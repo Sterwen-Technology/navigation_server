@@ -58,7 +58,7 @@ class Options(object):
             raise AttributeError(name)
 
 
-class ShipModul(threading.Thread):
+class ShipModulInterface(threading.Thread):
     def __init__(self,address,port):
         super().__init__()
         self._address = address
@@ -132,7 +132,7 @@ class NMEA_Publisher(threading.Thread):
         self._server = server
         self._address = address
         self._queue = queue.Queue(20)
-        reader.register(self)
+        # reader.register(self)
 
     def run(self):
         while True:
@@ -174,9 +174,9 @@ class NMEA_server(threading.Thread):
             _logger.info("Data server waiting for new connection")
             self._socket.listen(1)
             connection, address = self._socket.accept()
-            # print(address)
             _logger.info("New connection from IP %s port %d" % address)
             pub = NMEA_Publisher(connection, self._reader, self, address)
+            self._reader.register(pub)
             self._pubs[address] = pub
             pub.start()
 
@@ -184,6 +184,35 @@ class NMEA_server(threading.Thread):
         del self._pubs[address]
 
 
+class ShipModulConfig(threading.Thread):
+
+    def __init__(self, port, reader):
+        super().__init__()
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket.bind(('0.0.0.0', port))
+        self._reader = reader
+
+    def run(self):
+        _logger.info("Configuration server ready")
+        while True:
+            self._socket.listen(1)
+            connection, address = self._socket.accept()
+            _logger.info("New configuration connection from %s:%d" % address)
+            pub = NMEA_Publisher(connection, self._reader, self, address)
+            self._reader.configModeOn(pub)
+            self._pubs[address] = pub
+            pub.start()
+            while pub.is_alive():
+                try:
+                    msg = connection.recv(256)
+                except OSError as e:
+                    _logger.info("config socket read error: %s" % str(e))
+                    break
+                try:
+                    self._reader.send(msg)
+                except OSError:
+                    break
+            connection.close()
 
 def main():
     opts = Options(parser)
