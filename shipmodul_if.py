@@ -133,7 +133,6 @@ class NMEA_Publisher(threading.Thread):
         self._address = address
         self._queue = queue.Queue(20)
         reader.register(self)
-        self.start()
 
     def run(self):
         while True:
@@ -141,7 +140,7 @@ class NMEA_Publisher(threading.Thread):
             try:
                 self._socket.sendall(msg)
             except OSError as e:
-                _logger.warning("Error writing data on %s %d connection:%s => STOP" % (self._address, str(e)))
+                _logger.warning("Error writing data on %s:%d connection:%s => STOP" % (self._address[0], self._address[1], str(e)))
                 break
 
         self._reader.deregister(self)
@@ -153,7 +152,7 @@ class NMEA_Publisher(threading.Thread):
             self._queue.put(msg, block=False)
         except queue.Full:
             # need to empty the queue
-            _logger.warning("Overflow on %s connection" % self._address)
+            _logger.warning("Overflow on %s:%d connection" % (self._address[0], self._address[1]))
             try:
                 discard = self._queue.get(block=False)
             except queue.Empty:
@@ -168,31 +167,22 @@ class NMEA_server(threading.Thread):
         self._socket.bind(('0.0.0.0', port))
         self._reader = reader
         self._pubs = {}
-        self.start()
 
     def run(self):
         _logger.info("Data server ready")
         while True:
+            _logger.info("Data server waiting for new connection")
             self._socket.listen(1)
             connection, address = self._socket.accept()
             # print(address)
             _logger.info("New connection from IP %s port %d" % address)
             pub = NMEA_Publisher(connection, self._reader, self, address)
             self._pubs[address] = pub
-            pub.run()
+            pub.start()
 
     def remove_pub(self, address):
         del self._pubs[address]
 
-
-class ShipModulService(threading.Thread):
-
-    def __init__(self, port, reader):
-        super().__init__()
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._socket.bind(('0.0.0.0', port))
-        self._reader = reader
-        self.start()
 
 
 def main():
@@ -221,9 +211,8 @@ def main():
         return
 
     server = NMEA_server(opts.server, reader)
+    server.start()
     reader.start()
-    reader.run()
-    server.run()
     reader.join()
 
 
