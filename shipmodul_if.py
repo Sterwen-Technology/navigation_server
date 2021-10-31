@@ -131,7 +131,7 @@ class UDP_reader(ShipModulInterface):
 
     def read(self):
         data, address = self._socket.recvfrom(256)
-        # print("message from %s:%d" % address)
+        # print(data)
         return data
 
     def send(self, msg):
@@ -153,13 +153,19 @@ class TCP_reader(ShipModulInterface):
             raise
 
     def read(self):
-        return self._socket.recv(256)
+        try:
+            msg = self._socket.recv(256)
+        except OSError as e:
+            _logger.critical("Error receiving from Shipmodul: %s" % str(e))
+            raise
+        # print(msg)
+        return msg
 
     def send(self, msg):
         try:
             self._socket.sendall(msg)
         except OSError as e:
-            _logger.critical("Error writing on Shipmodul: %s" % str(e))
+            _logger.critical("Error writing to  Shipmodul: %s" % str(e))
             raise
 
 
