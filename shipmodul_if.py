@@ -37,6 +37,9 @@ def _parser():
                    choices=["CRITICAL","ERROR", "WARNING", "INFO", "DEBUG"],
                    default="INFO",
                    help="Level of traces, default INFO")
+    p.add_argument('-cp', '--config_port', action="store", type=int,
+                   default=4501,
+                   help="port for Shipmodul configuration server, default 4501")
     return p
 
 
@@ -115,7 +118,7 @@ class ShipModulInterface(threading.Thread):
             return True
 
 
-class UDP_reader(ShipModul):
+class UDP_reader(ShipModulInterface):
     def __init__(self,address, port):
         super().__init__(address, port)
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -139,7 +142,7 @@ class UDP_reader(ShipModul):
             raise
 
 
-class TCP_reader(ShipModul):
+class TCP_reader(ShipModulInterface):
 
     def __init__(self,address,port):
         super().__init__(address, port)
@@ -158,7 +161,6 @@ class TCP_reader(ShipModul):
         except OSError as e:
             _logger.critical("Error writing on Shipmodul: %s" % str(e))
             raise
-
 
 
 class NMEA_Publisher(threading.Thread):
@@ -228,10 +230,12 @@ class ShipModulConfig(threading.Thread):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.bind(('0.0.0.0', port))
         self._reader = reader
+        self._pub = None
 
     def run(self):
         _logger.info("Configuration server ready")
         while True:
+            _logger.info("Configuration server waiting for new connection")
             self._socket.listen(1)
             connection, address = self._socket.accept()
             _logger.info("New configuration connection from %s:%d" % address)
@@ -239,12 +243,14 @@ class ShipModulConfig(threading.Thread):
             if not self._reader.configModeOn(pub):
                 connection.close()
                 continue
-            self._pubs[address] = pub
+            self._pub = pub
             pub.start()
             _logger.info("Shipmodul configuration active")
             while pub.is_alive():
                 try:
                     msg = connection.recv(256)
+                    if len(msg) == 0:
+                        break
                 except OSError as e:
                     _logger.info("config socket read error: %s" % str(e))
                     break
@@ -256,6 +262,7 @@ class ShipModulConfig(threading.Thread):
             self._reader.deregister(pub)
             connection.close()
 
+
 def main():
     opts = Options(parser)
     # looger setup => stream handler for now
@@ -266,12 +273,13 @@ def main():
     _logger.setLevel(opts.trace_level)
     # open the shipmodul port
     port = opts.port
+    address = opts.address
     try:
         if opts.protocol == "UDP":
             _logger.info("opening UDP port %d" % port)
-            reader = UDP_reader('', port)
+            reader = UDP_reader(address, port)
         else:
-            address = opts.address
+
             _logger.info("opening port on host %s port %d" % (address, port))
             reader = TCP_reader (address, port)
             _logger.info("listening for NMEA sentences on host %s port %d" % (address, port))
@@ -282,9 +290,14 @@ def main():
         return
 
     server = NMEA_server(opts.server, reader)
+    config_server = ShipModulConfig(opts.config_port, reader)
     server.start()
+    config_server.start()
     reader.start()
-    reader.join()
+    try:
+        reader.join()
+    except KeyboardInterrupt:
+        return
 
 
 if __name__ == '__main__':
