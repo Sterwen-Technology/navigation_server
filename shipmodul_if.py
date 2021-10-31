@@ -64,6 +64,8 @@ class ShipModulInterface(threading.Thread):
         self._address = address
         self._port = port
         self._publishers = []
+        self._configmode = False
+        self._configpub = None
 
     def close(self):
         self._socket.close()
@@ -85,12 +87,32 @@ class ShipModulInterface(threading.Thread):
         self._publishers.append(pub)
 
     def deregister(self, pub):
-        self._publishers.remove(pub)
+        if pub == self._configpub:
+            self._configmode = False
+            self._configpub = None
+            _logger.info("Switching to normal mode for Shipmodul")
+        else:
+            try:
+                self._publishers.remove(pub)
+            except KeyError:
+                pass
 
     def publish(self, msg):
+        if self._configmode:
+            self._configpub.publish(msg)
+        else:
+            for p in self._publishers:
+                p.publish(msg)
 
-        for p in self._publishers:
-            p.publish(msg)
+    def configModeOn(self, pub):
+        if len(self._address) < 4:
+            _logger.error("Missing target IP address for config mode")
+            return False
+        else:
+            self._configmode = True
+            self._configpub = pub
+            _logger.info("Switching to configuration mode for Shipmodul")
+            return True
 
 
 class UDP_reader(ShipModul):
@@ -109,6 +131,13 @@ class UDP_reader(ShipModul):
         # print("message from %s:%d" % address)
         return data
 
+    def send(self, msg):
+        try:
+            self._socket.sendto(msg,(self._address, self._port))
+        except OSError as e:
+            _logger.critical("Error writing on Shipmodul: %s" % str(e))
+            raise
+
 
 class TCP_reader(ShipModul):
 
@@ -122,6 +151,14 @@ class TCP_reader(ShipModul):
 
     def read(self):
         return self._socket.recv(256)
+
+    def send(self, msg):
+        try:
+            self._socket.sendall(msg)
+        except OSError as e:
+            _logger.critical("Error writing on Shipmodul: %s" % str(e))
+            raise
+
 
 
 class NMEA_Publisher(threading.Thread):
@@ -199,9 +236,12 @@ class ShipModulConfig(threading.Thread):
             connection, address = self._socket.accept()
             _logger.info("New configuration connection from %s:%d" % address)
             pub = NMEA_Publisher(connection, self._reader, self, address)
-            self._reader.configModeOn(pub)
+            if not self._reader.configModeOn(pub):
+                connection.close()
+                continue
             self._pubs[address] = pub
             pub.start()
+            _logger.info("Shipmodul configuration active")
             while pub.is_alive():
                 try:
                     msg = connection.recv(256)
@@ -212,6 +252,8 @@ class ShipModulConfig(threading.Thread):
                     self._reader.send(msg)
                 except OSError:
                     break
+            _logger.info("Connection with configuration application lost")
+            self._reader.deregister(pub)
             connection.close()
 
 def main():
