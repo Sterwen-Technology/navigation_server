@@ -10,12 +10,14 @@
 #-------------------------------------------------------------------------------
 
 import socket
-import sys,os
+import sys
 
 from argparse import ArgumentParser
 import threading
 import queue
 import logging
+import time
+import datetime
 
 
 def _parser():
@@ -62,18 +64,34 @@ class Options(object):
 
 
 class ShipModulInterface(threading.Thread):
-    def __init__(self,address,port):
+    def __init__(self, address, port, timeout=30.0):
         super().__init__()
         self._address = address
         self._port = port
         self._publishers = []
         self._configmode = False
         self._configpub = None
+        self._startTS = 0
+        self._total_msg = 0
+        self._last_msg_count = 0
+        self._timeout = timeout
 
     def close(self):
         self._socket.close()
 
+    def timer_lapse(self):
+        _logger.debug("Timer lapse => total number of messages:%g" % self._total_msg)
+        if self._total_msg-self._last_msg_count == 0:
+            # no message received
+            _logger.warning("No NMEA messages received in the last %f4.1 sec" % self._timeout)
+        self._last_msg_count = self._total_msg
+        t = threading.Timer(self._timeout, self._timer_lapse)
+        t.start()
+
     def run(self):
+        self._startTS = time.time()
+        t = threading.Timer(self._timeout, self._timer_lapse)
+        t.start()
         while True:
             try:
                 data = self.read()
@@ -83,6 +101,7 @@ class ShipModulInterface(threading.Thread):
                     break
             except KeyboardInterrupt:
                 break
+            self._total_msg += 1
             self.publish(data)
         self.close()
 
@@ -163,7 +182,16 @@ class TCP_reader(ShipModulInterface):
             raise
 
 
-class NMEA_Publisher(threading.Thread):
+class Publisher(threading.Thread):
+    '''
+    Super class for all publishers
+    '''
+    def __init__(self):
+        super().__init__()
+
+
+class NMEA_Publisher(Publisher):
+
     def __init__(self, sock, reader, server, address):
         super().__init__()
         self._socket = sock
