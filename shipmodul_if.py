@@ -19,6 +19,7 @@ import logging
 import time
 import datetime
 
+import nmea0183
 
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
@@ -207,27 +208,19 @@ class Publisher(threading.Thread):
 
 class NMEA_Publisher(Publisher):
 
-    def __init__(self, sock, reader, server, address):
+    def __init__(self, client, reader):
         super().__init__()
-        self._socket = sock
+        self._client = client
         self._reader = reader
-        self._server = server
-        self._address = address
         self._queue = queue.Queue(20)
+        client.add_publisher(self)
         # reader.register(self)
 
     def run(self):
         while True:
             msg = self._queue.get()
-            try:
-                self._socket.sendall(msg)
-            except OSError as e:
-                _logger.warning("Error writing data on %s:%d connection:%s => STOP" % (self._address[0], self._address[1], str(e)))
+            if self.client.send(msg):
                 break
-
-        self._reader.deregister(self)
-        self._socket.close()
-        self._server.remove_pub(self._address)
 
     def publish(self, msg):
         try:
@@ -241,6 +234,46 @@ class NMEA_Publisher(Publisher):
                 pass
             self.publish(msg)
 
+    def deregister(self):
+        self._reader.deregister(self)
+
+
+class ClientConnection:
+    def __init__(self, connection, address, server):
+        self._socket = connection
+        self._address = address
+        self._server = server
+        self._totalmsg = 0
+        self._periodmsg = 0
+        self._pubs = []
+
+    def send(self,msg):
+        try:
+            self._socket.sendall(msg)
+            self._totalmsg += 1
+            self._periodmsg += 1
+            return False
+        except OSError as e:
+            _logger.warning(
+                "Error writing data on %s:%d connection:%s => STOP" % (self._address[0], self._address[1], str(e)))
+            self.close()
+            return True
+
+    def close(self):
+        for p in self._pubs:
+            p.deregister()
+        self._socket.close()
+        self._server.remove_client(self._address)
+
+    def reset_period(self):
+        self._periodmsg = 0
+
+    def msgcount(self):
+        return self._periodmsg
+
+    def add_publisher(self, pub):
+        self._pubs.append(pub)
+
 
 class NMEA_server(threading.Thread):
     def __init__(self, port, reader, options):
@@ -249,7 +282,6 @@ class NMEA_server(threading.Thread):
         self._socket.bind(('0.0.0.0', port))
         self._reader = reader
         self._options = options
-        self._pubs = {}
         self._connections = {}
 
     def run(self):
@@ -266,20 +298,26 @@ class NMEA_server(threading.Thread):
                 break
 
             _logger.info("New connection from IP %s port %d" % address)
-            pub = NMEA_Publisher(connection, self._reader, self, address)
+            client = ClientConnection(connection, address, self)
+            pub = NMEA_Publisher(client, self._reader)
             self._reader.register(pub)
-            self._pubs[address] = pub
-            self._connections[address] = connection
+            self._connections[address] = client
             pub.start()
 
-    def remove_pub(self, address):
-        del self._pubs[address]
+    def remove_client(self, address):
         del self._connections[address]
 
     def heartbeat(self):
         _logger.info("Server heartbeat number of connections: %d" % len(self._connections))
         t = threading.Timer(self._options.heartbeat, self.heartbeat)
         t.start()
+        for client in self._connections:
+            if client.msgcount() == 0:
+                # no message during period
+                heartbeat_msg = nmea0183.ZDA().message()
+                if client.send(heartbeat_msg):
+                    client.close()
+            client.reset_period()
 
 
 class ShipModulConfig(threading.Thread):
@@ -330,6 +368,8 @@ def main():
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
     _logger.setLevel(opts.trace_level)
+
+    nmea0183.NMEA0183Sentences.init('SN')
     # open the shipmodul port
     port = opts.port
     address = opts.address
