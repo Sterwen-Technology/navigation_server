@@ -44,7 +44,13 @@ def _parser():
                    help="port for Shipmodul configuration server, default 4501")
     p.add_argument("-t", "--timeout", action="store", type=float,
                    default=30.0,
-                   help="Timeout on recption of messages from Shipmodul, default 30sec")
+                   help="Timeout on reception of messages from Shipmodul, default 30sec")
+    p.add_argument("-m", "--max_connections", action="store", type=int, default=16,
+                   help="Maximum number of simultaneous connections on server, default 16"
+                   )
+    p.add_argument("-b", "--heartbeat", action="store", type=float,
+                   default=60.0,
+                   help="Active connection heartbeat period, default 60.0s")
     return p
 
 
@@ -237,27 +243,43 @@ class NMEA_Publisher(Publisher):
 
 
 class NMEA_server(threading.Thread):
-    def __init__(self, port, reader):
+    def __init__(self, port, reader, options):
         super().__init__()
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.bind(('0.0.0.0', port))
         self._reader = reader
+        self._options = options
         self._pubs = {}
+        self._connections = {}
 
     def run(self):
         _logger.info("Data server ready")
+        t = threading.Timer(self._options.heartbeat, self.heartbeat)
+        t.start()
         while True:
             _logger.info("Data server waiting for new connection")
             self._socket.listen(1)
-            connection, address = self._socket.accept()
+            if len(self._connections) <= self._options.max_connections:
+                connection, address = self._socket.accept()
+            else:
+                _logger.critical("Maximum number of connections (%d) reached => Server stop" % self._options.max_connections)
+                break
+
             _logger.info("New connection from IP %s port %d" % address)
             pub = NMEA_Publisher(connection, self._reader, self, address)
             self._reader.register(pub)
             self._pubs[address] = pub
+            self._connections[address] = connection
             pub.start()
 
     def remove_pub(self, address):
         del self._pubs[address]
+        del self._connections[address]
+
+    def heartbeat(self):
+        _logger.info("Server heartbeat number of connections: %d" % len(self._connections))
+        t = threading.Timer(self._options.heartbeat, self.heartbeat)
+        t.start()
 
 
 class ShipModulConfig(threading.Thread):
