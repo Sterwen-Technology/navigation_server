@@ -42,6 +42,9 @@ def _parser():
     p.add_argument('-cp', '--config_port', action="store", type=int,
                    default=4501,
                    help="port for Shipmodul configuration server, default 4501")
+    p.add_argument("-t", "--timeout", action="store", type=float,
+                   default=30.0,
+                   help="Timeout on recption of messages from Shipmodul, default 30sec")
     return p
 
 
@@ -83,14 +86,14 @@ class ShipModulInterface(threading.Thread):
         _logger.debug("Timer lapse => total number of messages:%g" % self._total_msg)
         if self._total_msg-self._last_msg_count == 0:
             # no message received
-            _logger.warning("No NMEA messages received in the last %f4.1 sec" % self._timeout)
+            _logger.warning("No NMEA messages received in the last %4.1f sec" % self._timeout)
         self._last_msg_count = self._total_msg
-        t = threading.Timer(self._timeout, self._timer_lapse)
+        t = threading.Timer(self._timeout, self.timer_lapse)
         t.start()
 
     def run(self):
         self._startTS = time.time()
-        t = threading.Timer(self._timeout, self._timer_lapse)
+        t = threading.Timer(self._timeout, self.timer_lapse)
         t.start()
         while True:
             try:
