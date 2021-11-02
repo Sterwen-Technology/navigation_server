@@ -126,7 +126,8 @@ class ShipModulInterface(threading.Thread):
         else:
             try:
                 self._publishers.remove(pub)
-            except KeyError:
+            except ValueError:
+                _logger.warning("Removing non attached publisher %s" % pub.descr())
                 pass
 
     def publish(self, msg):
@@ -219,7 +220,8 @@ class NMEA_Publisher(Publisher):
     def run(self):
         while True:
             msg = self._queue.get()
-            if self.client.send(msg):
+            if self._client.send(msg):
+                self._client.close()
                 break
 
     def publish(self, msg):
@@ -227,7 +229,7 @@ class NMEA_Publisher(Publisher):
             self._queue.put(msg, block=False)
         except queue.Full:
             # need to empty the queue
-            _logger.warning("Overflow on %s:%d connection" % (self._address[0], self._address[1]))
+            _logger.warning("Overflow on connection %s" % self._client.descr())
             try:
                 discard = self._queue.get(block=False)
             except queue.Empty:
@@ -236,6 +238,9 @@ class NMEA_Publisher(Publisher):
 
     def deregister(self):
         self._reader.deregister(self)
+
+    def descr(self):
+        return self._client.descr()
 
 
 class ClientConnection:
@@ -256,7 +261,6 @@ class ClientConnection:
         except OSError as e:
             _logger.warning(
                 "Error writing data on %s:%d connection:%s => STOP" % (self._address[0], self._address[1], str(e)))
-            self.close()
             return True
 
     def close(self):
@@ -273,6 +277,9 @@ class ClientConnection:
 
     def add_publisher(self, pub):
         self._pubs.append(pub)
+
+    def descr(self):
+        return "Connection %s:%d" % self._address
 
 
 class NMEA_server(threading.Thread):
@@ -311,13 +318,17 @@ class NMEA_server(threading.Thread):
         _logger.info("Server heartbeat number of connections: %d" % len(self._connections))
         t = threading.Timer(self._options.heartbeat, self.heartbeat)
         t.start()
-        for client in self._connections:
+        to_be_closed = []
+        for client in self._connections.values():
             if client.msgcount() == 0:
                 # no message during period
+                _logger.info("Sending heartbeat on %s" % client.descr())
                 heartbeat_msg = nmea0183.ZDA().message()
                 if client.send(heartbeat_msg):
-                    client.close()
-            client.reset_period()
+                    to_be_closed.append(client)
+                client.reset_period()
+        for client in to_be_closed:
+            client.close()
 
 
 class ShipModulConfig(threading.Thread):
