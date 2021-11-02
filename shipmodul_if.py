@@ -348,7 +348,7 @@ def main():
         _logger.critical(str(e))
         return
 
-    server = NMEA_server(opts.server, reader)
+    server = NMEA_server(opts.server, reader, opts)
     config_server = ShipModulConfig(opts.config_port, reader)
     server.start()
     config_server.start()
