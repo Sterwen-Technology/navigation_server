@@ -31,8 +31,8 @@ def _parser():
                    default='',
                    help="IP address or URL for Shipmodul, no default")
     p.add_argument("-pr", "--protocol", action="store", type=str,
-                   choices=['TCP','UDP'], default='TCP',
-                   help="Protocol to read NMEA sentences, default TCP")
+                   choices=['TCP','UDP'], default='UDP',
+                   help="Protocol to read NMEA sentences, default UDP")
     p.add_argument("-s", "--server", action="store", type=int,
                    default=4500,
                    help="NMEA server port, default 4500")
@@ -147,6 +147,8 @@ class ShipModulInterface(threading.Thread):
             _logger.info("Switching to configuration mode for Shipmodul")
             return True
 
+    def totalinput_msg(self):
+        return self._total_msg
 
 class UDP_reader(ShipModulInterface):
     def __init__(self,address, port):
@@ -166,7 +168,7 @@ class UDP_reader(ShipModulInterface):
 
     def send(self, msg):
         try:
-            self._socket.sendto(msg,(self._address, self._port))
+            self._socket.sendto(msg, (self._address, self._port))
         except OSError as e:
             _logger.critical("Error writing on Shipmodul: %s" % str(e))
             raise
@@ -203,26 +205,10 @@ class Publisher(threading.Thread):
     '''
     Super class for all publishers
     '''
-    def __init__(self):
+    def __init__(self, reader):
         super().__init__()
-
-
-class NMEA_Publisher(Publisher):
-
-    def __init__(self, client, reader):
-        super().__init__()
-        self._client = client
         self._reader = reader
         self._queue = queue.Queue(20)
-        client.add_publisher(self)
-        # reader.register(self)
-
-    def run(self):
-        while True:
-            msg = self._queue.get()
-            if self._client.send(msg):
-                self._client.close()
-                break
 
     def publish(self, msg):
         try:
@@ -239,8 +225,44 @@ class NMEA_Publisher(Publisher):
     def deregister(self):
         self._reader.deregister(self)
 
+
+class NMEA_Publisher(Publisher):
+
+    def __init__(self, client, reader):
+        super().__init__(reader)
+        self._client = client
+
+        client.add_publisher(self)
+        # reader.register(self)
+
+    def run(self):
+        while True:
+            msg = self._queue.get()
+            if self._client.send(msg):
+                self._client.close()
+                break
+
     def descr(self):
         return self._client.descr()
+
+
+class ConfigPublisher(Publisher):
+    def __init__(self, connection, reader, server, address):
+        super().__init__(reader)
+        self._socket = connection
+        self._address = address
+        self._server = server
+
+    def run(self):
+        while True:
+            msg = self._queue.get()
+            # print("run config:", msg)
+            try:
+                self._socket.sendall(msg)
+            except OSError as e:
+                _logger.debug("Error writing response on config:%s" % str(e))
+                break
+        self._reader.deregister(self)
 
 
 class ClientConnection:
@@ -252,7 +274,7 @@ class ClientConnection:
         self._periodmsg = 0
         self._pubs = []
 
-    def send(self,msg):
+    def send(self, msg):
         try:
             self._socket.sendall(msg)
             self._totalmsg += 1
@@ -315,7 +337,9 @@ class NMEA_server(threading.Thread):
         del self._connections[address]
 
     def heartbeat(self):
-        _logger.info("Server heartbeat number of connections: %d" % len(self._connections))
+        _logger.info("Server heartbeat number of connections: %d, total number of NMEA msg: %d"
+                     % (len(self._connections),
+                        self._reader.totalinput_msg()))
         t = threading.Timer(self._options.heartbeat, self.heartbeat)
         t.start()
         to_be_closed = []
@@ -347,7 +371,7 @@ class ShipModulConfig(threading.Thread):
             self._socket.listen(1)
             connection, address = self._socket.accept()
             _logger.info("New configuration connection from %s:%d" % address)
-            pub = NMEA_Publisher(connection, self._reader, self, address)
+            pub = ConfigPublisher(connection, self._reader, self, address)
             if not self._reader.configModeOn(pub):
                 connection.close()
                 continue
@@ -362,6 +386,7 @@ class ShipModulConfig(threading.Thread):
                 except OSError as e:
                     _logger.info("config socket read error: %s" % str(e))
                     break
+                _logger.debug(msg.decode().strip('\r\n'))
                 try:
                     self._reader.send(msg)
                 except OSError:
