@@ -53,6 +53,8 @@ def _parser():
     p.add_argument("-b", "--heartbeat", action="store", type=float,
                    default=60.0,
                    help="Active connection heartbeat period, default 60.0s")
+    p.add_argument("-l", "--log", action="store", type=str,
+                   help="Logfile for all incoming NMEA sentences")
     return p
 
 
@@ -150,6 +152,7 @@ class ShipModulInterface(threading.Thread):
 
     def totalinput_msg(self):
         return self._total_msg
+
 
 class UDP_reader(ShipModulInterface):
     def __init__(self,address, port):
@@ -264,6 +267,36 @@ class ConfigPublisher(Publisher):
                 _logger.debug("Error writing response on config:%s" % str(e))
                 break
         self._reader.deregister(self)
+
+
+class LogPublisher(Publisher):
+    def __init__(self, reader, filename):
+        super().__init__(reader)
+        self._filename = filename
+        try:
+            self._fd = open(filename, "w")
+        except IOError as e:
+            _logger.error("Error opening logfile %s: %s" % (filename, str(e)))
+            raise
+        self._start = time.time()
+        self._fd.write("NMEA LOG START TIME:%9.3f\n" % self._start)
+        self._fd.flush()
+        self._stopflag = False
+
+    def run(self):
+        while True:
+            msg = self._queue.get()
+            delta_t = time.time() - self._start
+            self._fd.write("%9.3f|" % delta_t)
+            self._fd.write(msg)
+            self._fd.write('\n')
+            self._fd.flush()
+            if self._stopflag:
+                break
+        self._fd.close()
+
+    def close(self):
+        self._stopflag = True
 
 
 class ClientConnection:
@@ -427,6 +460,14 @@ def main():
 
     server = NMEA_server(opts.server, reader, opts)
     config_server = ShipModulConfig(opts.config_port, reader)
+    # logger
+    try:
+        logfile = opts.log
+        logpub = LogPublisher(reader, logfile)
+        reader.register(logpub)
+        logpub.start()
+    except AttributeError:
+        pass
     server.start()
     config_server.start()
     reader.start()
