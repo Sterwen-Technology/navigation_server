@@ -21,6 +21,7 @@ import datetime
 
 import nmea0183
 
+
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
 
