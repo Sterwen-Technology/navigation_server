@@ -75,8 +75,14 @@ class Options(object):
         except AttributeError:
             raise AttributeError(name)
 
+#################################################################
+#
+#   Classes for ShipModule interface
+#################################################################
+
 
 class ShipModulInterface(threading.Thread):
+
     def __init__(self, address, port, timeout=30.0):
         super().__init__()
         self._address = address
@@ -204,6 +210,12 @@ class TCP_reader(ShipModulInterface):
             _logger.critical("Error writing to  Shipmodul: %s" % str(e))
             raise
 
+#######################################################################
+#
+#    Publisher classes => send messages to clients
+#
+########################################################################
+
 
 class Publisher(threading.Thread):
     '''
@@ -251,6 +263,10 @@ class NMEA_Publisher(Publisher):
 
 
 class ConfigPublisher(Publisher):
+    '''
+    This class is used for Configuration mode, meaning when the Multiplexer utility is connected
+    It gains exclusive access
+    '''
     def __init__(self, connection, reader, server, address):
         super().__init__(reader)
         self._socket = connection
@@ -288,8 +304,8 @@ class LogPublisher(Publisher):
             msg = self._queue.get()
             delta_t = time.time() - self._start
             self._fd.write("%9.3f|" % delta_t)
-            self._fd.write(msg)
-            self._fd.write('\n')
+            self._fd.write(msg.decode())
+            # self._fd.write('\n')
             self._fd.flush()
             if self._stopflag:
                 break
@@ -297,6 +313,9 @@ class LogPublisher(Publisher):
 
     def close(self):
         self._stopflag = True
+
+    def descr(self):
+        return "Log File "+self._filename
 
 
 class ClientConnection:
@@ -339,6 +358,10 @@ class ClientConnection:
 
 
 class NMEA_server(threading.Thread):
+    '''
+    Server class for NMEA clients
+
+    '''
     def __init__(self, port, reader, options):
         super().__init__()
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -463,9 +486,10 @@ def main():
     # logger
     try:
         logfile = opts.log
-        logpub = LogPublisher(reader, logfile)
-        reader.register(logpub)
-        logpub.start()
+        if logfile is not None:
+            logpub = LogPublisher(reader, logfile)
+            reader.register(logpub)
+            logpub.start()
     except AttributeError:
         pass
     server.start()
