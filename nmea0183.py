@@ -1,3 +1,13 @@
+#-------------------------------------------------------------------------------
+# Name:        NMEA
+# Purpose:      Utilities to analyse and generate NMEA sentences
+#
+# Author:      Laurent Carré
+#
+# Created:     25/10/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
 
 import operator
 from functools import reduce
@@ -46,8 +56,6 @@ class ZDA(NMEA0183Sentences):
         self._sentence = "$%sZDA,%s.%2d,%s,%d,%d" % (NMEA0183Sentences._sender_id, hms, cs, dates,
                                                      NMEA0183Sentences._local_hours,
                                                      NMEA0183Sentences._local_minutes)
-
-
 
 
 if __name__ == "__main__":

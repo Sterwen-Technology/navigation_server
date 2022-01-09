@@ -1,0 +1,22 @@
+
+//-------------------------------------------------------------------------------
+// Name:        j1939.proto
+// Purpose:     j1939 messages protobuf definition file
+//
+// Author:      Laurent Carré
+//
+// Created:     27/10/2021
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021
+// Licence:     <your licence>
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+message j1939 {
+  uint32 pgn=1;
+  uint32 priority=2;
+  uint32 sa=3; // source address
+  uint32 da =4; // destination address
+  uint32 timestamp = 5; // unit to be defined
+  bytes payload = 6;
+}
