@@ -1,0 +1,34 @@
+#-------------------------------------------------------------------------------
+# Name:        server_common
+# Purpose:     Abstract class for all servers
+#
+# Author:      Laurent Carré
+#
+# Created:     25/10/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+
+import threading
+import logging
+import socket
+
+_logger = logging.getLogger("ShipDataServer")
+
+
+class NavTCPServer(threading.Thread):
+
+    def __init__(self, name, port):
+        self._name = name
+        self._port = port
+        if self._port == 0:
+            raise ValueError
+        super().__init__(name=self._name)
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._socket.bind(('0.0.0.0', self._port))
+        self._socket.settimeout(5.0)
+        self._stop_flag = False
+
+    def name(self):
+        return self._name
