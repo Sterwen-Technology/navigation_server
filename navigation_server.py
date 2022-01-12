@@ -22,52 +22,14 @@ from publisher import *
 from client_publisher import *
 from internal_gps import *
 from simulator_input import *
+from configuration import NavigationConfiguration
 
 
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
 
-    p.add_argument("-p", "--port", action="store", type=int,
-                   default=10110,
-                   help="Listening port for Shipmodul input, default is 10110")
-    p.add_argument("-a", "--address", action="store", type=str,
-                   default='',
-                   help="IP address or URL for Shipmodul, no default")
-    p.add_argument("-pr", "--protocol", action="store", type=str,
-                   choices=['TCP','UDP'], default='UDP',
-                   help="Protocol to read NMEA sentences, default UDP")
-    p.add_argument("-s", "--server", action="store", type=int,
-                   default=4500,
-                   help="NMEA server port, default 4500")
-    p.add_argument('-d', '--trace_level', action="store", type=str,
-                   choices=["CRITICAL","ERROR", "WARNING", "INFO", "DEBUG"],
-                   default="INFO",
-                   help="Level of traces, default INFO")
-    p.add_argument('-cp', '--config_port', action="store", type=int,
-                   default=4501,
-                   help="port for Shipmodul configuration server, default 4501")
-    p.add_argument("-t", "--timeout", action="store", type=float,
-                   default=30.0,
-                   help="Timeout on reception of messages from Shipmodul, default 30sec")
-    p.add_argument("-m", "--max_connections", action="store", type=int, default=16,
-                   help="Maximum number of simultaneous connections on server, default 16"
-                   )
-    p.add_argument("-b", "--heartbeat", action="store", type=float,
-                   default=10.0,
-                   help="Active connection heartbeat period, default 60.0s")
-    p.add_argument("-l", "--log", action="store", type=str,
-                   help="Logfile for all incoming NMEA sentences")
-    p.add_argument("-c", "--console", action="store", type=int,
-                   default=4502,
-                   help="Console port, default 4502")
-    p.add_argument("-ns", "--nmea_sender", action="store", type=int,
-                   default=4503,
-                   help="NMEA message sender port, default 4503")
-    p.add_argument("-sm", "--simul", action="store", type=str,
-                   help="IP address of NMEA Simulator")
-    p.add_argument("-sp", "--simul_port", action="store", type=int,
-                   default=3555, help="Port for simulator default is 3555")
-    p.add_argument('-ti', '--trace_input', action='store', type=str)
+    p.add_argument('-s', '--settings', action='store', type=str, default='./settings.yml')
+
     return p
 
 
@@ -95,18 +57,19 @@ class NMEA_server(NavTCPServer):
     Server class for NMEA clients
 
     '''
-    def __init__(self, port, options):
-        super().__init__("NMEA_Server", port)
+    def __init__(self, options: dict):
+        super().__init__(options)
         self._instruments = []
         self._options = options
         self._connections = {}
         self._timer = None
+        self._timer_name = self.name + "-timer"
         self._sender = None
         self._sender_instrument = None
 
     def start_timer(self):
-        self._timer = threading.Timer(self._options.heartbeat, self.heartbeat)
-        self._timer.name = "NMEA server timer"
+        self._timer = threading.Timer(self._heartbeat, self.heartbeat)
+        self._timer.name = self._timer_name
         self._timer.start()
 
     def stop_timer(self):
@@ -114,13 +77,13 @@ class NMEA_server(NavTCPServer):
             self._timer.cancel()
 
     def run(self):
-        _logger.info("NMEA server ready")
+        _logger.info("%s ready" % self.name)
         self.start_timer()
         self._socket.settimeout(5.0)
         while not self._stop_flag:
-            _logger.info("Data server waiting for new connection")
+            _logger.info("%s waiting for new connection" % self.name)
             self._socket.listen(1)
-            if len(self._connections) <= self._options.max_connections:
+            if len(self._connections) <= self._max_connections:
                 try:
                     connection, address = self._socket.accept()
                 except socket.timeout:
@@ -132,7 +95,7 @@ class NMEA_server(NavTCPServer):
                     connection.close()
                     break
             else:
-                _logger.critical("Maximum number of connections (%d) reached:" % self._options.max_connections)
+                _logger.critical("Maximum number of connections (%d) reached:" % self._max_connections)
                 time.sleep(5.0)
                 continue
 
@@ -144,12 +107,12 @@ class NMEA_server(NavTCPServer):
             pub.start()
             if self._sender_instrument is not None and self._sender is None:
                 self._sender = NMEA_Sender(client, self._sender_instrument)
-                if self._options.trace_input is not None:
-                    trpub = SendPublisher(self._sender, self._options.trace_input)
+                if self._options.get('trace_input', None) is not None:
+                    trpub = SendPublisher(self._sender, self._options['trace_input'])
                     trpub.start()
                 self._sender.start()
             # end of while loop
-        _logger.info("NMEA server thread stops")
+        _logger.info("%s thread stops" % self.name)
         self._socket.close()
 
     def add_instrument(self, instrument):
@@ -168,8 +131,8 @@ class NMEA_server(NavTCPServer):
         self._sender = None
 
     def heartbeat(self):
-        _logger.info("Server heartbeat number of connections: %d"
-                     % len(self._connections))
+        _logger.info("%s heartbeat number of connections: %d"
+                     % (self.name, len(self._connections)))
         if self._stop_flag:
             return
         self.start_timer()
@@ -186,7 +149,7 @@ class NMEA_server(NavTCPServer):
             client.close()
 
     def stop(self):
-        _logger.info("Main NMEA server stopping")
+        _logger.info("%s stopping" % self.name)
         self._stop_flag = True
         self.stop_timer()
         clients = self._connections.values()
@@ -304,20 +267,27 @@ def print_threads():
 
 
 def main():
-    opts = Options(parser)
+    opts = parser.parse_args()
+    config = NavigationConfiguration(opts.settings)
+    config.add_class(NMEA_server)
+    config.add_class(Console)
     # logger setup => stream handler for now
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
-    _logger.setLevel(opts.trace_level)
+    _logger.setLevel(config.get_option('trace', 'INFO'))
 
-    nmea0183.NMEA0183Sentences.init('SN')
+    nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'SN'))
     #  start the console
 
-    console = Console(opts.console)
+    # console = Console(opts.console)
 
     main_server = NavigationServer()
+    for server_descr in config.servers():
+        server = server_descr.build_object()
+        main_server.add_server(server)
+
     main_server.set_console(console)
 
     # create the NMEA server

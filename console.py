@@ -20,8 +20,8 @@ _logger = logging.getLogger("ShipDataServer")
 
 class Console(NavTCPServer):
 
-    def __init__(self, port):
-        super().__init__("Console", port)
+    def __init__(self, options):
+        super().__init__(options)
         self._servers = {}
         self._instruments = {}
         self._injectors = {}

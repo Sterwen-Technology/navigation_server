@@ -5,37 +5,44 @@
 # Author:      Laurent Carré
 #
 # Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technolgy 2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
-global:
-  trace: INFO
+
+trace: INFO
 
 servers:
 
-- server:
-    name: NMEAServer
+- NMEAServer:
     class: NMEAServer
     port: 4500
 
-- server:
-    name: Console
+- Console:
     class: Console
     port: 4502
 
-- server:
-    name: ShipModulConfig
+- ShipModulConfig:
     class: ShipModulConfig
     port: 4501
 
 instruments:
 
-- instrument:
-    name: MiniPlex3
+- MiniPlex3:
     class: ShipModul
     factory: create_instrument
     address: 172.16.2.100
+    port: 10110
     transport: TCP
+    server: NMEAServer
+
+publishers:
+
+    - MainLog:
+        class: LogPublisher
+        file: /var/log/navigation.log
+        instruments: [MiniPlex3]
+
+
 
 
 
