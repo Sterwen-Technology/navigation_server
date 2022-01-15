@@ -28,6 +28,8 @@ class NavigationServerObject:
             self._param = item[1]
         self._class = None
         self._class_name = self._param['class']
+        self._param['name'] = self._name
+        self._object = None
 
     @property
     def obj_class(self):
@@ -40,20 +42,37 @@ class NavigationServerObject:
     def name(self):
         return self._name
 
+    @property
+    def object(self):
+        return self._object
+
     def build_object(self):
         if self._class is None:
-            raise ConfigurationException("Missing class to build %s object" % self._name)
+            try:
+                self._class = NavigationConfiguration.get_conf().get_class(self._class_name)
+            except KeyError:
+                raise ConfigurationException("Missing class to build %s object" % self._name)
         factory = self._param.get('factory', None)
         if factory is None:
-            return self._class(self._param)
+            self._object = self._class(self._param)
         else:
-            return self._class.getattr(factory)(self._param)
+            print(dir(self._class))
+            self._object = getattr(self._class, factory)(self._param)
+        return self._object
+
 
 class NavigationConfiguration:
+
+    _instance = None
+
+    @staticmethod
+    def get_conf():
+        return NavigationConfiguration._instance
 
     def __init__(self, settings_file):
         self._configuration = None
         self._obj_dict = {}
+        self._class_dict = {}
         self._servers = {}
         self._instruments = {}
         self._publishers = {}
@@ -81,12 +100,13 @@ class NavigationConfiguration:
             nav_obj = NavigationServerObject(obj)
             self._obj_dict[nav_obj.name] = nav_obj
             self._publishers[nav_obj.name] = nav_obj
+        NavigationConfiguration._instance = self
 
     def dump(self):
         print(self._configuration)
 
     def get_option(self, name, default):
-        self._configuration.get(name, default)
+        return self._configuration.get(name, default)
 
     def object_descr_iter(self, obj_type):
         servers = self._configuration[obj_type]
@@ -94,15 +114,22 @@ class NavigationConfiguration:
             yield server
 
     def servers(self):
-        return self._servers
+        return self._servers.values()
+
+    def instruments(self):
+        return self._instruments.values()
+
+    def publishers(self):
+        return self._publishers.values()
 
     def add_class(self, class_object):
-        try:
-            self._obj_dict[class_object.__name__].set_class(class_object)
-        except KeyError:
-            _logger.error("No object configured for Python class:%s" % class_object.__name__)
+        self._class_dict[class_object.__name__] = class_object
 
+    def get_class(self, name):
+        return self._class_dict[name]
 
+    def get_object(self, name):
+        return self._obj_dict[name].object
 
 
 def main():

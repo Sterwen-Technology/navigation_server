@@ -20,7 +20,7 @@ from shipmodul_if import *
 from console import Console
 from publisher import *
 from client_publisher import *
-from internal_gps import *
+# from internal_gps import *
 from simulator_input import *
 from configuration import NavigationConfiguration
 
@@ -63,7 +63,7 @@ class NMEA_server(NavTCPServer):
         self._options = options
         self._connections = {}
         self._timer = None
-        self._timer_name = self.name + "-timer"
+        self._timer_name = self.name() + "-timer"
         self._sender = None
         self._sender_instrument = None
 
@@ -81,7 +81,7 @@ class NMEA_server(NavTCPServer):
         self.start_timer()
         self._socket.settimeout(5.0)
         while not self._stop_flag:
-            _logger.info("%s waiting for new connection" % self.name)
+            _logger.info("%s waiting for new connection" % self.name())
             self._socket.listen(1)
             if len(self._connections) <= self._max_connections:
                 try:
@@ -112,7 +112,7 @@ class NMEA_server(NavTCPServer):
                     trpub.start()
                 self._sender.start()
             # end of while loop
-        _logger.info("%s thread stops" % self.name)
+        _logger.info("%s thread stops" % self.name())
         self._socket.close()
 
     def add_instrument(self, instrument):
@@ -149,7 +149,7 @@ class NMEA_server(NavTCPServer):
             client.close()
 
     def stop(self):
-        _logger.info("%s stopping" % self.name)
+        _logger.info("%s stopping" % self.name())
         self._stop_flag = True
         self.stop_timer()
         clients = self._connections.values()
@@ -194,14 +194,18 @@ class NavigationServer:
     def name(self):
         return self._name
 
-    def set_console(self, console):
-        self._console = console
-        self._servers.append(console)
-        console.add_server(self)
-
     def add_server(self, server):
+        if type(server) == Console:
+            if self._console is not None:
+                _logger.error("Only one Console can bet set")
+                raise ValueError
+            self._console = server
+            for s in self._servers:
+                self._console.add_server(s)
+            self._console.add_server(self)
+        elif self._console is not None:
+            self._console.add_server(server)
         self._servers.append(server)
-        self._console.add_server(server)
 
     def start(self):
         def start_publisher(pub):
@@ -271,6 +275,9 @@ def main():
     config = NavigationConfiguration(opts.settings)
     config.add_class(NMEA_server)
     config.add_class(Console)
+    config.add_class(ShipModulConfig)
+    config.add_class(ShipModulInterface)
+    config.add_class(SimulatorInput)
     # logger setup => stream handler for now
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
@@ -284,39 +291,27 @@ def main():
     # console = Console(opts.console)
 
     main_server = NavigationServer()
+    # create the servers
     for server_descr in config.servers():
         server = server_descr.build_object()
         main_server.add_server(server)
+    # create the instruments
+    for inst_descr in config.instruments():
+        instrument = inst_descr.build_object()
+        main_server.add_instrument(instrument)
+    # create the publishers
+    for pub_descr in config.publishers():
+        publisher = pub_descr.build_object()
+        main_server.add_publisher()
 
-    main_server.set_console(console)
 
-    # create the NMEA server
-    main_server.add_server(NMEA_server(opts.server, opts))
-    shipmodul = ShipModulInterface.create_instrument(opts)
-    main_server.add_instrument(shipmodul)
-    main_server.add_server(ShipModulConfig(opts.config_port, shipmodul))
-    # add additional instruments
-    # server.add_instrument(InternalGps())
-    # add the simulator
-    try:
-        simul_addr = opts.simul
-        if simul_addr is not None:
-            simul = SimulatorInput(simul_addr, opts.simul_port)
-            main_server.add_instrument(simul)
-            pub = Injector('Simulator', [simul], shipmodul)
-            main_server.add_publisher(pub)
-    except AttributeError:
-        pass
+    pub = Injector('Simulator', [simul], shipmodul)
+    main_server.add_publisher(pub)
 
-    # do we have log
-    try:
-        logfile = opts.log
-        if logfile is not None:
-            logpub = LogPublisher(main_server.instruments, logfile)
-            main_server.add_publisher(logpub)
+    logpub = LogPublisher(main_server.instruments, logfile)
+    main_server.add_publisher(logpub)
 
-    except AttributeError:
-        pass
+
     main_server.start()
     main_server.wait()
 

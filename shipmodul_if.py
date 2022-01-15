@@ -18,7 +18,6 @@ from server_common import NavTCPServer
 from publisher import Publisher
 from instrument import Instrument, InstrumentReadError
 
-
 _logger = logging.getLogger("ShipDataServer")
 
 
@@ -33,22 +32,18 @@ class ShipModulInterface(Instrument):
     @staticmethod
     def create_instrument(opts):
         # create NMEA reader on Shipmodul multiplexer
-        port = opts.port
-        address = opts.address
+        protocol = opts.get('protocol', 'UDP')
 
-        if opts.protocol == "UDP":
-            _logger.info("opening UDP port %d" % port)
-            reader = UDP_reader(address, port)
+        if protocol == "UDP":
+            reader = UDP_reader(opts)
         else:
-            _logger.info("opening port on host %s port %d" % (address, port))
-            reader = TCP_reader(address, port)
-            _logger.info("listening for NMEA sentences on host %s port %d" % (address, port))
+            reader = TCP_reader(opts)
         return reader
 
-    def __init__(self, address, port, timeout=30.0):
-        super().__init__(name="Shipmodul", timeout=timeout)
-        self._address = address
-        self._port = port
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._address = opts['address']
+        self._port = opts['port']
         self._socket = None
 
     def close(self):
@@ -84,10 +79,11 @@ class ShipModulInterface(Instrument):
 
 
 class UDP_reader(ShipModulInterface):
-    def __init__(self, address, port):
-        super().__init__(address, port)
+    def __init__(self, opts):
+        super().__init__(opts)
 
     def open(self):
+        _logger.info("opening UDP port %d" % self._port)
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         try:
@@ -118,8 +114,8 @@ class UDP_reader(ShipModulInterface):
 
 class TCP_reader(ShipModulInterface):
 
-    def __init__(self,address,port):
-        super().__init__(address, port)
+    def __init__(self, opts):
+        super().__init__(opts)
 
     def open(self):
         _logger.info("Connecting (TCP) to NMEA source %s:%d" % (self._address, self._port))
@@ -176,14 +172,20 @@ class ConfigPublisher(Publisher):
 
 class ShipModulConfig(NavTCPServer):
 
-    def __init__(self, port, reader):
-        super().__init__("Shipmodul configurator", port)
+    def __init__(self, opts):
+        super().__init__(opts)
 
-        self._reader = reader
+        self._reader = None
         self._pub = None
         self._connection = None
 
     def run(self):
+        try:
+            self._reader = self.resolve_ref('instrument')
+        except KeyError:
+            _logger.error("%s no instrument associated => stop" % self.name())
+            return
+
         _logger.info("Configuration server ready")
         while not self._stop_flag:
             _logger.info("Configuration server waiting for new connection")

@@ -14,7 +14,7 @@ trace: INFO
 servers:
 
 - NMEAServer:
-    class: NMEAServer
+    class: NMEA_server
     port: 4500
 
 - Console:
@@ -24,11 +24,12 @@ servers:
 - ShipModulConfig:
     class: ShipModulConfig
     port: 4501
+    instrument: MiniPlex3
 
 instruments:
 
 - MiniPlex3:
-    class: ShipModul
+    class: ShipModulInterface
     factory: create_instrument
     address: 172.16.2.100
     port: 10110

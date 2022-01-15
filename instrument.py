@@ -16,6 +16,7 @@ import threading
 import logging
 import time
 from publisher import Publisher
+from configuration import NavigationConfiguration
 
 
 _logger = logging.getLogger("ShipDataServer")
@@ -29,9 +30,11 @@ class Instrument(threading.Thread):
 
     (NOT_READY, OPEN, CONNECTED, ACTIVE) = range(4)
 
-    def __init__(self, name, timeout=30.0):
+    def __init__(self, opts):
+        name = opts['name']
         super().__init__(name=name)
         self._name = name
+        self._opts = opts
         self._publishers = []
         self._configmode = False
         self._configpub = None
@@ -40,7 +43,7 @@ class Instrument(threading.Thread):
         self._total_msg_s = 0
         self._last_msg_count = 0
         self._last_msg_count_s = 0
-        self._timeout = timeout
+        self._timeout = opts.get('timeout', 30.0)
         self._stopflag = False
         self._timer = None
         self._state = self.NOT_READY
@@ -143,3 +146,7 @@ class Instrument(threading.Thread):
 
     def default_sender(self):
         return False
+
+    def resolve_ref(self, name):
+        reference = self._opts[name]
+        return NavigationConfiguration.get_conf().get_object(reference)

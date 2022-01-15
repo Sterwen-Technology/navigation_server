@@ -13,6 +13,8 @@ import threading
 import logging
 import socket
 
+from configuration import NavigationConfiguration
+
 _logger = logging.getLogger("ShipDataServer")
 
 
@@ -35,3 +37,10 @@ class NavTCPServer(threading.Thread):
 
     def name(self):
         return self._name
+
+    def resolve_ref(self, name):
+        reference = self._options[name]
+        return NavigationConfiguration.get_conf().get_object(reference)
+
+    def add_instrument(self, instrument):
+        pass

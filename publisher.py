@@ -5,6 +5,8 @@ import queue
 import logging
 import datetime
 
+from configuration import NavigationConfiguration
+
 _logger = logging.getLogger("ShipDataServer")
 
 #######################################################################
@@ -18,10 +20,15 @@ class Publisher(threading.Thread):
     '''
     Super class for all publishers
     '''
-    def __init__(self, instruments: list, name):
+    def __init__(self, opts):
+        name = opts['name']
+        self._opts = opts
         super().__init__(name=name)
         self._name = name
-        self._instruments = instruments
+        inst_list = opts['instruments']
+        self._instruments = []
+        for inst_name in inst_list:
+            self._instruments.append(self.resolve_ref(inst_name))
         for inst in self._instruments:
             # print("Registering %s on %s" % (self._name, inst.name()))
             inst.register(self)
@@ -81,11 +88,15 @@ class Publisher(threading.Thread):
     def descr(self):
         return "Publisher %s" % self._name
 
+    @staticmethod
+    def resolve_ref(name):
+        return NavigationConfiguration.get_conf().get_object(name)
+
 
 class LogPublisher(Publisher):
-    def __init__(self, instruments, filename):
-        super().__init__(instruments, "logger")
-        self._filename = filename
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._filename = opts['filename']
         try:
             self._fd = open(filename, "w")
         except IOError as e:
@@ -116,9 +127,9 @@ class LogPublisher(Publisher):
 
 class Injector(Publisher):
 
-    def __init__(self, target, instruments: list, name):
-        super().__init__(instruments, name)
-        self._target = target
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._target = self.resolve_ref(opts['target'])
 
     def process_msg(self, msg):
         self._target.send_cmd(msg)
@@ -130,15 +141,15 @@ class Injector(Publisher):
 
 class SendPublisher(Publisher):
 
-    def __init__(self, sender, filename):
-        super().__init__([], "sender_logger")
-        self._sender = sender
-        self._filename = filename
-        sender.add_publisher(self)
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._sender = self.resolve_ref(opts['sender'])
+        self._filename = opts['filename']
+        self._sender.add_publisher(self)
         try:
-            self._fd = open(filename, "w")
+            self._fd = open(self._filename, "w")
         except IOError as e:
-            _logger.error("Error opening logfile %s: %s" % (filename, str(e)))
+            _logger.error("Error opening logfile %s: %s" % (self._filename, str(e)))
             raise
         self._start = time.time()
         self._fd.write("NMEA LOG START TIME:%9.3f\n" % self._start)
