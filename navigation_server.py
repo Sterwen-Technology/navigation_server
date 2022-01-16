@@ -132,7 +132,7 @@ class NMEA_server(NavTCPServer):
 
     def heartbeat(self):
         _logger.info("%s heartbeat number of connections: %d"
-                     % (self.name, len(self._connections)))
+                     % (self._name, len(self._connections)))
         if self._stop_flag:
             return
         self.start_timer()
@@ -260,7 +260,7 @@ class NavigationServer:
 
     def add_publisher(self, publisher: Publisher):
         self._publishers.append(publisher)
-        publisher.start()
+        # publisher.start()
 
 
 def print_threads():
@@ -278,6 +278,8 @@ def main():
     config.add_class(ShipModulConfig)
     config.add_class(ShipModulInterface)
     config.add_class(SimulatorInput)
+    config.add_class(LogPublisher)
+    config.add_class(Injector)
     # logger setup => stream handler for now
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
@@ -302,15 +304,7 @@ def main():
     # create the publishers
     for pub_descr in config.publishers():
         publisher = pub_descr.build_object()
-        main_server.add_publisher()
-
-
-    pub = Injector('Simulator', [simul], shipmodul)
-    main_server.add_publisher(pub)
-
-    logpub = LogPublisher(main_server.instruments, logfile)
-    main_server.add_publisher(logpub)
-
+        main_server.add_publisher(publisher)
 
     main_server.start()
     main_server.wait()

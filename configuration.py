@@ -56,7 +56,6 @@ class NavigationServerObject:
         if factory is None:
             self._object = self._class(self._param)
         else:
-            print(dir(self._class))
             self._object = getattr(self._class, factory)(self._param)
         return self._object
 

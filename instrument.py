@@ -26,6 +26,10 @@ class InstrumentReadError(Exception):
     pass
 
 
+class InstrumentTimeOut(InstrumentReadError):
+    pass
+
+
 class Instrument(threading.Thread):
 
     (NOT_READY, OPEN, CONNECTED, ACTIVE) = range(4)
@@ -84,6 +88,8 @@ class Instrument(threading.Thread):
                     #  message is composite
                     _logger.debug(str(data))
 
+            except InstrumentTimeOut:
+                continue
             except (socket.timeout, InstrumentReadError):
                 if self._stopflag:
                     break

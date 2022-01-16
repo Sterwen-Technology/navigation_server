@@ -20,7 +20,7 @@ class NMEA_Publisher(Publisher):
 
     def __init__(self, client, instruments: list):
 
-        super().__init__(instruments, client.descr())
+        super().__init__(None, internal=True, instruments=instruments, name=client.descr())
         self._client = client
 
         client.add_publisher(self)

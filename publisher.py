@@ -20,15 +20,21 @@ class Publisher(threading.Thread):
     '''
     Super class for all publishers
     '''
-    def __init__(self, opts):
-        name = opts['name']
-        self._opts = opts
+    def __init__(self, opts, internal=False, instruments=None, name=None):
+        if internal:
+            self._opts = None
+            self._instruments = instruments
+        else:
+            name = opts['name']
+            self._opts = opts
+            inst_list = opts['instruments']
+            self._instruments = []
+            for inst_name in inst_list:
+                self._instruments.append(self.resolve_ref(inst_name))
+
         super().__init__(name=name)
         self._name = name
-        inst_list = opts['instruments']
-        self._instruments = []
-        for inst_name in inst_list:
-            self._instruments.append(self.resolve_ref(inst_name))
+
         for inst in self._instruments:
             # print("Registering %s on %s" % (self._name, inst.name()))
             inst.register(self)
@@ -68,7 +74,7 @@ class Publisher(threading.Thread):
                     break
                 else:
                     continue
-            # print("message get in Publisher %s" % msg.decode()[:6])
+            # print("message get in Publisher %s" % msg)
             if not self.process_msg(msg):
                 break
         self.last_action()
@@ -96,11 +102,11 @@ class Publisher(threading.Thread):
 class LogPublisher(Publisher):
     def __init__(self, opts):
         super().__init__(opts)
-        self._filename = opts['filename']
+        self._filename = opts['file']
         try:
-            self._fd = open(filename, "w")
+            self._fd = open(self._filename, "w")
         except IOError as e:
-            _logger.error("Error opening logfile %s: %s" % (filename, str(e)))
+            _logger.error("Error opening logfile %s: %s" % (self._filename, str(e)))
             raise
         self._start = time.time()
         self._fd.write("NMEA LOG START TIME:%9.3f\n" % self._start)

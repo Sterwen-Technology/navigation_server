@@ -16,7 +16,7 @@ import time
 
 from server_common import NavTCPServer
 from publisher import Publisher
-from instrument import Instrument, InstrumentReadError
+from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -32,7 +32,7 @@ class ShipModulInterface(Instrument):
     @staticmethod
     def create_instrument(opts):
         # create NMEA reader on Shipmodul multiplexer
-        protocol = opts.get('protocol', 'UDP')
+        protocol = opts.get('transport', 'UDP')
 
         if protocol == "UDP":
             reader = UDP_reader(opts)
@@ -132,10 +132,12 @@ class TCP_reader(ShipModulInterface):
     def read(self):
         try:
             msg = self._socket.recv(256)
+        except TimeoutError:
+            _logger.info("Timeout error on %s" % self._name)
+            raise InstrumentTimeOut()
         except OSError as e:
-            _logger.info("Error receiving from Shipmodul: %s" % str(e))
-            msg = ''
-        # print(msg)
+            _logger.error("Error receiving from Shipmodul: %s" % str(e))
+            raise InstrumentReadError()
         return msg
 
     def send(self, msg):
@@ -152,7 +154,7 @@ class ConfigPublisher(Publisher):
     It gains exclusive access
     '''
     def __init__(self, connection, reader, server, address):
-        super().__init__([reader], "Shipmodul config publisher")
+        super().__init__(None, internal=True, instruments=[reader], name="Shipmodul config publisher")
         self._socket = connection
         self._address = address
         self._server = server
