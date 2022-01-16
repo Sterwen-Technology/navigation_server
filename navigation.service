@@ -5,7 +5,7 @@ Requires=network.target
 [Service]
 Type=simple
 User=solidsense
-ExecStart=/usr/bin/python3  /data/solidsense/navigation/navigation_server.py -a 172.16.2.100
+ExecStart=/usr/bin/python3  /data/solidsense/navigation/navigation_server.py --settings /data/solidsense/navaigation/settings.yml
 Restart=always
 RestartSec=6
 
