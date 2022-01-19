@@ -77,7 +77,7 @@ class NMEA_server(NavTCPServer):
             self._timer.cancel()
 
     def run(self):
-        _logger.info("%s ready" % self.name)
+        _logger.info("%s ready" % self.name())
         self.start_timer()
         self._socket.settimeout(5.0)
         while not self._stop_flag:

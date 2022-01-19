@@ -109,6 +109,10 @@ class NavigationConfiguration:
 
     def object_descr_iter(self, obj_type):
         servers = self._configuration[obj_type]
+        if servers is None:
+            # nothing to iterate
+            _logger.info("No %s objects in the settings file" % obj_type)
+            return
         for server in servers:
             yield server
 

@@ -36,7 +36,7 @@ class NMEA0183Sentences:
         NMEA0183Sentences._sender_id = sender_id
         NMEA0183Sentences._local_hours = time.timezone / 3600
         NMEA0183Sentences._local_minutes = time.timezone % 3600
-        print(" Local to UTC %d:%d" % (NMEA0183Sentences._local_hours, NMEA0183Sentences._local_minutes))
+        # print(" Local to UTC %d:%d" % (NMEA0183Sentences._local_hours, NMEA0183Sentences._local_minutes))
 
     def message(self):
         checksum = NMEA0183Sentences.checksum(self._sentence)
