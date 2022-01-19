@@ -160,7 +160,7 @@ class NMEA_server(NavTCPServer):
     def read_status(self):
         out = {}
         out['object'] = 'server'
-        out['name'] = self.name
+        out['name'] = self.name()
         out['port'] = self._port
         if len(self._connections) > 0:
             connections = []
