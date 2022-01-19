@@ -41,42 +41,50 @@ class iKonvertMsg():
         if len(data) < 8:
             print("iKonvert incorrect data frame len=%d" % len(data))
             return None
-        str_msg = data.decode().strip('\n\r')
+        try:
+            str_msg = data.decode().strip('\n\r')
+        except UnicodeDecodeError:
+            _logger.error("iKonvert message not valid %s" % str(data))
+            return None
+
         _logger.debug("iKonvert received:%s" % str_msg)
         fields = str_msg.split(',')
         if len(fields) < 2:
             _logger.error("iKonvert improper message")
             return
-        if fields[0][0] == '!':
-            self._type = N2K
-            self._param['pgn'] = fields[1]
-            self._param['priority'] = fields[2]
-            self._param['source'] = fields[3]
-            self._param['destination'] = fields[4]
-            self._param['timer'] = fields[5]
-            self._param['payload'] = base64.b64decode(fields[6])
-        elif fields[1][0] == '0':
-            if len(fields[3]) == 0:
+        try:
+            if fields[0][0] == '!':
+                self._type = N2K
+                self._param['pgn'] = fields[1]
+                self._param['priority'] = fields[2]
+                self._param['source'] = fields[3]
+                self._param['destination'] = fields[4]
+                self._param['timer'] = fields[5]
+                self._param['payload'] = base64.b64decode(fields[6])
+            elif fields[1][0] == '0':
+                if len(fields[3]) == 0:
+                    self._type = NOT_CONN
+                else:
+                    self._type = STATUS
+                    self._param['bus_load'] = fields[2]
+                    self._param['frame_errors'] = fields[3]
+                    self._param['nb_devices'] = fields[4]
+                    self._param['uptime'] = fields[5]
+                    self._param['CAN_address'] = fields[6]
+                    self._param['nb_rejected_PGN'] = fields[7]
+            elif fields[1] == 'TEXT':
                 self._type = NOT_CONN
+                self._param['boot'] = fields[2]
+            elif fields[1] == 'ACK':
+                self._type = ACK
+                self._param['message'] = fields[2]
+            elif fields[1] == 'NAK':
+                self._type = NAK
+                self._param['error'] = fields[2]
             else:
-                self._type = STATUS
-                self._param['bus_load'] = fields[2]
-                self._param['frame_errors'] = fields[3]
-                self._param['nb_devices'] = fields[4]
-                self._param['uptime'] = fields[5]
-                self._param['CAN_address'] = fields[6]
-                self._param['nb_rejected_PGN'] = fields[7]
-        elif fields[1] == 'TEXT':
-            self._type = NOT_CONN
-            self._param['boot'] = fields[2]
-        elif fields[1] == 'ACK':
-            self._type = ACK
-            self._param['message'] = fields[2]
-        elif fields[1] == 'NAK':
-            self._type = NAK
-            self._param['error'] = fields[2]
-        else:
-            _logger.error("iKonvert Unknown message type %s %s" % (fields[0], fields[1]))
+                _logger.error("iKonvert Unknown message type %s %s" % (fields[0], fields[1]))
+        except KeyError:
+            _logger.error("iKonvert decoding error for message %s" % fields[0])
         return self
 
     def get(self, param):
@@ -127,10 +135,12 @@ class iKonvert(Instrument):
     (WAIT_MSG, WAIT_CONN, WAIT_ACKNAK) = range(20, 23)
     end_line = '\r\n'.encode()
 
-    def __init__(self, tty_name, mode, trace=None):
-        super().__init__(name="iKonvert")
-        self._tty_name = tty_name
-        self._mode = mode  # ALL (send all PGN) or NORMAL (send only requested PGN)
+    def __init__(self, opts):
+        # opts["name"] = "iKonvert"
+        super().__init__(opts)
+        self._tty_name = opts["tty_name"]
+        trace = opts.get("trace", None)
+        self._mode = opts.get("mode", "ALL")  # ALL (send all PGN) or NORMAL (send only requested PGN)
         self._tty = None
         self._reader = None
         self._wait_sem = threading.Semaphore(0)
