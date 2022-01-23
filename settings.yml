@@ -38,10 +38,10 @@ instruments:
 
 publishers:
 
-    - MainLog:
-        class: LogPublisher
-        file: /var/log/navigation.log
-        instruments: [MiniPlex3]
+#    - MainLog:
+#       class: LogPublisher
+#        file: /data/solidsense/log/navigation.log
+#        instruments: [MiniPlex3]
 
 
 

@@ -77,7 +77,7 @@ class NMEA_server(NavTCPServer):
             self._timer.cancel()
 
     def run(self):
-        _logger.info("%s ready" % self.name)
+        _logger.info("%s ready" % self.name())
         self.start_timer()
         self._socket.settimeout(5.0)
         while not self._stop_flag:
@@ -160,7 +160,7 @@ class NMEA_server(NavTCPServer):
     def read_status(self):
         out = {}
         out['object'] = 'server'
-        out['name'] = self.name
+        out['name'] = self.name()
         out['port'] = self._port
         if len(self._connections) > 0:
             connections = []
