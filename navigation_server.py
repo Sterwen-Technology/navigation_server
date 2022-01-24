@@ -23,6 +23,8 @@ from client_publisher import *
 # from internal_gps import *
 from simulator_input import *
 from configuration import NavigationConfiguration
+from ikonvert import iKonvert
+from nmea2k_pgndefs import PGNDefinitions
 
 
 def _parser():
@@ -280,6 +282,7 @@ def main():
     config.add_class(SimulatorInput)
     config.add_class(LogPublisher)
     config.add_class(Injector)
+    config.add_class(iKonvert)
     # logger setup => stream handler for now
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
@@ -287,10 +290,9 @@ def main():
     _logger.addHandler(loghandler)
     _logger.setLevel(config.get_option('trace', 'INFO'))
 
+    # global parameters
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'SN'))
-    #  start the console
-
-    # console = Console(opts.console)
+    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", 'PGNDefns.N2kDfn.xml'))
 
     main_server = NavigationServer()
     # create the servers
