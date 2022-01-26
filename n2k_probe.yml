@@ -18,8 +18,13 @@ instruments:
 - iKonvert:
     class: iKonvert
     tty_name: /dev/ttyUSB1
+    trace: test_xte.log
 
 publishers:
+
+    - N2KTrace:
+          class: N2kTracePublisher
+          instruments: [iKonvert]
 
 #    - MainLog:
 #       class: LogPublisher

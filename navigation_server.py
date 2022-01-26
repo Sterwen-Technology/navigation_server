@@ -25,6 +25,7 @@ from simulator_input import *
 from configuration import NavigationConfiguration
 from ikonvert import iKonvert
 from nmea2k_pgndefs import PGNDefinitions
+from nmea2000_decode import N2kTracePublisher
 
 
 def _parser():
@@ -283,6 +284,7 @@ def main():
     config.add_class(LogPublisher)
     config.add_class(Injector)
     config.add_class(iKonvert)
+    config.add_class(N2kTracePublisher)
     # logger setup => stream handler for now
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")

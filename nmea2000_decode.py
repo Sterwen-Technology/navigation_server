@@ -15,6 +15,7 @@ import base64
 
 from nmea2000_msg import *
 from nmea2k_pgndefs import *
+from publisher import Publisher
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -86,6 +87,18 @@ class Options(object):
             return getattr(self.options, name)
         except AttributeError:
             raise AttributeError(name)
+
+
+class N2kTracePublisher(Publisher):
+
+    def __init__(self, opts):
+        super().__init__(opts)
+
+    def process_msg(self, msg):
+        res = msg.decode()
+        if res is not None:
+            print(res)
+        return True
 
 
 def main():
