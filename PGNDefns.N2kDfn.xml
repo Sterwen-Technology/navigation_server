@@ -6943,41 +6943,41 @@
       <Fields>
         <UIntField Name="Start WP ID">
           <BitOffset>0</BitOffset>
-          <BitLength>8</BitLength>
+          <BitLength>16</BitLength>
         </UIntField>
         <UIntField Name="nItems">
-          <BitOffset>8</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <UIntField Name="Number of valid WPs in the WP-List">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <UIntField Name="Database ID">
+        <UIntField Name="Number of valid WPs in the WP-List">
           <BitOffset>32</BitOffset>
-          <BitLength>8</BitLength>
+          <BitLength>16</BitLength>
+        </UIntField>
+        <UIntField Name="Database ID">
+          <BitOffset>48</BitOffset>
+          <BitLength>16</BitLength>
         </UIntField>
         <UIntField Name="Reserved">
           <Description>reserved</Description>
-          <BitOffset>40</BitOffset>
-          <BitLength>8</BitLength>
+          <BitOffset>64</BitOffset>
+          <BitLength>16</BitLength>
         </UIntField>
         <UIntField Name="WP ID">
-          <BitOffset>48</BitOffset>
-          <BitLength>8</BitLength>
+          <BitOffset>80</BitOffset>
+          <BitLength>16</BitLength>
         </UIntField>
         <ASCIIField Name="WP Name">
-          <BitOffset>56</BitOffset>
+          <BitOffset>96</BitOffset>
           <BitLength>64</BitLength>
         </ASCIIField>
         <DblField Name="WP Latitude">
-          <BitOffset>120</BitOffset>
+          <BitOffset>160</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Latitude</FormatAs>
           <Scale>1E-07</Scale>
         </DblField>
         <DblField Name="WP Longitude">
-          <BitOffset>152</BitOffset>
+          <BitOffset>192</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Longitude</FormatAs>
           <Scale>1E-07</Scale>

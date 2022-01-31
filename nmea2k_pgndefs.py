@@ -270,7 +270,10 @@ class Field:
             self._name, self.type(), self._start_byte, self._byte_length, self._bit_offset, self.BitLength
         ))
         '''
+        _logger.debug("Decoding field %s type %s start %d end %d (%d)" %
+                      (self._name, self.type(), self._start_byte, self._end_byte, len(payload)))
         if self._end_byte > len(payload):
+            print("ERROR=======>", len(payload), payload)
             _logger.info("Field %s not present in PGN" % self._name)
             raise N2KDecodeEOLException
         try:
@@ -358,6 +361,14 @@ class Field:
             _logger.error("Cannot decode bit fields over 3 bytes %s %s" % (self._name, self.type()))
             return 0
 
+    def extract_var_str(self, payload):
+        lg = payload[self._start_byte]
+        type_s = payload[self._start_byte+1]
+        # print(lg, type_s, payload[self._start_byte+2:self._start_byte+lg+1])
+        if type_s != 1:
+            raise N2KDecodeException("Incorrect type for String")
+        return payload[self._start_byte+2:self._start_byte+lg].decode()
+
 
 class UIntField(Field):
 
@@ -439,7 +450,8 @@ class ASCIIField(Field):
         super().__init__(xml)
 
     def decode_value(self, payload):
-        return self.decode_string(payload)
+
+        return self.extract_var_str(payload)
 
 
 class StringField(Field):
@@ -448,4 +460,4 @@ class StringField(Field):
         super().__init__(xml)
 
     def decode_value(self, payload):
-        return self.decode_string(payload)
+        return self.extract_var_str(payload)
