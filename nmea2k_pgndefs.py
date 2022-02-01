@@ -12,6 +12,7 @@
 import logging
 import sys
 import xml.etree.ElementTree as ET
+from collections import namedtuple
 
 import struct
 
@@ -76,6 +77,9 @@ class PGNDefinitions:
         return self._pgn_defs[number]
 
 
+N2KDecodeResult = namedtuple("N2KDecodeResult", ['actual_length', 'valid', 'name', 'value'])
+
+
 class PGNDef:
 
     def __init__(self, pgnxml):
@@ -102,6 +106,9 @@ class PGNDef:
                     _logger.error("Field class %s not defined" % field.tag)
                     continue
                 fo = field_class(field)
+                self._fields[fo.name] = fo
+            elif field.tag == "RepeatedFieldSet":
+                fo = RepeatedFieldSet(field, self)
                 self._fields[fo.name] = fo
 
     def __str__(self):
@@ -135,19 +142,25 @@ class PGNDef:
         result = {}
         fields: list = []
         _logger.debug("start decoding PGN %d %s payload(%d bytes) %s" % (self._id, self._name, len(data), data.hex()))
+        index = 0
         for field in self._fields.values():
-            if field.name == 'Reserved':
-                continue
             try:
-                fields.append(field.decode(data))
+                result = field.decode(data, index)
             except N2KDecodeEOLException:
                 break
+            if result.valid:
+                fields.append((result.name, result.value))
+                index += result.actual_length
+
         result['pgn'] = self._id
         result['name'] = self._name
         result['fields'] = fields
         _logger.debug("End decoding PGN %d" % self._id)
 
         return result
+
+
+DecodeSpecs = namedtuple('DecodeSpecs', ['start', 'end'])
 
 
 class Field:
@@ -259,60 +272,67 @@ class Field:
     def extract_values_param(self):
         self._start_byte = self.BitOffset // 8
         self._bit_offset = self.BitOffset % 8
-        self._byte_length = self.BitLength // 8
-        if self.BitLength % 8 != 0:
-            self._byte_length += 1
-        self._end_byte = self._start_byte + self._byte_length
+        if self.BitLength != 0:
+            self._byte_length = self.BitLength // 8
+            if self.BitLength % 8 != 0:
+                self._byte_length += 1
+            self._end_byte = self._start_byte + self._byte_length
 
-    def decode(self, payload):
+    def decode(self, payload, index):
         '''
         print("Decoding field %s type %s start %d length %d offset %d bits %d" % (
             self._name, self.type(), self._start_byte, self._byte_length, self._bit_offset, self.BitLength
         ))
         '''
-        _logger.debug("Decoding field %s type %s start %d end %d (%d)" %
-                      (self._name, self.type(), self._start_byte, self._end_byte, len(payload)))
-        if self._end_byte > len(payload):
-            print("ERROR=======>", len(payload), payload)
-            _logger.info("Field %s not present in PGN" % self._name)
-            raise N2KDecodeEOLException
+        _logger.debug("Decoding field %s type %s start %d(%d) end %d (%d)" %
+                      (self._name, self.type(), self._start_byte, index,  self._end_byte, len(payload)))
+        specs = DecodeSpecs(0, 0)
+        if self._start_byte == 0:
+            specs.start = index
+        else:
+            specs.start = self._start_byte
+        if self._byte_length != 0:
+            specs.end = specs.start + self._byte_length
+
         try:
-            return self._name, self.decode_value(payload)
+            return self._name, self.decode_value(payload, specs)
         except Exception as e:
             _logger.error("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
             raise
 
     def extract_uint_byte(self, b_dec):
+        res = N2KDecodeResult(1, True, self._name)
         val2 = struct.unpack('<B', b_dec)
         # remove the leading bits
         val = val2[0]
         if self._bit_offset != 0:
             val >>= self._bit_offset
-        val = val & self.bit_mask_l[self.BitLength]
-        return val
+        res.value = val & self.bit_mask_l[self.BitLength]
+        return res
 
-    def extract_uint(self, payload):
-        b_dec = payload[self._start_byte:self._end_byte]
+    def extract_uint(self, payload, specs):
+        b_dec = payload[specs.start:specs.end]
+        res = N2KDecodeResult(1, True, self._name)
         if self._byte_length == 1:
-            value = self.extract_uint_byte(b_dec)
+            res.value = self.extract_uint_byte(b_dec)
         elif self._byte_length == 2:
             value = struct.unpack("<H", b_dec)
-            value = value[0]
+            res.value = value[0]
         elif self._byte_length == 3:
             value = struct.unpack('<BH', b_dec)
             tmpv = value[0] + (value[1] << 8)
             _logger.debug("Decoding 3 bytes as Uint %s %X %X %X" % (str(b_dec), value[0], value[1], tmpv))
-            value = tmpv
+            res.value = tmpv
         elif self._byte_length == 4:
             value = struct.unpack('<L', b_dec)
-            value = value[0]
+            res.value = value[0]
         else:
             _logger.error("Incorrect Field length for UInt field %s type %s length %d" % (
                 self._name, self.type(), self._byte_length))
-            return 0
-        return value
+            raise N2KDecodeException()
+        return res
 
-    def extract_int(self, payload):
+    def extract_int(self, payload, specs):
         b_dec = payload[self._start_byte: self._end_byte]
         if self._bit_offset != 0 or self.BitLength < 8:
             _logger.error("Cannot Int with bit offset or not byte")
@@ -341,8 +361,8 @@ class Field:
             pass
         return value
 
-    def decode_value(self, payload):
-        b_dec = payload[self._start_byte:self._end_byte]
+    def decode_value(self, payload, specs):
+        b_dec = payload[specs.start:specs.end]
         if self._byte_length == 1:
             return self.extract_uint_byte(b_dec)
         elif self._byte_length == 2:
@@ -461,3 +481,22 @@ class StringField(Field):
 
     def decode_value(self, payload):
         return self.extract_var_str(payload)
+
+
+class RepeatedFieldSet:
+
+    def __init__(self, xml, pgn):
+        self._name = xml.attrib['Name']
+        self._pgn = pgn
+        self._count = xml.attrib["Count"]
+        self._subfields = {}
+        for field in xml.iter():
+            if field.tag.endswith('Field'):
+                try:
+                    field_class = globals()[field.tag]
+                except KeyError:
+                    _logger.error("Field class %s not defined" % field.tag)
+                    continue
+                fo = field_class(field)
+                self._subfields[fo.name] = fo
+

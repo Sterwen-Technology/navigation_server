@@ -6962,26 +6962,28 @@
           <BitOffset>64</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <UIntField Name="WP ID">
-          <BitOffset>80</BitOffset>
-          <BitLength>16</BitLength>
-        </UIntField>
-        <ASCIIField Name="WP Name">
-          <BitOffset>96</BitOffset>
-          <BitLength>64</BitLength>
-        </ASCIIField>
-        <DblField Name="WP Latitude">
-          <BitOffset>160</BitOffset>
-          <BitLength>32</BitLength>
-          <FormatAs>Latitude</FormatAs>
-          <Scale>1E-07</Scale>
-        </DblField>
-        <DblField Name="WP Longitude">
-          <BitOffset>192</BitOffset>
-          <BitLength>32</BitLength>
-          <FormatAs>Longitude</FormatAs>
-          <Scale>1E-07</Scale>
-        </DblField>
+        <RepeatedFieldSet Name="Waypoint definitions" Count="nItems">
+          <UIntField Name="WP ID">
+            <BitOffset>0</BitOffset>
+            <BitLength>16</BitLength>
+          </UIntField>
+          <ASCIIField Name="WP Name">
+            <BitOffset>16</BitOffset>
+            <BitLength>0</BitLength>
+          </ASCIIField>
+          <DblField Name="WP Latitude">
+            <BitOffset>0</BitOffset>
+            <BitLength>32</BitLength>
+            <FormatAs>Latitude</FormatAs>
+            <Scale>1E-07</Scale>
+          </DblField>
+          <DblField Name="WP Longitude">
+            <BitOffset>0</BitOffset>
+            <BitLength>32</BitLength>
+            <FormatAs>Longitude</FormatAs>
+            <Scale>1E-07</Scale>
+          </DblField>
+        </RepeatedFieldSet>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130306">
