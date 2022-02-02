@@ -140,16 +140,18 @@ class PGNDef:
         '''
 
         result = {}
-        fields: list = []
+        fields: dict = {}
         _logger.debug("start decoding PGN %d %s payload(%d bytes) %s" % (self._id, self._name, len(data), data.hex()))
         index = 0
         for field in self._fields.values():
             try:
-                result = field.decode(data, index)
+                result = field.decode(data, index, fields)
             except N2KDecodeEOLException:
                 break
+            except N2KDecodeException:
+                continue
             if result.valid:
-                fields.append((result.name, result.value))
+                fields[result.name] = result.value
                 index += result.actual_length
 
         result['pgn'] = self._id
@@ -197,6 +199,22 @@ class Field:
         0x3F,
         0x7F,
         0xFF
+    ]
+
+    uint_invalid = [
+        0x00,
+        0xFF,
+        0xFFFF,
+        0xFFFFFF,
+        0xFFFFFFFF
+    ]
+
+    int_invalid = [
+        0x00,
+        0x7F,
+        0x7FFF,
+        0x7FFFFF,
+        0x7FFFFFFF
     ]
 
     def __init__(self, xml, do_not_process=None):
@@ -258,14 +276,6 @@ class Field:
         return "%s %s offset %d length %d bit offset %d" % (self._name, self.type(),
                                                             self._start_byte,self._byte_length, self._bit_offset)
 
-    def decode_string(self, payload):
-        try:
-            return payload[self._start_byte: self._end_byte].decode()
-        except UnicodeDecodeError:
-            _logger.error("Cannot decode bytes as string start %d end %d bytes %s"% (
-                self._start_byte, self._end_byte, payload.hex()
-            ))
-
     def compute_decode_param(self):
         self.extract_values_param()
 
@@ -278,7 +288,7 @@ class Field:
                 self._byte_length += 1
             self._end_byte = self._start_byte + self._byte_length
 
-    def decode(self, payload, index):
+    def decode(self, payload, index, fields):
         '''
         print("Decoding field %s type %s start %d length %d offset %d bits %d" % (
             self._name, self.type(), self._start_byte, self._byte_length, self._bit_offset, self.BitLength
@@ -301,7 +311,7 @@ class Field:
             raise
 
     def extract_uint_byte(self, b_dec):
-        res = N2KDecodeResult(1, True, self._name)
+        res = N2KDecodeResult(1, True, self._name, 0)
         val2 = struct.unpack('<B', b_dec)
         # remove the leading bits
         val = val2[0]
@@ -312,7 +322,7 @@ class Field:
 
     def extract_uint(self, payload, specs):
         b_dec = payload[specs.start:specs.end]
-        res = N2KDecodeResult(1, True, self._name)
+        res = N2KDecodeResult(self._byte_length, True, self._name, 0)
         if self._byte_length == 1:
             res.value = self.extract_uint_byte(b_dec)
         elif self._byte_length == 2:
@@ -330,27 +340,37 @@ class Field:
             _logger.error("Incorrect Field length for UInt field %s type %s length %d" % (
                 self._name, self.type(), self._byte_length))
             raise N2KDecodeException()
+        if res.value == self.uint_invalid[self._byte_length]:
+            res.valid = False
         return res
 
     def extract_int(self, payload, specs):
-        b_dec = payload[self._start_byte: self._end_byte]
+        b_dec = payload[specs.start: specs.end]
+        res = N2KDecodeResult(self._byte_length, True, self._name, 0)
         if self._bit_offset != 0 or self.BitLength < 8:
             _logger.error("Cannot Int with bit offset or not byte")
             return 0
         if self._byte_length == 1:
             value = struct.unpack('<b', b_dec)
+            invalid = 0x7F
         elif self._byte_length == 2:
             value = struct.unpack("<h", b_dec)
+            invalid = 0x7FFF
         elif self._byte_length == 4:
             value = struct.unpack('<l', b_dec)
+            invalid = 0x7FFFFFFF
         elif self._byte_length == 8:
             value = struct.unpack('<q', b_dec)
+            invalid = 0x7FFFFFFFFFFFFFFF
         else:
             _logger.error("Incorrect Field length %s" % self._name)
-            return 0
-        return value[0]
+            raise N2KDecodeException()
+        res.value = value[0]
+        if res.value == invalid:
+            res.valid = False
+        return res
 
-    def apply_scale_offset(self, value):
+    def apply_scale_offset(self, value: float):
         try:
             value = value*self.Scale
         except AttributeError:
@@ -363,6 +383,7 @@ class Field:
 
     def decode_value(self, payload, specs):
         b_dec = payload[specs.start:specs.end]
+        res = N2KDecodeResult(self._byte_length, True, self._name, 0)
         if self._byte_length == 1:
             return self.extract_uint_byte(b_dec)
         elif self._byte_length == 2:
@@ -374,20 +395,25 @@ class Field:
             remaining_bits = 16 - (self._bit_offset + self.BitLength)
             if remaining_bits > 0:
                 val >>= remaining_bits
-            return val
+            res.value = val
+            if val == 0xFF:
+                res.valid = False
+            return res
         elif self._byte_length == 3 or self._byte_length == 4:
-            return self.extract_uint(payload)
+            return self.extract_uint(payload, specs)
         else:
             _logger.error("Cannot decode bit fields over 3 bytes %s %s" % (self._name, self.type()))
             return 0
 
-    def extract_var_str(self, payload):
-        lg = payload[self._start_byte]
-        type_s = payload[self._start_byte+1]
+    def extract_var_str(self, payload, specs):
+        lg = payload[specs.start]
+        type_s = payload[specs.start+1]
+        res = N2KDecodeResult(lg, True, self._name, 0)
         # print(lg, type_s, payload[self._start_byte+2:self._start_byte+lg+1])
         if type_s != 1:
             raise N2KDecodeException("Incorrect type for String")
-        return payload[self._start_byte+2:self._start_byte+lg].decode()
+        res.value = payload[self._start_byte+2:self._start_byte+lg].decode()
+        return res
 
 
 class UIntField(Field):
@@ -395,8 +421,8 @@ class UIntField(Field):
     def __init__(self, xml):
         super().__init__(xml)
 
-    def decode_value(self, payload):
-        return self.extract_uint(payload)
+    def decode_value(self, payload, specs):
+        return self.extract_uint(payload, specs)
 
 
 class InstanceField(Field):
@@ -427,12 +453,16 @@ class EnumField(Field):
             return self._value_pair[value]
         except KeyError:
             _logger.error("Enum %s key %d non existent" % (self._name, value))
-            return "*****"
+            return None
 
-    def decode_value(self, payload):
-        enum_index = self.extract_uint(payload)
+    def decode_value(self, payload, specs):
+        res = self.extract_uint(payload, specs)
+        enum_index = res.value
         # print("Enum",b_dec,enum_index)
-        return self.get_name(enum_index)
+        res.value = self.get_name(enum_index)
+        if res.value is None:
+            res.valid = False
+        return res
 
 
 class IntField(Field):
@@ -440,8 +470,8 @@ class IntField(Field):
     def __init__(self, xml):
         super().__init__(xml)
 
-    def decode(self, payload):
-        return self.extract_int(payload)
+    def decode_value(self, payload, specs):
+        return self.extract_int(payload, specs)
 
 
 class DblField(Field):
@@ -449,9 +479,11 @@ class DblField(Field):
     def __init__(self, xml):
         super().__init__(xml)
 
-    def decode_value(self, payload):
-        value = float(self.extract_int(payload))
-        return self.apply_scale_offset(value)
+    def decode_value(self, payload, specs):
+        res = self.extract_int(payload, specs)
+        if res.valid:
+            res.value = self.apply_scale_offset(float(res.value))
+        return res
 
 
 class UDblField(Field):
@@ -459,9 +491,11 @@ class UDblField(Field):
     def __init__(self, xml):
         super().__init__(xml)
 
-    def decode_value(self, payload):
-        value = float(self.extract_uint(payload))
-        return self.apply_scale_offset(value)
+    def decode_value(self, payload, specs):
+        res = self.extract_uint(payload, specs)
+        if res.valid:
+            res.value = self.apply_scale_offset(float(res.value))
+        return res
 
 
 class ASCIIField(Field):
@@ -469,9 +503,9 @@ class ASCIIField(Field):
     def __init__(self, xml):
         super().__init__(xml)
 
-    def decode_value(self, payload):
+    def decode_value(self, payload, specs):
 
-        return self.extract_var_str(payload)
+        return self.extract_var_str(payload, specs)
 
 
 class StringField(Field):
@@ -479,8 +513,8 @@ class StringField(Field):
     def __init__(self, xml):
         super().__init__(xml)
 
-    def decode_value(self, payload):
-        return self.extract_var_str(payload)
+    def decode_value(self, payload, specs):
+        return self.extract_var_str(payload, specs)
 
 
 class RepeatedFieldSet:
@@ -499,4 +533,20 @@ class RepeatedFieldSet:
                     continue
                 fo = field_class(field)
                 self._subfields[fo.name] = fo
+
+    @property
+    def name(self):
+        return self._name
+
+    def descr(self):
+        out = "%s %s" % (self._name, "RepeatedFieldSet")
+        for f in self._subfields.values():
+            out += '\n\t\t'
+            out += f.descr()
+        return out
+
+    def decode(self, payload, index, fields):
+        res = N2KDecodeResult(0, True, self._name, None)
+        nb_set = fields[self._count]
+
 

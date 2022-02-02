@@ -32,6 +32,8 @@ def _parser():
                    choices=["CRITICAL","ERROR", "WARNING", "INFO", "DEBUG"],
                    default="INFO",
                    help="Level of traces, default INFO")
+    p.add_argument('-p', '--print', action='store', type=str,
+                   default='ALL')
     p.add_argument("-l", "--log", action="store", type=str,
                    help="Logfile for all incoming NMEA sentences")
     p.add_argument("-t", "--trace", action="store", type=str)
@@ -113,7 +115,8 @@ def main():
         return
     print("analyzing file:", opts.xml)
     defs = PGNDefinitions.build_definitions(opts.xml)
-    # defs.print_summary()
+    if opts.print is not None:
+        defs.print_summary()
     if opts.csv_out is not None:
         print("Generating PGN CSV file %s" % opts.csv_out)
         fp = open(opts.csv_out, 'w')
