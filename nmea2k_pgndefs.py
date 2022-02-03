@@ -354,7 +354,9 @@ class Field:
             specs.end = specs.start + self._byte_length
 
         try:
-            return self.decode_value(payload, specs)
+            res = self.decode_value(payload, specs)
+            _logger.debug("Result %s=%s" % (res.name, str(res.value)))
+            return res
         except Exception as e:
             _logger.error("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
             raise
@@ -613,16 +615,22 @@ class RepeatedFieldSet:
         _logger.debug("Start decoding Repeating fields at %d number of sets %d" % (index, nb_set))
         specs = DecodeSpecs(index, 0)
         result_fields: list = []
-        for f in self._subfields.values():
-            if f.length() != 0:
-                specs.end = specs.start+f.length()
-            if specs.end > payload_l:
-                raise N2KDecodeEOLException
-            l_res = f.decode_value(payload, specs)
-            if l_res.valid:
-                result_fields.append((l_res.name, l_res.value))
-            specs.start += l_res.actual_length
-            res.actual_length += l_res.actual_length
+        decoded_set = 0
+        while decoded_set < nb_set:
+            for f in self._subfields.values():
+                if f.length() != 0:
+                    specs.end = specs.start+f.length()
+                if specs.end > payload_l:
+                    raise N2KDecodeEOLException
+                _logger.debug("Decoding field %s type %s start %d end %d" %
+                              (f.name, f.type(), specs.start, specs.end))
+                l_res = f.decode_value(payload, specs)
+                if l_res.valid:
+                    result_fields.append((l_res.name, l_res.value))
+                _logger.debug("Result %s=%s" % (f.name, str(l_res.value)))
+                specs.start += l_res.actual_length
+                res.actual_length += l_res.actual_length
+            decoded_set += 1
 
         res.value = result_fields
         return res
