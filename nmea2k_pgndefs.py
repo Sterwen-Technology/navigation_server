@@ -185,6 +185,8 @@ class PGNDef:
             except N2KDecodeException:
                 continue
             index += inner_result.actual_length
+            if inner_result.name == "Reserved":
+                continue
             if inner_result.valid:
                 fields[inner_result.name] = inner_result.value
 
@@ -355,7 +357,11 @@ class Field:
 
         try:
             res = self.decode_value(payload, specs)
-            _logger.debug("Result %s=%s" % (res.name, str(res.value)))
+            if res.valid:
+                validity = "valid"
+            else:
+                validity = "invalid"
+            _logger.debug("Result %s=%s %s" % (res.name, str(res.value),validity))
             return res
         except Exception as e:
             _logger.error("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
@@ -466,9 +472,13 @@ class Field:
         res = N2KDecodeResult(self._name)
         res.actual_length = lg
         # print(lg, type_s, payload[self._start_byte+2:self._start_byte+lg+1])
-        if type_s != 1:
-            raise N2KDecodeException("Incorrect type for String")
+        if type_s != 1 and lg > 2:
+            res.invalid()
+            return
         specs.end = specs.start + lg
+        if lg == 2:
+            res.value = "None"
+            return res
         if specs.end > len(payload):
             raise N2KDecodeEOLException
         res.value = payload[specs.start+2:specs.end].decode()
@@ -542,6 +552,7 @@ class DblField(Field):
 
     def decode_value(self, payload, specs):
         res = self.extract_int(payload, specs)
+        # print("Dbl result %X" % res.value, "Valid", res.valid)
         if res.valid:
             res.value = self.apply_scale_offset(float(res.value))
         return res

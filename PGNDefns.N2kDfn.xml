@@ -3485,40 +3485,37 @@
           <BitOffset>66</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>68</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <Field Name="Route Name">
+        <ASCIIField Name="Route Name">
           <BitOffset>72</BitOffset>
-          <BitLength>2040</BitLength>
-        </Field>
-        <Field Name="Reserved">
+          <BitLength>0</BitLength>
+        </ASCIIField>
+        <UintField Name="Reserved">
           <Description>Reserved</Description>
-          <BitOffset>2112</BitOffset>
+          <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
-        </Field>
-        <UIntField Name="WP ID">
-          <BitOffset>2120</BitOffset>
-          <BitLength>16</BitLength>
-        </UIntField>
-        <Field Name="WP Name">
-          <BitOffset>2136</BitOffset>
-          <BitLength>2040</BitLength>
-        </Field>
-        <DblField Name="WP Latitude">
-          <BitOffset>4176</BitOffset>
-          <BitLength>32</BitLength>
-          <FormatAs>Latitude</FormatAs>
-          <Scale>1E-07</Scale>
-        </DblField>
-        <DblField Name="WP Longitude">
-          <BitOffset>4208</BitOffset>
-          <BitLength>32</BitLength>
-          <FormatAs>Longitude</FormatAs>
-          <Scale>1E-07</Scale>
-        </DblField>
+        </UintField>
+        <RepeatedFieldSet Name="WP Definitions" Count="nItems">
+          <UIntField Name="WP ID">
+            <BitOffset>0</BitOffset>
+            <BitLength>16</BitLength>
+          </UIntField>
+          <ASCIIField Name="WP Name">
+            <BitOffset>2</BitOffset>
+            <BitLength>0</BitLength>
+          </ASCIIField>
+          <DblField Name="WP Latitude">
+            <BitOffset>0</BitOffset>
+            <BitLength>32</BitLength>
+            <FormatAs>Latitude</FormatAs>
+            <Scale>1E-07</Scale>
+          </DblField>
+          <DblField Name="WP Longitude">
+            <BitOffset>0</BitOffset>
+            <BitLength>32</BitLength>
+            <FormatAs>Longitude</FormatAs>
+            <Scale>1E-07</Scale>
+          </DblField>
+        </RepeatedFieldSet>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129291">
