@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <PGNDefnCollection xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="0.1">
-  <Date>$Date: 2012-03-14 16:30:42 +0100 (wo, 14 mrt 2012) $</Date>
-  <Comment>Test Run</Comment>
-  <CreatorCode>Keversoft NMEA2000 Analyzer</CreatorCode>
+  <Date>$Date: 2022-02-01$</Date>
+  <Comment>Test Version</Comment>
+  <CreatorCode>Sterwen Technology from Keversoft NMEA2000 Analyzer</CreatorCode>
   <PGNDefns>
     <PGNDefn PGN="59392">
       <Name>ISO Acknowledgement</Name>
@@ -755,7 +755,7 @@
         </UIntField>
       </Fields>
     </PGNDefn>
-    <PGNDefn PGN="126720">
+    <PGNDefn PGN="996720">
       <Name>Airmar: Calibrate Compass</Name>
       <ByteLength>24</ByteLength>
       <Fields>
@@ -864,7 +864,7 @@
         </DblField>
       </Fields>
     </PGNDefn>
-    <PGNDefn PGN="126720">
+    <PGNDefn PGN="996720">
       <Name>Airmar: Attitude Offset</Name>
       <ByteLength>9</ByteLength>
       <Fields>
@@ -911,7 +911,7 @@
         </DblField>
       </Fields>
     </PGNDefn>
-    <PGNDefn PGN="126720">
+    <PGNDefn PGN="996720">
       <Name>Airmar: True Wind Options</Name>
       <ByteLength>24</ByteLength>
       <Fields>
@@ -1017,7 +1017,7 @@
         </DblField>
       </Fields>
     </PGNDefn>
-    <PGNDefn PGN="126720">
+    <PGNDefn PGN="996720">
       <Name>Manufacturer Propietary: Addressable Multi-Frame</Name>
       <ByteLength>2</ByteLength>
       <Fields>
@@ -1033,6 +1033,7 @@
           <BitOffset>13</BitOffset>
           <BitLength>3</BitLength>
           <EnumValues>
+            <EnumPair Value="0" Name="Unknown" />
             <EnumPair Value="4" Name="Marine" />
           </EnumValues>
         </EnumField>
@@ -1055,7 +1056,10 @@
           <Description>Marine Industry</Description>
           <BitOffset>13</BitOffset>
           <BitLength>3</BitLength>
-          <EnumValues />
+          <EnumValues>
+            <EnumPair Value="0" Name="Unknown" />
+            <EnumPair Value="4" Name="Marine" />
+          </EnumValues>
         </EnumField>
         <IntField Name="Proprietary ID">
           <BitOffset>16</BitOffset>
@@ -1288,6 +1292,11 @@
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
         </InstanceField>
+        <Field Name="Reserved">
+          <Description>Reserved</Description>
+          <BitOffset>8</BitOffset>
+          <BitLength>5</BitLength>
+        </Field>
         <EnumField Name="Direction Order">
           <BitOffset>8</BitOffset>
           <BitLength>3</BitLength>
@@ -1295,13 +1304,9 @@
             <EnumPair Value="0" Name="No direction order" />
             <EnumPair Value="1" Name="Move to starboard" />
             <EnumPair Value="2" Name="Move to port" />
+            <EnumPair Value="7" Name="Unavailable" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>10</BitOffset>
-          <BitLength>5</BitLength>
-        </Field>
         <DblField Name="Angle Order">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
@@ -2598,23 +2603,8 @@
           <BitLength>64</BitLength>
           <Scale>1E-6</Scale>
         </DblField>
-        <EnumField Name="GNSS type">
-          <BitOffset>248</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="GPS" />
-            <EnumPair Value="1" Name="GLONASS" />
-            <EnumPair Value="2" Name="GPS+GLONASS" />
-            <EnumPair Value="3" Name="GPS+SBAS/WAAS" />
-            <EnumPair Value="4" Name="GPS+SBAS/WAAS+GLONASS" />
-            <EnumPair Value="5" Name="Chayka" />
-            <EnumPair Value="6" Name="integrated" />
-            <EnumPair Value="7" Name="surveyed" />
-            <EnumPair Value="8" Name="Galileo" />
-          </EnumValues>
-        </EnumField>
         <EnumField Name="Method">
-          <BitOffset>252</BitOffset>
+          <BitOffset>248</BitOffset>
           <BitLength>4</BitLength>
           <EnumValues>
             <EnumPair Value="0" Name="no GNSS" />
@@ -2626,6 +2616,21 @@
             <EnumPair Value="6" Name="Estimated (DR) mode" />
             <EnumPair Value="7" Name="Manual Input" />
             <EnumPair Value="8" Name="Simulate mode" />
+          </EnumValues>
+        </EnumField>
+        <EnumField Name="GNSS type">
+          <BitOffset>252</BitOffset>
+          <BitLength>4</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="GPS" />
+            <EnumPair Value="1" Name="GLONASS" />
+            <EnumPair Value="2" Name="GPS+GLONASS" />
+            <EnumPair Value="3" Name="GPS+SBAS/WAAS" />
+            <EnumPair Value="4" Name="GPS+SBAS/WAAS+GLONASS" />
+            <EnumPair Value="5" Name="Chayka" />
+            <EnumPair Value="6" Name="integrated" />
+            <EnumPair Value="7" Name="surveyed" />
+            <EnumPair Value="8" Name="Galileo" />
           </EnumValues>
         </EnumField>
         <EnumField Name="Integrity">
@@ -2662,38 +2667,40 @@
         <DblField Name="Geoidal Separation">
           <Description>Geoidal Separation</Description>
           <BitOffset>304</BitOffset>
-          <BitLength>16</BitLength>
+          <BitLength>32</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <UIntField Name="Reference Stations">
+        <UIntField Name="nStations">
           <Description>Number of reference stations</Description>
-          <BitOffset>320</BitOffset>
+          <BitOffset>336</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <EnumField Name="Reference Station Type">
-          <BitOffset>328</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="GPS" />
-            <EnumPair Value="1" Name="GLONASS" />
-            <EnumPair Value="2" Name="GPS+GLONASS" />
-            <EnumPair Value="3" Name="GPS+SBAS/WAAS" />
-            <EnumPair Value="4" Name="GPS+SBAS/WAAS+GLONASS" />
-            <EnumPair Value="5" Name="Chayka" />
-            <EnumPair Value="6" Name="integrated" />
-            <EnumPair Value="7" Name="surveyed" />
-            <EnumPair Value="8" Name="Galileo" />
-          </EnumValues>
-        </EnumField>
-        <UIntField Name="Reference Station ID">
-          <BitOffset>332</BitOffset>
-          <BitLength>12</BitLength>
-        </UIntField>
-        <DblField Name="Age of DGNSS Corrections">
-          <BitOffset>344</BitOffset>
-          <BitLength>16</BitLength>
-          <Scale>0.01</Scale>
-        </DblField>
+        <RepeatedFieldSet Name="Reference Stations" Count="nStations">
+          <UIntField Name="Reference Station ID">
+            <BitOffset>0</BitOffset>
+            <BitLength>4</BitLength>
+          </UIntField>
+          <EnumField Name="Reference Station Type">
+            <BitOffset>4</BitOffset>
+            <BitLength>4</BitLength>
+            <EnumValues>
+              <EnumPair Value="0" Name="GPS" />
+              <EnumPair Value="1" Name="GLONASS" />
+              <EnumPair Value="2" Name="GPS+GLONASS" />
+              <EnumPair Value="3" Name="GPS+SBAS/WAAS" />
+              <EnumPair Value="4" Name="GPS+SBAS/WAAS+GLONASS" />
+              <EnumPair Value="5" Name="Chayka" />
+              <EnumPair Value="6" Name="integrated" />
+              <EnumPair Value="7" Name="surveyed" />
+              <EnumPair Value="8" Name="Galileo" />
+            </EnumValues>
+          </EnumField>
+          <DblField Name="Age of DGNSS Corrections">
+            <BitOffset>8</BitOffset>
+            <BitLength>16</BitLength>
+            <Scale>0.01</Scale>
+          </DblField>
+        </RepeatedFieldSet>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129033">
@@ -3477,23 +3484,23 @@
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <UIntField Name="Navigation direction in route">
-          <BitOffset>64</BitOffset>
-          <BitLength>2</BitLength>
-        </UIntField>
         <UIntField Name="Supplementary Route/WP data available">
           <BitOffset>66</BitOffset>
           <BitLength>2</BitLength>
+        </UIntField>
+        <UIntField Name="Navigation direction in route">
+          <BitOffset>68</BitOffset>
+          <BitLength>4</BitLength>
         </UIntField>
         <ASCIIField Name="Route Name">
           <BitOffset>72</BitOffset>
           <BitLength>0</BitLength>
         </ASCIIField>
-        <UintField Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
-        </UintField>
+        </UIntField>
         <RepeatedFieldSet Name="WP Definitions" Count="nItems">
           <UIntField Name="WP ID">
             <BitOffset>0</BitOffset>
@@ -3737,10 +3744,16 @@
             <EnumPair Value="4" Name="Reserved" />
             <EnumPair Value="5" Name="Reserved" />
             <EnumPair Value="6" Name="Error" />
+            <EnumPair Value="7" Name="Unknown" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="Actual Mode">
+        <Field Name="Reserved">
+          <Description>Reserved</Description>
           <BitOffset>11</BitOffset>
+          <BitLength>2</BitLength>
+        </Field>
+        <EnumField Name="Actual Mode">
+          <BitOffset>13</BitOffset>
           <BitLength>3</BitLength>
           <EnumValues>
             <EnumPair Value="0" Name="1D" />
@@ -3750,13 +3763,9 @@
             <EnumPair Value="4" Name="Reserved" />
             <EnumPair Value="5" Name="Reserved" />
             <EnumPair Value="6" Name="Error" />
+            <EnumPair Value="7" Name="Unknown" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>14</BitOffset>
-          <BitLength>2</BitLength>
-        </Field>
         <DblField Name="HDOP">
           <Description>Horizontal dilution of precision</Description>
           <BitOffset>16</BitOffset>
@@ -7003,20 +7012,28 @@
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
         </UDblField>
-        <EnumField Name="Reference">
+        <UIntField Name="Reserved">
+          <Description>Reserved</Description>
           <BitOffset>40</BitOffset>
+          <BitLength>5</BitLength>
+        </UIntField>
+        <EnumField Name="Reference">
+          <BitOffset>45</BitOffset>
           <BitLength>3</BitLength>
           <EnumValues>
             <EnumPair Value="0" Name="True (referenced to North)" />
             <EnumPair Value="1" Name="Magnetic" />
             <EnumPair Value="2" Name="Apparent" />
             <EnumPair Value="3" Name="True (boat referenced)" />
+            <EnumPair Value="4" Name="True (water referenced)"/>
+            <EnumPair Value="6" Name="Error"/>
+            <EnumPair Value="7" Name="Unavailable"/>
           </EnumValues>
         </EnumField>
         <UIntField Name="Reserved">
           <Description>Reserved</Description>
-          <BitOffset>43</BitOffset>
-          <BitLength>19</BitLength>
+          <BitOffset>48</BitOffset>
+          <BitLength>16</BitLength>
         </UIntField>
       </Fields>
     </PGNDefn>

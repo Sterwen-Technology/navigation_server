@@ -84,6 +84,7 @@ class N2KDecodeResult:
         self._name = name
         self._valid = True
         self._value = None
+        self._increment = True
 
     @property
     def actual_length(self):
@@ -105,12 +106,19 @@ class N2KDecodeResult:
     def value(self):
         return self._value
 
+    @property
+    def increment(self):
+        return self._increment
+
     @value.setter
     def value(self, val):
         self._value = val
 
     def invalid(self):
         self._valid = False
+
+    def no_increment(self):
+        self._increment = False
 
 
 class PGNDef:
@@ -181,10 +189,13 @@ class PGNDef:
             try:
                 inner_result = field.decode(data, index, fields)
             except N2KDecodeEOLException:
+                _logger.error("EOL error in PGN %s" % self._id_str)
                 break
-            except N2KDecodeException:
+            except N2KDecodeException as e:
+                _logger.error("Decoding error in PGN %s: %s" % (self._id_str, str(e)))
                 continue
-            index += inner_result.actual_length
+            if inner_result.increment:
+                index += inner_result.actual_length
             if inner_result.name == "Reserved":
                 continue
             if inner_result.valid:
@@ -364,8 +375,8 @@ class Field:
             _logger.debug("Result %s=%s %s" % (res.name, str(res.value),validity))
             return res
         except Exception as e:
-            _logger.error("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
-            raise
+            # _logger.error("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
+            raise N2KDecodeException("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
 
     def extract_uint_byte(self, b_dec):
         res = N2KDecodeResult(self._name)
@@ -373,9 +384,12 @@ class Field:
         val2 = struct.unpack('<B', b_dec)
         # remove the leading bits
         val = val2[0]
+        # print("Byte decode",self._name,"byte:",b_dec,"Offset",self._bit_offset,"length",self.BitLength,":%X"%val)
         if self._bit_offset != 0:
-            val >>= self._bit_offset
+            val >>= 8-(self._bit_offset + self.BitLength)
         res.value = val & self.bit_mask_l[self.BitLength]
+        if self._bit_offset + self.BitLength < 8:
+            res.no_increment()
         return res
 
     def extract_uint(self, payload, specs):
@@ -396,9 +410,8 @@ class Field:
             value = struct.unpack('<L', b_dec)
             res.value = value[0]
         else:
-            _logger.error("Incorrect Field length for UInt field %s type %s length %d" % (
+            raise N2KDecodeException("Incorrect Field length for UInt field %s type %s length %d" % (
                 self._name, self.type(), self._byte_length))
-            raise N2KDecodeException()
         if res.value == self.uint_invalid[self._byte_length]:
             res.invalid()
         return res
@@ -408,8 +421,8 @@ class Field:
         res = N2KDecodeResult(self._name)
         res.actual_length = self._byte_length
         if self._bit_offset != 0 or self.BitLength < 8:
-            _logger.error("Cannot Int with bit offset or not byte")
-            return 0
+            raise N2KDecodeException("Cannot decode Int with bit offset or not byte")
+
         if self._byte_length == 1:
             value = struct.unpack('<b', b_dec)
             invalid = 0x7F
@@ -423,8 +436,7 @@ class Field:
             value = struct.unpack('<q', b_dec)
             invalid = 0x7FFFFFFFFFFFFFFF
         else:
-            _logger.error("Incorrect Field length %s" % self._name)
-            raise N2KDecodeException()
+            raise N2KDecodeException("Incorrect Field length %s" % self._name)
         res.value = value[0]
         if res.value == invalid:
             res.invalid()
@@ -463,7 +475,7 @@ class Field:
         elif self._byte_length == 3 or self._byte_length == 4:
             return self.extract_uint(payload, specs)
         else:
-            _logger.error("Cannot decode bit fields over 3 bytes %s %s" % (self._name, self.type()))
+            # _logger.error("Cannot decode bit fields over 3 bytes %s %s" % (self._name, self.type()))
             raise N2KDecodeException("Cannot decode bit fields over 3 bytes %s %s" % (self._name, self.type()))
 
     def extract_var_str(self, payload, specs):
@@ -521,8 +533,9 @@ class EnumField(Field):
         try:
             return self._value_pair[value]
         except KeyError:
-            _logger.error("Enum %s key %d non existent" % (self._name, value))
-            return None
+            #_logger.error("Enum %s key %d non existent" % (self._name, value))
+            # return None
+            raise N2KDecodeException("Enum %s key %d non existent" % (self._name, value))
 
     def decode_value(self, payload, specs):
         res = self.extract_uint(payload, specs)
@@ -619,9 +632,15 @@ class RepeatedFieldSet:
 
     def decode(self, payload, index, fields):
         res = N2KDecodeResult(self._name)
-        nb_set = fields[self._count]
+        try:
+            nb_set = fields[self._count]
+        except KeyError:
+            nb_set = 0
         if nb_set < 1:
-            raise N2KDecodeException("Number of field sets wrong value(0)")
+            _logger.info("Field set %s empty" % self._name)
+            res.invalid()
+            res.actual_length = 0
+            return res
         payload_l = len(payload)
         _logger.debug("Start decoding Repeating fields at %d number of sets %d" % (index, nb_set))
         specs = DecodeSpecs(index, 0)
