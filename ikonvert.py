@@ -198,7 +198,7 @@ class iKonvert(Instrument):
                              int(msg.get('source')),
                              int(msg.get('destination')),
                              msg.get('payload'))
-        #  n2k_msg.display()
+        # n2k_msg.display()
         try:
             self._queue.put(n2k_msg, block=False)
         except queue.Full:

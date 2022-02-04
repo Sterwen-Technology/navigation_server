@@ -37,14 +37,15 @@ class J1939_msg:
 
     def display(self):
         pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
-        print("PGN %d|%04X|%s" % (self._pgn, self._pgn, pgn_def.name))
+        print("PGN %d|%04X|%s|time:%d" % (self._pgn, self._pgn, pgn_def.name,self._ts))
 
     def __str__(self):
         if self._pgn == 0:
             return "Dummy PGN 0"
         else:
             pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
-            return "PGN %d|%04X|%s sa=%d data:%s" % (self._pgn, self._pgn, pgn_def.name, self._sa, self._payload.hex())
+            return "PGN %d|%04X|%s sa=%d time=%d data:%s" % (self._pgn, self._pgn, pgn_def.name, self._sa, self._ts,
+                                                             self._payload.hex())
 
     def as_protobuf(self):
         res = j1939()
@@ -102,12 +103,14 @@ class PgnRecord:
 
 class N2KProbePublisher(Publisher):
 
-    def __init__(self, instrument, interval: float):
-        self._interval = int(interval * 1e9)
+    def __init__(self, opts):
+        _logger.info("Instantiating N2KProbePublisher")
+        self._interval = int(opts['interval']) * 1e9
         self._records = {}
-        super().__init__([instrument], "ProbePublisher")
+        super().__init__(opts)
 
     def process_msg(self, msg):
+        # print("Process msg pgn", msg.pgn)
         clock = time.time_ns()
         display = False
         if msg.pgn == 0:

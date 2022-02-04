@@ -26,6 +26,7 @@ from configuration import NavigationConfiguration
 from ikonvert import iKonvert
 from nmea2k_pgndefs import PGNDefinitions
 from nmea2000_decode import N2kTracePublisher
+from nmea2000_msg import N2KProbePublisher
 
 
 def _parser():
@@ -211,12 +212,14 @@ class NavigationServer:
         self._servers.append(server)
 
     def start(self):
+        '''
         def start_publisher(pub):
             for instrument in self._instruments:
                 instrument.register(pub)
             pub.start()
+            '''
         for publisher in self._publishers:
-            start_publisher(publisher)
+            publisher.start()
         for server in self._servers:
             server.start()
         for inst in self._instruments:
@@ -308,9 +311,11 @@ def main():
     # create the publishers
     for pub_descr in config.publishers():
         publisher = pub_descr.build_object()
+        print(publisher.descr())
         main_server.add_publisher(publisher)
 
     main_server.start()
+    print_threads()
     main_server.wait()
 
 

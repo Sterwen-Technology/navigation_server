@@ -66,15 +66,18 @@ class Publisher(threading.Thread):
         self.deregister()
 
     def run(self) -> None:
+        _logger.info("Starting Publisher %s" % self._name)
         while not self._stopflag:
+            count = 0
             try:
                 msg = self._queue.get(timeout=1.0)
+                count += 1
             except queue.Empty:
                 if self._stopflag:
                     break
                 else:
                     continue
-            # print("message get in Publisher %s" % msg)
+            # print("message get in Publisher %s" % msg, count, self.ident)
             if not self.process_msg(msg):
                 break
         self.last_action()

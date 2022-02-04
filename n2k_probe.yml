@@ -17,8 +17,8 @@ instruments:
 
 - iKonvert:
     class: iKonvert
-    tty_name: /dev/ttyUSB1
-    trace: test_xte.log
+    tty_name: /dev/ttyUSB0
+    trace: /mnt/meaban/Bateau/tests/test220204-1.log
 
 publishers:
 

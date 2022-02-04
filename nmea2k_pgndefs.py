@@ -310,7 +310,7 @@ class Field:
         try:
             set_as_attr, attr_type = attr_def[xml.tag]
         except KeyError:
-            print("Missing attribute definition", xml.tag)
+            _logger.error("Missing attribute definition %s" % xml.tag)
             return None
 
         if attr_type == str:
