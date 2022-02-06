@@ -7006,12 +7006,12 @@
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <UDblField Name="Wind Angle">
+        <DblField Name="Wind Angle">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
-        </UDblField>
+        </DblField>
         <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>40</BitOffset>
