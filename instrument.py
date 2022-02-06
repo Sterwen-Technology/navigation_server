@@ -104,7 +104,7 @@ class Instrument(threading.Thread):
 
     def register(self, pub):
         self._publishers.append(pub)
-        print("Instrument %s register %s" % (self._name, pub.name()))
+        # print("Instrument %s register %s" % (self._name, pub.name()))
 
     def deregister(self, pub):
         try:
@@ -114,7 +114,7 @@ class Instrument(threading.Thread):
             pass
 
     def publish(self, msg):
-        print("Publishing on %d publishers" % len(self._publishers))
+        # print("Publishing on %d publishers" % len(self._publishers))
         for p in self._publishers:
             p.publish(msg)
 

@@ -269,11 +269,11 @@ class Field:
     ]
 
     uint_invalid = [
-        0x00,
-        0xFF,
-        0xFFFF,
-        0xFFFFFF,
-        0xFFFFFFFF
+        0x00,  # this shall never happen
+        0xFF,  # 1 byte
+        0xFFFF,  # 2 bytes
+        0xFFFFFF,  # 3 bytes
+        0xFFFFFFFF  # 4 bytes
     ]
 
     def __init__(self, xml, do_not_process=None):
@@ -412,6 +412,7 @@ class Field:
         else:
             raise N2KDecodeException("Incorrect Field length for UInt field %s type %s length %d" % (
                 self._name, self.type(), self._byte_length))
+        # print("%X %X"%(res.value, self.uint_invalid[self._byte_length]))
         if res.value == self.uint_invalid[self._byte_length]:
             res.invalid()
         return res
