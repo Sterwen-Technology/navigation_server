@@ -430,6 +430,7 @@ class Field:
         elif self._byte_length == 2:
             value = struct.unpack("<h", b_dec)
             invalid = 0x7FFF
+            print(specs.start, specs.end, b_dec, value[0])
         elif self._byte_length == 4:
             value = struct.unpack('<l', b_dec)
             invalid = 0x7FFFFFFF
