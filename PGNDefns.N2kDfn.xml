@@ -1135,7 +1135,7 @@
     </PGNDefn>
     <PGNDefn PGN="126996">
       <Name>Product Information</Name>
-      <ByteLength>134</ByteLength>
+      <ByteLength>-1</ByteLength>
       <Fields>
         <UIntField Name="NMEA 2000 Version">
           <BitOffset>0</BitOffset>
@@ -3375,11 +3375,11 @@
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <DblField Name="Distance to Waypoint">
+        <UDblField Name="Distance to Waypoint">
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
           <Scale>0.01</Scale>
-        </DblField>
+        </UDblField>
         <EnumField Name="Course/Bearing reference">
           <BitOffset>40</BitOffset>
           <BitLength>2</BitLength>
@@ -7006,12 +7006,12 @@
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <DblField Name="Wind Angle">
+        <UDblField Name="Wind Angle">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
-        </DblField>
+        </UDblField>
         <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>40</BitOffset>
