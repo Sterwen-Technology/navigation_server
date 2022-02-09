@@ -17,7 +17,7 @@ import base64
 import datetime
 
 from instrument import Instrument, InstrumentReadError
-from nmea2000_msg import J1939_msg
+from nmea2000_msg import NMEA2000Msg
 
 _logger = logging.getLogger("ShipDataServer")
 (UNKNOWN, STATUS, NOT_CONN, ACK, NAK, N2K) = range(6)
@@ -193,7 +193,7 @@ class iKonvert(Instrument):
 
     def process_n2k(self, msg):
         # print("N2K message received pgn %s" % msg.get('pgn'))
-        n2k_msg = J1939_msg( int(msg.get('pgn')),
+        n2k_msg = NMEA2000Msg( int(msg.get('pgn')),
                              int(msg.get('priority')),
                              int(msg.get('source')),
                              int(msg.get('destination')),
@@ -265,7 +265,7 @@ class iKonvert(Instrument):
             self.send_loc_cmd('N2NET_OFFLINE', wait=0)
             self.wait_status()
         self._reader.stop()
-        self._queue.put(J1939_msg(0,0,0,0,None))
+        self._queue.put(NMEA2000Msg(0))
         self._ikstate = self.IKIDLE
 
     def close(self):

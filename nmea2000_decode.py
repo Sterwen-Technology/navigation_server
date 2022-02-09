@@ -60,7 +60,7 @@ def file_input(filename, pgn_active, outfd=sys.stdout):
         sa = int(fields[3])
         da = int(fields[4])
         payload = base64.b64decode(fields[6])
-        msg = J1939_msg(pgn, prio, sa, da, payload)
+        msg = NMEA2000Msg(pgn, prio, sa, da, payload)
         outfd.write(timestamp)
         outfd.write('|')
         outfd.write(str(msg))
@@ -70,7 +70,7 @@ def file_input(filename, pgn_active, outfd=sys.stdout):
             outfd.write(str(res))
             outfd.write('\n')
             if msg.pgn == 126992:
-                o = J1939Factory.build(msg, res['fields'])
+                o = NMEA2000Factory.build(msg, res['fields'])
         outfd.flush()
 
 
@@ -95,12 +95,38 @@ class N2kTracePublisher(Publisher):
 
     def __init__(self, opts):
         super().__init__(opts)
+        pgn_filter = opts.get('filter', None)
+        if pgn_filter is not None:
+            self._filter = pgn_list(pgn_filter)
+        else:
+            self._filter = None
+        self._print_option = opts.get('print', 'ALL')
 
     def process_msg(self, msg):
         res = msg.decode()
+        if self._print_option == 'NONE':
+            return True
+        if self._filter is not None:
+            if msg.pgn not in self._filter:
+                return True
         if res is not None:
             print(res)
         return True
+
+
+def pgn_list(str_filter):
+    res = []
+    str_pgn_list = str_filter.split(',')
+    pgn_defs = PGNDefinitions.pgn_defs()
+    for str_pgn in str_pgn_list:
+        pgn = int(str_pgn)
+        try:
+            pgn_d = pgn_defs.pgn_def(pgn)
+        except KeyError:
+            print("Invalid PGN:", pgn, "Ignored")
+            continue
+        res.append(pgn)
+    return res
 
 
 def main():
@@ -128,9 +154,7 @@ def main():
         pgn_active = []
         if opts.filter is not None:
             print(opts.filter)
-            pgn_list_s = opts.filter.split(',')
-            for s in pgn_list_s:
-                pgn_active.append(int(s))
+            pgn_active = pgn_list(opts.filter)
         if opts.output_file is not None:
             ofd = open(opts.output_file, "w")
         else:

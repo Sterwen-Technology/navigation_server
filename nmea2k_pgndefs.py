@@ -132,8 +132,17 @@ class PGNDef:
         bl = pgnxml.find('ByteLength')
         if bl is not None:
             self._byte_length = int(bl.text)
+            if self._byte_length <= 0:
+                self._variable_length = True
+            else:
+                self._variable_length = False
+            if self._byte_length > 8:
+                self._fast_packet = True
         else:
             self._byte_length = 0
+            self._variable_length = True
+            self._fast_packet = True
+
         fields = pgnxml.find('Fields')
         if fields is None:
             _logger.info("PGN %s has no Fields" % self._id_str)
@@ -281,6 +290,7 @@ class Field:
         self._end_byte = 0
         self._bit_offset = 0
         self._byte_length = 0
+        self._variable_length = False
         self._name = xml.attrib['Name']
         self._attributes = {}
         # print("Field name:", self._name, "class:", self.__class__.__name__)
@@ -344,11 +354,13 @@ class Field:
     def extract_values_param(self):
         self._start_byte = self.BitOffset // 8
         self._bit_offset = self.BitOffset % 8
-        if self.BitLength != 0:
+        if self.BitLength > 0:
             self._byte_length = self.BitLength // 8
             if self.BitLength % 8 != 0:
                 self._byte_length += 1
             self._end_byte = self._start_byte + self._byte_length
+        else:
+            self._variable_length = True
 
     def decode(self, payload, index, fields):
         '''
@@ -430,7 +442,7 @@ class Field:
         elif self._byte_length == 2:
             value = struct.unpack("<h", b_dec)
             invalid = 0x7FFF
-            print(specs.start, specs.end, b_dec, value[0])
+            #  print(specs.start, specs.end, b_dec, value[0])
         elif self._byte_length == 4:
             value = struct.unpack('<l', b_dec)
             invalid = 0x7FFFFFFF
