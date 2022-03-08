@@ -30,7 +30,19 @@ instruments:
     transport: TCP
     server: NMEAServer
 
+- YDEthernet:
+    class: IPInstrument
+    address: 192.168.1.60
+    port: 1456
+    transport: TCP
+    protocol: NMEA0183
+
 publishers:
+
+- EthInjector:
+      class: Injector
+      instruments: [ScannavReplay]
+      target: YDEthernet
 
 #    - MainLog:
 #       class: LogPublisher

@@ -31,7 +31,8 @@ class IPInstrument(Instrument):
         super().__init__(opts)
         self._address = opts['address']
         self._port = opts['port']
-        self._protocol = opts.get('protocol', 'TCP')
+
+        self._protocol = opts.get('transport', 'TCP')
         if self._protocol == 'TCP':
             self._transport = TCP_reader(self._address, self._port)
         elif self._protocol == 'UDP':
@@ -62,6 +63,7 @@ class IP_transport():
     def __init__(self, address, port):
         self._address = address
         self._port = port
+        self._ref = "%s:%d" % (self._address, self._port)
         self._socket = None
 
     def close(self):
@@ -80,7 +82,7 @@ class UDP_reader(IP_transport):
         try:
             self._socket.bind(('', self._port))
         except OSError as e:
-            _logger.error("Error opening UDP socket:%s" % str(e))
+            _logger.error("Error opening UDP socket %s:%s" % (self._ref, str(e)))
             self._socket.close()
             return False
         self._socket.settimeout(5.0)
@@ -99,7 +101,7 @@ class UDP_reader(IP_transport):
         try:
             self._socket.sendto(msg, (self._address, self._port))
         except OSError as e:
-            _logger.critical("Error writing on UDP socket: %s" % str(e))
+            _logger.critical("Error writing on UDP socket %s: %s" % (self._ref, str(e)))
             self.close()
 
 
@@ -109,14 +111,14 @@ class TCP_reader(IP_transport):
         super().__init__(address, port)
 
     def open(self):
-        _logger.info("Connecting (TCP) to NMEA source %s:%d" % (self._address, self._port))
+        _logger.info("Connecting (TCP) to NMEA source %s" % self._ref)
         try:
             self._socket = socket.create_connection((self._address, self._port), 5.0)
 
             _logger.info("Successful TCP connection")
             return True
         except OSError as e:
-            _logger.error("Connection error using TCP: %s" % str(e))
+            _logger.error("Connection error using TCP %s: %s" % (self._ref, str(e)))
 
             return False
 
@@ -124,10 +126,10 @@ class TCP_reader(IP_transport):
         try:
             msg = self._socket.recv(256)
         except TimeoutError:
-            _logger.info("Timeout error on TCP socket (%s:%d)" % (self._address, self._port))
+            _logger.info("Timeout error on TCP socket %s" % self._ref)
             raise InstrumentTimeOut()
         except OSError as e:
-            _logger.error("Error receiving from TCP socket: %s" % str(e))
+            _logger.error("Error receiving from TCP socket %s: %s" % (self._ref, str(e)))
             raise InstrumentReadError()
         return msg
 
@@ -135,7 +137,7 @@ class TCP_reader(IP_transport):
         try:
             self._socket.sendall(msg)
         except OSError as e:
-            _logger.critical("Error writing to TCP socket: %s" % str(e))
+            _logger.critical("Error writing to TCP socket %s: %s" % (self._ref, str(e)))
             raise
 
 
