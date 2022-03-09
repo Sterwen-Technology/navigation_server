@@ -27,10 +27,12 @@ class SimulatorInput(IPInstrument):
     def read(self):
         try:
             return super().read()
-        except InstrumentTimeOut:
+        except (InstrumentTimeOut, InstrumentReadError):
             self._nb_timeout += 1
             if self._nb_timeout > self._max_timeouts:
+                _logger.info("Simulator read max errors reached")
                 if self._reopen_on_timeout:
+                    _logger.info("%s closing socket" % self.name())
                     self.close()
             raise
 

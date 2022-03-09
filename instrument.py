@@ -121,7 +121,9 @@ class Instrument(threading.Thread):
     def send_cmd(self, msg):
         if not self._configmode:
             self._total_msg_s += 1
-            self.send(msg)
+            return self.send(msg)
+        else:
+            return True
 
     def total_input_msg(self):
         return self._total_msg

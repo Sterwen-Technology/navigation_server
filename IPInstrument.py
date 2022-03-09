@@ -51,6 +51,9 @@ class IPInstrument(Instrument):
         return self._transport.read()
 
     def send(self, msg):
+        if self._state == self.NOT_READY:
+            _logger.error("Write attempt on non ready transport: %s" % self.name())
+            return False
         return self._transport.send(msg)
 
     def close(self):
@@ -67,7 +70,8 @@ class IP_transport():
         self._socket = None
 
     def close(self):
-        self._socket.close()
+        if self._socket is not None:
+            self._socket.close()
 
 
 class UDP_reader(IP_transport):
@@ -100,9 +104,11 @@ class UDP_reader(IP_transport):
     def send(self, msg):
         try:
             self._socket.sendto(msg, (self._address, self._port))
+            return True
         except OSError as e:
             _logger.critical("Error writing on UDP socket %s: %s" % (self._ref, str(e)))
             self.close()
+            return False
 
 
 class TCP_reader(IP_transport):
@@ -115,7 +121,7 @@ class TCP_reader(IP_transport):
         try:
             self._socket = socket.create_connection((self._address, self._port), 5.0)
 
-            _logger.info("Successful TCP connection")
+            _logger.info("Successful TCP connection %s" % self._ref)
             return True
         except OSError as e:
             _logger.error("Connection error using TCP %s: %s" % (self._ref, str(e)))
@@ -136,9 +142,10 @@ class TCP_reader(IP_transport):
     def send(self, msg):
         try:
             self._socket.sendall(msg)
+            return True
         except OSError as e:
             _logger.critical("Error writing to TCP socket %s: %s" % (self._ref, str(e)))
-            raise
+            return False
 
 
 
