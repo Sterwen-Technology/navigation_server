@@ -29,6 +29,7 @@ instruments:
     port: 3555
     transport: TCP
     server: NMEAServer
+    direction: read_only
 
 - YDEthernet:
     class: IPInstrument
@@ -36,6 +37,7 @@ instruments:
     port: 1456
     transport: TCP
     protocol: NMEA0183
+    direction: write_only
 
 publishers:
 

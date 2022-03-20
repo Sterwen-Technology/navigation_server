@@ -33,6 +33,10 @@ class InstrumentTimeOut(InstrumentReadError):
 class Instrument(threading.Thread):
 
     (NOT_READY, OPEN, CONNECTED, ACTIVE) = range(4)
+    (BIDIRECTIONAL, READ_ONLY, WRITE_ONLY) = range(10, 13)
+    dir_dict = {'bidirectional': BIDIRECTIONAL,
+                'read_only': READ_ONLY,
+                'write_only': WRITE_ONLY}
 
     def __init__(self, opts):
         name = opts['name']
@@ -48,6 +52,11 @@ class Instrument(threading.Thread):
         self._last_msg_count = 0
         self._last_msg_count_s = 0
         self._timeout = opts.get('timeout', 30.0)
+        self._max_attempt = opts.get('max_attempt', 20)
+        self._open_delay = opts.get('open_delay', 2.0)
+        direction = opts.get('direction', 'bidirectional')
+        print(self.name(), ":", direction)
+        self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
         self._stopflag = False
         self._timer = None
         self._state = self.NOT_READY
@@ -59,22 +68,40 @@ class Instrument(threading.Thread):
 
     def timer_lapse(self):
         _logger.debug("Timer lapse => total number of messages:%g" % self._total_msg)
-        if self._total_msg-self._last_msg_count == 0:
+        if self._total_msg-self._last_msg_count == 0 and self._direction != self.WRITE_ONLY:
             # no message received
             _logger.warning("Instrument %s:No NMEA messages received in the last %4.1f sec" %
                             (self._name, self._timeout))
         self._last_msg_count = self._total_msg
         self._last_msg_count_s = self._total_msg_s
+        _logger.info("Instrument %s NMEA message received:%d sent:%d" % (self.name(), self._total_msg, self._total_msg_s))
         if not self._stopflag:
             self.start_timer()
 
     def run(self):
         self._startTS = time.time()
         self.start_timer()
+        nb_attempts = 0
         while not self._stopflag:
             if self._state == self.NOT_READY:
                 if not self.open():
+                    nb_attempts += 1
+                    if nb_attempts > self._max_attempt:
+                        _logger.error("Failed to open %s after %d attempts => instrument stops" % (
+                            self.name(), self._max_attempt
+                        ))
+                        break
+                    time.sleep(self._open_delay)
                     continue
+                else:
+                    nb_attempts = 0
+
+            if self._direction == self.WRITE_ONLY:
+                if self._stopflag:
+                    break
+                time.sleep(1.0)
+                continue
+
             try:
                 data = self.read()
                 if type(data) == bytes:
@@ -120,6 +147,9 @@ class Instrument(threading.Thread):
 
     def send_cmd(self, msg):
         if not self._configmode:
+            if self._direction == self.READ_ONLY:
+                _logger.error("Instrument %s attempt to write on a READ ONLY instrument" % self.name())
+                return False
             self._total_msg_s += 1
             return self.send(msg)
         else:
