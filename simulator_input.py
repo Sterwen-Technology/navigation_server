@@ -11,36 +11,31 @@
 
 import socket
 import logging
-from instrument import *
+from IPInstrument import *
 
 _logger = logging.getLogger("ShipDataServer")
 
 
-class SimulatorInput(Instrument):
+class SimulatorInput(IPInstrument):
 
-    def __init__(self, address, port):
-        name = "Simulator@%s" % address
-        self._address = (address, port)
-        super().__init__(name)
-        self._socket = None
-
-    def open(self):
-        _logger.info("%s opening socket" % self._name)
-        try:
-            self._socket = socket.create_connection(self._address, timeout=10.)
-        except (socket.error, OSError) as err:
-            _logger.error("%s cannot open data source %s" % (self._name, str(err)))
-            return False
-        self._state = self.CONNECTED
-        _logger.info("%s connected" % self._name)
-        return True
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._max_timeouts = opts.get('max_timeouts', 3)
+        self._reopen_on_timeout = opts.get('reopen_on_timeout', True)
+        self._nb_timeout = 0
 
     def read(self):
         try:
-            data = self._socket.recv(256)
-        except OSError as e:
-            raise InstrumentReadError(e)
-        return data
+            return super().read()
+        except (InstrumentTimeOut, InstrumentReadError):
+            self._nb_timeout += 1
+            if self._nb_timeout > self._max_timeouts:
+                _logger.info("Simulator read max errors reached")
+                if self._reopen_on_timeout:
+                    _logger.info("%s closing socket" % self.name())
+                    self.close()
+            raise
 
-    def close(self):
-        self._socket.close()
+    def open(self):
+        self._nb_timeout = 0
+        return super().open()

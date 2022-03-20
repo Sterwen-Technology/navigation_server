@@ -21,15 +21,20 @@ from j1939_pb2 import j1939
 _logger = logging.getLogger("ShipDataServer")
 
 
-class J1939_msg:
+class NMEA2000Msg:
 
-    def __init__(self, pgn: int, prio: int, sa: int, da: int, payload: bytearray):
+    def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytearray = None):
         self._pgn = pgn
         self._prio = prio
         self._sa = sa
         self._da = da
-        self._payload = payload
-        self._ts = time.time_ns()
+        if payload is not None:
+            self._payload = payload
+            self._ts = time.time_ns()
+            if len(payload) <= 8:
+                self._fast_packet = False
+            else:
+                self._fast_packet = True
 
     @property
     def pgn(self):
@@ -37,14 +42,15 @@ class J1939_msg:
 
     def display(self):
         pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
-        print("PGN %d|%04X|%s" % (self._pgn, self._pgn, pgn_def.name))
+        print("PGN %d|%04X|%s|time:%d" % (self._pgn, self._pgn, pgn_def.name,self._ts))
 
     def __str__(self):
         if self._pgn == 0:
             return "Dummy PGN 0"
         else:
             pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
-            return "PGN %d|%04X|%s sa=%d data:%s" % (self._pgn, self._pgn, pgn_def.name, self._sa, self._payload.hex())
+            return "PGN %d|%04X|%s sa=%d time=%d data:%s" % (self._pgn, self._pgn, pgn_def.name, self._sa, self._ts,
+                                                             self._payload.hex())
 
     def as_protobuf(self):
         res = j1939()
@@ -102,12 +108,14 @@ class PgnRecord:
 
 class N2KProbePublisher(Publisher):
 
-    def __init__(self, instrument, interval: float):
-        self._interval = int(interval * 1e9)
+    def __init__(self, opts):
+        _logger.info("Instantiating N2KProbePublisher")
+        self._interval = int(opts['interval']) * 1e9
         self._records = {}
-        super().__init__([instrument], "ProbePublisher")
+        super().__init__(opts)
 
     def process_msg(self, msg):
+        # print("Process msg pgn", msg.pgn)
         clock = time.time_ns()
         display = False
         if msg.pgn == 0:
@@ -131,41 +139,41 @@ class N2KProbePublisher(Publisher):
             print(rec)
 
 
-class J1939Object:
+class NMEA2000Object:
     '''
-    This class and subclasses hold decoded J1939 entity that are directly processable
+    This class and subclasses hold decoded NMEA2000 entity that are directly processable
     The generic subclass is a default
     Specific subclasses can be created to handle special processing
     '''
 
-    def __init__(self, message: J1939_msg, fields: dict):
+    def __init__(self, pgn: int, message: NMEA2000Msg = None, **kwargs):
+        self._pgn = pgn
         self._msg = message
-        self._fields = {}
-        for f in fields:
-            self._fields[f[0]] = f[1]
+        self.__dict__.update(kwargs)
 
 
-class SystemTime(J1939Object):
+class SystemTime(NMEA2000Object):
 
     secondsperday = 3600. * 24.
 
-    def __init__(self, message, fields):
-        super().__init__(message, fields)
-        days = self._fields['Date']
-        seconds = self._fields['Time']
-        ts = (days * self.secondsperday) + seconds
-        self._dt = datetime.datetime.fromtimestamp(ts)
-        print(self._dt)
+    def __init__(self, message, **kwargs):
+        super().__init__(126992, message, **kwargs)
+        if message is not None:
+            self._days = message['Date']
+            self._seconds = message['Time']
+            ts = (self._days * self.secondsperday) + self._seconds
+            self._dt = datetime.datetime.fromtimestamp(ts)
+        # print(self._dt)
 
 
-class J1939Factory:
+class NMEA2000Factory:
     class_build = {
         126992: SystemTime
     }
 
     @staticmethod
-    def build(message: J1939_msg, fields: dict) -> J1939Object:
+    def build(message: NMEA2000Msg, fields: dict) -> NMEA2000Object:
         try:
-            return J1939Factory.class_build[message.pgn](message, fields)
+            return NMEA2000Factory.class_build[message.pgn](message, kwargs=fields)
         except KeyError:
-            return J1939Object(message, fields)
+            return NMEA2000Object(message.pgn, message, kwargs=fields)

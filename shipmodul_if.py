@@ -17,6 +17,7 @@ import time
 from server_common import NavTCPServer
 from publisher import Publisher
 from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
+from IPInstrument import IPInstrument
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -27,28 +28,10 @@ _logger = logging.getLogger("ShipDataServer")
 #################################################################
 
 
-class ShipModulInterface(Instrument):
-
-    @staticmethod
-    def create_instrument(opts):
-        # create NMEA reader on Shipmodul multiplexer
-        protocol = opts.get('transport', 'UDP')
-
-        if protocol == "UDP":
-            reader = UDP_reader(opts)
-        else:
-            reader = TCP_reader(opts)
-        return reader
+class ShipModulInterface(IPInstrument):
 
     def __init__(self, opts):
         super().__init__(opts)
-        self._address = opts['address']
-        self._port = opts['port']
-        self._socket = None
-
-    def close(self):
-        self._socket.close()
-        self._state = self.NOT_READY
 
     def deregister(self, pub):
         if pub == self._configpub:
@@ -76,76 +59,6 @@ class ShipModulInterface(Instrument):
 
     def default_sender(self):
         return True
-
-
-class UDP_reader(ShipModulInterface):
-    def __init__(self, opts):
-        super().__init__(opts)
-
-    def open(self):
-        _logger.info("opening UDP port %d" % self._port)
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        try:
-            self._socket.bind(('', self._port))
-        except OSError as e:
-            _logger.error("Error connecting Shipmodul via UDP:%s" % str(e))
-            self._socket.close()
-            return False
-        self._socket.settimeout(5.0)
-        self._state = self.OPEN
-        return True
-
-    def read(self):
-        try:
-            data, address = self._socket.recvfrom(256)
-        except OSError as e:
-            raise InstrumentReadError(e)
-        # print(data)
-        return data
-
-    def send(self, msg):
-        try:
-            self._socket.sendto(msg, (self._address, self._port))
-        except OSError as e:
-            _logger.critical("Error writing on Shipmodul: %s" % str(e))
-            self.close()
-
-
-class TCP_reader(ShipModulInterface):
-
-    def __init__(self, opts):
-        super().__init__(opts)
-
-    def open(self):
-        _logger.info("Connecting (TCP) to NMEA source %s:%d" % (self._address, self._port))
-        try:
-            self._socket = socket.create_connection((self._address, self._port), 5.0)
-            self._state = self.CONNECTED
-            _logger.info("Successful TCP connection")
-            return True
-        except OSError as e:
-            _logger.error("Connection error with shipmodul using TCP: %s" % str(e))
-            self._state = self.NOT_READY
-            return False
-
-    def read(self):
-        try:
-            msg = self._socket.recv(256)
-        except TimeoutError:
-            _logger.info("Timeout error on %s" % self._name)
-            raise InstrumentTimeOut()
-        except OSError as e:
-            _logger.error("Error receiving from Shipmodul: %s" % str(e))
-            raise InstrumentReadError()
-        return msg
-
-    def send(self, msg):
-        try:
-            self._socket.sendall(msg)
-        except OSError as e:
-            _logger.critical("Error writing to  Shipmodul: %s" % str(e))
-            raise
 
 
 class ConfigPublisher(Publisher):
