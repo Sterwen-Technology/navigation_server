@@ -5,33 +5,33 @@
 The navigation server-router aggregate and distribute navigation and other operational data aboard recreational vessels. It is a focal point and server for all kind of data needed to control the course and operational condition of the boat. The system is based on the folowwing building blocks:
 
 ### Servers
+The servers are TCP servers allowing any navigation or control application to access the flow of data via TCP/IP
+
+### Instruments
+Intrument classes are connecting to intrumentations bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
+Currently tested intruments:
 
 
 ## Installation
-The 
+The project is entirely written in Python 3 and has been tested with Python 3.7 - 3.9. It is intended to run on Linux based system 
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+
 
 ## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
 
 ## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+The current stage is under development a version 1.0 is planned for the .
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+.
 
 ## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Laurent Carré - Sterwen Technology.
 
 ## License
 Eclipse Public License 2.0.
 
 ## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Under development.
 
