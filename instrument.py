@@ -51,7 +51,8 @@ class Instrument(threading.Thread):
         self._total_msg_s = 0
         self._last_msg_count = 0
         self._last_msg_count_s = 0
-        self._timeout = opts.get('timeout', 30.0)
+        self._report_timer = opts.get('report_timer', 30.0)
+        self._timeout = opts.get('timeout', 10.0)
         self._max_attempt = opts.get('max_attempt', 20)
         self._open_delay = opts.get('open_delay', 2.0)
         direction = opts.get('direction', 'bidirectional')
@@ -62,7 +63,7 @@ class Instrument(threading.Thread):
         self._state = self.NOT_READY
 
     def start_timer(self):
-        self._timer = threading.Timer(self._timeout, self.timer_lapse)
+        self._timer = threading.Timer(self._report_timer, self.timer_lapse)
         self._timer.name = self._name + "timer"
         self._timer.start()
 

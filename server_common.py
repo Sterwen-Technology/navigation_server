@@ -29,10 +29,11 @@ class NavTCPServer(threading.Thread):
         super().__init__(name=self._name)
         self._max_connections = options.get('max_connections', 10)
         self._heartbeat = options.get('heartbeat', 30.0)
+        self._timeout = options.get('timeout', 5.0)
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.bind(('0.0.0.0', self._port))
-        self._socket.settimeout(5.0)
+        self._socket.settimeout(self._timeout)
         self._stop_flag = False
 
     def name(self):
