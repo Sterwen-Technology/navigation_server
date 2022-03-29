@@ -30,6 +30,7 @@ instruments:
     transport: TCP
     server: NMEAServer
     direction: read_only
+    report_timer: 60
 
 - YDEthernet:
     class: IPInstrument

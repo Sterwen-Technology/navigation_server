@@ -34,9 +34,9 @@ class IPInstrument(Instrument):
 
         self._protocol = opts.get('transport', 'TCP')
         if self._protocol == 'TCP':
-            self._transport = TCP_reader(self._address, self._port)
+            self._transport = TCP_reader(self._address, self._port, self._timeout)
         elif self._protocol == 'UDP':
-            self._transport = UDP_reader(self._address, self._port)
+            self._transport = UDP_reader(self._address, self._port, self._timeout)
 
     def open(self):
 
@@ -63,11 +63,12 @@ class IPInstrument(Instrument):
 
 class IP_transport():
 
-    def __init__(self, address, port):
+    def __init__(self, address, port, timeout):
         self._address = address
         self._port = port
         self._ref = "%s:%d" % (self._address, self._port)
         self._socket = None
+        self._timeout = timeout
 
     def close(self):
         if self._socket is not None:
@@ -89,7 +90,7 @@ class UDP_reader(IP_transport):
             _logger.error("Error opening UDP socket %s:%s" % (self._ref, str(e)))
             self._socket.close()
             return False
-        self._socket.settimeout(5.0)
+        self._socket.settimeout(self._timeout)
 
         return True
 
@@ -122,10 +123,10 @@ class TCP_reader(IP_transport):
             self._socket = socket.create_connection((self._address, self._port), 5.0)
 
             _logger.info("Successful TCP connection %s" % self._ref)
+            self._socket.settimeout(self._timeout)
             return True
         except OSError as e:
             _logger.error("Connection error using TCP %s: %s" % (self._ref, str(e)))
-
             return False
 
     def read(self):
