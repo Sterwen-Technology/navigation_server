@@ -10,14 +10,11 @@
 #-------------------------------------------------------------------------------
 
 import socket
-import threading
 import logging
-import time
 
-from server_common import NavTCPServer
-from publisher import Publisher
-from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
-from IPInstrument import IPInstrument
+from src.server_common import NavTCPServer
+from src.publisher import Publisher
+from src.IPInstrument import IPInstrument
 
 _logger = logging.getLogger("ShipDataServer")
 

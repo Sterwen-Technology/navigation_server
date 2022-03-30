@@ -5,7 +5,7 @@ import queue
 import logging
 import datetime
 
-from configuration import NavigationConfiguration
+from src.configuration import NavigationConfiguration
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -16,6 +16,10 @@ _logger = logging.getLogger("ShipDataServer")
 ########################################################################
 
 
+class PublisherOverflow(Exception):
+    pass
+
+
 class Publisher(threading.Thread):
     '''
     Super class for all publishers
@@ -24,9 +28,13 @@ class Publisher(threading.Thread):
         if internal:
             self._opts = None
             self._instruments = instruments
+            queue_size = 20
+            self._max_lost = 100
         else:
             name = opts['name']
             self._opts = opts
+            queue_size = opts.get('queue_size', 20)
+            self._max_lost = opts.get('max_lost', 5)
             inst_list = opts['instruments']
             self._instruments = []
             for inst_name in inst_list:
@@ -38,7 +46,8 @@ class Publisher(threading.Thread):
         for inst in self._instruments:
             # print("Registering %s on %s" % (self._name, inst.name()))
             inst.register(self)
-        self._queue = queue.Queue(20)
+
+        self._queue = queue.Queue(queue_size)
         self._stopflag = False
         self._nb_msg_lost = 0
 
@@ -51,6 +60,8 @@ class Publisher(threading.Thread):
             # need to empty the queue
             self._nb_msg_lost += 1
             _logger.warning("Overflow on connection %s total message lost %d" % (self._name, self._nb_msg_lost))
+            if self._nb_msg_lost >= self._max_lost :
+                raise PublisherOverflow
 
     def deregister(self):
         for inst in self._instruments:

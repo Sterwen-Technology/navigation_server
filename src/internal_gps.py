@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     29/11/2021
-# Copyright:   (c) Laurent Carré Sterwen Technolgy 2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 
@@ -16,21 +16,28 @@ import sys
 import time
 import threading
 
-sys.path.insert(0,"/opt/SolidSense/modem_gps")
+sys.path.insert(0," /opt/SolidSense/modem_gps")
 
-from QuectelAT_Service import *
+try:
+    from QuectelAT_Service import *
+    gps_present = True
+except ImportError:
+    gps_present = False
 
 
-from instrument import Instrument, InstrumentReadError
+from instrument import Instrument, InstrumentReadError, InstrumentNotPresent
 
 _logger = logging.getLogger("ShipDataServer")
 
 
 class InternalGps(Instrument):
 
-    def __init__(self):
+    def __init__(self, opts):
 
-        super().__init__('InternalGPS')
+        if not gps_present:
+            raise InstrumentNotPresent('InternalGPS')
+
+        super().__init__(opts)
         fp = open("/data/solidsense/modem_gps/parameters.json")
         self._params = json.load(fp)
         fp.close()
