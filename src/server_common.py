@@ -5,15 +5,15 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021
-# Licence:     <your licence>
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
 import threading
 import logging
 import socket
 
-from configuration import NavigationConfiguration
+from src.configuration import NavigationConfiguration
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -40,7 +40,11 @@ class NavTCPServer(threading.Thread):
         return self._name
 
     def resolve_ref(self, name):
-        reference = self._options[name]
+        try:
+            reference = self._options[name]
+        except KeyError:
+            _logger.error("Unknown reference %s" % name)
+            return None
         return NavigationConfiguration.get_conf().get_object(reference)
 
     def add_instrument(self, instrument):

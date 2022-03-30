@@ -17,6 +17,7 @@ import logging
 import time
 from publisher import Publisher
 from configuration import NavigationConfiguration
+from publisher import PublisherOverflow
 
 
 _logger = logging.getLogger("ShipDataServer")
@@ -27,6 +28,10 @@ class InstrumentReadError(Exception):
 
 
 class InstrumentTimeOut(InstrumentReadError):
+    pass
+
+
+class InstrumentNotPresent(Exception):
     pass
 
 
@@ -143,8 +148,24 @@ class Instrument(threading.Thread):
 
     def publish(self, msg):
         # print("Publishing on %d publishers" % len(self._publishers))
+        fault = False
         for p in self._publishers:
-            p.publish(msg)
+            try:
+                p.publish(msg)
+            except PublisherOverflow:
+                _logger.error("Publisher %s in overflow, removing..." % p.name())
+                if not fault:
+                    faulty_pub = []
+                    fault = True
+                faulty_pub.append(p)
+
+        if fault:
+            for p in faulty_pub:
+                self._publishers.remove(p)
+            if len(self._publishers) == 0:
+                _logger.error("Instrument %s as no publisher" % self._name)
+
+
 
     def send_cmd(self, msg):
         if not self._configmode:

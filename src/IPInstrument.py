@@ -77,8 +77,8 @@ class IP_transport():
 
 class UDP_reader(IP_transport):
 
-    def __init__(self, address, port):
-        super().__init__(address, port)
+    def __init__(self, address, port, timeout):
+        super().__init__(address, port, timeout)
 
     def open(self):
         _logger.info("opening UDP port %d" % self._port)
@@ -114,8 +114,8 @@ class UDP_reader(IP_transport):
 
 class TCP_reader(IP_transport):
 
-    def __init__(self, address, port):
-        super().__init__(address, port)
+    def __init__(self, address, port, timeout):
+        super().__init__(address, port, timeout)
 
     def open(self):
         _logger.info("Connecting (TCP) to NMEA source %s" % self._ref)

@@ -5,8 +5,8 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021
-# Licence:     <your licence>
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
 import sys
@@ -15,15 +15,15 @@ from argparse import ArgumentParser
 import signal
 
 import nmea0183
-from server_common import NavTCPServer
+from src.data_server import NMEA_server
 from shipmodul_if import *
-from console import Console
+from src.console import Console
 from publisher import *
-from client_publisher import *
-# from internal_gps import *
+from src.client_publisher import *
+from src.internal_gps import InternalGps
 from simulator_input import *
-from configuration import NavigationConfiguration
-from ikonvert import iKonvert
+from src.configuration import NavigationConfiguration
+from src.ikonvert import iKonvert
 from nmea2k_pgndefs import PGNDefinitions
 from nmea2000_decode import N2kTracePublisher
 from nmea2000_msg import N2KProbePublisher
@@ -53,127 +53,6 @@ class Options(object):
             return getattr(self.options, name)
         except AttributeError:
             raise AttributeError(name)
-
-
-class NMEA_server(NavTCPServer):
-
-    '''
-    Server class for NMEA clients
-
-    '''
-    def __init__(self, options: dict):
-        super().__init__(options)
-        self._instruments = []
-        self._options = options
-        self._connections = {}
-        self._timer = None
-        self._timer_name = self.name() + "-timer"
-        self._sender = None
-        self._sender_instrument = None
-
-    def start_timer(self):
-        self._timer = threading.Timer(self._heartbeat, self.heartbeat)
-        self._timer.name = self._timer_name
-        self._timer.start()
-
-    def stop_timer(self):
-        if self._timer is not None:
-            self._timer.cancel()
-
-    def run(self):
-        _logger.info("%s ready" % self.name())
-        self.start_timer()
-        self._socket.settimeout(5.0)
-        while not self._stop_flag:
-            _logger.info("%s waiting for new connection" % self.name())
-            self._socket.listen(1)
-            if len(self._connections) <= self._max_connections:
-                try:
-                    connection, address = self._socket.accept()
-                except socket.timeout:
-                    if self._stop_flag:
-                        break
-                    else:
-                        continue
-                if self._stop_flag:
-                    connection.close()
-                    break
-            else:
-                _logger.critical("Maximum number of connections (%d) reached:" % self._max_connections)
-                time.sleep(5.0)
-                continue
-
-            _logger.info("New connection from IP %s port %d" % address)
-            client = ClientConnection(connection, address, self)
-            self._connections[address] = client
-            # now create a publisher for all instruments
-            pub = NMEA_Publisher(client, self._instruments)
-            pub.start()
-            if self._sender_instrument is not None and self._sender is None:
-                self._sender = NMEA_Sender(client, self._sender_instrument)
-                if self._options.get('trace_input', None) is not None:
-                    trpub = SendPublisher(self._sender, self._options['trace_input'])
-                    trpub.start()
-                self._sender.start()
-            # end of while loop
-        _logger.info("%s thread stops" % self.name())
-        self._socket.close()
-
-    def add_instrument(self, instrument):
-        self._instruments.append(instrument)
-        if instrument.default_sender():
-            self._sender_instrument = instrument
-        # now if we had some active connections we need to create the publishers
-        for client in self._connections.values():
-            pub = NMEA_Publisher(client, instrument)
-            pub.start()
-
-    def remove_client(self, address):
-        del self._connections[address]
-
-    def remove_sender(self):
-        self._sender = None
-
-    def heartbeat(self):
-        _logger.info("%s heartbeat number of connections: %d"
-                     % (self._name, len(self._connections)))
-        if self._stop_flag:
-            return
-        self.start_timer()
-        to_be_closed = []
-        for client in self._connections.values():
-            if client.msgcount() == 0:
-                # no message during period
-                _logger.info("Sending heartbeat on %s" % client.descr())
-                heartbeat_msg = nmea0183.ZDA().message()
-                if client.send(heartbeat_msg):
-                    to_be_closed.append(client)
-                client.reset_period()
-        for client in to_be_closed:
-            client.close()
-
-    def stop(self):
-        _logger.info("%s stopping" % self.name())
-        self._stop_flag = True
-        self.stop_timer()
-        clients = self._connections.values()
-        for client in clients:
-            client._close()
-        self._connections = {}
-
-    def read_status(self):
-        out = {}
-        out['object'] = 'server'
-        out['name'] = self.name()
-        out['port'] = self._port
-        if len(self._connections) > 0:
-            connections = []
-            for c in self._connections.values():
-                connections.append(c.read_status())
-            out['connections'] = connections
-        else:
-            out['connection'] = 'no connections'
-        return out
 
 
 class NavigationServer:
@@ -289,6 +168,8 @@ def main():
     config.add_class(Injector)
     config.add_class(iKonvert)
     config.add_class(N2kTracePublisher)
+    config.add_class(N2KProbePublisher)
+    config.add_class(InternalGps)
     # logger setup => stream handler for now
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
@@ -298,7 +179,7 @@ def main():
 
     # global parameters
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'SN'))
-    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", 'PGNDefns.N2kDfn.xml'))
+    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", 'def/PGNDefns.N2kDfn.xml'))
 
     main_server = NavigationServer()
     # create the servers

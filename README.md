@@ -8,8 +8,12 @@ The navigation server-router aggregate and distribute navigation and other opera
 The servers are TCP servers allowing any navigation or control application to access the flow of data via TCP/IP
 
 ### Instruments
-Intrument classes are connecting to intrumentations bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
-Currently tested intruments:
+Instrument classes are connecting to instrumentation bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
+Currently, tested instruments:
+- Shipmodul Miniplex3 Ethernet
+- Digital Yacht iKonvert
+- Yachting Digital Ethernet
+- Direct serial link on NMEA0183
 
 
 ## Installation

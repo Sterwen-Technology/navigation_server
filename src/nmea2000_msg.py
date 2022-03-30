@@ -9,14 +9,12 @@
 #-------------------------------------------------------------------------------
 
 import time
-import logging
 from google.protobuf.json_format import MessageToJson
-import json
 import datetime
 
 from nmea2k_pgndefs import *
 from publisher import Publisher
-from j1939_pb2 import j1939
+from src.j1939_pb2 import j1939
 
 _logger = logging.getLogger("ShipDataServer")
 

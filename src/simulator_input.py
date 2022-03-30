@@ -9,9 +9,7 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 
-import socket
-import logging
-from IPInstrument import *
+from src.IPInstrument import *
 
 _logger = logging.getLogger("ShipDataServer")
 
