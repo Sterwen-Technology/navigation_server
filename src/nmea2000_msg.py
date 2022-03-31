@@ -1,11 +1,12 @@
+#-------------------------------------------------------------------------------
 # Name:        nmea2000_msg
-# Purpose:     Manages all NMEA2000/J1939 messages
+# Purpose:     Manages all NMEA2000 messages internal representation
 #
 # Author:      Laurent Carré
 #
 # Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technolgy 2021
-# Licence:     <your licence>
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
 import time
@@ -14,7 +15,7 @@ import datetime
 
 from nmea2k_pgndefs import *
 from publisher import Publisher
-from src.j1939_pb2 import j1939
+from src.nmea2000_pb2 import nmea2000
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -51,7 +52,7 @@ class NMEA2000Msg:
                                                              self._payload.hex())
 
     def as_protobuf(self):
-        res = j1939()
+        res = nmea2000()
         res.pgn = self._pgn
         res.priority = self._prio
         res.sa = self._sa
@@ -135,6 +136,44 @@ class N2KProbePublisher(Publisher):
     def dump_records(self):
         for rec in self._records.values():
             print(rec)
+
+
+class N2KTracePublisher(Publisher):
+
+    def __init__(self, opts):
+        super().__init__(opts)
+        pgn_filter = opts.get('filter', None)
+        if pgn_filter is not None:
+            self._filter = pgn_list(pgn_filter)
+        else:
+            self._filter = None
+        self._print_option = opts.get('print', 'ALL')
+
+    def process_msg(self, msg):
+        res = msg.decode()
+        if self._print_option == 'NONE':
+            return True
+        if self._filter is not None:
+            if msg.pgn not in self._filter:
+                return True
+        if res is not None:
+            print(res)
+        return True
+
+
+def pgn_list(str_filter):
+    res = []
+    str_pgn_list = str_filter.split(',')
+    pgn_defs = PGNDefinitions.pgn_defs()
+    for str_pgn in str_pgn_list:
+        pgn = int(str_pgn)
+        try:
+            pgn_d = pgn_defs.pgn_def(pgn)
+        except KeyError:
+            print("Invalid PGN:", pgn, "Ignored")
+            continue
+        res.append(pgn)
+    return res
 
 
 class NMEA2000Object:

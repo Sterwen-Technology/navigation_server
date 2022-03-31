@@ -17,14 +17,12 @@ class Vedirect:
         self.state = self.WAIT_HEADER
         self.dict = {}
 
-
     (HEX, WAIT_HEADER, IN_KEY, IN_VALUE, IN_CHECKSUM) = range(5)
 
     def input(self, byte):
         if byte == self.hexmarker and self.state != self.IN_CHECKSUM:
             self.state = self.HEX
-            
-        
+
         if self.state == self.WAIT_HEADER:
             self.bytes_sum += byte
             if byte == self.header1:
@@ -36,7 +34,7 @@ class Vedirect:
         elif self.state == self.IN_KEY:
             self.bytes_sum += byte
             if byte == self.delimiter:
-                if (self.key == 'Checksum'):
+                if self.key == 'Checksum':
                     self.state = self.IN_CHECKSUM
                 else:
                     self.state = self.IN_VALUE
@@ -58,7 +56,7 @@ class Vedirect:
             self.key = ''
             self.value = ''
             self.state = self.WAIT_HEADER
-            if (self.bytes_sum % 256 == 0):
+            if self.bytes_sum % 256 == 0:
                 self.bytes_sum = 0
                 return self.dict
             else:
@@ -75,16 +73,15 @@ class Vedirect:
             data = self.ser.read()
             for single_byte in data:
                 packet = self.input(single_byte)
-                if (packet != None):
+                if packet is not None:
                     return packet
-            
 
     def read_data_callback(self, callbackFunction):
         while True:
             data = self.ser.read()
             for byte in data:
                 packet = self.input(byte)
-                if (packet != None):
+                if packet is not None:
                     callbackFunction(packet)
 
 

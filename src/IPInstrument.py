@@ -29,10 +29,10 @@ class IPInstrument(Instrument):
 
     def __init__(self, opts):
         super().__init__(opts)
-        self._address = opts['address']
-        self._port = opts['port']
+        self._address = opts.get('address', str, 'localhost')
+        self._port = opts.get('port', int, 0)
 
-        self._protocol = opts.get('transport', 'TCP')
+        self._protocol = opts.get('transport', str, 'TCP')
         if self._protocol == 'TCP':
             self._transport = TCP_reader(self._address, self._port, self._timeout)
         elif self._protocol == 'UDP':

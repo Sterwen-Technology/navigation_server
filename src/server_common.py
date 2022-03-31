@@ -20,16 +20,16 @@ _logger = logging.getLogger("ShipDataServer")
 
 class NavTCPServer(threading.Thread):
 
-    def __init__(self, options ):
+    def __init__(self, options):
         self._name = options['name']
-        self._port = options['port']
+        self._port = options.get('port', int, 0)
         self._options = options
         if self._port == 0:
             raise ValueError
         super().__init__(name=self._name)
-        self._max_connections = options.get('max_connections', 10)
-        self._heartbeat = options.get('heartbeat', 30.0)
-        self._timeout = options.get('timeout', 5.0)
+        self._max_connections = options.get('max_connections', int, 10)
+        self._heartbeat = options.get('heartbeat', float, 30.0)
+        self._timeout = options.get('timeout', float, 5.0)
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.bind(('0.0.0.0', self._port))

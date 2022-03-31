@@ -18,8 +18,8 @@ class SimulatorInput(IPInstrument):
 
     def __init__(self, opts):
         super().__init__(opts)
-        self._max_timeouts = opts.get('max_timeouts', 3)
-        self._reopen_on_timeout = opts.get('reopen_on_timeout', True)
+        self._max_timeouts = opts.get('max_timeouts', int, 3)
+        self._reopen_on_timeout = opts.get('reopen_on_timeout', bool, True)
         self._nb_timeout = 0
 
     def read(self):

@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     29/11/2021
-# Copyright:   (c) Laurent Carré Sterwen Technolgy 2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 
@@ -56,11 +56,11 @@ class Instrument(threading.Thread):
         self._total_msg_s = 0
         self._last_msg_count = 0
         self._last_msg_count_s = 0
-        self._report_timer = opts.get('report_timer', 30.0)
-        self._timeout = opts.get('timeout', 10.0)
-        self._max_attempt = opts.get('max_attempt', 20)
-        self._open_delay = opts.get('open_delay', 2.0)
-        direction = opts.get('direction', 'bidirectional')
+        self._report_timer = opts.get('report_timer', float,  30.0)
+        self._timeout = opts.get('timeout', float, 10.0)
+        self._max_attempt = opts.get('max_attempt', int, 20)
+        self._open_delay = opts.get('open_delay', float, 2.0)
+        direction = opts.get('direction', str, 'bidirectional')
         print(self.name(), ":", direction)
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
         self._stopflag = False
@@ -165,8 +165,6 @@ class Instrument(threading.Thread):
             if len(self._publishers) == 0:
                 _logger.error("Instrument %s as no publisher" % self._name)
 
-
-
     def send_cmd(self, msg):
         if not self._configmode:
             if self._direction == self.READ_ONLY:
@@ -199,6 +197,9 @@ class Instrument(threading.Thread):
         raise NotImplementedError("To be implemented in subclass")
 
     def read(self):
+        raise NotImplementedError("To be implemented in subclass")
+
+    def send(self, msg):
         raise NotImplementedError("To be implemented in subclass")
 
     def sender(self):

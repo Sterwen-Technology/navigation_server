@@ -29,7 +29,7 @@ class NMEA_server(NavTCPServer):
     Server class for NMEA clients
 
     '''
-    def __init__(self, options: dict):
+    def __init__(self, options ):
         super().__init__(options)
         self._instruments = []
         self._options = options

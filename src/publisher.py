@@ -33,9 +33,9 @@ class Publisher(threading.Thread):
         else:
             name = opts['name']
             self._opts = opts
-            queue_size = opts.get('queue_size', 20)
-            self._max_lost = opts.get('max_lost', 5)
-            inst_list = opts['instruments']
+            queue_size = opts.get('queue_size', int, 20)
+            self._max_lost = opts.get('max_lost', int, 5)
+            inst_list = opts.getlist('instruments', str, [])
             self._instruments = []
             for inst_name in inst_list:
                 self._instruments.append(self.resolve_ref(inst_name))

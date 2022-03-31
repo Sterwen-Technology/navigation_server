@@ -15,7 +15,6 @@ import base64
 
 from nmea2000_msg import *
 from nmea2k_pgndefs import *
-from publisher import Publisher
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -89,44 +88,6 @@ class Options(object):
             return getattr(self.options, name)
         except AttributeError:
             raise AttributeError(name)
-
-
-class N2kTracePublisher(Publisher):
-
-    def __init__(self, opts):
-        super().__init__(opts)
-        pgn_filter = opts.get('filter', None)
-        if pgn_filter is not None:
-            self._filter = pgn_list(pgn_filter)
-        else:
-            self._filter = None
-        self._print_option = opts.get('print', 'ALL')
-
-    def process_msg(self, msg):
-        res = msg.decode()
-        if self._print_option == 'NONE':
-            return True
-        if self._filter is not None:
-            if msg.pgn not in self._filter:
-                return True
-        if res is not None:
-            print(res)
-        return True
-
-
-def pgn_list(str_filter):
-    res = []
-    str_pgn_list = str_filter.split(',')
-    pgn_defs = PGNDefinitions.pgn_defs()
-    for str_pgn in str_pgn_list:
-        pgn = int(str_pgn)
-        try:
-            pgn_d = pgn_defs.pgn_def(pgn)
-        except KeyError:
-            print("Invalid PGN:", pgn, "Ignored")
-            continue
-        res.append(pgn)
-    return res
 
 
 def main():

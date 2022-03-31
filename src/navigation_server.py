@@ -25,8 +25,7 @@ from simulator_input import *
 from src.configuration import NavigationConfiguration
 from src.ikonvert import iKonvert
 from nmea2k_pgndefs import PGNDefinitions
-from nmea2000_decode import N2kTracePublisher
-from nmea2000_msg import N2KProbePublisher
+from nmea2000_msg import N2KProbePublisher, N2KTracePublisher
 
 
 def _parser():
@@ -167,7 +166,7 @@ def main():
     config.add_class(LogPublisher)
     config.add_class(Injector)
     config.add_class(iKonvert)
-    config.add_class(N2kTracePublisher)
+    config.add_class(N2KTracePublisher)
     config.add_class(N2KProbePublisher)
     config.add_class(InternalGps)
     # logger setup => stream handler for now
