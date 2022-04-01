@@ -1,0 +1,44 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/12/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+#
+trace: DEBUG
+
+servers:
+
+- NMEAServer:
+    class: NMEA_server
+    port: 4500
+
+- Console:
+    class: Console
+    port: 4502
+
+instruments:
+
+- SolarPanel:
+    class: MPPT_Instrument
+    port: 4505
+    server: NMEAServer
+    direction: read_only
+    report_timer: 10
+
+publishers:
+
+#    - MainLog:
+#       class: LogPublisher
+#        file: /data/solidsense/log/navigation.log
+#        instruments: [MiniPlex3]
+
+
+
+
+
+

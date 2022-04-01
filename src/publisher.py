@@ -5,7 +5,7 @@ import queue
 import logging
 import datetime
 
-from src.configuration import NavigationConfiguration
+from configuration import NavigationConfiguration
 
 _logger = logging.getLogger("ShipDataServer")
 

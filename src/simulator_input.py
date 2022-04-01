@@ -9,7 +9,7 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 
-from src.IPInstrument import *
+from IPInstrument import *
 
 _logger = logging.getLogger("ShipDataServer")
 

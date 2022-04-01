@@ -70,6 +70,7 @@ class Instrument(threading.Thread):
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)
         self._timer.name = self._name + "timer"
+        _logger.debug("%s start lapse time %4.2f" % (self._timer.name, self._report_timer))
         self._timer.start()
 
     def timer_lapse(self):

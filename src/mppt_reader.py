@@ -13,6 +13,7 @@ import serial
 import threading
 import logging
 import sys
+import socket
 from argparse import ArgumentParser
 from concurrent import futures
 
@@ -142,7 +143,7 @@ class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
 
     solar_output_v = [('I', 'current', float, 0.001),
                       ('V', 'voltage', float, 0.001),
-                      ('PPV', 'panel_power', float, 0.001)]
+                      ('PPV', 'panel_power', float, 1.0)]
 
     def __init__(self, reader):
         self._reader = reader
@@ -160,6 +161,7 @@ class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
         pass
 
     def GetOutput(self, request, context):
+        _logger.debug("GRPC request GetOutput")
         packet = self._reader.get_packet()
         ret_val = vedirect_pb2.solar_output()
         if packet is not None:
@@ -169,21 +171,74 @@ class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
 
 class GrpcServer():
 
-    def __init__(self, opts, reader)
-        port = opts.get('port', 4505)
+    def __init__(self, opts, reader):
+        port = opts.port
         address = "0.0.0.0:%d" % port
         self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         vedirect_pb2_grpc.add_solar_mpptServicer_to_server(MPPT_Servicer(reader), self._server)
         self._server.add_insecure_port(address)
+        _logger.info("MPPT server ready on address:%s" % address)
 
     def start(self):
         self._server.start()
+        _logger.info("MPPT server started")
+
+
+class UDPSerialEmulator:
+
+    def __init__(self, port):
+
+        self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self._address = ('0.0.0.0', port)
+        # self._socket.bind(self._address)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+    def send(self, msg):
+        _logger.debug("Sending UDP packet to %s:%d" % self._address)
+        self._socket.sendto(msg, self._address)
+
+
+class TCPSerialEmulator(threading.Thread):
+
+    def __init__(self, port):
+        super().__init__()
+        self._address = ('0.0.0.0', port)
+        self._server = socket.create_server(self._address, family=socket.AF_INET, reuse_port=True)
+        self._connection = None
+        self._remote = None
+
+    def run(self):
+        while True:
+            _logger.debug("Serial emulator waiting for connection")
+            self._server.listen()
+            self._connection, self._remote = self._server.accept()
+            _logger.info("New serial emulation from %s:%d" % self._remote)
+            while True:
+                try:
+                    data = self._connection.recv(256)
+                except socket.error as e:
+                    _logger.info("Error receiving on serial emulator" + str(e))
+                    self._connection.close()
+                    self._connection = None
+                    break
+
+    def send(self, msg):
+        if self._connection is not None:
+            try:
+                _logger.debug("Sending TCP packet to %s:%d" % self._remote)
+                self._connection.sendall(msg)
+            except (IOError, socket.error) as e:
+                _logger.error("Error sending on serial emulator" + str(e))
+
 
 
 class VEdirect_simulator():
 
-    def __init__(self, filename):
+    def __init__(self, filename, serial_emu=None):
         self._fd = open(filename, 'r')
+        _logger.info("Opening simulator on file name:%s" % filename)
+        self._ser = serial_emu
         self._lock = threading.Lock()
         self._lock.acquire()
 
@@ -195,6 +250,8 @@ class VEdirect_simulator():
             _logger.error(str(e))
             self._lock.release()
             return None
+        if self._ser is not None:
+            self._ser.send(line.encode())
         return json.loads(line)
 
     def start(self):
@@ -207,13 +264,24 @@ class VEdirect_simulator():
 
 def main():
     opts = parser.parse_args()
+    loghandler = logging.StreamHandler()
+    logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
+    loghandler.setFormatter(logformat)
+    _logger.addHandler(loghandler)
+    _logger.setLevel(logging.DEBUG)
 
+    if opts.serial_port is not None:
+        ser_emu = TCPSerialEmulator(opts.serial_port)
+    else:
+        ser_emu = None
     if opts.simulator is not None:
-        reader = VEdirect_simulator(opts.simulator)
+        reader = VEdirect_simulator(opts.simulator, ser_emu)
     else:
         reader = Vedirect(opts.interface, 10.0)
 
     server = GrpcServer(opts, reader)
+    if ser_emu is not None:
+        ser_emu.start()
     reader.start()
     server.start()
 

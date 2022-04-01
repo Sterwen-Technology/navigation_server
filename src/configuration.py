@@ -54,7 +54,7 @@ class Parameters:
                 return value
             else:
                 try:
-                    value = float(value)
+                    return float(value)
                 except ValueError:
                     _logger.warning("Parameter %s expected float" % p_name)
                     raise

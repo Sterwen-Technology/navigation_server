@@ -19,11 +19,11 @@ class NMEA0183Sentences:
 
     @staticmethod
     def checksum(nmea_str):
-        return reduce( operator.xor, map(ord, nmea_str), 0)
+        return reduce( operator.xor, map(ord, nmea_str[1:]), 0)
 
     @staticmethod
     def hex_checksum(nmea_str):
-        val = NMEA0183Sentences.checksum(nmea_str)
+        val = NMEA0183Sentences.checksum(nmea_str[1:])
         hex_val = "%2X" % val
         return hex_val
 
@@ -63,8 +63,8 @@ class ZDA(NMEA0183Sentences):
 
 class XDR(NMEA0183Sentences):
 
-    def __init__(self, transducers: list):
-        self._sentence = "%sXDR"
+    def __init__(self):
+        self._sentence = "$%sXDR" % self._sender_id
         self._nbt = 0
 
     def add_transducer(self, t_type, data, unit, t_id):

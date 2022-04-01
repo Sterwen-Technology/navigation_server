@@ -15,7 +15,7 @@ import datetime
 
 from nmea2k_pgndefs import *
 from publisher import Publisher
-from src.nmea2000_pb2 import nmea2000
+from nmea2000_pb2 import nmea2000
 
 _logger = logging.getLogger("ShipDataServer")
 

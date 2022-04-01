@@ -15,18 +15,18 @@ from argparse import ArgumentParser
 import signal
 
 import nmea0183
-from src.data_server import NMEA_server
+from data_server import NMEA_server
 from shipmodul_if import *
-from src.console import Console
+from console import Console
 from publisher import *
-from src.client_publisher import *
-from src.internal_gps import InternalGps
+from client_publisher import *
+from internal_gps import InternalGps
 from simulator_input import *
-from src.configuration import NavigationConfiguration
-from src.ikonvert import iKonvert
+from configuration import NavigationConfiguration
+from ikonvert import iKonvert
 from nmea2k_pgndefs import PGNDefinitions
 from nmea2000_msg import N2KProbePublisher, N2KTracePublisher
-from victron_mppt.mppt_instrument import MPPT_Instrument
+from mppt_instrument import MPPT_Instrument
 
 
 def _parser():
@@ -180,7 +180,7 @@ def main():
 
     # global parameters
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'SN'))
-    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", 'def/PGNDefns.N2kDfn.xml'))
+    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", '../def/PGNDefns.N2kDfn.xml'))
 
     main_server = NavigationServer()
     # create the servers

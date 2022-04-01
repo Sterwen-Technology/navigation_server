@@ -12,9 +12,9 @@
 import socket
 import logging
 
-from src.server_common import NavTCPServer
-from src.publisher import Publisher
-from src.IPInstrument import IPInstrument
+from server_common import NavTCPServer
+from publisher import Publisher
+from IPInstrument import IPInstrument
 
 _logger = logging.getLogger("ShipDataServer")
 

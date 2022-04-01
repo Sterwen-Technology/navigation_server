@@ -13,7 +13,7 @@ import threading
 import logging
 import socket
 
-from src.configuration import NavigationConfiguration
+from configuration import NavigationConfiguration
 
 _logger = logging.getLogger("ShipDataServer")
 
