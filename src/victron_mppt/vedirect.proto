@@ -1,0 +1,41 @@
+//-------------------------------------------------------------------------------
+// Name:        vedirect.proto
+// Purpose:     Victron RS485 messages protobuf definition file
+//
+// Author:      Laurent Carré
+//
+// Created:     27/10/2021
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+// Messages to transmit Victron VE direct messages between the reader and the instrument
+
+
+message device {
+  string product_id = 1;
+  string firmware = 2;
+  string serial = 3;
+  uint32 error =4;
+  uint32 state =5;
+  uint32 mppt_state =7;
+  float day_max_power = 6; //Watt
+  float day_power = 8; //Watt-heure
+}
+
+message solar_output {
+  float current = 1;  // Amp
+  float voltage =2;   // Volt
+  float panel_power =3;  //Watt
+}
+
+message request {
+  int32 id = 1;
+}
+
+service solar_mppt {
+  rpc GetDeviceInfo(request) returns (device) {}
+  rpc GetOutput(request) returns (solar_output) {}
+}

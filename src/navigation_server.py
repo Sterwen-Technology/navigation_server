@@ -26,6 +26,7 @@ from src.configuration import NavigationConfiguration
 from src.ikonvert import iKonvert
 from nmea2k_pgndefs import PGNDefinitions
 from nmea2000_msg import N2KProbePublisher, N2KTracePublisher
+from victron_mppt.mppt_instrument import MPPT_Instrument
 
 
 def _parser():
@@ -169,6 +170,7 @@ def main():
     config.add_class(N2KTracePublisher)
     config.add_class(N2KProbePublisher)
     config.add_class(InternalGps)
+    config.add_class(MPPT_Instrument)
     # logger setup => stream handler for now
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")

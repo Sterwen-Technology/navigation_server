@@ -38,6 +38,9 @@ class NMEA0183Sentences:
         NMEA0183Sentences._local_minutes = time.timezone % 3600
         # print(" Local to UTC %d:%d" % (NMEA0183Sentences._local_hours, NMEA0183Sentences._local_minutes))
 
+    def __init__(self):
+        self._sentence = None
+
     def message(self):
         checksum = NMEA0183Sentences.checksum(self._sentence)
         msg = ("%s*%2X\r\n" % (self._sentence, checksum)).encode()
@@ -56,6 +59,19 @@ class ZDA(NMEA0183Sentences):
         self._sentence = "$%sZDA,%s.%2d,%s,%d,%d" % (NMEA0183Sentences._sender_id, hms, cs, dates,
                                                      NMEA0183Sentences._local_hours,
                                                      NMEA0183Sentences._local_minutes)
+
+
+class XDR(NMEA0183Sentences):
+
+    def __init__(self, transducers: list):
+        self._sentence = "%sXDR"
+        self._nbt = 0
+
+    def add_transducer(self, t_type, data, unit, t_id):
+        self._nbt += 1
+        if self._nbt > 4:
+            return
+        self._sentence += ",%s,%s,%s,%s" % (t_type, data, unit, t_id)
 
 
 if __name__ == "__main__":
