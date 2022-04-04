@@ -53,10 +53,16 @@ class Options(object):
 
 class Vedirect(threading.Thread):
 
-    def __init__(self, serialport, timeout):
+    def __init__(self, serialport, timeout, emulator):
         super().__init__(name="Vedirect")
         self.serialport = serialport
-        self.ser = serial.Serial(serialport, 19200, timeout=timeout)
+        try:
+            self.ser = serial.Serial(serialport, 19200, timeout=timeout)
+        except serial.SerialException as e:
+            _logger.error("Cannot open VEdirect serial interface %s" % str(e))
+            raise
+
+        self._emulator = emulator
         self.header1 = ord('\r')
         self.header2 = ord('\n')
         self.hexmarker = ord(':')
@@ -65,21 +71,29 @@ class Vedirect(threading.Thread):
         self.value = ''
         self.bytes_sum = 0
         self.state = self.WAIT_HEADER
-        self.dict = {}
+        self._results = ({}, {})
+        self._active = 0
+        self.dict = self._results[self._active]
+        self._data_dict = None
+        self._lock = threading.Lock()
+        self._buffer = bytearray(256)
+        self._buflen = 0
+
 
     (HEX, WAIT_HEADER, IN_KEY, IN_VALUE, IN_CHECKSUM) = range(5)
 
     def input(self, byte):
+        self._buffer[self._buflen] = byte
+        self._buflen += 1
+
         if byte == self.hexmarker and self.state != self.IN_CHECKSUM:
             self.state = self.HEX
-
         if self.state == self.WAIT_HEADER:
             self.bytes_sum += byte
             if byte == self.header1:
                 self.state = self.WAIT_HEADER
             elif byte == self.header2:
                 self.state = self.IN_KEY
-
             return None
         elif self.state == self.IN_KEY:
             self.bytes_sum += byte
@@ -118,25 +132,29 @@ class Vedirect(threading.Thread):
         else:
             raise AssertionError()
 
-    def read_data_single(self):
-        while True:
-            data = self.ser.read()
-            for single_byte in data:
-                packet = self.input(single_byte)
-                if packet is not None:
-                    return packet
-
-    def read_data_callback(self, callbackFunction):
+    def run(self):
         while True:
             data = self.ser.read()
             for byte in data:
                 packet = self.input(byte)
                 if packet is not None:
-                    callbackFunction(packet)
+                    # ok we have a good packet
+                    self._lock.acquire()
+                    # swap the dict.
+                    self._data_dict = self.dict
+                    self._active = not self._active
+                    self.dict = self._results[self._active]
+                    self._lock.release()
+                    if self._emulator is not None:
+                        self._emulator.send(self._buffer[:self._buflen])
+                    self._buflen = 0
 
-    def run(self):
-        while True:
-            self.read_data_single()
+    def lock_get_data(self):
+        self._lock.acquire()
+        return self._data_dict
+
+    def unlock_data(self):
+        self._lock.release()
 
 
 class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
@@ -162,10 +180,11 @@ class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
 
     def GetOutput(self, request, context):
         _logger.debug("GRPC request GetOutput")
-        packet = self._reader.get_packet()
+        packet = self._reader.lock_get_data()
         ret_val = vedirect_pb2.solar_output()
         if packet is not None:
             self.set_data(ret_val, self.solar_output_v, packet)
+        self._reader.unlock_data()
         return ret_val
 
 
@@ -242,7 +261,7 @@ class VEdirect_simulator():
         self._lock = threading.Lock()
         self._lock.acquire()
 
-    def get_packet(self):
+    def lock_get_data(self):
 
         try:
             line = self._fd.readline()
@@ -261,7 +280,6 @@ class VEdirect_simulator():
         self._lock.acquire()
 
 
-
 def main():
     opts = parser.parse_args()
     loghandler = logging.StreamHandler()
@@ -277,7 +295,7 @@ def main():
     if opts.simulator is not None:
         reader = VEdirect_simulator(opts.simulator, ser_emu)
     else:
-        reader = Vedirect(opts.interface, 10.0)
+        reader = Vedirect(opts.interface, 10.0, ser_emu)
 
     server = GrpcServer(opts, reader)
     if ser_emu is not None:
