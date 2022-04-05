@@ -5,15 +5,18 @@
 # Author:      Laurent Carré
 #
 # Created:     27/02/2022
-# Copyright:   (c) Laurent Carré Sterwen Technolgy 2021-2022
-# Licence:     <your licence>
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
 import socket
 import logging
+import queue
 
 # from server_common import NavTCPServer
 # from publisher import Publisher
+import threading
+
 from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
 
 _logger = logging.getLogger("ShipDataServer")
@@ -149,8 +152,73 @@ class TCP_reader(IP_transport):
             return False
 
 
+class IPAsynchReader(threading.Thread):
+
+    def __init__(self, transport, out_queue, separator, msg_processing):
+        super().__init__()
+        self._transport = transport
+        self._out_queue = out_queue
+        self._separator = separator
+        self._msg_processing = msg_processing
+        self._stop_flag = False
+        self._buffer = bytearray(512)
+
+    def run(self):
+
+        while not self._stop_flag:
+            try:
+                buffer = self._transport.read()
+            except InstrumentReadError:
+                break
+            except InstrumentTimeOut:
+                continue
+            start_idx = 0
+            end_idx = len(buffer)
+            while True:
+                if start_idx >= end_idx:
+                    break
+                index = buffer.find(self._separator, start_idx, end_idx)
+                if index == -1:
+                    _logger.error("YDFrame missing delimiter start %d end %d" % (start_idx, end_idx))
+                    _logger.error("YDFrame missing delimiter %s" % buffer[start_idx: end_idx].hex(' ', 2))
+                    break
+                frame = buffer[start_idx:index]
+                start_idx = index + 2
+                try:
+                    msg = self._msg_processing(frame)
+                except ValueError:
+                    continue
+                self._out_queue.put(msg)
+
+    def stop(self):
+        self._stop_flag = True
 
 
+class BufferedIPInstrument(IPInstrument):
+    '''
+    This class provide a buffered input/output when there is a decoupling between read operation and the
+    actual message read.
+    Typical use:
+    - Devices with multiple messages in a single I/O
+    - N2K fast track management
+    '''
+    def __init__(self, opts, seperator, msg_processing):
+        super().__init__(opts)
+        self._in_queue = queue.Queue(20)
+        self._asynch_io = IPAsynchReader (self._transport, self._in_queue, seperator, msg_processing)
+
+    def open(self):
+        super().open()
+        if self._state == self.CONNECTED:
+            self._asynch_io.start()
+
+    def read(self):
+        return self._in_queue.get()
+
+    def stop(self):
+        self._asynch_io.stop()
+        self._asynch_io.join()
+        super().stop()
 
 
 

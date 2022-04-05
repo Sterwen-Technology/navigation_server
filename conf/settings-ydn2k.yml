@@ -28,19 +28,19 @@ servers:
 
 instruments:
 
-- MiniPlex3:
-    class: ShipModulInterface
-    address: 192.168.1.62
-    port: 10110
+- YDEN:
+    class: YDInstrument
+    address: 192.168.1.60
+    port: 1457
     transport: TCP
     server: NMEAServer
 
 publishers:
 
-#    - MainLog:
-#       class: LogPublisher
-#        file: /data/solidsense/log/navigation.log
-#        instruments: [MiniPlex3]
+- MainLog:
+    class: LogPublisher
+    file: /mnt/meaban/Bateau/tests/YDEN.log
+    instruments: [YDEN]
 
 
 

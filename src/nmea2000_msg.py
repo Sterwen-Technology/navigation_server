@@ -56,8 +56,14 @@ class NMEA2000Msg:
         res.pgn = self._pgn
         res.priority = self._prio
         res.sa = self._sa
-        res.timestamp = int(self._ts / 1000)
-        res.payload = self._payload
+        try:
+            res.timestamp = int(self._ts / 1000)
+        except ValueError:
+            _logger.error("Invalid time stamp %d on PGN %d" % (self._ts, self._pgn))
+        try:
+            res.payload = self._payload
+        except TypeError as e:
+            _logger.error("Type error %s on payload PGN %d type %s" % (e, self._pgn, type(self._payload)))
         return res
 
     def serialize(self):
