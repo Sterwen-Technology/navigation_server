@@ -41,6 +41,11 @@ class PGNDefinitions:
     def pgn_defs():
         return PGNDefinitions.pgn_definitions
 
+    @staticmethod
+    def pgn_definition(pgn):
+        return PGNDefinitions.pgn_definitions.pgn_def(pgn)
+
+
     def __init__(self, xml_file):
 
         try:
@@ -129,6 +134,7 @@ class PGNDef:
         self._id = int(self._id_str)
         self._name = pgnxml.find('Name').text
         self._fields = {}
+        self._fast_packet = False
         bl = pgnxml.find('ByteLength')
         if bl is not None:
             self._byte_length = int(bl.text)
@@ -176,6 +182,9 @@ class PGNDef:
     @property
     def length(self):
         return self._byte_length
+
+    def fast_packet(self) -> bool:
+        return self._fast_packet
 
     def fields(self):
         return self._fields.values()

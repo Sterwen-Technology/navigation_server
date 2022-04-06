@@ -57,7 +57,7 @@ class NMEA2000Msg:
         res.priority = self._prio
         res.sa = self._sa
         try:
-            val = int(self._ts / 1000000000)
+            val = int(self._ts / 1000)
             res.timestamp = val
         except ValueError:
             _logger.error("Invalid time stamp %s %d on PGN %d" % (type(val), val, self._pgn))
@@ -149,20 +149,19 @@ class N2KTracePublisher(Publisher):
 
     def __init__(self, opts):
         super().__init__(opts)
-        pgn_filter = opts.get('filter', None)
-        if pgn_filter is not None:
-            self._filter = pgn_list(pgn_filter)
-        else:
-            self._filter = None
-        self._print_option = opts.get('print', 'ALL')
+        self._filter = opts.getlist('filter', int, None)
+        _logger.info("%s filter:%s" % (self.name(), self._filter))
+        self._print_option = opts.get('print', str, 'ALL')
 
     def process_msg(self, msg):
-        res = msg.decode()
+
         if self._print_option == 'NONE':
             return True
         if self._filter is not None:
             if msg.pgn not in self._filter:
                 return True
+        # print("decoding %s", msg)
+        res = msg.decode()
         if res is not None:
             print(res)
         return True
@@ -221,3 +220,108 @@ class NMEA2000Factory:
             return NMEA2000Factory.class_build[message.pgn](message, kwargs=fields)
         except KeyError:
             return NMEA2000Object(message.pgn, message, kwargs=fields)
+
+
+class FastPacketException(Exception):
+    pass
+
+
+class FastPacket:
+
+    def __init__(self, pgn):
+        self._sequence = 0
+        self._byte_length = 0
+        self._length = 0
+        self._pgn = pgn
+        self._frames = list()
+        self._count = 0
+
+    def first_packet(self, pgn, frame):
+        self._sequence = (frame[0] >> 5) & 7
+        counter = frame[0] & 0x1F
+        if counter != 0 or self._pgn != pgn:
+            raise FastPacketException('Incorrect frame sequence')
+        self._byte_length = frame[1]
+        self._length = 6
+        self._frames.append(frame[2:8])
+        self._count += 1
+
+    def add_packet(self, pgn , frame):
+        counter = frame[0] & 0x1F
+        if self ._count != counter:
+            raise FastPacketException('Frame not in sequence')
+        self._frames.append(frame[1:])
+        self._count += 1
+        self._length += len(frame) - 1
+        if self._length >= self._byte_length:
+            return True
+        else:
+            return False
+
+    def total_frame(self):
+        result = bytearray(self._byte_length)
+        start_idx = 0
+        for f in self._frames:
+            l = len(f)
+            if start_idx + l >= self._byte_length:
+                result[start_idx:] = f[:self._byte_length - start_idx +1]
+            else:
+                result[start_idx:] = f
+            start_idx += l
+        return result
+
+    @property
+    def sequence(self):
+        return self._sequence
+
+    @property
+    def pgn(self):
+        return self._pgn
+
+
+class FastPacketHandler:
+
+    _sequences = {}
+    _pgn_active = {}
+
+    @staticmethod
+    def process_frame(pgn, frame):
+        seq = (frame[0] >> 5) & 7
+        try:
+            handle = FastPacketHandler._sequences [seq]
+        except KeyError:
+            handle = None
+
+        if handle is not None:
+            # let's see if this is OK
+            if handle.pgn != pgn:
+                raise FastPacketException('PGN mix in sequence')
+            if handle.add_packet(pgn, frame):
+                result = handle.total_frame()
+                FastPacketHandler._sequences[seq] = None
+                FastPacketHandler._pgn_active[pgn] = False
+                _logger.debug("Fast packet end sequence on PGN %d" % pgn)
+                return result
+            else:
+                return None
+        else:
+            # first packet
+            handle = FastPacket(pgn)
+            handle.first_packet(pgn, frame)
+            FastPacketHandler._sequences[seq] = handle
+            FastPacketHandler._pgn_active[pgn] = True
+            _logger.debug("Fast packet start sequence on PGN %d" % pgn)
+            return None
+
+    @staticmethod
+    def is_pgn_active(pgn):
+        try:
+            return FastPacketHandler._pgn_active[pgn]
+        except KeyError:
+            return False
+
+
+
+
+
+

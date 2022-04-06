@@ -164,7 +164,8 @@ class IPAsynchReader(threading.Thread):
         self._buffer = bytearray(512)
 
     def run(self):
-
+        part = False
+        part_buf = bytearray()
         while not self._stop_flag:
             try:
                 buffer = self._transport.read()
@@ -172,7 +173,6 @@ class IPAsynchReader(threading.Thread):
                 continue
             except InstrumentReadError:
                 break
-
             start_idx = 0
             end_idx = len(buffer)
             while True:
@@ -180,10 +180,20 @@ class IPAsynchReader(threading.Thread):
                     break
                 index = buffer.find(self._separator, start_idx, end_idx)
                 if index == -1:
-                    _logger.error("YDFrame missing delimiter start %d end %d" % (start_idx, end_idx))
-                    _logger.error("YDFrame missing delimiter %s" % buffer[start_idx: end_idx].hex(' ', 2))
+                    if part:
+                        _logger.error("YDFrame missing delimiter start %d end %d" % (start_idx, end_idx))
+                        _logger.error("YDFrame missing delimiter %s" % buffer[start_idx: end_idx].hex(' ', 2))
+                    else:
+                        part = True
+                        part_buf = buffer[start_idx: end_idx]
+                        _logger.debug("Partial frame (%d %d): %s" % (start_idx, end_idx, part_buf))
                     break
-                frame = buffer[start_idx:index]
+                if part:
+                    frame = part_buf + buffer[start_idx:index]
+                    _logger.debug("Frame reconstruction %s %s" % (part_buf, buffer[start_idx:index]))
+                    part = False
+                else:
+                    frame = buffer[start_idx:index]
                 start_idx = index + 2
                 try:
                     msg = self._msg_processing(frame)
@@ -220,9 +230,10 @@ class BufferedIPInstrument(IPInstrument):
         return self._in_queue.get()
 
     def stop(self):
+        super().stop()
         self._asynch_io.stop()
         self._asynch_io.join()
-        super().stop()
+
 
 
 
