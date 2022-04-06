@@ -131,10 +131,16 @@ class LogPublisher(Publisher):
         self._fd.write("%9.3f|" % delta_t)
         if type(msg) == bytes:
             self._fd.write(msg.decode())
+
         else:
             # need to serialize first
-            self._fd.write(msg.serialize())
-            self._fd.write('\n')
+            try:
+                msg_str = msg.serialize()
+                self._fd.write(msg_str)
+            except Exception as e:
+                print("message error",e,msg)
+                pass
+        self._fd.write('\n')
         self._fd.flush()
         return True
 
