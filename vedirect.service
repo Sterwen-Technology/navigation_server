@@ -1,0 +1,13 @@
+[Unit]
+Description=Navigation Data Server
+Requires=network.target
+
+[Service]
+Type=simple
+User=solidsense
+ExecStart=/usr/bin/python3  /data/solidsense/navigation/src/mppt_reader.py
+Restart=always
+RestartSec=6
+
+[Install]
+WantedBy=multi-user.target
