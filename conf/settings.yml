@@ -1,0 +1,49 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/12/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+#
+trace: INFO
+
+servers:
+
+- NMEAServer:
+    class: NMEA_server
+    port: 4500
+
+- Console:
+    class: Console
+    port: 4502
+
+- ShipModulConfig:
+    class: ShipModulConfig
+    port: 4501
+    instrument: MiniPlex3
+
+instruments:
+
+- MiniPlex3:
+    class: ShipModulInterface
+    address: 192.168.1.62
+    port: 10110
+    transport: TCP
+    server: NMEAServer
+
+publishers:
+
+#    - MainLog:
+#       class: LogPublisher
+#        file: /data/solidsense/log/navigation.log
+#        instruments: [MiniPlex3]
+
+
+
+
+
+

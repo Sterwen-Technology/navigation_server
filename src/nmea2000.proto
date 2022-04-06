@@ -1,0 +1,25 @@
+
+//-------------------------------------------------------------------------------
+// Name:        nmea2000.proto
+// Purpose:     nmea2000 messages protobuf definition file
+//
+// Author:      Laurent Carré
+//
+// Created:     27/10/2021
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+// generic NMEA2000 message with all fast packets concatenated
+// so the payload length can be > 8 bytes
+
+message nmea2000 {
+  uint32 pgn=1;
+  uint32 priority=2;
+  uint32 sa=3; // source address
+  uint32 da =4; // destination address
+  uint64 timestamp = 5; // micro-seconds
+  bytes payload = 6;
+}

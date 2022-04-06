@@ -1,0 +1,39 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/12/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+#
+trace: INFO
+
+servers:
+
+instruments:
+
+- iKonvert:
+    class: iKonvert
+    tty_name: /dev/ttyUSB1
+    trace: /mnt/meaban/Bateau/tests/test220309-1.log
+
+publishers:
+
+    - N2KTrace:
+          class: N2kTracePublisher
+          instruments: [iKonvert]
+          # filter: 129283,129284
+
+#    - MainLog:
+#       class: LogPublisher
+#        file: /data/solidsense/log/navigation.log
+#        instruments: [MiniPlex3]
+
+
+
+
+
+
