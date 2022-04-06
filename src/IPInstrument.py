@@ -135,10 +135,10 @@ class TCP_reader(IP_transport):
     def read(self):
         try:
             msg = self._socket.recv(256)
-        except TimeoutError:
+        except (TimeoutError, socket.timeout) :
             _logger.info("Timeout error on TCP socket %s" % self._ref)
             raise InstrumentTimeOut()
-        except OSError as e:
+        except socket.error as e:
             _logger.error("Error receiving from TCP socket %s: %s" % (self._ref, str(e)))
             raise InstrumentReadError()
         return msg
@@ -168,10 +168,11 @@ class IPAsynchReader(threading.Thread):
         while not self._stop_flag:
             try:
                 buffer = self._transport.read()
-            except InstrumentReadError:
-                break
             except InstrumentTimeOut:
                 continue
+            except InstrumentReadError:
+                break
+
             start_idx = 0
             end_idx = len(buffer)
             while True:
@@ -189,6 +190,9 @@ class IPAsynchReader(threading.Thread):
                 except ValueError:
                     continue
                 self._out_queue.put(msg)
+                if self._stop_flag:
+                    break
+        _logger.info("Asynch reader stopped")
 
     def stop(self):
         self._stop_flag = True

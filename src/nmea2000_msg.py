@@ -57,11 +57,12 @@ class NMEA2000Msg:
         res.priority = self._prio
         res.sa = self._sa
         try:
-            res.timestamp = int(self._ts / 1000)
+            val = int(self._ts / 1000000000)
+            res.timestamp = val
         except ValueError:
-            _logger.error("Invalid time stamp %d on PGN %d" % (self._ts, self._pgn))
+            _logger.error("Invalid time stamp %s %d on PGN %d" % (type(val), val, self._pgn))
         try:
-            res.payload = self._payload
+            res.payload = bytes(self._payload)
         except TypeError as e:
             _logger.error("Type error %s on payload PGN %d type %s" % (e, self._pgn, type(self._payload)))
         return res
