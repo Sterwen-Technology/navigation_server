@@ -33,11 +33,13 @@ from ydn2k_instrument import YDInstrument
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
 
-    p.add_argument('-s', '--settings', action='store', type=str, default='./settings.yml')
+    p.add_argument('-s', '--settings', action='store', type=str, default='./conf/settings.yml')
+    p.add_argument('-d', '--working_dir', action='store', type=str)
 
     return p
 
 
+version = "V0.931"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
 
@@ -181,8 +183,12 @@ def main():
     _logger.setLevel(config.get_option('trace', 'INFO'))
 
     # global parameters
+    if opts.working_dir is not None:
+        os.chdir(opts.working_dir)
+    _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2022" % version)
+    _logger.info("Navigation server working directory:%s" % os.getcwd())
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'SN'))
-    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", '../def/PGNDefns.N2kDfn.xml'))
+    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
 
     main_server = NavigationServer()
     # create the servers
@@ -200,7 +206,7 @@ def main():
         main_server.add_publisher(publisher)
 
     main_server.start()
-    print_threads()
+    # print_threads()
     main_server.wait()
 
 
