@@ -184,11 +184,11 @@ def main():
 
     # global parameters
     if opts.working_dir is not None:
-        os.chroot(opts.working_dir)
+        os.chdir(opts.working_dir)
     _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2022" % version)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'SN'))
-    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", '../def/PGNDefns.N2kDfn.xml'))
+    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
 
     main_server = NavigationServer()
     # create the servers
