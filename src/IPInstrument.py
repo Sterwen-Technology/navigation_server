@@ -135,10 +135,10 @@ class TCP_reader(IP_transport):
     def read(self):
         try:
             msg = self._socket.recv(256)
-        except TimeoutError:
+        except (TimeoutError, socket.timeout) :
             _logger.info("Timeout error on TCP socket %s" % self._ref)
             raise InstrumentTimeOut()
-        except OSError as e:
+        except socket.error as e:
             _logger.error("Error receiving from TCP socket %s: %s" % (self._ref, str(e)))
             raise InstrumentReadError()
         return msg
@@ -164,14 +164,15 @@ class IPAsynchReader(threading.Thread):
         self._buffer = bytearray(512)
 
     def run(self):
-
+        part = False
+        part_buf = bytearray()
         while not self._stop_flag:
             try:
                 buffer = self._transport.read()
-            except InstrumentReadError:
-                break
             except InstrumentTimeOut:
                 continue
+            except InstrumentReadError:
+                break
             start_idx = 0
             end_idx = len(buffer)
             while True:
@@ -179,16 +180,29 @@ class IPAsynchReader(threading.Thread):
                     break
                 index = buffer.find(self._separator, start_idx, end_idx)
                 if index == -1:
-                    _logger.error("YDFrame missing delimiter start %d end %d" % (start_idx, end_idx))
-                    _logger.error("YDFrame missing delimiter %s" % buffer[start_idx: end_idx].hex(' ', 2))
+                    if part:
+                        _logger.error("YDFrame missing delimiter start %d end %d" % (start_idx, end_idx))
+                        _logger.error("YDFrame missing delimiter %s" % buffer[start_idx: end_idx].hex(' ', 2))
+                    else:
+                        part = True
+                        part_buf = buffer[start_idx: end_idx]
+                        _logger.debug("Partial frame (%d %d): %s" % (start_idx, end_idx, part_buf))
                     break
-                frame = buffer[start_idx:index]
+                if part:
+                    frame = part_buf + buffer[start_idx:index]
+                    _logger.debug("Frame reconstruction %s %s" % (part_buf, buffer[start_idx:index]))
+                    part = False
+                else:
+                    frame = buffer[start_idx:index]
                 start_idx = index + 2
                 try:
                     msg = self._msg_processing(frame)
                 except ValueError:
                     continue
                 self._out_queue.put(msg)
+                if self._stop_flag:
+                    break
+        _logger.info("Asynch reader stopped")
 
     def stop(self):
         self._stop_flag = True
@@ -216,9 +230,10 @@ class BufferedIPInstrument(IPInstrument):
         return self._in_queue.get()
 
     def stop(self):
+        super().stop()
         self._asynch_io.stop()
         self._asynch_io.join()
-        super().stop()
+
 
 
 

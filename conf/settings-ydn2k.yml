@@ -38,8 +38,9 @@ instruments:
 publishers:
 
 - MainLog:
-    class: LogPublisher
-    file: /mnt/meaban/Bateau/tests/YDEN.log
+    class: N2KTracePublisher
+    filter: [130578,129029]
+    # file: /mnt/meaban/Bateau/tests/YDEN.log
     instruments: [YDEN]
 
 
