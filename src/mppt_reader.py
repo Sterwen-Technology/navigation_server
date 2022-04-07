@@ -76,7 +76,7 @@ class Vedirect(threading.Thread):
         self.dict = self._results[self._active]
         self._data_dict = None
         self._lock = threading.Lock()
-        self._buffer = bytearray(256)
+        self._buffer = bytearray(512)
         self._buflen = 0
 
 
@@ -147,6 +147,7 @@ class Vedirect(threading.Thread):
                     self._lock.release()
                     if self._emulator is not None:
                         self._emulator.send(self._buffer[:self._buflen])
+                    # _logger.debug(self._buffer[:self._buflen])
                     self._buflen = 0
 
     def lock_get_data(self):
@@ -223,7 +224,11 @@ class TCPSerialEmulator(threading.Thread):
     def __init__(self, port):
         super().__init__()
         self._address = ('0.0.0.0', port)
-        self._server = socket.create_server(self._address, family=socket.AF_INET, reuse_port=True)
+        #self._server = socket.create_server(self._address, family=socket.AF_INET, reuse_port=True)
+        self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._server.bind(('0.0.0.0', port))
+        # self._socket.settimeout(self._timeout)
         self._connection = None
         self._remote = None
 
@@ -286,7 +291,7 @@ def main():
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
-    _logger.setLevel(logging.DEBUG)
+    _logger.setLevel(logging.INFO)
 
     if opts.serial_port is not None:
         ser_emu = TCPSerialEmulator(opts.serial_port)
