@@ -42,10 +42,6 @@ instruments:
     direction: read_only
     report_timer: 10
 
-- GPS:
-    class: InternalGps
-    server: NMEAServer
-
 publishers:
 
 #    - MainLog:
