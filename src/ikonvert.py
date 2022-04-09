@@ -5,8 +5,8 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021
-# Licence:     <your licence>
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
 import serial

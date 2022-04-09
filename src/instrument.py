@@ -6,7 +6,7 @@
 #
 # Created:     29/11/2021
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
-# Licence:     <your licence>
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
 import socket

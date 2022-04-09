@@ -5,9 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="98340c39-ef22-4b98-af81-9eacfb6b6dfd" name="Default Changelist" comment="LOca">
-      <change beforePath="$PROJECT_DIR$/internal_gps.py" beforeDir="false" afterPath="$PROJECT_DIR$/internal_gps.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/navigation_server.py" beforeDir="false" afterPath="$PROJECT_DIR$/navigation_server.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/settings.yml" beforeDir="false" afterPath="$PROJECT_DIR$/settings.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,6 +31,14 @@
       <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
     </file-type-list>
   </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="NamedScopeManager">
+    <order>
+      <scope name="Sterwen-Tech" />
+    </order>
+  </component>
   <component name="ProjectId" id="20xND8QYxM69TqZhXFsmX4vWtWu" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
@@ -44,7 +50,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/nmea2000_msg.py" />
-    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RunManager" selected="Python.navigation_server">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
@@ -142,8 +148,8 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.nmea2000_decode" />
       <item itemvalue="Python.navigation_server" />
+      <item itemvalue="Python.nmea2000_decode" />
     </list>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
@@ -208,7 +214,6 @@
         </entry>
       </map>
     </option>
-    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="LOca" />
