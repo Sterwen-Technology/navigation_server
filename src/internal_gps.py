@@ -16,18 +16,19 @@ import sys
 import time
 import threading
 
-sys.path.insert(0," /opt/SolidSense/modem_gps")
+sys.path.insert(0, "/opt/SolidSense/modem_gps")
+_logger = logging.getLogger("ShipDataServer")
 
 try:
     from QuectelAT_Service import *
     gps_present = True
-except ImportError:
+except ImportError as e:
+    _logger.error(str(e))
     gps_present = False
 
 
 from instrument import Instrument, InstrumentReadError, InstrumentNotPresent
 
-_logger = logging.getLogger("ShipDataServer")
 
 
 class InternalGps(Instrument):

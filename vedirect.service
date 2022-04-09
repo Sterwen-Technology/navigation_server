@@ -5,7 +5,7 @@ Requires=network.target
 [Service]
 Type=simple
 User=solidsense
-ExecStart=/usr/bin/python3  /data/solidsense/navigation/src/mppt_reader.py
+ExecStart=/usr/bin/python3  /data/solidsense/navigation/src/mppt_reader.py -i /dev/ttyUSB0
 Restart=always
 RestartSec=6
 
