@@ -40,6 +40,7 @@ def _parser():
 
 
 version = "V0.931"
+default_base_dir = "/mnt/meaban/Bateau/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
 
@@ -159,6 +160,7 @@ def print_threads():
 
 
 def main():
+    print("Current directory", os.getcwd())
     opts = parser.parse_args()
     config = NavigationConfiguration(opts.settings)
     config.add_class(NMEA_server)
@@ -185,6 +187,10 @@ def main():
     # global parameters
     if opts.working_dir is not None:
         os.chdir(opts.working_dir)
+    else:
+        if os.getcwd() != default_base_dir:
+            os.chdir(default_base_dir)
+
     _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2022" % version)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'SN'))

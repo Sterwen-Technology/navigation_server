@@ -39,7 +39,7 @@ publishers:
 
 - MainLog:
     class: N2KTracePublisher
-    filter: [130578,129029]
+    # filter: [130578,129029]
     # file: /mnt/meaban/Bateau/tests/YDEN.log
     instruments: [YDEN]
 

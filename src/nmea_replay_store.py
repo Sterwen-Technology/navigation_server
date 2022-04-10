@@ -82,7 +82,7 @@ def main():
     while True:
         try:
             data = sock.recv(256)
-            print(data)
+            # print(data)
             if len(data) == 0:
                 break
             if filter_f is None:

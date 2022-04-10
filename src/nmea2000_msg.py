@@ -16,13 +16,14 @@ import datetime
 from nmea2k_pgndefs import *
 from publisher import Publisher
 from nmea2000_pb2 import nmea2000
+from generic_msg import *
 
 _logger = logging.getLogger("ShipDataServer")
 
 
 class NMEA2000Msg:
 
-    def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytearray = None):
+    def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytes = None):
         self._pgn = pgn
         self._prio = prio
         self._sa = sa
@@ -120,8 +121,11 @@ class N2KProbePublisher(Publisher):
         self._records = {}
         super().__init__(opts)
 
-    def process_msg(self, msg):
+    def process_msg(self, gen_msg):
         # print("Process msg pgn", msg.pgn)
+        if gen_msg.type != N2K_MSG:
+            return
+        msg = gen_msg.msg
         clock = time.time_ns()
         display = False
         if msg.pgn == 0:
@@ -153,8 +157,10 @@ class N2KTracePublisher(Publisher):
         _logger.info("%s filter:%s" % (self.name(), self._filter))
         self._print_option = opts.get('print', str, 'ALL')
 
-    def process_msg(self, msg):
-
+    def process_msg(self, gen_msg):
+        if gen_msg.type != N2K_MSG:
+            return
+        msg = gen_msg.msg
         if self._print_option == 'NONE':
             return True
         if self._filter is not None:

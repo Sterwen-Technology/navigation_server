@@ -88,7 +88,7 @@ class NMEA0183Filter:
             self._formatters.append(f)
 
     def valid_sentence(self, msg):
-        if msg[0] != ord('$') or msg[0] != ord('!'):
+        if msg[0] != ord('$') and msg[0] != ord('!'):
             print('Invalid NMEA message', msg[0])
             return False
         if msg[3:6] in self._formatters:

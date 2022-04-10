@@ -12,6 +12,7 @@
 import socket
 import sys,os
 import time
+import serial
 
 from argparse import ArgumentParser
 
@@ -33,6 +34,7 @@ def _parser():
     p.add_argument("-pr", "--protocol", action="store", type=str,
                    choices=['TCP','UDP'], default='TCP',
                    help="Protocol to read NMEA sentences, default TCP")
+    p.add_argument('-s','--sleep', action='store', type=float, default=0.25)
 
     return p
 
@@ -92,6 +94,7 @@ def main():
                 except IOError as e:
                     print(e)
                     break
+                time.sleep(opts.sleep)
             else:
                 data = sock.recv(256)
             print(data)
@@ -102,7 +105,8 @@ def main():
             break
 
     output.close()
-    sock.close()
+    if sock is not None:
+        sock.close()
 
 
 if __name__ == '__main__':

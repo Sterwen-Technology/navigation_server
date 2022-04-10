@@ -18,9 +18,10 @@ import datetime
 
 from instrument import Instrument, InstrumentReadError
 from nmea2000_msg import NMEA2000Msg
+from generic_msg import *
 
 _logger = logging.getLogger("ShipDataServer")
-(UNKNOWN, STATUS, NOT_CONN, ACK, NAK, N2K) = range(6)
+(UNKNOWN, STATUS, NOT_CONN, ACK, NAK, N2K, N183) = range(7)
 
 
 class iKonvertMsg():
@@ -28,6 +29,7 @@ class iKonvertMsg():
     def __init__(self):
         self._type = UNKNOWN
         self._raw = None
+        self._msg = None
         self._param = {}
 
     @staticmethod
@@ -41,48 +43,53 @@ class iKonvertMsg():
         if len(data) < 8:
             print("iKonvert incorrect data frame len=%d" % len(data))
             return None
-        try:
-            str_msg = data.decode().strip('\n\r')
-        except UnicodeDecodeError:
-            _logger.error("iKonvert message not valid %s" % str(data))
-            return None
 
-        _logger.debug("iKonvert received:%s" % str_msg)
-        fields = str_msg.split(',')
+        _logger.debug("iKonvert received:%s" % data )
+        fields = data.split(b',')
         if len(fields) < 2:
             _logger.error("iKonvert improper message")
             return
         try:
-            if fields[0][0] == '!':
+            if fields[0][0:6] == b'!PDGY':
                 self._type = N2K
-                self._param['pgn'] = fields[1]
-                self._param['priority'] = fields[2]
-                self._param['source'] = fields[3]
-                self._param['destination'] = fields[4]
-                self._param['timer'] = fields[5]
-                self._param['payload'] = base64.b64decode(fields[6])
-            elif fields[1][0] == '0':
-                if len(fields[3]) == 0:
+                self._msg = NMEA2000Msg(
+                    pgn=int(fields[1]),
+                    prio=int(fields[2]),
+                    sa=int(fields[3]),
+                    da=int(fields[4]),
+                    payload=base64.b64decode(fields[6])
+                )
+            elif fields[0][0:6] == b'$PDGY':
+                if fields[1][0] == ord('0'):
+                    if len(fields[3]) == 0:
+                        self._type = NOT_CONN
+                    else:
+                        self._type = STATUS
+                        self._param['bus_load'] = fields[2]
+                        self._param['frame_errors'] = fields[3]
+                        self._param['nb_devices'] = fields[4]
+                        self._param['uptime'] = fields[5]
+                        self._param['CAN_address'] = fields[6]
+                        self._param['nb_rejected_PGN'] = fields[7]
+                elif fields[1] == b'TEXT':
                     self._type = NOT_CONN
+                    self._param['boot'] = fields[2]
+                elif fields[1] == b'ACK':
+                    self._type = ACK
+                    self._param['message'] = fields[2]
+                elif fields[1] == b'NAK':
+                    self._type = NAK
+                    self._param['error'] = fields[2]
                 else:
-                    self._type = STATUS
-                    self._param['bus_load'] = fields[2]
-                    self._param['frame_errors'] = fields[3]
-                    self._param['nb_devices'] = fields[4]
-                    self._param['uptime'] = fields[5]
-                    self._param['CAN_address'] = fields[6]
-                    self._param['nb_rejected_PGN'] = fields[7]
-            elif fields[1] == 'TEXT':
-                self._type = NOT_CONN
-                self._param['boot'] = fields[2]
-            elif fields[1] == 'ACK':
-                self._type = ACK
-                self._param['message'] = fields[2]
-            elif fields[1] == 'NAK':
-                self._type = NAK
-                self._param['error'] = fields[2]
+                    _logger.error("iKonvert Unknown message type %s %s" % (fields[0], fields[1]))
             else:
-                _logger.error("iKonvert Unknown message type %s %s" % (fields[0], fields[1]))
+                if fields[0][0] == b'$':
+                    # this shall be NMEA0183
+                    self._type = N183
+                    self._msg = data
+                else:
+                    _logger.error("iKonvert Unknown message type %s %s" % (fields[0], fields[1]))
+
         except KeyError:
             _logger.error("iKonvert decoding error for message %s" % fields[0])
         return self
@@ -93,6 +100,14 @@ class iKonvertMsg():
     @property
     def type(self):
         return self._type
+
+    @property
+    def raw(self):
+        return self._raw
+
+    @property
+    def msg(self):
+        return self._msg
 
 
 class iKonvertRead(threading.Thread):
@@ -140,7 +155,7 @@ class iKonvert(Instrument):
         super().__init__(opts)
         self._tty_name = opts.get("tty_name", str, "/dev/ttyUSB0")
         trace = opts.get("trace", str, None)
-        self._mode = opts.get("mode", "ALL")  # ALL (send all PGN) or NORMAL (send only requested PGN)
+        self._mode = opts.get("mode", str, "ALL")  # ALL (send all PGN) or NORMAL (send only requested PGN)
         self._tty = None
         self._reader = None
         self._wait_sem = threading.Semaphore(0)
@@ -176,7 +191,7 @@ class iKonvert(Instrument):
                 return False
             _logger.info("iKonvert serial interface %s open" % self._tty_name)
         cb = {UNKNOWN: self.process_status, STATUS: self.process_status, NOT_CONN: self.process_status,
-              ACK: self.process_acknak, NAK: self.process_acknak, N2K: self.process_n2k}
+              ACK: self.process_acknak, NAK: self.process_acknak, N2K: self.process_nmea, N183: self.process_nmea}
         if self._reader is None:
             self._reader = iKonvertRead(self._tty, cb,  self._trace_fd)
             self._reader.start()
@@ -191,16 +206,14 @@ class iKonvert(Instrument):
         else:
             return True
 
-    def process_n2k(self, msg):
+    def process_nmea(self, msg):
         # print("N2K message received pgn %s" % msg.get('pgn'))
-        n2k_msg = NMEA2000Msg( int(msg.get('pgn')),
-                             int(msg.get('priority')),
-                             int(msg.get('source')),
-                             int(msg.get('destination')),
-                             msg.get('payload'))
-        # n2k_msg.display()
+        if msg.type == N183:
+            nav_msg = NavGenericMsg(N0183_MSG, msg.raw)
+        else:
+            nav_msg = NavGenericMsg(N2K_MSG, msg.raw, msg.msg)
         try:
-            self._queue.put(n2k_msg, block=False)
+            self._queue.put(nav_msg, block=False)
         except queue.Full:
             # just discard
             _logger.error("iKonvert read queue full")
@@ -265,7 +278,7 @@ class iKonvert(Instrument):
             self.send_loc_cmd('N2NET_OFFLINE', wait=0)
             self.wait_status()
         self._reader.stop()
-        self._queue.put(NMEA2000Msg(0))
+        self._queue.put(NavGenericMsg(NULL_MSG))
         self._ikstate = self.IKIDLE
 
     def close(self):
