@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='navigation_server',
-    version='0.96',
+    version='0.931',
     packages=[''],
     url='',
     license='Eclipse Public License 2.0',

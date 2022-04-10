@@ -74,6 +74,29 @@ class XDR(NMEA0183Sentences):
         self._sentence += ",%s,%s,%s,%s" % (t_type, data, unit, t_id)
 
 
+class NMEA0183Filter:
+
+    def __init__(self, filter_string, sep):
+        self._formatters = []
+        flist = filter_string.split(sep)
+        for f in flist:
+            if len(f) != 3:
+                print('Invalid formatter', f)
+                continue
+            if type(f) == str:
+                f = f.encode()
+            self._formatters.append(f)
+
+    def valid_sentence(self, msg):
+        if msg[0] != ord('$') or msg[0] != ord('!'):
+            print('Invalid NMEA message', msg[0])
+            return False
+        if msg[3:6] in self._formatters:
+            return True
+        else:
+            return False
+
+
 if __name__ == "__main__":
 
     print("=====================")

@@ -14,6 +14,7 @@ import threading
 import logging
 import sys
 import socket
+import time
 from argparse import ArgumentParser
 from concurrent import futures
 
@@ -53,6 +54,8 @@ class Options(object):
 
 class Vedirect(threading.Thread):
 
+    (HEX, WAIT_HEADER, IN_KEY, IN_VALUE, IN_CHECKSUM) = range(5)
+
     def __init__(self, serialport, timeout, emulator):
         super().__init__(name="Vedirect")
         self.serialport = serialport
@@ -76,11 +79,21 @@ class Vedirect(threading.Thread):
         self.dict = self._results[self._active]
         self._data_dict = None
         self._lock = threading.Lock()
-        self._buffer = bytearray(256)
+        self._buffer = bytearray(512)
         self._buflen = 0
+        # self._ts = 0
 
+    def lock_data(self):
+        # _logger.info("Locking data lock=%s" % self._lock.locked())
+        if not self._lock.acquire(blocking=True, timeout=1.0):
+            _logger.error("Vedirect data lock timeout")
 
-    (HEX, WAIT_HEADER, IN_KEY, IN_VALUE, IN_CHECKSUM) = range(5)
+    def unlock_data(self):
+        try:
+            self._lock.release()
+        except RuntimeError:
+            _logger.error("Vedirect data lock release error")
+        # _logger.info("Unlocking data")
 
     def input(self, byte):
         self._buffer[self._buflen] = byte
@@ -139,22 +152,21 @@ class Vedirect(threading.Thread):
                 packet = self.input(byte)
                 if packet is not None:
                     # ok we have a good packet
-                    self._lock.acquire()
+                    self.lock_data()
+                    self.dict['timestamp'] = time.monotonic()
                     # swap the dict.
                     self._data_dict = self.dict
                     self._active = not self._active
                     self.dict = self._results[self._active]
-                    self._lock.release()
+                    self.unlock_data()
                     if self._emulator is not None:
                         self._emulator.send(self._buffer[:self._buflen])
+                    # _logger.debug(self._buffer[:self._buflen])
                     self._buflen = 0
 
     def lock_get_data(self):
-        self._lock.acquire()
+        self.lock_data()
         return self._data_dict
-
-    def unlock_data(self):
-        self._lock.release()
 
 
 class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
@@ -183,6 +195,9 @@ class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
         packet = self._reader.lock_get_data()
         ret_val = vedirect_pb2.solar_output()
         if packet is not None:
+            data_age = time.monotonic() - packet['timestamp']
+            if data_age > 30.0:
+                _logger.error("Vedirect outdated data by %5.1f seconds" % data_age)
             self.set_data(ret_val, self.solar_output_v, packet)
         self._reader.unlock_data()
         return ret_val
@@ -223,7 +238,11 @@ class TCPSerialEmulator(threading.Thread):
     def __init__(self, port):
         super().__init__()
         self._address = ('0.0.0.0', port)
-        self._server = socket.create_server(self._address, family=socket.AF_INET, reuse_port=True)
+        # self._server = socket.create_server(self._address, family=socket.AF_INET, reuse_port=True)
+        self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._server.bind(('0.0.0.0', port))
+        # self._socket.settimeout(self._timeout)
         self._connection = None
         self._remote = None
 
@@ -286,7 +305,7 @@ def main():
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
-    _logger.setLevel(logging.DEBUG)
+    _logger.setLevel(logging.INFO)
 
     if opts.serial_port is not None:
         ser_emu = TCPSerialEmulator(opts.serial_port)

@@ -116,7 +116,7 @@ class NMEA_server(NavTCPServer):
             if client.msgcount() == 0:
                 # no message during period
                 _logger.info("Sending heartbeat on %s" % client.descr())
-                heartbeat_msg = nmea0183.ZDA().message()
+                heartbeat_msg = ZDA().message()
                 if client.send(heartbeat_msg):
                     to_be_closed.append(client)
                 client.reset_period()
