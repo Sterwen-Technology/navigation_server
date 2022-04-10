@@ -238,7 +238,7 @@ class TCPSerialEmulator(threading.Thread):
     def __init__(self, port):
         super().__init__()
         self._address = ('0.0.0.0', port)
-        #self._server = socket.create_server(self._address, family=socket.AF_INET, reuse_port=True)
+        # self._server = socket.create_server(self._address, family=socket.AF_INET, reuse_port=True)
         self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._server.bind(('0.0.0.0', port))

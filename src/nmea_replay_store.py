@@ -1,11 +1,11 @@
 #-------------------------------------------------------------------------------
-# Name:        module1
+# Name:        Filter replay data and store in file
 # Purpose:
 #
-# Author:      Laurent
+# Author:      Laurent Carré
 #
-# Created:     14/04/2019
-# Copyright:   (c) Laurent 2019
+# Created:     10/04/2022
+# Copyright:   (c) Sterwen-Technology Laurent Carré 2022
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 
@@ -15,20 +15,18 @@ import time
 
 from argparse import ArgumentParser
 
+from nmea0183 import NMEA0183Filter
+
 
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
-    p.add_argument("-o", "--output", action="store", type=str,
-        default='COM6', help="Serial port for the NMEA Output")
-    p.add_argument("-b", "--baudrate", action="store", type=int,
-        default=4800,
-        help="Baud rate for the NMEA output, usually 4800, which is also the default")
-    p.add_argument('-f', '--file', action='store', default=None, help='File for input instead of server')
+    p.add_argument("-o", "--output", action="store", type=str, default=None, help="File for the NMEA Output")
+    p.add_argument('-f', '--filter', action='store', type=str, default=None, help='List of sentences to be collected')
     p.add_argument("-p", "--port", action="store", type=int,
                    default=3555,
                    help="Listening port for NMEA input, default is 3555")
     p.add_argument("-a", "--address", action="store", type=str,
-                   default='',
+                   default='localhost',
                    help="IP address or URL for NMEA Input, default is localhost")
     p.add_argument("-pr", "--protocol", action="store", type=str,
                    choices=['TCP','UDP'], default='TCP',
@@ -57,50 +55,45 @@ class Options(object):
 def main():
     opts = Options(parser)
 
-    if opts.file is None:
-        port = opts.port
-        address = opts.address
-        print("opening port on host %s port %d" % (address, port))
-        try:
-            sock = socket.create_connection((address, port))
-        except OSError as e:
-            print(e)
-            return
-        print("listening for NMEA sentences on host %s port %d" % (address, port))
+    if opts.output is None:
+        print("Output file name missing")
+        return
+    if opts.filter is not None:
+        filter_f = NMEA0183Filter(opts.filter, ',')
     else:
-        try:
-            fd = open(opts.file,'rb')
-        except IOError as e:
-            print(e)
-            return
-        sock = None
-        print("Reading NMEA sentence in file:", opts.file)
+        filter_f = None
 
+    port = opts.port
+    address = opts.address
+    print("opening port on host %s port %d" % (address, port))
+    try:
+        sock = socket.create_connection((address, port))
+    except OSError as e:
+        print(e)
+        return
+    print("listening for NMEA sentences on host %s port %d" % (address, port))
     print("Opening serial output %s" % opts.output)
     try:
-        output = serial.Serial(port=opts.output, baudrate=opts.baudrate)
+        output = open(opts.output,"bw")
     except IOError as e:
         print(e)
         return
 
     while True:
-
         try:
-            if sock is None:
-                try:
-                    data = fd.readline(256)
-                except IOError as e:
-                    print(e)
-                    break
-            else:
-                data = sock.recv(256)
+            data = sock.recv(256)
             print(data)
             if len(data) == 0:
                 break
-            output.write(data)
+            if filter_f is None:
+                output.write(data)
+                print(data)
+            elif filter_f.valid_sentence(data):
+                output.write(data)
+                print(data)
         except KeyboardInterrupt:
             break
-
+    print("Closing connection and file")
     output.close()
     sock.close()
 
