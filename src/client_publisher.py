@@ -12,6 +12,7 @@
 import threading
 import logging
 from publisher import Publisher
+from generic_msg import *
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -27,7 +28,7 @@ class NMEA_Publisher(Publisher):
         # reader.register(self)
 
     def process_msg(self, msg):
-        return not self._client.send(msg)
+        return not self._client.send(msg.raw)
 
     def last_action(self):
         if not self._stopflag:
@@ -62,7 +63,7 @@ class NMEA_Sender(threading.Thread):
                 except ValueError:
                     _logger.error("Error splitting message at index:%d %s" % (start, str(msg[start:])))
                     break
-                message = msg[start:end+1]
+                message = NavGenericMsg(N0183_MSG, raw=msg[start:end+1])
                 # print("Command sent:", message)
                 self._instrument.send_cmd(message)
                 if self._publisher is not None:

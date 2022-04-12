@@ -83,7 +83,7 @@ class iKonvertMsg():
                 else:
                     _logger.error("iKonvert Unknown message type %s %s" % (fields[0], fields[1]))
             else:
-                if fields[0][0] == b'$':
+                if fields[0][0] == ord('$'):
                     # this shall be NMEA0183
                     self._type = N183
                     self._msg = data
@@ -112,9 +112,8 @@ class iKonvertMsg():
 
 class iKonvertRead(threading.Thread):
 
-    def __init__(self, tty, instr_cbd, trace_file=None):
+    def __init__(self, tty, instr_cbd):
         self._tty = tty
-        self._trace_file = trace_file
         super().__init__(name="IkonvertRead")
 
         self._stop_flag = False
@@ -130,12 +129,6 @@ class iKonvertRead(threading.Thread):
             msg = iKonvertMsg.from_bytes(data)
             if msg is not None:
                 self._instr_cbd[msg.type](msg)
-                if self._trace_file is not None:
-                    # only N2K messages are traced
-                    if msg.type == N2K:
-                        time_str = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f|")
-                        self._trace_file.write(time_str)
-                        self._trace_file.write(data.decode())
             else:
                 _logger.error("iKonvert read error - suspected timeout")
         _logger.info("stopping iKonvert read")
@@ -154,7 +147,6 @@ class iKonvert(Instrument):
         # opts["name"] = "iKonvert"
         super().__init__(opts)
         self._tty_name = opts.get("tty_name", str, "/dev/ttyUSB0")
-        trace = opts.get("trace", str, None)
         self._mode = opts.get("mode", str, "ALL")  # ALL (send all PGN) or NORMAL (send only requested PGN)
         self._tty = None
         self._reader = None
@@ -166,14 +158,6 @@ class iKonvert(Instrument):
         self._wait_event = 0
         self._queue = queue.Queue(20)
         self._cmd_result = None
-        if trace is not None:
-            try:
-                self._trace_fd = open(trace, "w")
-            except IOError as e:
-                _logger.error("iKonvert trace file %s %s" % (trace, str(e)))
-                self._trace_fd = None
-        else:
-            self._trace_fd = None
 
     def open(self):
         # this section is critical
@@ -193,7 +177,7 @@ class iKonvert(Instrument):
         cb = {UNKNOWN: self.process_status, STATUS: self.process_status, NOT_CONN: self.process_status,
               ACK: self.process_acknak, NAK: self.process_acknak, N2K: self.process_nmea, N183: self.process_nmea}
         if self._reader is None:
-            self._reader = iKonvertRead(self._tty, cb,  self._trace_fd)
+            self._reader = iKonvertRead(self._tty, cb)
             self._reader.start()
         self.wait_status()
         if self._ikstate == self.IKREADY:
@@ -212,6 +196,7 @@ class iKonvert(Instrument):
             nav_msg = NavGenericMsg(N0183_MSG, msg.raw)
         else:
             nav_msg = NavGenericMsg(N2K_MSG, msg.raw, msg.msg)
+        self.trace(self.TRACE_IN, nav_msg)
         try:
             self._queue.put(nav_msg, block=False)
         except queue.Full:

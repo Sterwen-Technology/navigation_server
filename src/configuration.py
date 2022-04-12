@@ -15,6 +15,8 @@ import sys
 
 _logger = logging.getLogger("ShipDataServer")
 
+global_configuration = None
+
 
 class ConfigurationException(Exception):
     pass
@@ -78,6 +80,7 @@ class Parameters:
 class NavigationServerObject:
 
     def __init__(self, class_descr):
+        global global_configuration
         for item in class_descr.items():
             self._name = item[0]
             self._param = item[1]
@@ -85,6 +88,7 @@ class NavigationServerObject:
         self._class_name = self._param['class']
         self._param['name'] = self._name
         self._object = None
+        global_configuration = self
 
     @property
     def obj_class(self):

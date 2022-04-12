@@ -20,6 +20,14 @@ class NavGenericMsg:
         self._type = msg_type
         self._msg = msg
         self._raw = raw
+        if self._type == N0183_MSG:
+            if raw is None:
+                self._type = NULL_MSG
+            elif len(raw) == 0:
+                self._type = NULL_MSG
+        elif self._type == N2K_MSG:
+            if msg is None:
+                self._type = NULL_MSG
 
     @property
     def type(self):
@@ -28,3 +36,13 @@ class NavGenericMsg:
     @property
     def msg(self):
         return self._msg
+
+    @property
+    def raw(self):
+        return self._raw
+
+    def printable(self) -> str:
+        if self._type == N0183_MSG:
+            return self._raw.decode()
+        elif self._type == N2K_MSG:
+            return str(self._msg)

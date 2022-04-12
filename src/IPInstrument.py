@@ -16,6 +16,7 @@ import queue
 # from server_common import NavTCPServer
 # from publisher import Publisher
 import threading
+from generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, N0183_MSG
 
 from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
 
@@ -51,13 +52,22 @@ class IPInstrument(Instrument):
             self._state = self.NOT_READY
 
     def read(self):
-        return self._transport.read()
+        raw = self._transport.read()
+        if self._protocol == self.NMEA0183:
+            msg = NavGenericMsg(N0183_MSG, raw=raw)
+        else:
+            raise InstrumentReadError("Protocol not supported")
+        if self._trace_msg:
+            self.trace(self.TRACE_IN, msg)
+        return msg
 
     def send(self, msg):
         if self._state == self.NOT_READY:
             _logger.error("Write attempt on non ready transport: %s" % self.name())
             return False
-        return self._transport.send(msg)
+        if self._trace_msg:
+            self.trace(self.TRACE_OUT, msg)
+        return self._transport.send(msg.raw)
 
     def close(self):
         self._transport.close()

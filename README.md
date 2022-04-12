@@ -4,13 +4,19 @@
 ## Description
 The navigation server-router aggregate and distribute navigation and other operational data aboard recreational vessels.
 It is a focal point and server for all kind of data needed to control the course and operational condition of the boat.
-The system is based on the building blocks described here below. The configuration and parameters of the system are described in a Yaml file.
+The system is based on the building blocks described here below. 
+The configuration and parameters of the system are described in a Yaml file.
+All building blocks are optional, but if there is no Instrument or Publisher nothing will happen.
+
+The system works with a single Python process and messages are exchanged internally. This can lead to a scalability problem but this was not observed so far.
+
+
 
 ### Servers
 The servers are TCP servers allowing any navigation or control application to access the flow of data via TCP/IP.
 There is a generic server: NMEAServer. This server is sending all messages coming from the associated instruments to the clients.
 Client can also send messages to the server that are sent to the instrument input.
-The default protocol is NMEA0183 based even if it carries NMEA2000 messages
+The default protocol is NMEA0183 based even if it carries NMEA2000 messages (Digital Yacht like sentence)
 
 ### Instruments
 Instrument classes are connecting to instrumentation bus via direct interfaces or couplers. Direct communication via serial lines is also supported.

@@ -8,7 +8,8 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
-
+import datetime
+import os
 import socket
 
 
@@ -16,8 +17,9 @@ import threading
 import logging
 import time
 from publisher import Publisher
-from configuration import NavigationConfiguration
+from configuration import NavigationConfiguration, global_configuration
 from publisher import PublisherOverflow
+from generic_msg import NavGenericMsg, NULL_MSG
 
 
 _logger = logging.getLogger("ShipDataServer")
@@ -39,9 +41,14 @@ class Instrument(threading.Thread):
 
     (NOT_READY, OPEN, CONNECTED, ACTIVE) = range(4)
     (BIDIRECTIONAL, READ_ONLY, WRITE_ONLY) = range(10, 13)
+    (NMEA0183, NMEA2000) = range(20, 22)
+    (TRACE_IN, TRACE_OUT) = range(30, 32)
+
     dir_dict = {'bidirectional': BIDIRECTIONAL,
                 'read_only': READ_ONLY,
                 'write_only': WRITE_ONLY}
+
+    protocol_dict = {'nmea0183': NMEA0183, 'nmea2000': NMEA2000}
 
     def __init__(self, opts):
         name = opts['name']
@@ -60,12 +67,17 @@ class Instrument(threading.Thread):
         self._timeout = opts.get('timeout', float, 10.0)
         self._max_attempt = opts.get('max_attempt', int, 20)
         self._open_delay = opts.get('open_delay', float, 2.0)
+        protocol = opts.get('protocol', str, 'nmea0183')
+        self._protocol = self.protocol_dict[protocol]
         direction = opts.get('direction', str, 'bidirectional')
-        print(self.name(), ":", direction)
+        # print(self.name(), ":", direction)
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
         self._stopflag = False
         self._timer = None
         self._state = self.NOT_READY
+        self._trace_msg = opts.get('trace_messages', bool, False)
+        if self._trace_msg:
+            self.open_trace_file()
 
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)
@@ -110,17 +122,12 @@ class Instrument(threading.Thread):
                 continue
 
             try:
-                data = self.read()
-                if type(data) == bytes:
-                    if len(data) == 0:
-                        _logger.warning("No data from %s => stop connection" % self._name)
-                        self.close()
-                        continue
-                    else:
-                        _logger.debug(data.decode().strip('\n\r'))
+                msg = self.read()
+                if msg.type == NULL_MSG:
+                    _logger.warning("No data from %s => stop connection" % self._name)
+                    self.close()
                 else:
-                    #  message is composite
-                    _logger.debug(str(data))
+                    _logger.debug(msg.printable())
 
             except InstrumentTimeOut:
                 continue
@@ -132,7 +139,7 @@ class Instrument(threading.Thread):
             # good data received - publish
             self._total_msg += 1
             self._state = self.ACTIVE
-            self.publish(data)
+            self.publish(msg)
         self.close()
         _logger.info("%s instrument thread stops"%self._name)
 
@@ -197,10 +204,10 @@ class Instrument(threading.Thread):
     def close(self):
         raise NotImplementedError("To be implemented in subclass")
 
-    def read(self):
+    def read(self) -> NavGenericMsg:
         raise NotImplementedError("To be implemented in subclass")
 
-    def send(self, msg):
+    def send(self, msg:NavGenericMsg):
         raise NotImplementedError("To be implemented in subclass")
 
     def sender(self):
@@ -212,3 +219,26 @@ class Instrument(threading.Thread):
     def resolve_ref(self, name):
         reference = self._opts[name]
         return NavigationConfiguration.get_conf().get_object(reference)
+
+    def open_trace_file(self):
+        trace_dir = global_configuration.get('trace_dir', '/var/log')
+        date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
+        filename = "TRACE-%s-%s.log" % (self.name(), date_stamp)
+        filepath = os.path.join(trace_dir, filename)
+        try:
+            self._trace_fd = open(filepath, "w")
+        except IOError as e:
+            _logger.error("Trace file error %s" % e)
+            self._trace_msg = False
+
+    def trace(self, direction, msg: NavGenericMsg):
+        if self._trace_msg:
+            if direction == self.TRACE_IN:
+                fc = ">"
+            else:
+                fc = "<"
+            self._trace_fd.write(fc)
+            out_msg = msg.printable()
+            self._trace_fd.write(out_msg)
+            if out_msg[len(out_msg)-1] != '\n':
+                self._trace_fd.write('\n')

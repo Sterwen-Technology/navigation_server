@@ -22,7 +22,7 @@ from publisher import *
 from client_publisher import *
 from internal_gps import InternalGps
 from simulator_input import *
-from configuration import NavigationConfiguration
+from configuration import NavigationConfiguration, global_configuration
 from ikonvert import iKonvert
 from nmea2k_pgndefs import PGNDefinitions
 from nmea2000_msg import N2KProbePublisher, N2KTracePublisher
@@ -160,6 +160,7 @@ def print_threads():
 
 
 def main():
+    global global_configuration
     print("Current directory", os.getcwd())
     opts = parser.parse_args()
     config = NavigationConfiguration(opts.settings)
