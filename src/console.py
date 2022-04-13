@@ -37,7 +37,7 @@ class Console(NavTCPServer):
         _logger.info("Console starting")
         while not self._stop_flag:
             self._socket.listen(1)
-            _logger.info("Console waiting for connection")
+            _logger.debug("Console waiting for connection")
             try:
                 self._connection, address = self._socket.accept()
             except socket.timeout:

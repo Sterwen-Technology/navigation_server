@@ -22,7 +22,7 @@ from publisher import *
 from client_publisher import *
 from internal_gps import InternalGps
 from simulator_input import *
-from configuration import NavigationConfiguration, global_configuration
+from configuration import NavigationConfiguration
 from ikonvert import iKonvert
 from nmea2k_pgndefs import PGNDefinitions
 from nmea2000_msg import N2KProbePublisher, N2KTracePublisher
@@ -39,8 +39,8 @@ def _parser():
     return p
 
 
-version = "V0.931"
-default_base_dir = "/mnt/meaban/Bateau/navigation_server"
+version = "V0.94"
+default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
 
@@ -160,9 +160,16 @@ def print_threads():
 
 
 def main():
-    global global_configuration
-    print("Current directory", os.getcwd())
+    # global global_configuration
+
     opts = parser.parse_args()
+    # global parameters
+    if opts.working_dir is not None:
+        os.chdir(opts.working_dir)
+    else:
+        if os.getcwd() != default_base_dir:
+            os.chdir(default_base_dir)
+    print("Current directory", os.getcwd())
     config = NavigationConfiguration(opts.settings)
     config.add_class(NMEA_server)
     config.add_class(Console)
@@ -184,13 +191,6 @@ def main():
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
     _logger.setLevel(config.get_option('trace', 'INFO'))
-
-    # global parameters
-    if opts.working_dir is not None:
-        os.chdir(opts.working_dir)
-    else:
-        if os.getcwd() != default_base_dir:
-            os.chdir(default_base_dir)
 
     _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2022" % version)
     _logger.info("Navigation server working directory:%s" % os.getcwd())

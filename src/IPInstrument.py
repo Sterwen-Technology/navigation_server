@@ -52,8 +52,9 @@ class IPInstrument(Instrument):
             self._state = self.NOT_READY
 
     def read(self):
-        raw = self._transport.read()
-        if self._protocol == self.NMEA0183:
+        raw = self._transport.recv()
+        print(self._mode,raw)
+        if self._mode == self.NMEA0183:
             msg = NavGenericMsg(N0183_MSG, raw=raw)
         else:
             raise InstrumentReadError("Protocol not supported")
@@ -62,6 +63,7 @@ class IPInstrument(Instrument):
         return msg
 
     def send(self, msg):
+        _logger.debug("Sending %s" % msg.printable())
         if self._state == self.NOT_READY:
             _logger.error("Write attempt on non ready transport: %s" % self.name())
             return False
@@ -107,7 +109,7 @@ class UDP_reader(IP_transport):
 
         return True
 
-    def read(self):
+    def recv(self):
         try:
             data, address = self._socket.recvfrom(256)
         except OSError as e:
@@ -142,7 +144,7 @@ class TCP_reader(IP_transport):
             _logger.error("Connection error using TCP %s: %s" % (self._ref, str(e)))
             return False
 
-    def read(self):
+    def recv(self):
         try:
             msg = self._socket.recv(256)
         except (TimeoutError, socket.timeout) :
@@ -154,6 +156,7 @@ class TCP_reader(IP_transport):
         return msg
 
     def send(self, msg):
+        _logger.debug("TCP send %s" % msg)
         try:
             self._socket.sendall(msg)
             return True
@@ -178,33 +181,50 @@ class IPAsynchReader(threading.Thread):
         part_buf = bytearray()
         while not self._stop_flag:
             try:
-                buffer = self._transport.read()
+                buffer = self._transport.recv()
             except InstrumentTimeOut:
                 continue
             except InstrumentReadError:
                 break
             start_idx = 0
             end_idx = len(buffer)
+            if end_idx == 0:
+                break
             while True:
                 if start_idx >= end_idx:
                     break
                 index = buffer.find(self._separator, start_idx, end_idx)
                 if index == -1:
                     if part:
-                        _logger.error("YDFrame missing delimiter start %d end %d" % (start_idx, end_idx))
-                        _logger.error("YDFrame missing delimiter %s" % buffer[start_idx: end_idx].hex(' ', 2))
+                        if buffer[start_idx] in self._separator:
+                            _logger.debug("Partial separator found")
+                            start_idx += 1
+                            continue
+                        else:
+                            _logger.error("Frame missing delimiter start %d end %d" % (start_idx, end_idx))
+                            _logger.error("Frame missing delimiter %s" % buffer[start_idx: end_idx].hex(' ', 2))
                     else:
-                        part = True
-                        part_buf = buffer[start_idx: end_idx]
-                        _logger.debug("Partial frame (%d %d): %s" % (start_idx, end_idx, part_buf))
-                    break
+
+                        if buffer[end_idx - 1] in self._separator:
+                            # so in fact we have a full frame
+                            end_idx -= 1
+                            index = end_idx
+                        else:
+                            part = True
+                            part_buf = buffer[start_idx: end_idx]
+                            _logger.debug("Partial frame (%d %d): %s" % (start_idx, end_idx, part_buf))
+                        break
                 if part:
+                    if buffer[index - 2] in self._separator:
+                        index -= 1
                     frame = part_buf + buffer[start_idx:index]
                     _logger.debug("Frame reconstruction %s %s" % (part_buf, buffer[start_idx:index]))
                     part = False
                 else:
                     frame = buffer[start_idx:index]
                 start_idx = index + 2
+                if len(frame) == 0:
+                    continue
                 try:
                     msg = self._msg_processing(frame)
                 except ValueError:
@@ -213,6 +233,9 @@ class IPAsynchReader(threading.Thread):
                 if self._stop_flag:
                     break
         _logger.info("Asynch reader stopped")
+        self._stop_flag = True
+        msg = self._msg_processing(bytes(b'\x04'))
+        self._out_queue.put(msg)
 
     def stop(self):
         self._stop_flag = True
@@ -237,7 +260,9 @@ class BufferedIPInstrument(IPInstrument):
             self._asynch_io.start()
 
     def read(self):
-        return self._in_queue.get()
+        msg = self._in_queue.get()
+        self.trace(self.TRACE_IN, msg)
+        return msg
 
     def stop(self):
         super().stop()
@@ -245,6 +270,38 @@ class BufferedIPInstrument(IPInstrument):
         self._asynch_io.join()
 
 
+class TCPBufferedReader:
 
+    def __init__(self, connection, separator):
+        self._connection = connection
+        self._in_queue = queue.Queue(10)
+        self._reader = IPAsynchReader(self, self._in_queue, separator, self.process_frame_0183)
+        self._reader.start()
 
+    def read(self):
+        msg = self._in_queue.get()
+        # self.trace(self.TRACE_IN, msg)
+        return msg
+
+    def stop(self):
+        self._reader.stop()
+        self._reader.join()
+        _logger.info("TCP Buffered read stopped")
+
+    def recv(self):
+        try:
+            msg = self._connection.recv(256)
+        except (TimeoutError, socket.timeout) :
+            _logger.info("Timeout error on TCP socket")
+            raise InstrumentTimeOut()
+        except socket.error as e:
+            _logger.error("Error receiving from TCP socket %s: %s" % str(e))
+            raise InstrumentReadError()
+        return msg
+
+    @staticmethod
+    def process_frame_0183(frame):
+        if frame[0] == 4:
+            return NavGenericMsg(NULL_MSG)
+        return NavGenericMsg(N0183_MSG, raw=frame)
 

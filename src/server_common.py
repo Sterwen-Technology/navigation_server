@@ -45,7 +45,9 @@ class NavTCPServer(threading.Thread):
         except KeyError:
             _logger.error("Unknown reference %s" % name)
             return None
-        return NavigationConfiguration.get_conf().get_object(reference)
+        value = NavigationConfiguration.get_conf().get_object(reference)
+        _logger.debug("Server resolve name %s ref %s result:%s" % (name, reference, value))
+        return value
 
     def add_instrument(self, instrument):
         pass

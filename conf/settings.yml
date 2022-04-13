@@ -10,12 +10,14 @@
 #-------------------------------------------------------------------------------
 #
 trace: INFO
+trace_dir: /mnt/meaban/Bateau/tests
 
 servers:
 
 - NMEAServer:
     class: NMEA_server
     port: 4500
+    sender: MiniPlex3
 
 - Console:
     class: Console
@@ -34,6 +36,7 @@ instruments:
     port: 10110
     transport: TCP
     server: NMEAServer
+    trace_messages: true
 
 publishers:
 

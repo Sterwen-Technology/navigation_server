@@ -17,7 +17,7 @@ import threading
 import logging
 import time
 from publisher import Publisher
-from configuration import NavigationConfiguration, global_configuration
+from configuration import NavigationConfiguration
 from publisher import PublisherOverflow
 from generic_msg import NavGenericMsg, NULL_MSG
 
@@ -67,8 +67,8 @@ class Instrument(threading.Thread):
         self._timeout = opts.get('timeout', float, 10.0)
         self._max_attempt = opts.get('max_attempt', int, 20)
         self._open_delay = opts.get('open_delay', float, 2.0)
-        protocol = opts.get('protocol', str, 'nmea0183')
-        self._protocol = self.protocol_dict[protocol]
+        mode = opts.get('protocol', str, 'nmea0183')
+        self._mode = self.protocol_dict[mode]
         direction = opts.get('direction', str, 'bidirectional')
         # print(self.name(), ":", direction)
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
@@ -221,7 +221,7 @@ class Instrument(threading.Thread):
         return NavigationConfiguration.get_conf().get_object(reference)
 
     def open_trace_file(self):
-        trace_dir = global_configuration.get('trace_dir', '/var/log')
+        trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')
         date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
         filename = "TRACE-%s-%s.log" % (self.name(), date_stamp)
         filepath = os.path.join(trace_dir, filename)
@@ -240,5 +240,4 @@ class Instrument(threading.Thread):
             self._trace_fd.write(fc)
             out_msg = msg.printable()
             self._trace_fd.write(out_msg)
-            if out_msg[len(out_msg)-1] != '\n':
-                self._trace_fd.write('\n')
+            self._trace_fd.write('\n')

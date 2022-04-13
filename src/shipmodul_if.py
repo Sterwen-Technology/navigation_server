@@ -14,7 +14,8 @@ import logging
 
 from server_common import NavTCPServer
 from publisher import Publisher
-from IPInstrument import IPInstrument
+from IPInstrument import IPInstrument, BufferedIPInstrument, TCPBufferedReader
+from generic_msg import *
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -25,10 +26,10 @@ _logger = logging.getLogger("ShipDataServer")
 #################################################################
 
 
-class ShipModulInterface(IPInstrument):
+class ShipModulInterface(BufferedIPInstrument):
 
     def __init__(self, opts):
-        super().__init__(opts)
+        super().__init__(opts, b'\r\n', self.process_frame_0183)
 
     def deregister(self, pub):
         if pub == self._configpub:
@@ -57,6 +58,12 @@ class ShipModulInterface(IPInstrument):
     def default_sender(self):
         return True
 
+    @staticmethod
+    def process_frame_0183(frame):
+        if frame[0] == 4:
+            return NavGenericMsg(NULL_MSG)
+        return NavGenericMsg(N0183_MSG, raw=frame)
+
 
 class ConfigPublisher(Publisher):
     '''
@@ -69,9 +76,10 @@ class ConfigPublisher(Publisher):
         self._address = address
         self._server = server
 
-    def process_msg(self,msg):
+    def process_msg(self, msg):
+        _logger.debug("Shipmodul publisher sending:%s" % msg.printable())
         try:
-            self._socket.sendall(msg)
+            self._socket.sendall(msg.raw)
         except OSError as e:
             _logger.debug("Error writing response on config:%s" % str(e))
             return False
@@ -100,7 +108,7 @@ class ShipModulConfig(NavTCPServer):
 
         _logger.info("Configuration server ready")
         while not self._stop_flag:
-            _logger.info("Configuration server waiting for new connection")
+            _logger.debug("Configuration server waiting for new connection")
             self._socket.listen(1)
             try:
                 self._connection, address = self._socket.accept()
@@ -116,21 +124,21 @@ class ShipModulConfig(NavTCPServer):
             self._pub = pub
             pub.start()
             _logger.info("Shipmodul configuration active")
+            reader = TCPBufferedReader(self._connection, b'\r\n')
             while pub.is_alive():
-                try:
-                    msg = self._connection.recv(256)
-                    if len(msg) == 0:
-                        break
-                except OSError as e:
-                    _logger.info("config socket read error: %s" % str(e))
+
+                msg = reader.read()
+                if msg.type == NULL_MSG:
+                    _logger.error("Shipmodul config instrument null message received")
                     break
-                _logger.debug(msg.decode().strip('\r\n'))
-                try:
-                    self._reader.send(msg)
-                except OSError:
+                _logger.debug(msg.printable())
+                if not self._reader.send(msg):
+                    _logger.error("Shipmodul config instrument write error")
                     break
-            _logger.info("Connection with configuration application lost")
+
+            _logger.info("Connection with configuration application lost running %s" % pub.is_alive())
             self._pub.stop()
+            reader.stop()
             self._connection.close()
         _logger.info("Configuration server thread stops")
         self._socket.close()

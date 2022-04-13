@@ -37,7 +37,7 @@ class NMEA_server(NavTCPServer):
         self._timer = None
         self._timer_name = self.name() + "-timer"
         self._sender = None
-        self._sender_instrument = self.resolve_ref('sender')
+        self._sender_instrument = None
 
     def start_timer(self):
         self._timer = threading.Timer(self._heartbeat, self.heartbeat)
@@ -50,10 +50,12 @@ class NMEA_server(NavTCPServer):
 
     def run(self):
         _logger.info("%s ready" % self.name())
+        self._sender_instrument = self.resolve_ref('sender')
+        # print("Sender:", self._sender_instrument)
         self.start_timer()
         self._socket.settimeout(5.0)
         while not self._stop_flag:
-            _logger.info("%s waiting for new connection" % self.name())
+            _logger.debug("%s waiting for new connection" % self.name())
             self._socket.listen(1)
             if len(self._connections) <= self._max_connections:
                 try:
@@ -79,10 +81,6 @@ class NMEA_server(NavTCPServer):
             pub.start()
             if self._sender_instrument is not None and self._sender is None:
                 self._sender = NMEA_Sender(client, self._sender_instrument)
-                if self._options.get('trace_input', None) is not None:
-                    param = {'sender': self._sender.name, 'filename': self._options['trace_input']}
-                    trpub = SendPublisher(param)
-                    trpub.start()
                 self._sender.start()
             else:
                 _logger.error("No instrument to send NMEA messages for server %s" % self.name())

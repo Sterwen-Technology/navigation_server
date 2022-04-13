@@ -13,6 +13,7 @@ import threading
 import logging
 from publisher import Publisher
 from generic_msg import *
+from IPInstrument import TCPBufferedReader
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -46,31 +47,26 @@ class NMEA_Sender(threading.Thread):
         self._instrument = instrument
         self._client.set_sender(self)
         self._publisher = None
+        self._stop_flag = False
 
     def add_publisher(self, publisher):
         self._publisher = publisher
 
     def run(self) -> None:
-        while True:
-            msg = self._client.get()
-            if msg is None:
+        reader = TCPBufferedReader(self._client.connection(), b'\r\n')
+        while not self._stop_flag:
+            msg = reader.read()
+            # print(msg.printable())
+            if msg.type == NULL_MSG:
                 break
-            # we can have several messages in a single TCP message
-            start = 0
-            while start < len(msg):
-                try:
-                    end = msg.index(b'\n', start)
-                except ValueError:
-                    _logger.error("Error splitting message at index:%d %s" % (start, str(msg[start:])))
-                    break
-                message = NavGenericMsg(N0183_MSG, raw=msg[start:end+1])
-                # print("Command sent:", message)
-                self._instrument.send_cmd(message)
-                if self._publisher is not None:
-                    self._publisher.publish(message)
-                start = end + 1
+            self._instrument.send_cmd(msg)
+            if self._publisher is not None:
+                self._publisher.publish(msg)
+        _logger.info("Stopping %s" % self.name)
+        reader.stop()
 
     def stop(self):
+        self._stop_flag = True
         if self._publisher is not None:
             self._publisher.stop()
 
@@ -141,6 +137,9 @@ class ClientConnection:
 
     def descr(self):
         return "Connection %s:%d" % self._address
+
+    def connection(self):
+        return self._socket
 
     def read_status(self):
         out = {}
