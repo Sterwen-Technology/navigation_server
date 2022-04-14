@@ -12,13 +12,10 @@
 import socket
 import logging
 import queue
-
-# from server_common import NavTCPServer
-# from publisher import Publisher
 import threading
 from generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, N0183_MSG
-
 from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
+from nmea0183 import process_nmea0183_frame
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -53,7 +50,7 @@ class IPInstrument(Instrument):
 
     def read(self):
         raw = self._transport.recv()
-        print(self._mode,raw)
+        # print(self._mode,raw)
         if self._mode == self.NMEA0183:
             msg = NavGenericMsg(N0183_MSG, raw=raw)
         else:
@@ -275,7 +272,7 @@ class TCPBufferedReader:
     def __init__(self, connection, separator):
         self._connection = connection
         self._in_queue = queue.Queue(10)
-        self._reader = IPAsynchReader(self, self._in_queue, separator, self.process_frame_0183)
+        self._reader = IPAsynchReader(self, self._in_queue, separator, process_nmea0183_frame)
         self._reader.start()
 
     def read(self):
@@ -299,9 +296,11 @@ class TCPBufferedReader:
             raise InstrumentReadError()
         return msg
 
-    @staticmethod
-    def process_frame_0183(frame):
-        if frame[0] == 4:
-            return NavGenericMsg(NULL_MSG)
-        return NavGenericMsg(N0183_MSG, raw=frame)
 
+class NMEA0183TCPReader(BufferedIPInstrument):
+
+    def __init__(self, opts):
+        super().__init__(opts, b'\r\n', process_nmea0183_frame)
+        if self._mode != self.NMEA0183:
+            _logger.error("Protocol incompatible with NMEA0183 reader")
+            raise ValueError

@@ -16,6 +16,7 @@ from server_common import NavTCPServer
 from publisher import Publisher
 from IPInstrument import IPInstrument, BufferedIPInstrument, TCPBufferedReader
 from generic_msg import *
+from nmea0183 import process_nmea0183_frame
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -29,7 +30,7 @@ _logger = logging.getLogger("ShipDataServer")
 class ShipModulInterface(BufferedIPInstrument):
 
     def __init__(self, opts):
-        super().__init__(opts, b'\r\n', self.process_frame_0183)
+        super().__init__(opts, b'\r\n', process_nmea0183_frame)
 
     def deregister(self, pub):
         if pub == self._configpub:
@@ -57,13 +58,6 @@ class ShipModulInterface(BufferedIPInstrument):
 
     def default_sender(self):
         return True
-
-    @staticmethod
-    def process_frame_0183(frame):
-        if frame[0] == 4:
-            return NavGenericMsg(NULL_MSG)
-        return NavGenericMsg(N0183_MSG, raw=frame)
-
 
 class ConfigPublisher(Publisher):
     '''

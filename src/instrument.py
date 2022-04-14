@@ -67,8 +67,7 @@ class Instrument(threading.Thread):
         self._timeout = opts.get('timeout', float, 10.0)
         self._max_attempt = opts.get('max_attempt', int, 20)
         self._open_delay = opts.get('open_delay', float, 2.0)
-        mode = opts.get('protocol', str, 'nmea0183')
-        self._mode = self.protocol_dict[mode]
+        self.get_mode(opts)
         direction = opts.get('direction', str, 'bidirectional')
         # print(self.name(), ":", direction)
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
@@ -78,6 +77,10 @@ class Instrument(threading.Thread):
         self._trace_msg = opts.get('trace_messages', bool, False)
         if self._trace_msg:
             self.open_trace_file()
+
+    def get_mode(self, opts):
+        mode = opts.get('protocol', str, 'nmea0183')
+        self._mode = self.protocol_dict[mode.lower()]
 
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)

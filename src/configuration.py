@@ -109,11 +109,14 @@ class NavigationServerObject:
             except KeyError:
                 raise ConfigurationException("Missing class to build %s object" % self._name)
         factory = self._param.get('factory', None)
-        if factory is None:
-            self._object = self._class(Parameters(self._param))
-        else:
-            self._object = getattr(self._class, factory)(Parameters(self._param))
-        return self._object
+        try:
+            if factory is None:
+                self._object = self._class(Parameters(self._param))
+            else:
+                self._object = getattr(self._class, factory)(Parameters(self._param))
+            return self._object
+        except TypeError as e:
+            _logger.error("Error building object %s class %s: %s" % (self._name, self._class_name, e))
 
     def __str__(self):
         return "Object %s class %s object %s" % (self._name, self._class, self._object)

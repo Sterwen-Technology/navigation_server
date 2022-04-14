@@ -14,6 +14,14 @@ from functools import reduce
 import datetime
 import time
 
+from generic_msg import *
+
+
+def process_nmea0183_frame(frame):
+    if frame[0] == 4:
+        return NavGenericMsg(NULL_MSG)
+    return NavGenericMsg(N0183_MSG, raw=frame)
+
 
 class NMEA0183Sentences:
 

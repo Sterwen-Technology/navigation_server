@@ -21,8 +21,9 @@ from console import Console
 from publisher import *
 from client_publisher import *
 from internal_gps import InternalGps
-from simulator_input import *
+# from simulator_input import *
 from configuration import NavigationConfiguration
+from IPInstrument import NMEA0183TCPReader
 from ikonvert import iKonvert
 from nmea2k_pgndefs import PGNDefinitions
 from nmea2000_msg import N2KProbePublisher, N2KTracePublisher
@@ -175,8 +176,8 @@ def main():
     config.add_class(Console)
     config.add_class(ShipModulConfig)
     config.add_class(ShipModulInterface)
-    config.add_class(IPInstrument)
-    config.add_class(SimulatorInput)
+    # config.add_class(IPInstrument)
+    config.add_class(NMEA0183TCPReader)
     config.add_class(LogPublisher)
     config.add_class(Injector)
     config.add_class(iKonvert)

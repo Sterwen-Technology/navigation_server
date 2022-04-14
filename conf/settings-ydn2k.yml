@@ -31,17 +31,18 @@ instruments:
 - YDEN:
     class: YDInstrument
     address: 192.168.1.60
-    port: 1457
+    port: 1456
+    protocol: nmea0183
     transport: TCP
     server: NMEAServer
 
 publishers:
 
-- MainLog:
-    class: N2KTracePublisher
+# - MainLog:
+    #class: N2KTracePublisher
     # filter: [130578,129029]
     # file: /mnt/meaban/Bateau/tests/YDEN.log
-    instruments: [YDEN]
+    #instruments: [YDEN]
 
 
 

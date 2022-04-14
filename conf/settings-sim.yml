@@ -24,16 +24,16 @@ servers:
 instruments:
 
 - ScannavReplay:
-    class: SimulatorInput
+    class: NMEA0183TCPReader
     address: 192.168.1.21
     port: 3555
     transport: TCP
-    server: NMEAServer
+    # server: NMEAServer
     direction: read_only
     report_timer: 60
 
 - YDEthernet:
-    class: IPInstrument
+    class: NMEA0183TCPReader
     address: 192.168.1.60
     port: 1456
     transport: TCP

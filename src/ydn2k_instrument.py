@@ -11,9 +11,11 @@
 
 import logging
 
+from instrument import Instrument
 from IPInstrument import BufferedIPInstrument
 from nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
 from nmea2k_pgndefs import PGNDefinitions
+from nmea0183 import process_nmea0183_frame
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -21,7 +23,11 @@ _logger = logging.getLogger("ShipDataServer")
 class YDInstrument(BufferedIPInstrument):
 
     def __init__(self, opts):
-        super().__init__(opts, b'\r\n', self.frame_processing)
+        self.get_mode(opts)
+        if self._mode == self.NMEA0183:
+            super().__init__(opts, b'\r\n', process_nmea0183_frame)
+        else:
+            super().__init__(opts, b'\r\n', self.frame_processing)
 
     @staticmethod
     def frame_processing(frame):
