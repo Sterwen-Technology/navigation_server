@@ -15,7 +15,7 @@ import queue
 import threading
 from generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, N0183_MSG
 from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
-from nmea0183 import process_nmea0183_frame
+from nmea0183 import process_nmea0183_frame, NMEAInvalidFrame
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -85,6 +85,9 @@ class IP_transport():
     def close(self):
         if self._socket is not None:
             self._socket.close()
+
+    def ref(self):
+        return self._ref
 
 
 class UDP_reader(IP_transport):
@@ -193,15 +196,16 @@ class IPAsynchReader(threading.Thread):
                 index = buffer.find(self._separator, start_idx, end_idx)
                 if index == -1:
                     if part:
-                        if buffer[start_idx] in self._separator:
-                            _logger.debug("Partial separator found")
-                            start_idx += 1
-                            continue
-                        else:
-                            _logger.error("Frame missing delimiter start %d end %d" % (start_idx, end_idx))
-                            _logger.error("Frame missing delimiter %s" % buffer[start_idx: end_idx].hex(' ', 2))
+                        #  there is contnuity needed
+                        if buffer[end_idx-1] in self._separator:
+                            end_idx -= 1
+                        part_buf.extend(buffer[start_idx:end_idx])
+                        break
+                        #else:
+                            #_logger.error("Frame missing delimiter start %d end %d" % (start_idx, end_idx))
+                            #_logger.error("Frame missing delimiter %s" % buffer[start_idx: end_idx].hex(' ', 2))
                     else:
-
+                        _logger.debug("No separator found before end of buffer %s" % buffer[start_idx:end_idx])
                         if buffer[end_idx - 1] in self._separator:
                             # so in fact we have a full frame
                             end_idx -= 1
@@ -212,13 +216,24 @@ class IPAsynchReader(threading.Thread):
                             _logger.debug("Partial frame (%d %d): %s" % (start_idx, end_idx, part_buf))
                         break
                 if part:
-                    if buffer[index - 2] in self._separator:
-                        index -= 1
-                    frame = part_buf + buffer[start_idx:index]
-                    _logger.debug("Frame reconstruction %s %s" % (part_buf, buffer[start_idx:index]))
+                    _logger.debug("Existing partial buffer. New buffer index %d %s" % (start_idx, buffer))
+                    if index - start_idx == 0:
+                        frame = part_buf
+                    else:
+                        if buffer[start_idx] in self._separator:
+                            start_idx += 1
+                        #if buffer[index - 2] in self._separator:
+                            #index -= 1
+                        frame = part_buf + buffer[start_idx:index]
+                        _logger.debug("Frame reconstruction %s %s" % (part_buf, buffer[start_idx:index]))
                     part = False
                 else:
+                    if buffer[start_idx] in self._separator:
+                        start_idx += 1
                     frame = buffer[start_idx:index]
+                    #if frame[0] != ord('$'):
+                        #_logger.error("Invalid frame in %s: %s" % (self._transport.ref(), frame))
+                        #_logger.error("start %d last %d buffer %s" % (start_idx, index, buffer))
                 start_idx = index + 2
                 if len(frame) == 0:
                     continue
@@ -226,10 +241,14 @@ class IPAsynchReader(threading.Thread):
                     msg = self._msg_processing(frame)
                 except ValueError:
                     continue
+                except NMEAInvalidFrame:
+                    _logger.error("Invalid frame in %s: %s %s" % (self._transport.ref(), frame, buffer))
+                    #_logger.error("Partial %s start %d last %d buffer %s" % (part, start_idx, index, buffer))
+                    continue
                 self._out_queue.put(msg)
                 if self._stop_flag:
                     break
-        _logger.info("Asynch reader stopped")
+        _logger.info("Asynch reader %s stopped" % self._transport.ref())
         self._stop_flag = True
         msg = self._msg_processing(bytes(b'\x04'))
         self._out_queue.put(msg)
@@ -248,12 +267,16 @@ class BufferedIPInstrument(IPInstrument):
     '''
     def __init__(self, opts, seperator, msg_processing):
         super().__init__(opts)
-        self._in_queue = queue.Queue(20)
-        self._asynch_io = IPAsynchReader (self._transport, self._in_queue, seperator, msg_processing)
+        if self._direction != self.WRITE_ONLY:
+            self._in_queue = queue.Queue(20)
+            self._asynch_io = IPAsynchReader (self._transport, self._in_queue, seperator, msg_processing)
+        else:
+            self._in_queue = None
+            self._asynch_io = None
 
     def open(self):
         super().open()
-        if self._state == self.CONNECTED:
+        if self._state == self.CONNECTED and self._asynch_io is not None:
             self._asynch_io.start()
 
     def read(self):
@@ -263,8 +286,9 @@ class BufferedIPInstrument(IPInstrument):
 
     def stop(self):
         super().stop()
-        self._asynch_io.stop()
-        self._asynch_io.join()
+        if self._asynch_io is not None:
+            self._asynch_io.stop()
+            self._asynch_io.join()
 
 
 class TCPBufferedReader:
@@ -292,7 +316,7 @@ class TCPBufferedReader:
             _logger.info("Timeout error on TCP socket")
             raise InstrumentTimeOut()
         except socket.error as e:
-            _logger.error("Error receiving from TCP socket %s: %s" % str(e))
+            _logger.error("Error receiving from TCP socket %s: %s" % (self.name(), e))
             raise InstrumentReadError()
         return msg
 

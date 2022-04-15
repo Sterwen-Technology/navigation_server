@@ -27,8 +27,14 @@ class NavGenericMsg:
                 self._type = NULL_MSG
             else:
                 self._raw = bytearray(raw)
-                self._raw.extend(b'\r\n')
-                self._datalen = len(raw)
+                lt = len(raw)
+                i1 = lt - 2
+                if raw[i1:lt] == b'\r\n':
+                    self._datalen = i1
+                else:
+                    self._raw.extend(b'\r\n')
+                    self._datalen = lt
+
         elif self._type == N2K_MSG:
             if msg is None:
                 self._type = NULL_MSG

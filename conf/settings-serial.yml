@@ -6,7 +6,7 @@
 #
 # Created:     26/12/2021
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
-# Licence:     <your licence>
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
 trace: INFO
@@ -14,33 +14,39 @@ trace_dir: /mnt/meaban/Bateau/tests
 
 servers:
 
+- NMEAServer:
+    class: NMEA_server
+    port: 4500
+    sender: MiniPlex3
+
+- Console:
+    class: Console
+    port: 4502
+
+- ShipModulConfig:
+    class: ShipModulConfig
+    port: 4501
+    instrument: MiniPlex3
 
 instruments:
 
-- ScannavReplay:
-    class: NMEA0183TCPReader
-    address: 192.168.1.21
-    port: 3555
-    transport: TCP
-    # server: NMEAServer
-    direction: read_only
-    report_timer: 60
+#- Serial1:
+ #    class: NMEASerialPort
+ #    device: /dev/ttyUSB1
+  #  baudrate: 57600
+  #   server: NMEAServer
+   #  trace_messages: false
 
-- YDEthernet:
-    class: NMEA0183TCPReader
-    address: 192.168.1.60
-    port: 1456
+- MiniPlex3:
+    class: ShipModulInterface
+    address: 192.168.1.62
+    port: 10110
     transport: TCP
-    protocol: NMEA0183
-    direction: write_only
+    server: NMEAServer
     trace_messages: true
 
-publishers:
 
-- EthInjector:
-      class: Injector
-      instruments: [ScannavReplay]
-      target: YDEthernet
+publishers:
 
 #    - MainLog:
 #       class: LogPublisher

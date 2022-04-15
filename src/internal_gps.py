@@ -1,12 +1,12 @@
 #-------------------------------------------------------------------------------
-# Name:        Instrument
-# Purpose:     Abstract super class for all instruments
+# Name:        Internal GPS
+# Purpose:     Class to access the SolidSEnse internal Quectel GPS
 #
 # Author:      Laurent Carré
 #
 # Created:     29/11/2021
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
-# Licence:     <your licence>
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
 import serial
@@ -26,9 +26,8 @@ except ImportError as e:
     _logger.error(str(e))
     gps_present = False
 
-
 from instrument import Instrument, InstrumentReadError, InstrumentNotPresent
-
+from nmea0183 import NMEA0183Msg
 
 
 class InternalGps(Instrument):
@@ -83,7 +82,7 @@ class InternalGps(Instrument):
             except serial.serialutil.SerialException as e:
                 _logger.error("Internal GPS error reading %s" % str(e))
                 raise InstrumentReadError("Serial error")
-            return data
+            return NMEA0183MsgMsg(data)
 
     def close(self):
         self._tty.close()

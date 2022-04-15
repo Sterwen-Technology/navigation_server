@@ -17,10 +17,27 @@ import time
 from generic_msg import *
 
 
+class NMEAInvalidFrame(Exception):
+    pass
+
+
+class NMEA0183Msg(NavGenericMsg):
+
+    def __init__(self, data):
+        super().__init__(N0183_MSG, raw=data)
+        # verify that we have a checksum
+        if self._raw[self._datalen - 3] != ord('*'):
+            raise NMEAInvalidFrame
+        self._checksum = int(self._raw[self._datalen-2:self._datalen], 16)
+
+
+
 def process_nmea0183_frame(frame):
     if frame[0] == 4:
         return NavGenericMsg(NULL_MSG)
-    return NavGenericMsg(N0183_MSG, raw=frame)
+    if frame[0] != ord('$'):
+        raise NMEAInvalidFrame
+    return NMEA0183Msg(frame)
 
 
 class NMEA0183Sentences:

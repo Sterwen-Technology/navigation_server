@@ -29,6 +29,7 @@ from nmea2k_pgndefs import PGNDefinitions
 from nmea2000_msg import N2KProbePublisher, N2KTracePublisher
 from mppt_instrument import MPPT_Instrument
 from ydn2k_instrument import YDInstrument
+from serial_nmeaport import NMEASerialPort
 
 
 def _parser():
@@ -186,6 +187,7 @@ def main():
     config.add_class(InternalGps)
     config.add_class(MPPT_Instrument)
     config.add_class(YDInstrument)
+    config.add_class(NMEASerialPort)
     # logger setup => stream handler for now
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
