@@ -16,6 +16,7 @@ servers:
 - NMEAServer:
     class: NMEA_server
     port: 4500
+    sender: MiniPlex3
 
 - Console:
     class: Console
@@ -40,7 +41,7 @@ instruments:
     port: 4505
     server: NMEAServer
     direction: read_only
-    report_timer: 10
+    report_timer: 60
 
 publishers:
 

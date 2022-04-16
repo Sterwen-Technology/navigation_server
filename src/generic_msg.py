@@ -9,13 +9,13 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-(NULL_MSG, N0183_MSG, N2K_MSG) = range(100, 103)
+(NULL_MSG, TRANSPARENT_MSG, N0183_MSG, N2K_MSG) = range(100, 104)
 
 
 class NavGenericMsg:
 
     def __init__(self, msg_type, raw=None, msg=None):
-        if msg_type not in [NULL_MSG, N0183_MSG, N2K_MSG]:
+        if msg_type not in [NULL_MSG, TRANSPARENT_MSG, N0183_MSG, N2K_MSG]:
             raise ValueError
         self._type = msg_type
         self._msg = msg
@@ -38,6 +38,9 @@ class NavGenericMsg:
         elif self._type == N2K_MSG:
             if msg is None:
                 self._type = NULL_MSG
+
+        elif self.type == TRANSPARENT_MSG:
+            self._raw = raw
 
     @property
     def type(self):

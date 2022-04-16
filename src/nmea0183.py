@@ -31,11 +31,17 @@ class NMEA0183Msg(NavGenericMsg):
         self._checksum = int(self._raw[self._datalen-2:self._datalen], 16)
 
 
+class NMEA0183SentenceMsg(NMEA0183Msg):
+
+    def __init__(self, sentence):
+        super().__init__(sentence.message())
+        self._msg = sentence
+
 
 def process_nmea0183_frame(frame):
     if frame[0] == 4:
         return NavGenericMsg(NULL_MSG)
-    if frame[0] != ord('$'):
+    if frame[0] not in b'$!':
         raise NMEAInvalidFrame
     return NMEA0183Msg(frame)
 

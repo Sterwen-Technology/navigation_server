@@ -13,7 +13,7 @@ import socket
 import logging
 import queue
 import threading
-from generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, N0183_MSG
+from generic_msg import *
 from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
 from nmea0183 import process_nmea0183_frame, NMEAInvalidFrame
 
@@ -32,12 +32,13 @@ class IPInstrument(Instrument):
         super().__init__(opts)
         self._address = opts.get('address', str, 'localhost')
         self._port = opts.get('port', int, 0)
+        self._buffer_size = opts.get('buffer_size', int, 256)
 
         self._protocol = opts.get('transport', str, 'TCP')
         if self._protocol == 'TCP':
-            self._transport = TCP_reader(self._address, self._port, self._timeout)
+            self._transport = TCP_reader(self._address, self._port, self._timeout, self._buffer_size)
         elif self._protocol == 'UDP':
-            self._transport = UDP_reader(self._address, self._port, self._timeout)
+            self._transport = UDP_reader(self._address, self._port, self._timeout, self._buffer_size)
 
     def open(self):
 
@@ -75,12 +76,13 @@ class IPInstrument(Instrument):
 
 class IP_transport():
 
-    def __init__(self, address, port, timeout):
+    def __init__(self, address, port, timeout, buffer_size):
         self._address = address
         self._port = port
         self._ref = "%s:%d" % (self._address, self._port)
         self._socket = None
         self._timeout = timeout
+        self._buffer_size = buffer_size
 
     def close(self):
         if self._socket is not None:
@@ -92,8 +94,8 @@ class IP_transport():
 
 class UDP_reader(IP_transport):
 
-    def __init__(self, address, port, timeout):
-        super().__init__(address, port, timeout)
+    def __init__(self, address, port, timeout, buffer_size):
+        super().__init__(address, port, timeout, buffer_size)
 
     def open(self):
         _logger.info("opening UDP port %d" % self._port)
@@ -111,7 +113,7 @@ class UDP_reader(IP_transport):
 
     def recv(self):
         try:
-            data, address = self._socket.recvfrom(256)
+            data, address = self._socket.recvfrom(self._buffer_size)
         except OSError as e:
             raise InstrumentReadError(e)
         # print(data)
@@ -129,8 +131,8 @@ class UDP_reader(IP_transport):
 
 class TCP_reader(IP_transport):
 
-    def __init__(self, address, port, timeout):
-        super().__init__(address, port, timeout)
+    def __init__(self, address, port, timeout, buffer_size):
+        super().__init__(address, port, timeout, buffer_size)
 
     def open(self):
         _logger.info("Connecting (TCP) to NMEA source %s" % self._ref)
@@ -146,7 +148,7 @@ class TCP_reader(IP_transport):
 
     def recv(self):
         try:
-            msg = self._socket.recv(256)
+            msg = self._socket.recv(self._buffer_size)
         except (TimeoutError, socket.timeout) :
             _logger.info("Timeout error on TCP socket %s" % self._ref)
             raise InstrumentTimeOut()
@@ -175,6 +177,7 @@ class IPAsynchReader(threading.Thread):
         self._msg_processing = msg_processing
         self._stop_flag = False
         self._buffer = bytearray(512)
+        self._transparent = False
 
     def run(self):
         part = False
@@ -186,6 +189,11 @@ class IPAsynchReader(threading.Thread):
                 continue
             except InstrumentReadError:
                 break
+            if self._transparent:
+                msg = NavGenericMsg(TRANSPARENT_MSG, raw=buffer)
+                self._out_queue.put(msg)
+                continue
+            # start buffer processing
             start_idx = 0
             end_idx = len(buffer)
             if end_idx == 0:
@@ -211,10 +219,14 @@ class IPAsynchReader(threading.Thread):
                             end_idx -= 1
                             index = end_idx
                         else:
-                            part = True
-                            part_buf = buffer[start_idx: end_idx]
-                            _logger.debug("Partial frame (%d %d): %s" % (start_idx, end_idx, part_buf))
-                        break
+
+                            if buffer[start_idx] in self._separator:
+                                start_idx += 1
+                            if end_idx - start_idx > 0:
+                                part = True
+                                part_buf = bytearray(buffer[start_idx: end_idx])
+                                _logger.debug("Partial frame (%d %d): %s" % (start_idx, end_idx, part_buf))
+                            break
                 if part:
                     _logger.debug("Existing partial buffer. New buffer index %d %s" % (start_idx, buffer))
                     if index - start_idx == 0:
@@ -230,10 +242,17 @@ class IPAsynchReader(threading.Thread):
                 else:
                     if buffer[start_idx] in self._separator:
                         start_idx += 1
-                    frame = buffer[start_idx:index]
-                    #if frame[0] != ord('$'):
-                        #_logger.error("Invalid frame in %s: %s" % (self._transport.ref(), frame))
-                        #_logger.error("start %d last %d buffer %s" % (start_idx, index, buffer))
+                    if index - start_idx <= 0:
+                        _logger.error("Null length frame in %s" % buffer)
+                        start_idx = index + 2
+                        continue
+                    frame = bytearray(buffer[start_idx:index])
+                    try:
+                        if frame[0] not in b'!$':
+                            _logger.error("Invalid frame in %s: %s" % (self._transport.ref(), frame))
+                            _logger.error("start %d last %d buffer %s" % (start_idx, index, buffer))
+                    except IndexError:
+                        _logger.error("Null Frame %s start %d end %d %s" % (type(frame), start_idx, index, buffer))
                 start_idx = index + 2
                 if len(frame) == 0:
                     continue
@@ -256,6 +275,9 @@ class IPAsynchReader(threading.Thread):
     def stop(self):
         self._stop_flag = True
 
+    def set_transparency(self, flag: bool):
+        self._transparent = flag
+
 
 class BufferedIPInstrument(IPInstrument):
     '''
@@ -273,6 +295,7 @@ class BufferedIPInstrument(IPInstrument):
         else:
             self._in_queue = None
             self._asynch_io = None
+        self._transparent = False
 
     def open(self):
         super().open()
@@ -289,6 +312,10 @@ class BufferedIPInstrument(IPInstrument):
         if self._asynch_io is not None:
             self._asynch_io.stop()
             self._asynch_io.join()
+
+    def set_transparency(self, flag: bool):
+        if self._asynch_io is not None:
+            self._asynch_io.set_transparency(flag)
 
 
 class TCPBufferedReader:

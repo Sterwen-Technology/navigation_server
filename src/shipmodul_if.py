@@ -59,6 +59,7 @@ class ShipModulInterface(BufferedIPInstrument):
     def default_sender(self):
         return True
 
+
 class ConfigPublisher(Publisher):
     '''
     This class is used for Configuration mode, meaning when the Multiplexer utility is connected
@@ -71,7 +72,7 @@ class ConfigPublisher(Publisher):
         self._server = server
 
     def process_msg(self, msg):
-        _logger.debug("Shipmodul publisher sending:%s" % msg.printable())
+        _logger.debug("Shipmodul publisher sending:%s" % msg)
         try:
             self._socket.sendall(msg.raw)
         except OSError as e:
@@ -118,21 +119,23 @@ class ShipModulConfig(NavTCPServer):
             self._pub = pub
             pub.start()
             _logger.info("Shipmodul configuration active")
-            reader = TCPBufferedReader(self._connection, b'\r\n')
+            # reader = TCPBufferedReader(self._connection, b'\r\n', address)
+            self._reader.set_transparency(True)
             while pub.is_alive():
 
-                msg = reader.read()
-                if msg.type == NULL_MSG:
+                msg = self._connection.recv(256)
+                if len(msg) == 0:
                     _logger.error("Shipmodul config instrument null message received")
                     break
-                _logger.debug(msg.printable())
-                if not self._reader.send(msg):
+                _logger.debug("Shipmodul conf msg %s" % msg)
+                int_msg = NavGenericMsg(TRANSPARENT_MSG, raw=msg)
+                if not self._reader.send(int_msg):
                     _logger.error("Shipmodul config instrument write error")
                     break
 
             _logger.info("Connection with configuration application lost running %s" % pub.is_alive())
+            self._reader.set_transparency(False)
             self._pub.stop()
-            reader.stop()
             self._connection.close()
         _logger.info("Configuration server thread stops")
         self._socket.close()

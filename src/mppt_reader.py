@@ -168,6 +168,10 @@ class Vedirect(threading.Thread):
         self.lock_data()
         return self._data_dict
 
+    def lock_data(self):
+        # _logger.info("Locking data lock=%s" % self._lock.locked())
+        if not self._lock.acquire(blocking=True, timeout=1.0):
+            _logger.error("Vedirect data lock timeout")
 
 class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
 

@@ -16,7 +16,7 @@ from vedirect_pb2 import *
 from vedirect_pb2_grpc import *
 
 from instrument import *
-from nmea0183 import XDR
+from nmea0183 import XDR, NMEA0183SentenceMsg
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -66,7 +66,7 @@ class MPPT_Instrument(Instrument):
         sentence.add_transducer('I', "%.2f" % result.current, 'A', 'MPPT Current')
         sentence.add_transducer('U', "%.2f" % result.voltage, 'V', 'DC Circuit Voltage')
         sentence.add_transducer('W', "%.1f" % result.panel_power, 'W', 'Solar Panel Power')
-        return sentence.message()
+        return NMEA0183SentenceMsg(sentence)
 
     def stop(self):
         self._lock.release()
