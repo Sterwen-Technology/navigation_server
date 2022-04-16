@@ -53,7 +53,7 @@ class NMEA_Sender(threading.Thread):
         self._publisher = publisher
 
     def run(self) -> None:
-        reader = TCPBufferedReader(self._client.connection(), b'\r\n')
+        reader = TCPBufferedReader(self._client.connection(), b'\r\n', self._client.address())
         while not self._stop_flag:
             msg = reader.read()
             # print(msg.printable())
@@ -140,6 +140,9 @@ class ClientConnection:
 
     def connection(self):
         return self._socket
+
+    def address(self):
+        return self._address
 
     def read_status(self):
         out = {}

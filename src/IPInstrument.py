@@ -293,8 +293,10 @@ class BufferedIPInstrument(IPInstrument):
 
 class TCPBufferedReader:
 
-    def __init__(self, connection, separator):
+    def __init__(self, connection, separator, address):
         self._connection = connection
+        self._address = address
+        self._ref = "%s:%d" % address
         self._in_queue = queue.Queue(10)
         self._reader = IPAsynchReader(self, self._in_queue, separator, process_nmea0183_frame)
         self._reader.start()
@@ -319,6 +321,12 @@ class TCPBufferedReader:
             _logger.error("Error receiving from TCP socket %s: %s" % (self.name(), e))
             raise InstrumentReadError()
         return msg
+
+    def name(self):
+        return "TCPBufferedReader on %s:%d" % self._address
+
+    def ref(self):
+        return self._ref
 
 
 class NMEA0183TCPReader(BufferedIPInstrument):
