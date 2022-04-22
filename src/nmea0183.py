@@ -29,6 +29,22 @@ class NMEA0183Msg(NavGenericMsg):
         if self._raw[self._datalen - 3] != ord('*'):
             raise NMEAInvalidFrame
         self._checksum = int(self._raw[self._datalen-2:self._datalen], 16)
+        if self._checksum != NMEA0183Sentences.checksum(self._raw[1:self._datalen - 3]):
+            raise NMEAInvalidFrame
+        self._datafields_s = self._raw.index(b',') + 1
+
+    def talker(self):
+        return self._raw[1:3]
+
+    def formatter(self):
+        return self._raw[3:6]
+
+    def replace_talker(self, talker: bytes):
+        self._raw[1:3] = talker[:2]
+
+    def fields(self):
+        return self._raw[self._datafields_s:self._datalen-3].split(b',')
+
 
 
 class NMEA0183SentenceMsg(NMEA0183Msg):
@@ -50,7 +66,7 @@ class NMEA0183Sentences:
 
     @staticmethod
     def checksum(nmea_str):
-        return reduce( operator.xor, map(ord, nmea_str[1:]), 0)
+        return reduce(operator.xor, map(ord, nmea_str[1:]), 0)
 
     @staticmethod
     def hex_checksum(nmea_str):

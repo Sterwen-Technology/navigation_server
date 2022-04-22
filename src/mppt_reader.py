@@ -168,10 +168,6 @@ class Vedirect(threading.Thread):
         self.lock_data()
         return self._data_dict
 
-    def lock_data(self):
-        # _logger.info("Locking data lock=%s" % self._lock.locked())
-        if not self._lock.acquire(blocking=True, timeout=1.0):
-            _logger.error("Vedirect data lock timeout")
 
 class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
 
@@ -207,7 +203,7 @@ class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
         return ret_val
 
 
-class GrpcServer():
+class GrpcServer:
 
     def __init__(self, opts, reader):
         port = opts.port
@@ -274,8 +270,7 @@ class TCPSerialEmulator(threading.Thread):
                 _logger.error("Error sending on serial emulator" + str(e))
 
 
-
-class VEdirect_simulator():
+class VEdirect_simulator:
 
     def __init__(self, filename, serial_emu=None):
         self._fd = open(filename, 'r')
@@ -334,8 +329,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
-

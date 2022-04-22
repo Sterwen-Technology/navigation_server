@@ -74,7 +74,7 @@ class IPInstrument(Instrument):
         self._state = self.NOT_READY
 
 
-class IP_transport():
+class IP_transport:
 
     def __init__(self, address, port, timeout, buffer_size):
         self._address = address
@@ -149,7 +149,7 @@ class TCP_reader(IP_transport):
     def recv(self):
         try:
             msg = self._socket.recv(self._buffer_size)
-        except (TimeoutError, socket.timeout) :
+        except (TimeoutError, socket.timeout):
             _logger.info("Timeout error on TCP socket %s" % self._ref)
             raise InstrumentTimeOut()
         except socket.error as e:
@@ -280,22 +280,24 @@ class IPAsynchReader(threading.Thread):
 
 
 class BufferedIPInstrument(IPInstrument):
-    '''
+    """
     This class provide a buffered input/output when there is a decoupling between read operation and the
     actual message read.
     Typical use:
     - Devices with multiple messages in a single I/O
     - N2K fast track management
-    '''
-    def __init__(self, opts, seperator, msg_processing):
+    """
+    def __init__(self, opts):
         super().__init__(opts)
+
+        self._in_queue = None
+        self._asynch_io = None
+        self._transparent = False
+
+    def set_message_processing(self, separator=b'\r\n', msg_processing=process_nmea0183_frame):
         if self._direction != self.WRITE_ONLY:
             self._in_queue = queue.Queue(20)
-            self._asynch_io = IPAsynchReader (self._transport, self._in_queue, seperator, msg_processing)
-        else:
-            self._in_queue = None
-            self._asynch_io = None
-        self._transparent = False
+            self._asynch_io = IPAsynchReader(self._transport, self._in_queue, separator, msg_processing)
 
     def open(self):
         super().open()
@@ -341,7 +343,7 @@ class TCPBufferedReader:
     def recv(self):
         try:
             msg = self._connection.recv(256)
-        except (TimeoutError, socket.timeout) :
+        except (TimeoutError, socket.timeout):
             _logger.info("Timeout error on TCP socket")
             raise InstrumentTimeOut()
         except socket.error as e:

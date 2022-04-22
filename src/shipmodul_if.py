@@ -30,7 +30,11 @@ _logger = logging.getLogger("ShipDataServer")
 class ShipModulInterface(BufferedIPInstrument):
 
     def __init__(self, opts):
-        super().__init__(opts, b'\r\n', process_nmea0183_frame)
+        super().__init__(opts)
+        if opts.get('nmea2000', bool, False):
+            self.set_message_processing()
+        else:
+            self.set_message_processing()
 
     def deregister(self, pub):
         if pub == self._configpub:
@@ -58,6 +62,24 @@ class ShipModulInterface(BufferedIPInstrument):
 
     def default_sender(self):
         return True
+
+    @staticmethod
+    def shipmodul_extract_nmea2000(frame):
+        m0183 = process_nmea0183_frame(frame)
+        if m0183.formatter() == b'PGN':
+            fields = m0183.fields()
+            pgn = int(fields[0], 16)
+            prio = int(fields[1][0], 16) & 7
+            dlc = int(fields[1][1], 16)
+            addr = int(fields[1][2:4], 16)
+            data = bytearray(dlc)
+            r_data = fields[2].fromhex
+            r_ind = dlc - 1
+            pr_byte = 0
+            while pr_byte < dlc:
+                data[r_ind] = int()
+
+
 
 
 class ConfigPublisher(Publisher):
