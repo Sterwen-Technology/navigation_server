@@ -23,11 +23,11 @@ _logger = logging.getLogger("ShipDataServer")
 class YDInstrument(BufferedIPInstrument):
 
     def __init__(self, opts):
-        self.get_mode(opts)
+        super().__init__(opts)
         if self._mode == self.NMEA0183:
-            super().__init__(opts, b'\r\n', process_nmea0183_frame)
+            self.set_message_processing()
         else:
-            super().__init__(opts, b'\r\n', self.frame_processing)
+            self.set_message_processing(self.frame_processing)
 
     @staticmethod
     def frame_processing(frame):

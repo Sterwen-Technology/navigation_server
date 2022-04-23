@@ -32,7 +32,7 @@ class ShipModulInterface(BufferedIPInstrument):
     def __init__(self, opts):
         super().__init__(opts)
         if opts.get('nmea2000', bool, False):
-            self.set_message_processing()
+            self.set_message_processing(msg_processing=shipmodul_extract_nmea2000)
         else:
             self.set_message_processing()
 
@@ -73,11 +73,28 @@ class ShipModulInterface(BufferedIPInstrument):
             dlc = int(fields[1][1], 16)
             addr = int(fields[1][2:4], 16)
             data = bytearray(dlc)
-            r_data = fields[2].fromhex
-            r_ind = dlc - 1
             pr_byte = 0
+            l_hex = len(fields[2])
+            i_hex = l_hex - 2
             while pr_byte < dlc:
-                data[r_ind] = int()
+                data[pr_byte] = int(fields[2][i_hex:i_hex+2], 16)
+                pr_byte += 1
+                i_hex -= 2
+            # now the PGN sentence is decoded
+            if FastPacketHandler.is_pgn_active(pgn):
+                data = FastPacketHandler.process_frame(pgn, data)
+                if data is None:
+                    raise ValueError  # no error but just to escape
+            elif PGNDefinitions.pgn_definition(pgn).fast_packet():
+                FastPacketHandler.process_frame(pgn, data)
+                raise ValueError  # no error but just to escape
+            msg = NMEA2000Msg(pgn, prio, addr, 0, data)
+            _logger.debug("Shipmodul PGN decode:%s" % str(msg))
+            return msg
+        else:
+            return m0183
+
+
 
 
 
