@@ -17,6 +17,8 @@ from publisher import Publisher
 from IPInstrument import IPInstrument, BufferedIPInstrument, TCPBufferedReader
 from generic_msg import *
 from nmea0183 import process_nmea0183_frame
+from nmea2000_msg import FastPacketHandler, NMEA2000Msg
+from nmea2k_pgndefs import PGNDefinitions
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -32,7 +34,8 @@ class ShipModulInterface(BufferedIPInstrument):
     def __init__(self, opts):
         super().__init__(opts)
         if opts.get('nmea2000', bool, False):
-            self.set_message_processing(msg_processing=shipmodul_extract_nmea2000)
+            self._fast_packet_handler = FastPacketHandler(self)
+            self.set_message_processing(msg_processing=self.shipmodul_extract_nmea2000)
         else:
             self.set_message_processing()
 
@@ -63,8 +66,7 @@ class ShipModulInterface(BufferedIPInstrument):
     def default_sender(self):
         return True
 
-    @staticmethod
-    def shipmodul_extract_nmea2000(frame):
+    def shipmodul_extract_nmea2000(self, frame):
         m0183 = process_nmea0183_frame(frame)
         if m0183.formatter() == b'PGN':
             fields = m0183.fields()
@@ -81,22 +83,18 @@ class ShipModulInterface(BufferedIPInstrument):
                 pr_byte += 1
                 i_hex -= 2
             # now the PGN sentence is decoded
-            if FastPacketHandler.is_pgn_active(pgn):
-                data = FastPacketHandler.process_frame(pgn, data)
+            if self._fast_packet_handler.is_pgn_active(pgn):
+                data = self._fast_packet_handler.process_frame(pgn, data)
                 if data is None:
                     raise ValueError  # no error but just to escape
             elif PGNDefinitions.pgn_definition(pgn).fast_packet():
-                FastPacketHandler.process_frame(pgn, data)
+                self._fast_packet_handler.process_frame(pgn, data)
                 raise ValueError  # no error but just to escape
             msg = NMEA2000Msg(pgn, prio, addr, 0, data)
             _logger.debug("Shipmodul PGN decode:%s" % str(msg))
             return msg
         else:
             return m0183
-
-
-
-
 
 
 class ConfigPublisher(Publisher):

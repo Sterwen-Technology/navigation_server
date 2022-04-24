@@ -287,14 +287,15 @@ class FastPacket:
 
 class FastPacketHandler:
 
-    _sequences = {}
-    _pgn_active = {}
+    def __init__(self, instrument):
+        self._sequences = {}
+        self._pgn_active = {}
+        self._instrument = instrument
 
-    @staticmethod
-    def process_frame(pgn, frame):
+    def process_frame(self, pgn, frame):
         seq = (frame[0] >> 5) & 7
         try:
-            handle = FastPacketHandler._sequences [seq]
+            handle = self._sequences[seq]
         except KeyError:
             handle = None
 
@@ -304,8 +305,8 @@ class FastPacketHandler:
                 raise FastPacketException('PGN mix in sequence')
             if handle.add_packet(pgn, frame):
                 result = handle.total_frame()
-                FastPacketHandler._sequences[seq] = None
-                FastPacketHandler._pgn_active[pgn] = False
+                self._sequences[seq] = None
+                self._pgn_active[pgn] = False
                 _logger.debug("Fast packet end sequence on PGN %d" % pgn)
                 return result
             else:
@@ -314,15 +315,14 @@ class FastPacketHandler:
             # first packet
             handle = FastPacket(pgn)
             handle.first_packet(pgn, frame)
-            FastPacketHandler._sequences[seq] = handle
-            FastPacketHandler._pgn_active[pgn] = True
+            self._sequences[seq] = handle
+            self._pgn_active[pgn] = True
             _logger.debug("Fast packet start sequence on PGN %d" % pgn)
             return None
 
-    @staticmethod
-    def is_pgn_active(pgn):
+    def is_pgn_active(self, pgn):
         try:
-            return FastPacketHandler._pgn_active[pgn]
+            return self._pgn_active[pgn]
         except KeyError:
             return False
 

@@ -283,6 +283,7 @@ class BufferedIPInstrument(IPInstrument):
     """
     This class provide a buffered input/output when there is a decoupling between read operation and the
     actual message read.
+    This class cannot be instantiade from the Yaml
     Typical use:
     - Devices with multiple messages in a single I/O
     - N2K fast track management
@@ -361,7 +362,8 @@ class TCPBufferedReader:
 class NMEA0183TCPReader(BufferedIPInstrument):
 
     def __init__(self, opts):
-        super().__init__(opts, b'\r\n', process_nmea0183_frame)
+        super().__init__(opts)
         if self._mode != self.NMEA0183:
             _logger.error("Protocol incompatible with NMEA0183 reader")
             raise ValueError
+        self.set_message_processing()

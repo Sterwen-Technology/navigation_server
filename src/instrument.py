@@ -210,7 +210,7 @@ class Instrument(threading.Thread):
     def read(self) -> NavGenericMsg:
         raise NotImplementedError("To be implemented in subclass")
 
-    def send(self, msg:NavGenericMsg):
+    def send(self, msg: NavGenericMsg):
         raise NotImplementedError("To be implemented in subclass")
 
     def sender(self):

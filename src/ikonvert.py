@@ -114,7 +114,7 @@ class iKonvertRead(threading.Thread):
 
     def __init__(self, tty, instr_cbd):
         self._tty = tty
-        super().__init__(name="IkonvertRead")
+        super().__init__(name="IKonvertRead")
 
         self._stop_flag = False
         self._instr_cbd = instr_cbd
@@ -138,10 +138,15 @@ class iKonvertRead(threading.Thread):
 
 
 class iKonvert(Instrument):
+    """
+    This class implement the interface towards the iKonvert Digital Yacht USB-NMEA2000 device
+    Inherits from Instrument
+    The full connection logic is
+    """
 
     (IKIDLE, IKREADY, IKCONNECTED) = range(10, 13)
     (WAIT_MSG, WAIT_CONN, WAIT_ACKNAK) = range(20, 23)
-    end_line = '\r\n'.encode()
+    end_line = b'\r\n'
 
     def __init__(self, opts):
         # opts["name"] = "iKonvert"
@@ -201,7 +206,7 @@ class iKonvert(Instrument):
             self._queue.put(nav_msg, block=False)
         except queue.Full:
             # just discard
-            _logger.error("iKonvert read queue full")
+            _logger.error("iKonvert write queue full")
 
     def process_status(self, msg):
 
@@ -272,6 +277,19 @@ class iKonvert(Instrument):
         if self._trace_fd is not None:
             self._trace_fd.close()
         self._tty = None
+
+    def send(self, msg):
+        if self._ikstate != self.IKCONNECTED:
+            return False
+        if self._trace_msg:
+            self.trace(self.TRACE_OUT, msg)
+        try:
+            self._tty.write(msg.raw)
+            return True
+        except serial.SerialException as e:
+            _logger.error("IKonvert write error: %s" % e)
+            return False
+
 
 
 
