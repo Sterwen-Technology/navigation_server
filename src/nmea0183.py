@@ -13,8 +13,12 @@ import operator
 from functools import reduce
 import datetime
 import time
+import logging
 
 from generic_msg import *
+
+
+_logger = logging.getLogger("ShipDataServer")
 
 
 class NMEAInvalidFrame(Exception):
@@ -29,7 +33,8 @@ class NMEA0183Msg(NavGenericMsg):
         if self._raw[self._datalen - 3] != ord('*'):
             raise NMEAInvalidFrame
         self._checksum = int(self._raw[self._datalen-2:self._datalen], 16)
-        if self._checksum != NMEA0183Sentences.checksum(self._raw[1:self._datalen - 3]):
+        if self._checksum != NMEA0183Sentences.b_checksum(self._raw[1:self._datalen - 3]):
+            _logger.error("Checksum error %h %s" % (self._checksum, self._raw[:self._datalen]))
             raise NMEAInvalidFrame
         self._datafields_s = self._raw.index(b',') + 1
 
@@ -67,6 +72,11 @@ class NMEA0183Sentences:
     @staticmethod
     def checksum(nmea_str):
         return reduce(operator.xor, map(ord, nmea_str[1:]), 0)
+
+    @staticmethod
+    def b_checksum(nmea_bytes):
+        return reduce(operator.xor, nmea_bytes, 0)
+
 
     @staticmethod
     def hex_checksum(nmea_str):

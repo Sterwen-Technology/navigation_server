@@ -75,6 +75,8 @@ class Instrument(threading.Thread):
         self._timer = None
         self._state = self.NOT_READY
         self._trace_msg = opts.get('trace_messages', bool, False)
+        self._trace_raw = opts.get('trace_raw', bool, False)
+        self._trace_msg = self._trace_msg or self._trace_raw
         if self._trace_msg:
             self.open_trace_file()
 
@@ -228,6 +230,7 @@ class Instrument(threading.Thread):
         date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
         filename = "TRACE-%s-%s.log" % (self.name(), date_stamp)
         filepath = os.path.join(trace_dir, filename)
+        _logger.info("Opening trace file %s" % filepath)
         try:
             self._trace_fd = open(filepath, "w")
         except IOError as e:
@@ -237,10 +240,27 @@ class Instrument(threading.Thread):
     def trace(self, direction, msg: NavGenericMsg):
         if self._trace_msg:
             if direction == self.TRACE_IN:
-                fc = ">"
+                fc = "%d>" % self._total_msg
             else:
-                fc = "<"
+                fc = "%d<" % self._total_msg_s
             self._trace_fd.write(fc)
             out_msg = msg.printable()
             self._trace_fd.write(out_msg)
             self._trace_fd.write('\n')
+
+    def trace_raw(self, direction, msg):
+        if self._trace_raw:
+            if direction == self.TRACE_IN:
+                fc = "R# >"
+            else:
+                fc = "R# <"
+            self._trace_fd.write(fc)
+            self._trace_fd.write(msg.decode())
+            self._trace_fd.write('\n')
+
+    def add_event_trace(self, message: str):
+        if self._trace_msg:
+            self._trace_fd.write("## Event:")
+            self._trace_fd.write(message)
+            self._trace_fd.write('\n')
+

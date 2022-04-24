@@ -10,6 +10,7 @@
 #-------------------------------------------------------------------------------
 #
 trace: INFO
+trace_dir: /mnt/meaban/Bateau/tests
 
 servers:
 
@@ -28,13 +29,24 @@ servers:
 
 instruments:
 
-- YDEN:
+- YDENN2K:
     class: YDInstrument
     address: 192.168.1.60
-    port: 1456
-    protocol: nmea0183
+    port: 1457
+    protocol: nmea2000
+    transport: TCP
+    # server: NMEAServer
+    trace_messages: true
+    trace_raw: true
+
+- MiniPlex3:
+    class: ShipModulInterface
+    address: 192.168.1.62
+    port: 10110
     transport: TCP
     server: NMEAServer
+    trace_messages: false
+    buffer_size: 128
 
 publishers:
 

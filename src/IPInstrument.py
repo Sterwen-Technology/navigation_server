@@ -73,6 +73,9 @@ class IPInstrument(Instrument):
         self._transport.close()
         self._state = self.NOT_READY
 
+    def transport(self):
+        return self._transport
+
 
 class IP_transport:
 
@@ -169,9 +172,10 @@ class TCP_reader(IP_transport):
 
 class IPAsynchReader(threading.Thread):
 
-    def __init__(self, transport, out_queue, separator, msg_processing):
+    def __init__(self, instrument, out_queue, separator, msg_processing):
         super().__init__()
-        self._transport = transport
+        self._transport = instrument.transport()
+        self._instrument = instrument
         self._out_queue = out_queue
         self._separator = separator
         self._msg_processing = msg_processing
@@ -196,6 +200,7 @@ class IPAsynchReader(threading.Thread):
             # start buffer processing
             start_idx = 0
             end_idx = len(buffer)
+            _logger.debug("%s buffer length %d" % (self._transport.ref(), end_idx))
             if end_idx == 0:
                 break
             while True:
@@ -243,19 +248,22 @@ class IPAsynchReader(threading.Thread):
                     if buffer[start_idx] in self._separator:
                         start_idx += 1
                     if index - start_idx <= 0:
-                        _logger.error("Null length frame in %s" % buffer)
+                        _logger.debug("Null length frame on %s in %s" % (self._transport.ref(), buffer))
                         start_idx = index + 2
                         continue
                     frame = bytearray(buffer[start_idx:index])
+                    '''
                     try:
                         if frame[0] not in b'!$':
                             _logger.error("Invalid frame in %s: %s" % (self._transport.ref(), frame))
                             _logger.error("start %d last %d buffer %s" % (start_idx, index, buffer))
                     except IndexError:
                         _logger.error("Null Frame %s start %d end %d %s" % (type(frame), start_idx, index, buffer))
+                    '''
                 start_idx = index + 2
                 if len(frame) == 0:
                     continue
+                self._instrument.trace_raw(Instrument.TRACE_IN, frame)
                 try:
                     msg = self._msg_processing(frame)
                 except ValueError:
@@ -298,7 +306,7 @@ class BufferedIPInstrument(IPInstrument):
     def set_message_processing(self, separator=b'\r\n', msg_processing=process_nmea0183_frame):
         if self._direction != self.WRITE_ONLY:
             self._in_queue = queue.Queue(20)
-            self._asynch_io = IPAsynchReader(self._transport, self._in_queue, separator, msg_processing)
+            self._asynch_io = IPAsynchReader(self, self._in_queue, separator, msg_processing)
 
     def open(self):
         super().open()
