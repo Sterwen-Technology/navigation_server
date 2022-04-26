@@ -255,6 +255,7 @@ class FastPacket:
     def add_packet(self, pgn , frame):
         counter = frame[0] & 0x1F
         if self ._count != counter:
+            _logger.error("Fast Packet on PGN %d count %d frame %s" % (pgn, self._count, frame))
             raise FastPacketException('Frame not in sequence')
         self._frames.append(frame[1:])
         self._count += 1

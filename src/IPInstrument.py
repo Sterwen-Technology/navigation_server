@@ -154,10 +154,10 @@ class TCP_reader(IP_transport):
             msg = self._socket.recv(self._buffer_size)
         except (TimeoutError, socket.timeout):
             _logger.info("Timeout error on TCP socket %s" % self._ref)
-            raise InstrumentTimeOut()
+            raise InstrumentTimeOut
         except socket.error as e:
             _logger.error("Error receiving from TCP socket %s: %s" % (self._ref, str(e)))
-            raise InstrumentReadError()
+            raise InstrumentReadError
         return msg
 
     def send(self, msg):
@@ -174,8 +174,13 @@ class IPAsynchReader(threading.Thread):
 
     def __init__(self, instrument, out_queue, separator, msg_processing):
         super().__init__()
-        self._transport = instrument.transport()
-        self._instrument = instrument
+        if isinstance(instrument, IPInstrument):
+            self._transport = instrument.transport()
+            self._instrument = instrument
+        else:
+            self._transport = instrument
+            self._instrument = None
+
         self._out_queue = out_queue
         self._separator = separator
         self._msg_processing = msg_processing
@@ -190,6 +195,7 @@ class IPAsynchReader(threading.Thread):
             try:
                 buffer = self._transport.recv()
             except InstrumentTimeOut:
+                _logger.error("Asynchronous read transport time out")
                 continue
             except InstrumentReadError:
                 break
@@ -202,7 +208,7 @@ class IPAsynchReader(threading.Thread):
             end_idx = len(buffer)
             _logger.debug("%s buffer length %d" % (self._transport.ref(), end_idx))
             if end_idx == 0:
-                break
+                continue
             while True:
                 if start_idx >= end_idx:
                     break
@@ -263,7 +269,8 @@ class IPAsynchReader(threading.Thread):
                 start_idx = index + 2
                 if len(frame) == 0:
                     continue
-                self._instrument.trace_raw(Instrument.TRACE_IN, frame)
+                if self._instrument is not None:
+                    self._instrument.trace_raw(Instrument.TRACE_IN, frame)
                 try:
                     msg = self._msg_processing(frame)
                 except ValueError:

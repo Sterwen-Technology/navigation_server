@@ -82,7 +82,10 @@ class InternalGps(Instrument):
             except serial.serialutil.SerialException as e:
                 _logger.error("Internal GPS error reading %s" % str(e))
                 raise InstrumentReadError("Serial error")
-            return NMEA0183MsgMsg(data)
+            msg = NMEA0183Msg(data)
+            self.trace(self.TRACE_IN, msg)
+            msg.replace_talker(self._talker)
+            return msg
 
     def close(self):
         self._tty.close()

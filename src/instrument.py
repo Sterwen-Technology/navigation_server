@@ -67,6 +67,9 @@ class Instrument(threading.Thread):
         self._timeout = opts.get('timeout', float, 10.0)
         self._max_attempt = opts.get('max_attempt', int, 20)
         self._open_delay = opts.get('open_delay', float, 2.0)
+        self._talker = opts.get('talker', str, None)
+        if self._talker is not None:
+            self._talker = self._talker.upper().encode()
         self.get_mode(opts)
         direction = opts.get('direction', str, 'bidirectional')
         # print(self.name(), ":", direction)

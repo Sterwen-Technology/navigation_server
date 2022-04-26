@@ -1,0 +1,31 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/12/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+#
+trace: DEBUG
+trace_dir: /mnt/meaban/Bateau/tests
+
+servers:
+
+
+instruments:
+
+- GPS:
+    class: InternalGps
+    trace_messages: true
+
+publishers:
+
+
+
+
+
+
+

@@ -71,9 +71,10 @@ class ShipModulInterface(BufferedIPInstrument):
         if m0183.formatter() == b'PGN':
             fields = m0183.fields()
             pgn = int(fields[0], 16)
-            prio = int(fields[1][0], 16) & 7
-            dlc = int(fields[1][1], 16)
-            addr = int(fields[1][2:4], 16)
+            attribute = int(fields[1], 16)
+            prio = attribute >> 12 & 7
+            dlc = attribute >> 8 & 0xF
+            addr = attribute & 0xFF
             data = bytearray(dlc)
             pr_byte = 0
             l_hex = len(fields[2])
@@ -92,7 +93,8 @@ class ShipModulInterface(BufferedIPInstrument):
                 raise ValueError  # no error but just to escape
             msg = NMEA2000Msg(pgn, prio, addr, 0, data)
             _logger.debug("Shipmodul PGN decode:%s" % str(msg))
-            return msg
+            gmsg = NavGenericMsg(N2K_MSG, raw=frame, msg=msg)
+            return gmsg
         else:
             return m0183
 

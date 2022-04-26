@@ -83,7 +83,7 @@ class NMEA_server(NavTCPServer):
                 self._sender = NMEA_Sender(client, self._sender_instrument)
                 self._sender.start()
             else:
-                _logger.error("No instrument to send NMEA messages for server %s" % self.name())
+                _logger.info("No instrument (sender) to send NMEA messages for server %s" % self.name())
             # end of while loop => the thread stops
         _logger.info("%s thread stops" % self.name())
         self._socket.close()
