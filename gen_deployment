@@ -1,0 +1,6 @@
+#!/bin/bash
+#
+# tar file generator for navigation system
+# Copyright Sterwen Technology 2021-2022
+#
+tar cvf navigation.tar src/*.py conf/*.yml def/* *.service *.py LICENSE
