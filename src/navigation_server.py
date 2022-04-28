@@ -41,7 +41,7 @@ def _parser():
     return p
 
 
-version = "V0.94"
+version = "V0.95"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -86,7 +86,7 @@ class NavigationServer:
     def add_server(self, server):
         if type(server) == Console:
             if self._console is not None:
-                _logger.error("Only one Console can bet set")
+                _logger.error("Only one Console can be set")
                 raise ValueError
             self._console = server
             for s in self._servers:
@@ -155,10 +155,10 @@ class NavigationServer:
 
 
 def print_threads():
-    print("Number of active threads:", threading.active_count())
+    _logger.info("Number of remaining active threads: %d" % threading.active_count())
     thl = threading.enumerate()
     for t in thl:
-        print(t.name)
+        _logger.info("Thread:%s" % t.name)
 
 
 def main():

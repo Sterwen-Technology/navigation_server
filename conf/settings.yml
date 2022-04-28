@@ -9,7 +9,7 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
-trace: DEBUG
+trace: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 
 servers:
@@ -40,6 +40,10 @@ instruments:
     trace_messages: true
 
 publishers:
+
+- Trace:
+    class: N2KTracePublisher
+    instruments: [MiniPlex3]
 
 #    - MainLog:
 #       class: LogPublisher

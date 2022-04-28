@@ -28,16 +28,12 @@ class Parameters:
     def __getitem__(self, p_name):
         return self._param[p_name]
 
-    def get(self, p_name, p_type, default):
-        try:
-            value = self._param[p_name]
-        except KeyError:
-            if default is None:
-                return None
-            value = default
-
+    @staticmethod
+    def convert(p_name, p_type, value):
         if p_type == str:
             return str(value)
+        elif p_type == bytes:
+            return bytes(str(value).encode())
         elif p_type == bool:
             if type(value) == bool:
                 return value
@@ -60,7 +56,16 @@ class Parameters:
                     raise
         else:
             _logger.error("Not supported type %s for parameter %s" % (str(p_type), p_name) )
-            return default
+            raise ValueError
+
+    def get(self, p_name, p_type, default):
+        try:
+            value = self._param[p_name]
+        except KeyError:
+            if default is None:
+                return None
+            value = default
+        return self.convert(p_name, p_type, value)
 
     def getlist(self, p_name, p_type, default=None):
         try:
@@ -69,7 +74,10 @@ class Parameters:
             return default
 
         if issubclass(type(value), list):
-            return value
+            val_list = []
+            for v in value:
+                val_list.append(self.convert('list item for %s' % p_name, p_type, v))
+            return val_list
         else:
             _logger.warning("Parameter %s expected a list" % p_name)
             return default

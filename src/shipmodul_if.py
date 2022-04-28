@@ -17,7 +17,7 @@ from publisher import Publisher
 from IPInstrument import IPInstrument, BufferedIPInstrument, TCPBufferedReader
 from generic_msg import *
 from nmea0183 import process_nmea0183_frame
-from nmea2000_msg import FastPacketHandler, NMEA2000Msg
+from nmea2000_msg import FastPacketHandler, NMEA2000Msg, FastPacketException
 from nmea2k_pgndefs import PGNDefinitions
 
 _logger = logging.getLogger("ShipDataServer")
@@ -67,6 +67,9 @@ class ShipModulInterface(BufferedIPInstrument):
         return True
 
     def shipmodul_extract_nmea2000(self, frame):
+        if frame[0] == 4:
+            # EOT
+            return NavGenericMsg(NULL_MSG)
         m0183 = process_nmea0183_frame(frame)
         if m0183.formatter() == b'PGN':
             fields = m0183.fields()
@@ -84,12 +87,19 @@ class ShipModulInterface(BufferedIPInstrument):
                 pr_byte += 1
                 i_hex -= 2
             # now the PGN sentence is decoded
-            if self._fast_packet_handler.is_pgn_active(pgn):
-                data = self._fast_packet_handler.process_frame(pgn, data)
+            if self._fast_packet_handler.is_pgn_active(pgn, data):
+                try:
+                    data = self._fast_packet_handler.process_frame(pgn, data)
+                except FastPacketException:
+                    _logger.error("Shipmodul Fast packet error frame: %s pgn %d data %s" % (frame, pgn, data.hex()))
+                    raise ValueError
                 if data is None:
                     raise ValueError  # no error but just to escape
             elif PGNDefinitions.pgn_definition(pgn).fast_packet():
-                self._fast_packet_handler.process_frame(pgn, data)
+                try:
+                    self._fast_packet_handler.process_frame(pgn, data)
+                except FastPacketException:
+                    _logger.error("Shipmodul Fast packet error on initial frame %s data %s" % (frame, data.hex()))
                 raise ValueError  # no error but just to escape
             msg = NMEA2000Msg(pgn, prio, addr, 0, data)
             _logger.debug("Shipmodul PGN decode:%s" % str(msg))

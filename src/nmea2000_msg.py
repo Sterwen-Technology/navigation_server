@@ -239,28 +239,41 @@ class FastPacket:
         self._byte_length = 0
         self._length = 0
         self._pgn = pgn
-        self._frames = list()
+        self._frames = None
         self._count = 0
+        self._nbframes = 0
 
     def first_packet(self, pgn, frame):
         self._sequence = (frame[0] >> 5) & 7
         counter = frame[0] & 0x1F
         if counter != 0 or self._pgn != pgn:
+            _logger.error("Fast Packet first packet on PGN %d sequence %d count %d frame %s" %
+                          (pgn, self._sequence, counter, frame))
             raise FastPacketException('Incorrect frame sequence')
         self._byte_length = frame[1]
+        l7 = self._byte_length - 6
+        nb7 = int(l7/7)
+        if l7 % 7 != 0:
+            nb7 += 1
+        self._nbframes = nb7 + 1
+        self._frames = [None for i in range(self._nbframes)]
         self._length = 6
-        self._frames.append(frame[2:8])
+        self._frames[0] = frame[2:8]
         self._count += 1
 
-    def add_packet(self, pgn , frame):
+    def add_packet(self, pgn, frame):
         counter = frame[0] & 0x1F
+
+        '''
         if self ._count != counter:
-            _logger.error("Fast Packet on PGN %d count %d frame %s" % (pgn, self._count, frame))
+            sequence = (frame[0] >> 5) & 7
+            _logger.error("Fast Packet on PGN %d seq %d count %d %d frame %s" % (pgn, sequence, self._count, counter, frame))
             raise FastPacketException('Frame not in sequence')
-        self._frames.append(frame[1:])
+        '''
+        self._frames[counter] = frame[1:]
         self._count += 1
         self._length += len(frame) - 1
-        if self._length >= self._byte_length:
+        if self._length >= self._byte_length or self._count >= self._nbframes:
             return True
         else:
             return False
@@ -269,6 +282,9 @@ class FastPacket:
         result = bytearray(self._byte_length)
         start_idx = 0
         for f in self._frames:
+            if f is None:
+                _logger.error("Fast packet missing frame")
+                raise FastPacketException
             l = len(f)
             if start_idx + l >= self._byte_length:
                 result[start_idx:] = f[:self._byte_length - start_idx +1]
@@ -289,26 +305,25 @@ class FastPacket:
 class FastPacketHandler:
 
     def __init__(self, instrument):
-        self._sequences = {}
+        self._sequences = [None for i in range(8)]
         self._pgn_active = {}
         self._instrument = instrument
 
     def process_frame(self, pgn, frame):
         seq = (frame[0] >> 5) & 7
-        try:
-            handle = self._sequences[seq]
-        except KeyError:
-            handle = None
-
+        handle = self._sequences[seq]
+        _logger.debug("Fast Packet ==> PGN %d seq %d frame %s" % (pgn, seq, frame.hex()))
         if handle is not None:
             # let's see if this is OK
             if handle.pgn != pgn:
+                _logger.error("Fast Packet PGN mix expected %d actual %d seq %d frame %s" %
+                              (handle.pgn, pgn, seq, frame.hex()))
                 raise FastPacketException('PGN mix in sequence')
             if handle.add_packet(pgn, frame):
                 result = handle.total_frame()
                 self._sequences[seq] = None
                 self._pgn_active[pgn] = False
-                _logger.debug("Fast packet end sequence on PGN %d" % pgn)
+                _logger.debug("Fast packet ==> end sequence on PGN %d" % pgn)
                 return result
             else:
                 return None
@@ -318,14 +333,19 @@ class FastPacketHandler:
             handle.first_packet(pgn, frame)
             self._sequences[seq] = handle
             self._pgn_active[pgn] = True
-            _logger.debug("Fast packet start sequence on PGN %d" % pgn)
+            _logger.debug("Fast packet ==> start sequence on PGN %d with sequence %d" % (pgn, seq))
             return None
 
-    def is_pgn_active(self, pgn):
-        try:
-            return self._pgn_active[pgn]
-        except KeyError:
-            return False
+    def is_pgn_active(self, pgn, frame) -> bool:
+        seq = (frame[0] >> 5) & 7
+        handle = self._sequences[seq]
+        if handle is not None:
+            if handle.pgn == pgn:
+                return True
+        return False
+
+
+
 
 
 

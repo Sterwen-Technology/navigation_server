@@ -24,6 +24,7 @@ instruments:
     transport: TCP
     # server: NMEAServer
     direction: read_only
+    # white_list: [GGA, GLL, RMC]
     report_timer: 60
 
 - YDEthernet:

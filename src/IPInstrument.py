@@ -381,4 +381,21 @@ class NMEA0183TCPReader(BufferedIPInstrument):
         if self._mode != self.NMEA0183:
             _logger.error("Protocol incompatible with NMEA0183 reader")
             raise ValueError
-        self.set_message_processing()
+        ffilter = opts.getlist('white_list', bytes)
+        self._filter = ffilter
+        if ffilter is None:
+            self.set_message_processing()
+        else:
+            _logger.info("Formatter filter %s" % self._filter)
+            self.set_message_processing(msg_processing=self.filter_messages)
+
+    def filter_messages(self, frame):
+        if frame[0] == 4:
+            # EOT
+            return NavGenericMsg(NULL_MSG)
+        msg = process_nmea0183_frame(frame)
+        if msg.formatter() in self._filter:
+            _logger.debug("Message retained: %s" % frame)
+            return msg
+        # _logger.debug("Rejected message %s" % frame)
+        raise ValueError
