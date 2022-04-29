@@ -96,7 +96,13 @@ class Vedirect(threading.Thread):
         # _logger.info("Unlocking data")
 
     def input(self, byte):
-        self._buffer[self._buflen] = byte
+        try:
+            self._buffer[self._buflen] = byte
+        except IndexError:
+            _logger.error("Input buffer overflow %d" % self._buflen)
+            self._buflen = 0
+            return None
+
         self._buflen += 1
 
         if byte == self.hexmarker and self.state != self.IN_CHECKSUM:

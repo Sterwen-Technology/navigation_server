@@ -34,7 +34,7 @@ class NMEA0183Msg(NavGenericMsg):
             raise NMEAInvalidFrame
         self._checksum = int(self._raw[self._datalen-2:self._datalen], 16)
         if self._checksum != NMEA0183Sentences.b_checksum(self._raw[1:self._datalen - 3]):
-            _logger.error("Checksum error %h %s" % (self._checksum, self._raw[:self._datalen]))
+            _logger.error("Checksum error %h %s" % (self._checksum, self._raw[:self._datalen].hex()))
             raise NMEAInvalidFrame
         self._datafields_s = self._raw.index(b',') + 1
 

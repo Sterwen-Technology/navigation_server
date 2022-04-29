@@ -144,6 +144,11 @@ class Instrument(threading.Thread):
                     break
                 else:
                     continue
+            except Exception as e:
+                # catch all
+                _logger.error("Un-caught exception during instrument read: %s" % e)
+                self.close()
+                continue
             # good data received - publish
             self._total_msg += 1
             self._state = self.ACTIVE

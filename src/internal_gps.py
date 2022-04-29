@@ -84,22 +84,25 @@ class InternalGps(Instrument):
                 raise InstrumentReadError("Serial error")
             msg = NMEA0183Msg(data)
             self.trace(self.TRACE_IN, msg)
-            msg.replace_talker(self._talker)
+            if self._talker is not None:
+                msg.replace_talker(self._talker)
             return msg
 
     def close(self):
+        self._state = self.NOT_READY
         self._tty.close()
         self._fix_event.set()
 
     def timer_lapse(self):
         self._modem.open()
         status = self._modem.getGpsStatus()
-        self._fix = status['fix']
+        fix = status['fix']
         self._modem.close()
-        if self._fix:
+        if not self._fix and fix:
             _logger.info("Internal GPS become fixed")
+            self._fix = True
             self._fix_event.set()
-        else:
+        elif self._fix and not fix:
             self._fix_event.clear()
             _logger.info("Internal GPS lost fix")
         super().timer_lapse()
