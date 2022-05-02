@@ -134,6 +134,7 @@ class Instrument(threading.Thread):
                 if msg.type == NULL_MSG:
                     _logger.warning("No data from %s => stop connection" % self._name)
                     self.close()
+                    continue
                 else:
                     _logger.debug(msg.printable())
 
@@ -153,7 +154,7 @@ class Instrument(threading.Thread):
             self._total_msg += 1
             self._state = self.ACTIVE
             self.publish(msg)
-        self.close()
+        self.stop()
         _logger.info("%s instrument thread stops"%self._name)
 
     def register(self, pub):
@@ -208,6 +209,7 @@ class Instrument(threading.Thread):
     def stop(self):
         _logger.info("Stopping %s instrument"% self._name)
         self._stopflag = True
+        self.close()
         if self._timer is not None:
             self._timer.cancel()
 
