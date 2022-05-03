@@ -77,7 +77,6 @@ class NMEA0183Sentences:
     def b_checksum(nmea_bytes):
         return reduce(operator.xor, nmea_bytes, 0)
 
-
     @staticmethod
     def hex_checksum(nmea_str):
         val = NMEA0183Sentences.checksum(nmea_str[1:])

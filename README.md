@@ -30,6 +30,24 @@ Currently, tested instruments:
 Under preparation
 - Direct CAN Access
 
+#### Instruments instantiable classes
+
+
+#### Instruments generic parameters
+
+| Name            | Type                                 | Default                                  | Signification                            |
+|-----------------|--------------------------------------|------------------------------------------|------------------------------------------|
+| timeout         | float                                | 10                                       | Time out on instrment read in seconds    |
+ | report_timer    | float                                | 30                                       | Reporting / tracing interval in sec.     |
+ | max_attempt     | integer                              | 20                                       | Max number of attempt to open the device |
+| open_delay      | float                                | 2                                        | Delay between attempt to open the device |
+| talker          | string (2)                           | None | Talker ID substitution for NMEA0183      |
+| protocol | nmea0183, nmea2000 | nmea0183 | Messsage processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 when possible |
+| direction       | read_only, write_only, bidirectional | bidirectional | Direction of excahnge with device |
+| trace_messages  | boolean                              | False | Trace all messages after internal pre-processing |
+| trace_raw | boolean | False | Trace all messages in device format |
+
+
 ### Publishers
 Publishers concentrate messages from several instruments towards consumers. Publishers are implicitly created by Servers when a new client connection is created.
 There are also specific Publishers for tracing and logging.

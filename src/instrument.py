@@ -38,6 +38,9 @@ class InstrumentNotPresent(Exception):
 
 
 class Instrument(threading.Thread):
+    '''
+    Base abstract class for all instruments
+    '''
 
     (NOT_READY, OPEN, CONNECTED, ACTIVE) = range(4)
     (BIDIRECTIONAL, READ_ONLY, WRITE_ONLY) = range(10, 13)
@@ -82,6 +85,7 @@ class Instrument(threading.Thread):
         self._trace_msg = self._trace_msg or self._trace_raw
         if self._trace_msg:
             self.open_trace_file()
+        self._check_in_progress = False
 
     def get_mode(self, opts):
         mode = opts.get('protocol', str, 'nmea0183')
@@ -99,6 +103,7 @@ class Instrument(threading.Thread):
             # no message received
             _logger.warning("Instrument %s:No NMEA messages received in the last %4.1f sec" %
                             (self._name, self._timeout))
+            self.check_connection()
         self._last_msg_count = self._total_msg
         self._last_msg_count_s = self._total_msg_s
         _logger.info("Instrument %s NMEA message received:%d sent:%d" % (self.name(), self._total_msg, self._total_msg_s))
@@ -147,7 +152,7 @@ class Instrument(threading.Thread):
                     continue
             except Exception as e:
                 # catch all
-                _logger.error("Un-caught exception during instrument read: %s" % e)
+                _logger.error("Un-caught exception during instrument %s read: %s" % (self._name, e))
                 self.close()
                 continue
             # good data received - publish
@@ -155,6 +160,7 @@ class Instrument(threading.Thread):
             self._state = self.ACTIVE
             self.publish(msg)
         self.stop()
+        self.close()
         _logger.info("%s instrument thread stops"%self._name)
 
     def register(self, pub):
@@ -209,9 +215,9 @@ class Instrument(threading.Thread):
     def stop(self):
         _logger.info("Stopping %s instrument"% self._name)
         self._stopflag = True
-        self.close()
         if self._timer is not None:
             self._timer.cancel()
+            self._timer = None
 
     def open(self):
         raise NotImplementedError("To be implemented in subclass")
@@ -225,8 +231,9 @@ class Instrument(threading.Thread):
     def send(self, msg: NavGenericMsg):
         raise NotImplementedError("To be implemented in subclass")
 
-    def sender(self):
-        return False
+    def check_connection(self):
+        # raise NotImplementedError("To be implemented in subclass")
+        pass
 
     def default_sender(self):
         return False

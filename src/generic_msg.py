@@ -59,5 +59,7 @@ class NavGenericMsg:
             return self._raw[:self._datalen].decode()
         elif self._type == N2K_MSG:
             return str(self._msg)
+        elif self._type == TRANSPARENT_MSG:
+            return self._raw.decode().strip('\r\n')
         else:
             return "NULL"

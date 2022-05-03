@@ -9,11 +9,8 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-import logging
-import grpc
-import threading
-from vedirect_pb2 import *
-from vedirect_pb2_grpc import *
+from protobuf.vedirect_pb2 import *
+from protobuf.vedirect_pb2_grpc import *
 
 from instrument import *
 from nmea0183 import XDR, NMEA0183SentenceMsg

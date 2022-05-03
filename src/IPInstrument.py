@@ -61,7 +61,7 @@ class IPInstrument(Instrument):
         return msg
 
     def send(self, msg):
-        _logger.debug("Sending %s" % msg.printable())
+        _logger.debug("%s Sending %s" % (self.name(), msg.printable()))
         if self._state == self.NOT_READY:
             _logger.error("Write attempt on non ready transport: %s" % self.name())
             return False
@@ -195,7 +195,7 @@ class IPAsynchReader(threading.Thread):
             try:
                 buffer = self._transport.recv()
             except InstrumentTimeOut:
-                _logger.error("Asynchronous read transport time out")
+                _logger.info("Asynchronous read transport time out")
                 continue
             except InstrumentReadError:
                 break
@@ -328,8 +328,9 @@ class BufferedIPInstrument(IPInstrument):
     def stop(self):
         super().stop()
         if self._asynch_io is not None:
-            self._asynch_io.stop()
-            self._asynch_io.join()
+            if self._asynch_io.is_alive():
+                self._asynch_io.stop()
+                self._asynch_io.join()
 
     def set_transparency(self, flag: bool):
         if self._asynch_io is not None:

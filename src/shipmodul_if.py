@@ -16,7 +16,7 @@ from server_common import NavTCPServer
 from publisher import Publisher
 from IPInstrument import IPInstrument, BufferedIPInstrument, TCPBufferedReader
 from generic_msg import *
-from nmea0183 import process_nmea0183_frame
+from nmea0183 import process_nmea0183_frame, NMEA0183Msg
 from nmea2000_msg import FastPacketHandler, NMEA2000Msg, FastPacketException
 from nmea2k_pgndefs import PGNDefinitions
 
@@ -31,13 +31,18 @@ _logger = logging.getLogger("ShipDataServer")
 
 class ShipModulInterface(BufferedIPInstrument):
 
+    msg_check = NavGenericMsg(TRANSPARENT_MSG, b'$PSMDVER\r\n')
+    version_fmt = b'$PSMDVER'
+    version_fmt_l = len(version_fmt)
+
     def __init__(self, opts):
         super().__init__(opts)
         if opts.get('nmea2000', bool, False):
             self._fast_packet_handler = FastPacketHandler(self)
             self.set_message_processing(msg_processing=self.shipmodul_extract_nmea2000)
         else:
-            self.set_message_processing()
+            self.set_message_processing(msg_processing=self.shipmodul_process_frame)
+        self._check_ok = False
 
     def deregister(self, pub):
         if pub == self._configpub:
@@ -70,7 +75,7 @@ class ShipModulInterface(BufferedIPInstrument):
         if frame[0] == 4:
             # EOT
             return NavGenericMsg(NULL_MSG)
-        m0183 = process_nmea0183_frame(frame)
+        m0183 = self.shipmodul_process_frame(frame)
         if m0183.formatter() == b'PGN':
             fields = m0183.fields()
             pgn = int(fields[0], 16)
@@ -108,6 +113,46 @@ class ShipModulInterface(BufferedIPInstrument):
         else:
             return m0183
 
+    def shipmodul_process_frame(self, frame):
+        '''
+        Extract tag header when present
+        :param frame:
+        :return: NMEA0183Msg
+        '''
+        if frame[0] == 4:
+            # EOT
+            return NavGenericMsg(NULL_MSG)
+
+        if self._check_in_progress:
+            if frame[:self.version_fmt_l] == self.version_fmt:
+                _logger.info("Check connection answer: %s" % frame)
+                self._check_ok = True
+                return NMEA0183Msg(frame)
+
+        if frame[:2] == b'\\s':
+            end_of_tag = frame[2:].index(b'\\')
+            msg = NMEA0183Msg(frame[end_of_tag+1:])
+        else:
+            msg = NMEA0183Msg(frame)
+        return msg
+
+    def check_connection(self):
+        '''
+        Send a version message to check the connectivity when no activity
+        :return:
+        '''
+        if self._check_in_progress:
+            if not self._check_ok:
+                _logger.error("Shipmodul no answer on version request")
+                self.close()
+            self._check_in_progress = False
+        else:
+            self._check_in_progress = True
+            self._check_ok = False
+            self.send(self.msg_check)
+
+
+
 
 class ConfigPublisher(Publisher):
     '''
@@ -121,7 +166,7 @@ class ConfigPublisher(Publisher):
         self._server = server
 
     def process_msg(self, msg):
-        _logger.debug("Shipmodul publisher sending:%s" % msg)
+        _logger.debug("Shipmodul publisher sending:%s" % msg.raw)
         try:
             self._socket.sendall(msg.raw)
         except OSError as e:
