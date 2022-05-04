@@ -51,7 +51,7 @@ class YDInstrument(BufferedIPInstrument):
         for db in fields[3:]:
             data[i] = int(db,16)
             i += 1
-        if self._fast_packet_handler.is_pgn_active(pgn):
+        if self._fast_packet_handler.is_pgn_active(pgn, data):
             data = self._fast_packet_handler.process_frame(pgn, data)
             if data is None:
                 raise ValueError # no error but just to escape

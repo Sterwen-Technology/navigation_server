@@ -19,7 +19,8 @@ from argparse import ArgumentParser
 from concurrent import futures
 
 import grpc
-from protobuf import vedirect_pb2, vedirect_pb2_grpc
+import vedirect_pb2
+import vedirect_pb2_grpc
 
 
 def _parser():

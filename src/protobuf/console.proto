@@ -1,0 +1,48 @@
+//-------------------------------------------------------------------------------
+// Name:        console.proto
+// Purpose:     protobuf and grpc for remote control of navigation server
+//
+// Author:      Laurent Carré
+//
+// Created:     03/05/2022
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+message InstrumentMsg {
+  string  name=1;
+  string instrument_class=2;
+  enum State {
+     STOPPED=0;
+     RUNNING = 1;
+  }
+  State state=3;
+  enum Device_state {
+    NOT_READY=0;
+    OPEN=1;
+    CONNECTED=2;
+  }
+  Device_state dev_state=4;
+  string protocol=5;
+  uint32 msg_in=6;
+  uint32 msg_out=7;
+}
+
+message Request {
+  uint32 id=1;
+  string cmd=2;
+  string target=3;
+}
+
+message Response {
+  uint32 id=1;
+  string status=2;
+}
+
+service NavigationConsole {
+  rpc GetInstruments(Request) returns (stream InstrumentMsg) {}
+  rpc InstrumentCmd(Request) returns (Response) {}
+}
+

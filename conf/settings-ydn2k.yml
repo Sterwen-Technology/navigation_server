@@ -9,7 +9,7 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 #
-trace: INFO
+trace: DEBUG
 trace_dir: /mnt/meaban/Bateau/tests
 
 servers:
@@ -36,17 +36,8 @@ instruments:
     protocol: nmea2000
     transport: TCP
     # server: NMEAServer
-    trace_messages: true
-    trace_raw: true
-
-- MiniPlex3:
-    class: ShipModulInterface
-    address: 192.168.1.62
-    port: 10110
-    transport: TCP
-    server: NMEAServer
     trace_messages: false
-    buffer_size: 128
+    trace_raw: false
 
 publishers:
 

@@ -90,6 +90,7 @@ class Instrument(threading.Thread):
     def get_mode(self, opts):
         mode = opts.get('protocol', str, 'nmea0183')
         self._mode = self.protocol_dict[mode.lower()]
+        self._app_protocol = mode.lower()
 
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)
@@ -211,6 +212,12 @@ class Instrument(threading.Thread):
 
     def name(self):
         return self._name
+
+    def state(self):
+        return self._state
+
+    def protocol(self):
+        return self._app_protocol
 
     def stop(self):
         _logger.info("Stopping %s instrument"% self._name)

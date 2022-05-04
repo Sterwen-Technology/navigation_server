@@ -5,20 +5,63 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021
-# Licence:     <your licence>
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
-import threading
-import socket
+
 import logging
-import json
+import grpc
+from concurrent import futures
+from console_pb2 import *
+from console_pb2_grpc import *
 
 from server_common import *
 
 _logger = logging.getLogger("ShipDataServer")
 
 
-class Console(NavTCPServer):
+class ConsoleServicer(NavigationConsoleServicer):
+
+    def __init__(self, console):
+        self._console = console
+
+    def GetInstruments(self, request, context):
+        _logger.debug("Console GetInstruments")
+        for i in self._console.instruments():
+            resp = InstrumentMsg()
+            resp.name = i.name()
+            resp.instrument_class = type(i).__name__
+            if i.is_alive():
+                resp.state = InstrumentMsg.RUNNING
+            else:
+                resp.state = InstrumentMsg.STOPPED
+            resp.dev_state = i.state()
+            resp.protocol = i.protocol()
+            resp.msg_in = i.total_input_msg()
+            resp.msg_out = i.total_output_msg()
+            _logger.debug("Console GetInstruments sending instrument %s" % i.name())
+            yield resp
+        return
+
+    def InstrumentCmd(self, request, context):
+        resp = Response()
+        resp.id = request.id
+        try:
+            instrument = self._console.instrument(request.target)
+        except KeyError:
+            resp.status = "Instrument %s not found" % request.target
+            return resp
+        cmd = request.cmd
+        try:
+            ret_val = getattr(instrument, cmd)()
+        except AttributeError:
+            resp.status = "Command %s not found" % cmd
+            return resp
+        resp.status = " SUCCESS value=%s" % ret_val
+        return resp
+
+
+class Console(NavigationServer):
 
     def __init__(self, options):
         super().__init__(options)
@@ -26,6 +69,10 @@ class Console(NavTCPServer):
         self._instruments = {}
         self._injectors = {}
         self._connection = None
+        address = "0.0.0.0:%d" % self._port
+        self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self._grpc_server)
+        self._grpc_server.add_insecure_port(address)
 
     def add_server(self, server):
         self._servers[server.name()] = server
@@ -33,85 +80,19 @@ class Console(NavTCPServer):
     def add_instrument(self, instrument):
         self._instruments[instrument.name()] = instrument
 
-    def run(self) -> None:
-        _logger.info("Console starting")
-        while not self._stop_flag:
-            self._socket.listen(1)
-            _logger.debug("Console waiting for connection")
-            try:
-                self._connection, address = self._socket.accept()
-            except socket.timeout:
-                if self._stop_flag:
-                    if self._connection is not None:
-                        self._connection.close()
-                    break
-                else:
-                    continue
-            except OSError as e:
-                if self._stop_flag:
-                    break
-                else:
-                    raise
-            _logger.info("New console connection from %s:%d" % address)
+    def instruments(self):
+        return self._instruments.values()
 
-            while True:
-                try:
-                    cmd = self._connection.recv(1024)
-                except OSError as e:
-                    _logger.info("Error reading console socket: %s" % str(e))
-                    break
-                if len(cmd) == 0:
-                    break
-                self.process_cmd(cmd.decode())
+    def instrument(self, name):
+        return self._instruments[name]
 
-            _logger.info("Console connection closed")
-            self._connection.close()
-
-        _logger.info("Console server stopping")
-        self._socket.close()
+    def start(self) -> None:
+        _logger.info("Console starting on port %d" % self._port)
+        self._grpc_server.start()
 
     def stop(self):
-        self._stop_flag = True
-        if self._connection is not None:
-            self._connection.close()
-        self._socket.close()
+        _logger.info("Stopping Console GRPC Server")
+        self._end_event = self._grpc_server.stop(0.1)
 
-    def process_cmd(self, cmd):
-        #
-        #  only trivial command for the moment
-        _logger.info("Command received:%s" % cmd)
-        if cmd == "STOP":
-            server = self._servers['main']
-            self.reply("Stopping all servers - navigation system will stop")
-            self.reply("END")
-            self.stop()
-            server.stop_server()
-        elif cmd == "INSTRUMENTS":
-            self.instrument_status(cmd)
-        elif cmd == "SERVERS":
-            self.server_status(cmd)
-        else:
-            self.reply("Unknown command:%s" % cmd)
-
-    def reply(self, msg):
-        self._connection.sendall(msg.encode())
-
-    def reply_end(self):
-        self._connection.sendall("END".encode())
-        self._connection.close()
-
-    def instrument_status(self, cmd):
-        self.reply("INSTRUMENTS")
-        for name, inst in self._instruments.items():
-            resp = "%s | msg in %d msg out %d\n" % (name, inst.total_input_msg(), inst.total_output_msg())
-            print(resp)
-            self.reply(resp)
-        self.reply_end()
-
-    def server_status(self, cmd):
-        self.reply("SERVERS")
-        server = self._servers['NMEAServer']
-        out = server.read_status()
-        resp = json.dumps(out)
-        self.reply(resp)
-        self.reply_end()
+    def join(self):
+        self._end_event.wait()
