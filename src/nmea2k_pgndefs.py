@@ -17,7 +17,7 @@ from collections import namedtuple
 import struct
 
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+".decode")
 
 
 class N2KDecodeException(Exception):
@@ -44,7 +44,6 @@ class PGNDefinitions:
     @staticmethod
     def pgn_definition(pgn):
         return PGNDefinitions.pgn_definitions.pgn_def(pgn)
-
 
     def __init__(self, xml_file):
 

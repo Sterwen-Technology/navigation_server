@@ -10,6 +10,8 @@
 #-------------------------------------------------------------------------------
 #
 trace: INFO
+trace_decode: INFO
+trace_dir: /mnt/meaban/Bateau/tests
 
 servers:
 
@@ -17,14 +19,16 @@ instruments:
 
 - iKonvert:
     class: iKonvert
-    tty_name: /dev/ttyUSB0
-    trace: /mnt/meaban/Bateau/tests/test220410-1.log
+    tty_name: /dev/ttyUSB2
+    trace_raw: true
 
 publishers:
 
     - N2KTrace:
           class: N2KTracePublisher
           instruments: [iKonvert]
+          file: test1
+          output: FILE
           # filter: 129283,129284
 
 #    - MainLog:

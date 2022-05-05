@@ -12,11 +12,13 @@
 import time
 from google.protobuf.json_format import MessageToJson
 import datetime
+import os
 
 from nmea2k_pgndefs import *
 from publisher import Publisher
 from nmea2000_pb2 import nmea2000
 from generic_msg import *
+from configuration import NavigationConfiguration
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -155,11 +157,23 @@ class N2KTracePublisher(Publisher):
         super().__init__(opts)
         self._filter = opts.getlist('filter', int, None)
         _logger.info("%s filter:%s" % (self.name(), self._filter))
-        self._print_option = opts.get('print', str, 'ALL')
+        self._print_option = opts.get('output', str, 'ALL')
+        filename = opts.get('file', str, None)
+        if filename is not None:
+            trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')
+            date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
+            filename = "%s-N2K-%s.log" % (filename, date_stamp)
+            filepath = os.path.join(trace_dir, filename)
+            _logger.info("Opening trace file %s" % filepath)
+            try:
+                self._trace_fd = open(filepath, "w")
+            except IOError as e:
+                _logger.error("Trace file error %s" % e)
+                self._trace_fd = None
 
     def process_msg(self, gen_msg):
         if gen_msg.type != N2K_MSG:
-            return
+            return True
         msg = gen_msg.msg
         if self._print_option == 'NONE':
             return True
@@ -169,8 +183,17 @@ class N2KTracePublisher(Publisher):
         # print("decoding %s", msg)
         res = msg.decode()
         if res is not None:
-            print(res)
+            if self._print_option in ('ALL', 'PRINT'):
+                print(res)
+            if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
+                self._trace_fd.write(str(res))
+                self._trace_fd.write('\n')
         return True
+
+    def stop(self):
+        if self._trace_fd is not None:
+            self._trace_fd.close()
+        super().stop()
 
 
 def pgn_list(str_filter):

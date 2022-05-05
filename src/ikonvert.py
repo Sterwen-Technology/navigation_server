@@ -20,7 +20,7 @@ from instrument import Instrument, InstrumentReadError
 from nmea2000_msg import NMEA2000Msg
 from generic_msg import *
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer.iKonvert")
 (UNKNOWN, STATUS, NOT_CONN, ACK, NAK, N2K, N183) = range(7)
 
 
@@ -112,8 +112,9 @@ class iKonvertMsg():
 
 class iKonvertRead(threading.Thread):
 
-    def __init__(self, tty, instr_cbd):
+    def __init__(self, instrument, tty, instr_cbd):
         self._tty = tty
+        self._instrument = instrument
         super().__init__(name="IKonvertRead")
 
         self._stop_flag = False
@@ -126,6 +127,7 @@ class iKonvertRead(threading.Thread):
             except serial.SerialException as e:
                 _logger.error("iKonvert read error: %s" % str(e))
                 continue
+            self._instrument.trace_raw(Instrument.TRACE_IN, data)
             msg = iKonvertMsg.from_bytes(data)
             if msg is not None:
                 self._instr_cbd[msg.type](msg)
@@ -182,7 +184,7 @@ class iKonvert(Instrument):
         cb = {UNKNOWN: self.process_status, STATUS: self.process_status, NOT_CONN: self.process_status,
               ACK: self.process_acknak, NAK: self.process_acknak, N2K: self.process_nmea, N183: self.process_nmea}
         if self._reader is None:
-            self._reader = iKonvertRead(self._tty, cb)
+            self._reader = iKonvertRead(self, self._tty, cb)
             self._reader.start()
         self.wait_status()
         if self._ikstate == self.IKREADY:
@@ -263,20 +265,22 @@ class iKonvert(Instrument):
         return self._queue.get()
 
     def stop(self):
+        _logger.debug("iKonvert entering stop state=%d" % self._ikstate)
         super().stop()
-        if self._ikstate > self.IKIDLE:
+        if self._ikstate > self.IKREADY:
             self.send_loc_cmd('N2NET_OFFLINE', wait=0)
             self.wait_status()
         self._reader.stop()
         self._queue.put(NavGenericMsg(NULL_MSG))
         self._ikstate = self.IKIDLE
+        _logger.debug("iKonvert exiting stop state=%d" % self._ikstate)
 
     def close(self):
-        self._reader.join()
-        self._tty.close()
-        if self._trace_fd is not None:
-            self._trace_fd.close()
-        self._tty = None
+        _logger.debug("iKonvert closing")
+        if self._tty is not None:
+            self._reader.join()
+            self._tty.close()
+            self._tty = None
 
     def send(self, msg):
         if self._ikstate != self.IKCONNECTED:

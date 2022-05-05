@@ -47,6 +47,7 @@ class Options(object):
         except AttributeError:
             raise AttributeError(name)
 
+
 class ConsoleClient:
 
     def __init__(self, address):

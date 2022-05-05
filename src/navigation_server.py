@@ -41,7 +41,7 @@ def _parser():
     return p
 
 
-version = "V0.96"
+version = "V0.961"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -171,7 +171,7 @@ def main():
     else:
         if os.getcwd() != default_base_dir:
             os.chdir(default_base_dir)
-    print("Current directory", os.getcwd())
+    # print("Current directory", os.getcwd())
     config = NavigationConfiguration(opts.settings)
     config.add_class(NMEA_server)
     config.add_class(Console)
@@ -194,6 +194,8 @@ def main():
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
     _logger.setLevel(config.get_option('trace', 'INFO'))
+    decode_logger = _logger.getChild('decode')
+    decode_logger.setLevel(config.get_option('trace_decode', 'INFO'))
 
     _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2022" % version)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
@@ -212,7 +214,6 @@ def main():
     # create the publishers
     for pub_descr in config.publishers():
         publisher = pub_descr.build_object()
-        print(publisher.descr())
         main_server.add_publisher(publisher)
 
     main_server.start()
