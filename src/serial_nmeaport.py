@@ -22,6 +22,8 @@ class NMEASerialPort(Instrument):
 
     def __init__(self, opts):
         super().__init__(opts)
+        self._separator = b'\r\n'
+        self._separator_len = 2
         self._device = opts.get('device', str, None)
         if self._device is None:
             _logger.error("SerialPort %s no device specified" % self.name())

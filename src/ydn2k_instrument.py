@@ -25,6 +25,8 @@ class YDInstrument(BufferedIPInstrument):
 
     def __init__(self, opts):
         super().__init__(opts)
+        self._separator = b'\r\n'
+        self._separator_len = 2
         if self._mode == self.NMEA0183:
             self.set_message_processing()
         else:

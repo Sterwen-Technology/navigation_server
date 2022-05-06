@@ -38,6 +38,8 @@ class InternalGps(Instrument):
             raise InstrumentNotPresent('InternalGPS')
 
         super().__init__(opts)
+        self._separator = b'\r\n'
+        self._separator_len = 2
         fp = open("/data/solidsense/modem_gps/parameters.json")
         self._params = json.load(fp)
         fp.close()

@@ -37,6 +37,8 @@ class ShipModulInterface(BufferedIPInstrument):
 
     def __init__(self, opts):
         super().__init__(opts)
+        self._separator = b'\r\n'
+        self._separator_len = 2
         if opts.get('nmea2000', bool, False):
             self._fast_packet_handler = FastPacketHandler(self)
             self.set_message_processing(msg_processing=self.shipmodul_extract_nmea2000)

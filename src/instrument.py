@@ -86,6 +86,8 @@ class Instrument(threading.Thread):
         if self._trace_msg:
             self.open_trace_file()
         self._check_in_progress = False
+        self._separator = None
+        self._separator_len = 0
 
     def get_mode(self, opts):
         mode = opts.get('protocol', str, 'nmea0183')
@@ -278,8 +280,9 @@ class Instrument(threading.Thread):
                 fc = "R# >"
             else:
                 fc = "R# <"
+            l = len(msg) - self._separator_len
             self._trace_fd.write(fc)
-            self._trace_fd.write(msg.decode())
+            self._trace_fd.write(msg[:l].decode())
             self._trace_fd.write('\n')
 
     def add_event_trace(self, message: str):

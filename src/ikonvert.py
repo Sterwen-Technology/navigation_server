@@ -153,6 +153,8 @@ class iKonvert(Instrument):
     def __init__(self, opts):
         # opts["name"] = "iKonvert"
         super().__init__(opts)
+        self._separator = b'\r\n'
+        self._separator_len = 2
         self._tty_name = opts.get("tty_name", str, "/dev/ttyUSB0")
         self._mode = opts.get("mode", str, "ALL")  # ALL (send all PGN) or NORMAL (send only requested PGN)
         self._tty = None
