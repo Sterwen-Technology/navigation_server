@@ -23,6 +23,7 @@ message InstrumentMsg {
     NOT_READY=0;
     OPEN=1;
     CONNECTED=2;
+    ACTIVE=3;
   }
   Device_state dev_state=4;
   string protocol=5;

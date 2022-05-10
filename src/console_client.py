@@ -11,41 +11,41 @@
 
 import logging
 import grpc
-from argparse import ArgumentParser
-import sys
 
 from console_pb2 import *
 from console_pb2_grpc import *
 
-
-def _parser():
-    p = ArgumentParser(description=sys.argv[0])
-
-    p.add_argument("-p", "--port", action="store", type=int,
-                   default=4502,
-                   help="Console listening port, default 4502")
-    p.add_argument("-a", "--address", action="store", type=str,
-                   default='127.0.0.1',
-                   help="IP address for Navigation server, default is localhost")
-
-    return p
+_logger = logging.getLogger("ShipDataClient")
 
 
-parser = _parser()
+class InstrumentProxy:
 
+    def __init__(self, msg: InstrumentMsg):
+        self._msg = msg
 
-class Options(object):
-    def __init__(self, p):
-        self.parser = p
-        self.options = None
+    @property
+    def name(self):
+        return self._msg.name
 
-    def __getattr__(self, name):
-        if self.options is None:
-            self.options = self.parser.parse_args()
-        try:
-            return getattr(self.options, name)
-        except AttributeError:
-            raise AttributeError(name)
+    @property
+    def state(self):
+        return self._msg.DESCRIPTOR.fields_by_name['state'].enum_type.values_by_number[self._msg.state].name
+
+    @property
+    def dev_state(self):
+        return self._msg.DESCRIPTOR.fields_by_name['dev_state'].enum_type.values_by_number[self._msg.dev_state].name
+
+    @property
+    def protocol(self):
+        return self._msg.protocol
+
+    @property
+    def msg_in(self):
+        return self._msg.msg_in
+
+    @property
+    def msg_out(self):
+        return self._msg.msg_out
 
 
 class ConsoleClient:
@@ -54,29 +54,16 @@ class ConsoleClient:
         self._channel = grpc.insecure_channel(address)
         self._stub = NavigationConsoleStub(self._channel)
         self._req_id = 0
-        print("Console on navigation server", address)
+        _logger.info("Console on navigation server %s" % address)
 
     def get_instruments(self):
         instruments = []
         req = Request(id=self._req_id)
         try:
             for inst in self._stub.GetInstruments(req):
-                instruments.append(inst)
+                instruments.append(InstrumentProxy(inst))
             return instruments
         except Exception as err:
-            print("Error accessing server:", err)
+            _logger.error("Error accessing server:%s" % err)
             return None
 
-
-def main():
-    opts = Options(parser)
-    server = "%s:%d" % (opts.address, opts.port)
-    console = ConsoleClient(server)
-    result = console.get_instruments()
-    if result is not None:
-        for i in result:
-            print(i)
-
-
-if __name__ == '__main__':
-    main()
