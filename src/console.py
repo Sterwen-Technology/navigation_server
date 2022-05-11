@@ -17,7 +17,8 @@ from console_pb2_grpc import *
 
 from server_common import *
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+".console")
+_logger.setLevel(logging.DEBUG)
 
 
 class ConsoleServicer(NavigationConsoleServicer):
@@ -25,22 +26,39 @@ class ConsoleServicer(NavigationConsoleServicer):
     def __init__(self, console):
         self._console = console
 
+    @staticmethod
+    def instrument_resp(i):
+        resp = InstrumentMsg()
+        resp.name = i.name()
+        resp.instrument_class = type(i).__name__
+        if i.is_alive():
+            resp.state = InstrumentMsg.RUNNING
+        else:
+            resp.state = InstrumentMsg.STOPPED
+        resp.dev_state = i.state()
+        resp.protocol = i.protocol()
+        resp.msg_in = i.total_input_msg()
+        resp.msg_out = i.total_output_msg()
+        return resp
+
+    def GetInstrument(self, request, context):
+        _logger.debug("Console GetInstrument name %s" % equest.target)
+        try:
+            i = self._console.instrument(request.target)
+            resp = self.instrument_resp(i)
+        except KeyError:
+            _logger.error("Console access to non existent instrument %s" % request.target)
+            resp = InstrumentMsg(status="Instrument not found")
+        return resp
+
     def GetInstruments(self, request, context):
         _logger.debug("Console GetInstruments")
+
         for i in self._console.instruments():
-            resp = InstrumentMsg()
-            resp.name = i.name()
-            resp.instrument_class = type(i).__name__
-            if i.is_alive():
-                resp.state = InstrumentMsg.RUNNING
-            else:
-                resp.state = InstrumentMsg.STOPPED
-            resp.dev_state = i.state()
-            resp.protocol = i.protocol()
-            resp.msg_in = i.total_input_msg()
-            resp.msg_out = i.total_output_msg()
+            resp = self.instrument_resp(i)
             _logger.debug("Console GetInstruments sending instrument %s" % i.name())
             yield resp
+
         return
 
     def InstrumentCmd(self, request, context):

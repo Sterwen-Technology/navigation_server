@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rconsole.proto\"\xa6\x02\n\rInstrumentMsg\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x18\n\x10instrument_class\x18\x02 \x01(\t\x12#\n\x05state\x18\x03 \x01(\x0e\x32\x14.InstrumentMsg.State\x12.\n\tdev_state\x18\x04 \x01(\x0e\x32\x1b.InstrumentMsg.Device_state\x12\x10\n\x08protocol\x18\x05 \x01(\t\x12\x0e\n\x06msg_in\x18\x06 \x01(\r\x12\x0f\n\x07msg_out\x18\x07 \x01(\r\"!\n\x05State\x12\x0b\n\x07STOPPED\x10\x00\x12\x0b\n\x07RUNNING\x10\x01\"B\n\x0c\x44\x65vice_state\x12\r\n\tNOT_READY\x10\x00\x12\x08\n\x04OPEN\x10\x01\x12\r\n\tCONNECTED\x10\x02\x12\n\n\x06\x41\x43TIVE\x10\x03\"2\n\x07Request\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0b\n\x03\x63md\x18\x02 \x01(\t\x12\x0e\n\x06target\x18\x03 \x01(\t\"&\n\x08Response\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0e\n\x06status\x18\x02 \x01(\t2k\n\x11NavigationConsole\x12.\n\x0eGetInstruments\x12\x08.Request\x1a\x0e.InstrumentMsg\"\x00\x30\x01\x12&\n\rInstrumentCmd\x12\x08.Request\x1a\t.Response\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rconsole.proto\"\xb6\x02\n\rInstrumentMsg\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x18\n\x10instrument_class\x18\x02 \x01(\t\x12#\n\x05state\x18\x03 \x01(\x0e\x32\x14.InstrumentMsg.State\x12.\n\tdev_state\x18\x04 \x01(\x0e\x32\x1b.InstrumentMsg.Device_state\x12\x10\n\x08protocol\x18\x05 \x01(\t\x12\x0e\n\x06msg_in\x18\x06 \x01(\r\x12\x0f\n\x07msg_out\x18\x07 \x01(\r\x12\x0e\n\x06status\x18\x08 \x01(\t\"!\n\x05State\x12\x0b\n\x07STOPPED\x10\x00\x12\x0b\n\x07RUNNING\x10\x01\"B\n\x0c\x44\x65vice_state\x12\r\n\tNOT_READY\x10\x00\x12\x08\n\x04OPEN\x10\x01\x12\r\n\tCONNECTED\x10\x02\x12\n\n\x06\x41\x43TIVE\x10\x03\"2\n\x07Request\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0b\n\x03\x63md\x18\x02 \x01(\t\x12\x0e\n\x06target\x18\x03 \x01(\t\"&\n\x08Response\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0e\n\x06status\x18\x02 \x01(\t2\x98\x01\n\x11NavigationConsole\x12.\n\x0eGetInstruments\x12\x08.Request\x1a\x0e.InstrumentMsg\"\x00\x30\x01\x12+\n\rGetInstrument\x12\x08.Request\x1a\x0e.InstrumentMsg\"\x00\x12&\n\rInstrumentCmd\x12\x08.Request\x1a\t.Response\"\x00\x62\x06proto3')
 
 
 
@@ -49,15 +49,15 @@ if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
   _INSTRUMENTMSG._serialized_start=18
-  _INSTRUMENTMSG._serialized_end=312
-  _INSTRUMENTMSG_STATE._serialized_start=211
-  _INSTRUMENTMSG_STATE._serialized_end=244
-  _INSTRUMENTMSG_DEVICE_STATE._serialized_start=246
-  _INSTRUMENTMSG_DEVICE_STATE._serialized_end=312
-  _REQUEST._serialized_start=314
-  _REQUEST._serialized_end=364
-  _RESPONSE._serialized_start=366
-  _RESPONSE._serialized_end=404
-  _NAVIGATIONCONSOLE._serialized_start=406
-  _NAVIGATIONCONSOLE._serialized_end=513
+  _INSTRUMENTMSG._serialized_end=328
+  _INSTRUMENTMSG_STATE._serialized_start=227
+  _INSTRUMENTMSG_STATE._serialized_end=260
+  _INSTRUMENTMSG_DEVICE_STATE._serialized_start=262
+  _INSTRUMENTMSG_DEVICE_STATE._serialized_end=328
+  _REQUEST._serialized_start=330
+  _REQUEST._serialized_end=380
+  _RESPONSE._serialized_start=382
+  _RESPONSE._serialized_end=420
+  _NAVIGATIONCONSOLE._serialized_start=423
+  _NAVIGATIONCONSOLE._serialized_end=575
 # @@protoc_insertion_point(module_scope)

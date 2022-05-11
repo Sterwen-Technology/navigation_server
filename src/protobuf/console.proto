@@ -29,6 +29,7 @@ message InstrumentMsg {
   string protocol=5;
   uint32 msg_in=6;
   uint32 msg_out=7;
+  string status=8;
 }
 
 message Request {
@@ -44,6 +45,7 @@ message Response {
 
 service NavigationConsole {
   rpc GetInstruments(Request) returns (stream InstrumentMsg) {}
+  rpc GetInstrument(Request) returns (InstrumentMsg) {}
   rpc InstrumentCmd(Request) returns (Response) {}
 }
 
