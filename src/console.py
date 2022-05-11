@@ -42,7 +42,7 @@ class ConsoleServicer(NavigationConsoleServicer):
         return resp
 
     def GetInstrument(self, request, context):
-        _logger.debug("Console GetInstrument name %s" % equest.target)
+        _logger.debug("Console GetInstrument name %s" % request.target)
         try:
             i = self._console.instrument(request.target)
             resp = self.instrument_resp(i)
@@ -53,12 +53,10 @@ class ConsoleServicer(NavigationConsoleServicer):
 
     def GetInstruments(self, request, context):
         _logger.debug("Console GetInstruments")
-
         for i in self._console.instruments():
             resp = self.instrument_resp(i)
             _logger.debug("Console GetInstruments sending instrument %s" % i.name())
             yield resp
-
         return
 
     def InstrumentCmd(self, request, context):
@@ -76,6 +74,13 @@ class ConsoleServicer(NavigationConsoleServicer):
             resp.status = "Command %s not found" % cmd
             return resp
         resp.status = " SUCCESS value=%s" % ret_val
+        return resp
+
+    def ServerStatus(self, request, context):
+        resp = ServerMsg()
+        server = self._console.main_server()
+        resp.name = server.name()
+        resp.state = ServerMsg.RUNNING
         return resp
 
 
@@ -103,6 +108,9 @@ class Console(NavigationServer):
 
     def instrument(self, name):
         return self._instruments[name]
+
+    def main_server(self):
+        return self._servers['main']
 
     def start(self) -> None:
         _logger.info("Console starting on port %d" % self._port)

@@ -116,6 +116,7 @@ class Instrument(threading.Thread):
 
     def request_start(self):
         if self._autostart:
+            _logger.info("Starting instrument %s" % self._name)
             super().start()
 
     def run(self):
@@ -227,7 +228,7 @@ class Instrument(threading.Thread):
         return self._app_protocol
 
     def stop(self):
-        _logger.info("Stopping %s instrument"% self._name)
+        _logger.info("Stopping %s instrument" % self._name)
         self._stopflag = True
         if self._timer is not None:
             self._timer.cancel()

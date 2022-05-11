@@ -29,6 +29,11 @@ class NavigationConsoleStub(object):
                 request_serializer=console__pb2.Request.SerializeToString,
                 response_deserializer=console__pb2.Response.FromString,
                 )
+        self.ServerStatus = channel.unary_unary(
+                '/NavigationConsole/ServerStatus',
+                request_serializer=console__pb2.Request.SerializeToString,
+                response_deserializer=console__pb2.ServerMsg.FromString,
+                )
 
 
 class NavigationConsoleServicer(object):
@@ -52,6 +57,12 @@ class NavigationConsoleServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ServerStatus(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_NavigationConsoleServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -69,6 +80,11 @@ def add_NavigationConsoleServicer_to_server(servicer, server):
                     servicer.InstrumentCmd,
                     request_deserializer=console__pb2.Request.FromString,
                     response_serializer=console__pb2.Response.SerializeToString,
+            ),
+            'ServerStatus': grpc.unary_unary_rpc_method_handler(
+                    servicer.ServerStatus,
+                    request_deserializer=console__pb2.Request.FromString,
+                    response_serializer=console__pb2.ServerMsg.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -128,5 +144,22 @@ class NavigationConsole(object):
         return grpc.experimental.unary_unary(request, target, '/NavigationConsole/InstrumentCmd',
             console__pb2.Request.SerializeToString,
             console__pb2.Response.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ServerStatus(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/NavigationConsole/ServerStatus',
+            console__pb2.Request.SerializeToString,
+            console__pb2.ServerMsg.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

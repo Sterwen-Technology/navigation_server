@@ -49,7 +49,7 @@ class NMEA_server(NavTCPServer):
             self._timer.cancel()
 
     def run(self):
-        _logger.info("%s ready" % self.name())
+        _logger.info("%s ready listening on port %d" % (self.name(), self._port))
         self._sender_instrument = self.resolve_ref('sender')
         # print("Sender:", self._sender_instrument)
         self.start_timer()
@@ -90,6 +90,7 @@ class NMEA_server(NavTCPServer):
 
     def add_instrument(self, instrument):
         self._instruments.append(instrument)
+        _logger.info("Server %s adding instrument %s" % (self.name(), instrument.name()))
         #if instrument.default_sender():
             # self._sender_instrument = instrument
         # now if we had some active connections we need to create the publishers
@@ -102,6 +103,13 @@ class NMEA_server(NavTCPServer):
 
     def remove_sender(self):
         self._sender = None
+
+    def remove_instrument(self, instrument):
+        _logger.info("Server %s removing instrument %s" % (self.name(), instrument.name()))
+        try:
+            self._instruments.remove(instrument)
+        except ValueError:
+            _logger.error("Server %s removing instrument %s failed" % (self.name(), instrument.name()))
 
     def heartbeat(self):
         _logger.info("%s heartbeat number of connections: %d"
