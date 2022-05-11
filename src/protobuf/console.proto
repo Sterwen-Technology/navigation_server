@@ -11,13 +11,14 @@
 
 syntax = "proto3";
 
-message InstrumentMsg {
-  string  name=1;
-  string instrument_class=2;
-  enum State {
+enum State {
      STOPPED=0;
      RUNNING = 1;
   }
+
+message InstrumentMsg {
+  string  name=1;
+  string instrument_class=2;
   State state=3;
   enum Device_state {
     NOT_READY=0;
@@ -30,6 +31,15 @@ message InstrumentMsg {
   uint32 msg_in=6;
   uint32 msg_out=7;
   string status=8;
+  uint32 error=9;
+}
+
+message ServerMsg {
+  string name=1;
+  State state=2;
+  string protocol=3;
+  string status=4;
+  uint32 error=5;
 }
 
 message Request {
@@ -47,5 +57,6 @@ service NavigationConsole {
   rpc GetInstruments(Request) returns (stream InstrumentMsg) {}
   rpc GetInstrument(Request) returns (InstrumentMsg) {}
   rpc InstrumentCmd(Request) returns (Response) {}
+  rpc ServerStatus(Request) returns (ServerMsg) {}
 }
 
