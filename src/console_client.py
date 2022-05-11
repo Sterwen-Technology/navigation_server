@@ -47,6 +47,13 @@ class InstrumentProxy:
     def msg_out(self):
         return self._msg.msg_out
 
+    def stop(self, client):
+        return client.send_cmd(self._msg.name, 'stop')
+
+    def start(self, client):
+        return client.send_cmd(self._msg.name, 'start')
+
+
 
 class ConsoleClient:
 
@@ -59,6 +66,7 @@ class ConsoleClient:
     def get_instruments(self):
         instruments = []
         req = Request(id=self._req_id)
+        self._req_id += 1
         try:
             for inst in self._stub.GetInstruments(req):
                 instruments.append(InstrumentProxy(inst))
@@ -66,4 +74,16 @@ class ConsoleClient:
         except Exception as err:
             _logger.error("Error accessing server:%s" % err)
             return None
+
+    def send_cmd(self, target, command):
+        req = Request(id=self._req_id, target=target, cmd=command)
+        self._req_id += 1
+        try:
+            resp = self._stub.InstrumentCmd(req)
+            return resp
+        except Exception as err:
+            _logger.error("Error accessing server:%s" % err)
+            return None
+
+
 
