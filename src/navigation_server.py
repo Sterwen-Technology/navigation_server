@@ -108,7 +108,7 @@ class NavigationServer:
         for server in self._servers:
             server.start()
         for inst in self._instruments:
-            inst.start()
+            inst.request_start()
         self._is_running = True
 
     def wait(self):
@@ -116,7 +116,8 @@ class NavigationServer:
             server.join()
             _logger.info("%s threads joined" % server.name())
         for inst in self._instruments:
-            inst.join()
+            if inst.is_alive():
+                inst.join()
             _logger.info("Instrument %s thread joined" % inst.name())
         print_threads()
         self._is_running = False

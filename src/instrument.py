@@ -70,6 +70,7 @@ class Instrument(threading.Thread):
         self._timeout = opts.get('timeout', float, 10.0)
         self._max_attempt = opts.get('max_attempt', int, 20)
         self._open_delay = opts.get('open_delay', float, 2.0)
+        self._autostart = opts.get('autostart', bool, True)
         self._talker = opts.get('talker', str, None)
         if self._talker is not None:
             self._talker = self._talker.upper().encode()
@@ -112,6 +113,10 @@ class Instrument(threading.Thread):
         _logger.info("Instrument %s NMEA message received:%d sent:%d" % (self.name(), self._total_msg, self._total_msg_s))
         if not self._stopflag:
             self.start_timer()
+
+    def request_start(self):
+        if self._autostart:
+            super().start()
 
     def run(self):
         self._startTS = time.time()

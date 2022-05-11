@@ -158,6 +158,7 @@ class N2KTracePublisher(Publisher):
         self._filter = opts.getlist('filter', int, None)
         _logger.info("%s filter:%s" % (self.name(), self._filter))
         self._print_option = opts.get('output', str, 'ALL')
+        self._trace_fd = None
         filename = opts.get('file', str, None)
         if filename is not None:
             trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')

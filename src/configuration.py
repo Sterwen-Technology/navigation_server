@@ -82,6 +82,16 @@ class Parameters:
             _logger.warning("Parameter %s expected a list" % p_name)
             return default
 
+    def get_choice(self, p_name, p_list , default):
+        try:
+            value = self._param[p_name]
+        except KeyError:
+            return default
+        if value not in p_list:
+            _logger.error("Incorrect value %s for %s" % (value, p_name))
+            return default
+        return value
+
 
 class NavigationServerObject:
 
