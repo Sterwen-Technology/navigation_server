@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <N0183DefnCollection xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="1.0">
-  <Date>8/12/2009 1:19:18 p.m.</Date>
-  <Comment>Test</Comment>
-  <CreatorCode>Jason</CreatorCode>
+  <Date>12/05/2022</Date>
+  <Comment>Forked version from OpenSkipper</Comment>
+  <CreatorCode>Laurent Carré - Sterwen Technology</CreatorCode>
   <N0183Defns>
     <N0183Defn Description="Waypoint Arrival Alarm" Code="AAM">
       <Fields>

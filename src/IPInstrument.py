@@ -384,10 +384,13 @@ class NMEA0183TCPReader(BufferedIPInstrument):
             raise ValueError
         ffilter = opts.getlist('white_list', bytes)
         self._filter = ffilter
-        if ffilter is None:
+        rfilter = opts.getlist('black_list', bytes)
+        self._black_list = rfilter
+        if ffilter is None and rfilter is None:
             self.set_message_processing()
         else:
             _logger.info("Formatter filter %s" % self._filter)
+            _logger.info("Formatter black list %s" % self._black_list)
             self.set_message_processing(msg_processing=self.filter_messages)
 
     def filter_messages(self, frame):
@@ -395,8 +398,11 @@ class NMEA0183TCPReader(BufferedIPInstrument):
             # EOT
             return NavGenericMsg(NULL_MSG)
         msg = process_nmea0183_frame(frame)
-        if msg.formatter() in self._filter:
+        fmt = msg.formatter()
+        if fmt in self._filter:
             _logger.debug("Message retained: %s" % frame)
+            return msg
+        if fmt not in self._black_list:
             return msg
         # _logger.debug("Rejected message %s" % frame)
         raise ValueError

@@ -59,6 +59,15 @@ class ServerProxy:
     def __init__(self, msg):
         self._msg = msg
 
+    @property
+    def name(self):
+        return self._msg.name
+
+    @property
+    def state(self):
+        return self._msg.DESCRIPTOR.fields_by_name['state'].enum_type.values_by_number[self._msg.state].name
+
+
 
 class ConsoleClient:
 
@@ -100,6 +109,14 @@ class ConsoleClient:
             _logger.error("Error accessing server:%s" % err)
             return None
 
-
+    def server_status(self):
+        req = Request(id=self._req_id)
+        self._req_id += 1
+        try:
+            server_msg = self._stub.ServerStatus(req)
+            return ServerProxy(server_msg)
+        except Exception as err:
+            _logger.error("Error accessing server:%s" % err)
+            return None
 
 
