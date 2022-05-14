@@ -17,7 +17,8 @@ from generic_msg import *
 from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
 from nmea0183 import process_nmea0183_frame, NMEAInvalidFrame
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+".IPinstrument")
+# _logger.setLevel(logging.DEBUG)
 
 
 #################################################################
@@ -383,9 +384,15 @@ class NMEA0183TCPReader(BufferedIPInstrument):
             _logger.error("Protocol incompatible with NMEA0183 reader")
             raise ValueError
         ffilter = opts.getlist('white_list', bytes)
-        self._filter = ffilter
+        if ffilter is None:
+            self._filter = []
+        else:
+            self._filter = ffilter
         rfilter = opts.getlist('black_list', bytes)
-        self._black_list = rfilter
+        if rfilter is None:
+            self._black_list = []
+        else:
+            self._black_list = rfilter
         if ffilter is None and rfilter is None:
             self.set_message_processing()
         else:
@@ -404,5 +411,5 @@ class NMEA0183TCPReader(BufferedIPInstrument):
             return msg
         if fmt not in self._black_list:
             return msg
-        # _logger.debug("Rejected message %s" % frame)
+        _logger.debug("Rejected message %s" % frame)
         raise ValueError

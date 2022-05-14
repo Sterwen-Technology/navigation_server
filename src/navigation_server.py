@@ -41,7 +41,7 @@ def _parser():
     return p
 
 
-version = "V0.961"
+version = "V0.97"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -68,7 +68,7 @@ class NavigationServer:
         self._name = 'main'
         self._console = None
         self._servers = []
-        self._instruments = []
+        self._instruments = {}
         self._publishers = []
         self._sigint_count = 0
         self._is_running = False
@@ -78,7 +78,7 @@ class NavigationServer:
 
     @property
     def instruments(self):
-        return self._instruments
+        return self._instruments.values()
 
     def name(self):
         return self._name
@@ -107,7 +107,7 @@ class NavigationServer:
             publisher.start()
         for server in self._servers:
             server.start()
-        for inst in self._instruments:
+        for inst in self._instruments.values():
             inst.request_start()
         self._is_running = True
 
@@ -115,7 +115,7 @@ class NavigationServer:
         for server in self._servers:
             server.join()
             _logger.info("%s threads joined" % server.name())
-        for inst in self._instruments:
+        for inst in self._instruments.values():
             if inst.is_alive():
                 inst.join()
             _logger.info("Instrument %s thread joined" % inst.name())
@@ -125,7 +125,7 @@ class NavigationServer:
     def stop_server(self):
         for server in self._servers:
             server.stop()
-        for inst in self._instruments:
+        for inst in self._instruments.values():
             inst.stop()
         for pub in self._publishers:
             pub.stop()
@@ -143,16 +143,38 @@ class NavigationServer:
                 os._exit(1)
         # sys.exit(0)
 
+    def request_stop(self, param):
+        self.stop_server()
+
     def add_instrument(self, instrument):
-        self._instruments.append(instrument)
+        self._instruments[instrument.name()] = instrument
         for server in self._servers:
             server.add_instrument(instrument)
         if self._is_running:
-            instrument.start()
+            instrument.request_start()
 
     def add_publisher(self, publisher: Publisher):
         self._publishers.append(publisher)
         # publisher.start()
+
+    def start_instrument(self, name: str):
+        try:
+            instrument = self._instruments[name]
+        except KeyError:
+            return "Unknown Instrument"
+        if instrument.is_alive():
+            return "Instrument running"
+        if instrument.has_run():
+            # now we need to clean up all references
+            for server in self._servers:
+                server.remove_instrument(instrument)
+            inst_descr = NavigationConfiguration.get_conf().instrument(name)
+            new_instrument = inst_descr.build_object()
+            new_instrument.force_start()
+            self.add_instrument(new_instrument)
+        else:
+            instrument.request_start()
+        return "Start request OK"
 
 
 def print_threads():

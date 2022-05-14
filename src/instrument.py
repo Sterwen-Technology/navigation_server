@@ -89,6 +89,7 @@ class Instrument(threading.Thread):
         self._check_in_progress = False
         self._separator = None
         self._separator_len = 0
+        self._has_run = False
 
     def get_mode(self, opts):
         mode = opts.get('protocol', str, 'nmea0183')
@@ -119,7 +120,14 @@ class Instrument(threading.Thread):
             _logger.info("Starting instrument %s" % self._name)
             super().start()
 
+    def has_run(self):
+        return self._has_run
+
+    def force_start(self):
+        self._autostart = True
+
     def run(self):
+        self._has_run = True
         self._startTS = time.time()
         self.start_timer()
         nb_attempts = 0

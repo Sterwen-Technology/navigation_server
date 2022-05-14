@@ -202,6 +202,9 @@ class NavigationConfiguration:
     def instruments(self):
         return self._instruments.values()
 
+    def instrument(self, name):
+        return self._instruments[name]
+
     def publishers(self):
         return self._publishers.values()
 

@@ -18,7 +18,7 @@ from console_pb2_grpc import *
 from server_common import *
 
 _logger = logging.getLogger("ShipDataServer"+".console")
-_logger.setLevel(logging.DEBUG)
+# _logger.setLevel(logging.DEBUG)
 
 
 class ConsoleServicer(NavigationConsoleServicer):
@@ -32,9 +32,9 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.name = i.name()
         resp.instrument_class = type(i).__name__
         if i.is_alive():
-            resp.state = InstrumentMsg.RUNNING
+            resp.state = State.RUNNING
         else:
-            resp.state = InstrumentMsg.STOPPED
+            resp.state = State.STOPPED
         resp.dev_state = i.state()
         resp.protocol = i.protocol()
         resp.msg_in = i.total_input_msg()
@@ -77,10 +77,23 @@ class ConsoleServicer(NavigationConsoleServicer):
         return resp
 
     def ServerStatus(self, request, context):
-        resp = ServerMsg()
+        _logger.debug("Console server status ")
+        resp = ServerMsg(id=request.id)
         server = self._console.main_server()
         resp.name = server.name()
         resp.state = State.RUNNING
+        return resp
+
+    def ServerCmd(self, request, context):
+        _logger.debug("Console server cmd %s" % request.cmd)
+        resp = Response(id=request.id)
+        server = self._console.main_server()
+        if request.cmd == "stop":
+            server.request_stop(0)
+            resp.status = "stop requested"
+        elif request.cmd == "start_instrument":
+            i_name = request.target
+            resp.status = server.start_instrument(i_name)
         return resp
 
 
