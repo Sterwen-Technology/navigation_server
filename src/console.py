@@ -94,6 +94,7 @@ class ConsoleServicer(NavigationConsoleServicer):
         elif request.cmd == "start_instrument":
             i_name = request.target
             resp.status = server.start_instrument(i_name)
+        _logger.debug("ServerCmd response %s" % resp.status)
         return resp
 
 

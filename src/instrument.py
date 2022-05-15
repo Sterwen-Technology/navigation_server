@@ -78,6 +78,9 @@ class Instrument(threading.Thread):
         direction = opts.get('direction', str, 'bidirectional')
         # print(self.name(), ":", direction)
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
+        mode = opts.get('protocol', str, 'nmea0183')
+        self._mode = self.protocol_dict[mode.lower()]
+        self._app_protocol = mode.lower()
         self._stopflag = False
         self._timer = None
         self._state = self.NOT_READY
@@ -90,11 +93,7 @@ class Instrument(threading.Thread):
         self._separator = None
         self._separator_len = 0
         self._has_run = False
-
-    def get_mode(self, opts):
-        mode = opts.get('protocol', str, 'nmea0183')
-        self._mode = self.protocol_dict[mode.lower()]
-        self._app_protocol = mode.lower()
+        self._status = None
 
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)

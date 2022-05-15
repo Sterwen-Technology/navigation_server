@@ -150,6 +150,7 @@ class NavigationServer:
         self._instruments[instrument.name()] = instrument
         for server in self._servers:
             server.add_instrument(instrument)
+            server.update_instruments()
         if self._is_running:
             instrument.request_start()
 
@@ -173,6 +174,7 @@ class NavigationServer:
             new_instrument.force_start()
             self.add_instrument(new_instrument)
         else:
+            instrument.force_start()
             instrument.request_start()
         return "Start request OK"
 
