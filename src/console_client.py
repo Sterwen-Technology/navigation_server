@@ -51,7 +51,7 @@ class InstrumentProxy:
         return client.send_cmd(self._msg.name, 'stop')
 
     def start(self, client):
-        return client.send_cmd(self._msg.name, 'start')
+        return client.server_cmd('start_instrument', self._msg.name)
 
 
 class ServerProxy:
@@ -115,6 +115,20 @@ class ConsoleClient:
         try:
             server_msg = self._stub.ServerStatus(req)
             return ServerProxy(server_msg)
+        except Exception as err:
+            _logger.error("Error accessing server:%s" % err)
+            return None
+
+    def server_cmd(self, cmd, target=None):
+        req = Request(id=self._req_id)
+        self._req_id += 1
+        req.cmd = cmd
+        if target is not None:
+            req.target = target
+        try:
+            response = self._stub.ServerCmd(req)
+            _logger.info('Response status %s' % response.status)
+            return response.status
         except Exception as err:
             _logger.error("Error accessing server:%s" % err)
             return None
