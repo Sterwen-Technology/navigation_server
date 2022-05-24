@@ -154,8 +154,6 @@ class ShipModulInterface(BufferedIPInstrument):
             self.send(self.msg_check)
 
 
-
-
 class ConfigPublisher(Publisher):
     '''
     This class is used for Configuration mode, meaning when the Multiplexer utility is connected
@@ -191,12 +189,8 @@ class ShipModulConfig(NavTCPServer):
         self._connection = None
 
     def run(self):
-        try:
-            self._reader = self.resolve_ref('instrument')
-        except KeyError:
-            _logger.error("%s no instrument associated => stop" % self.name())
-            return
 
+        self.update_instruments()
         _logger.info("Configuration server ready")
         while not self._stop_flag:
             _logger.debug("Configuration server waiting for new connection")
@@ -241,7 +235,12 @@ class ShipModulConfig(NavTCPServer):
         if self._connection is not None:
             self._connection.close()
 
-
+    def update_instruments(self):
+        try:
+            self._reader = self.resolve_ref('instrument')
+        except KeyError:
+            _logger.error("%s no instrument associated => stop" % self.name())
+            return
 
 
 

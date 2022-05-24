@@ -60,7 +60,7 @@ class Publisher(threading.Thread):
             # need to empty the queue
             self._nb_msg_lost += 1
             _logger.warning("Overflow on connection %s total message lost %d" % (self._name, self._nb_msg_lost))
-            if self._nb_msg_lost >= self._max_lost :
+            if self._nb_msg_lost >= self._max_lost:
                 raise PublisherOverflow
 
     def deregister(self):

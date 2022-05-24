@@ -41,6 +41,12 @@ class NavigationServer:
     def add_instrument(self, instrument):
         pass
 
+    def remove_instrument(self, instrument):
+        pass
+
+    def update_instruments(self):
+        pass
+
 
 class NavTCPServer(NavigationServer, threading.Thread):
 

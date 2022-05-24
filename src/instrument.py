@@ -74,10 +74,12 @@ class Instrument(threading.Thread):
         self._talker = opts.get('talker', str, None)
         if self._talker is not None:
             self._talker = self._talker.upper().encode()
-        self.get_mode(opts)
         direction = opts.get('direction', str, 'bidirectional')
         # print(self.name(), ":", direction)
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
+        mode = opts.get('protocol', str, 'nmea0183')
+        self._mode = self.protocol_dict[mode.lower()]
+        self._app_protocol = mode.lower()
         self._stopflag = False
         self._timer = None
         self._state = self.NOT_READY
@@ -89,11 +91,8 @@ class Instrument(threading.Thread):
         self._check_in_progress = False
         self._separator = None
         self._separator_len = 0
-
-    def get_mode(self, opts):
-        mode = opts.get('protocol', str, 'nmea0183')
-        self._mode = self.protocol_dict[mode.lower()]
-        self._app_protocol = mode.lower()
+        self._has_run = False
+        self._status = None
 
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)
@@ -119,7 +118,14 @@ class Instrument(threading.Thread):
             _logger.info("Starting instrument %s" % self._name)
             super().start()
 
+    def has_run(self):
+        return self._has_run
+
+    def force_start(self):
+        self._autostart = True
+
     def run(self):
+        self._has_run = True
         self._startTS = time.time()
         self.start_timer()
         nb_attempts = 0

@@ -11,6 +11,7 @@
 
 from vedirect_pb2 import *
 from vedirect_pb2_grpc import *
+from grpc import StatusCode, insecure_channel, RpcError
 
 from instrument import *
 from nmea0183 import XDR, NMEA0183SentenceMsg
@@ -31,7 +32,7 @@ class MPPT_Instrument(Instrument):
         self._lock = threading.Semaphore()
 
     def open(self):
-        self._channel = grpc.insecure_channel(self._address)
+        self._channel = insecure_channel(self._address)
         self._stub = solar_mpptStub(self._channel)
         self._state = self.OPEN
         return True
@@ -41,13 +42,21 @@ class MPPT_Instrument(Instrument):
         req = request()
         req.id = 1
         try:
-            ret_val = self._stub.GetOutput(req)
+            ret_val = self._stub.GetOutput(req, timeout=self._timeout)
             self._state = self.ACTIVE
             return ret_val
-        except grpc.RpcError as err:
-            _logger.error(str(err))
-            self._state = self.NOT_READY
-            raise InstrumentReadError
+        except RpcError as err:
+            # _logger.error(str(err))
+            if err.code() == StatusCode.UNAVAILABLE:
+                _logger.error("VEDirect GrPC server not present => stop")
+                self._state = self.NOT_READY
+                self._stopflag = True
+                raise InstrumentReadError
+            elif err.code() == StatusCode.DEADLINE_EXCEEDED:
+                raise InstrumentTimeOut
+            else:
+                _logger.error(str(err))
+                raise InstrumentReadError
 
     def timer_lapse(self):
         _logger.debug("MPPT instrument timer lapse releasing lock")

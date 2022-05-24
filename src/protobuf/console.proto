@@ -35,11 +35,12 @@ message InstrumentMsg {
 }
 
 message ServerMsg {
-  string name=1;
-  State state=2;
-  string protocol=3;
-  string status=4;
-  uint32 error=5;
+  uint32 id=1;
+  string name=2;
+  State state=3;
+  string protocol=4;
+  string status=5;
+  uint32 error=6;
 }
 
 message Request {
@@ -58,5 +59,6 @@ service NavigationConsole {
   rpc GetInstrument(Request) returns (InstrumentMsg) {}
   rpc InstrumentCmd(Request) returns (Response) {}
   rpc ServerStatus(Request) returns (ServerMsg) {}
+  rpc ServerCmd(Request) returns (Response) {}
 }
 

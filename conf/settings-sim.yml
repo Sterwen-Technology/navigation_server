@@ -25,6 +25,7 @@ instruments:
     # server: NMEAServer
     direction: read_only
     # white_list: [GGA, GLL, RMC]
+    black_list: [PGN]
     report_timer: 60
 
 - YDEthernet:
@@ -42,6 +43,8 @@ publishers:
       class: Injector
       instruments: [ScannavReplay]
       target: YDEthernet
+      queue_size: 50
+      max_lost: 20
 
 #    - MainLog:
 #       class: LogPublisher
