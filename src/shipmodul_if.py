@@ -20,7 +20,8 @@ from nmea0183 import process_nmea0183_frame, NMEA0183Msg
 from nmea2000_msg import FastPacketHandler, NMEA2000Msg, FastPacketException
 from nmea2k_pgndefs import PGNDefinitions
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+".Shipmodul")
+# _logger.setLevel(logging.DEBUG)
 
 
 #################################################################
@@ -94,23 +95,26 @@ class ShipModulInterface(BufferedIPInstrument):
                 pr_byte += 1
                 i_hex -= 2
             # now the PGN sentence is decoded
+            _logger.debug("start processing PGN %d" % pgn)
             if self._fast_packet_handler.is_pgn_active(pgn, data):
+                _logger.debug("Shipmodul PGN %d is active" % pgn)
                 try:
                     data = self._fast_packet_handler.process_frame(pgn, data)
-                except FastPacketException:
-                    _logger.error("Shipmodul Fast packet error frame: %s pgn %d data %s" % (frame, pgn, data.hex()))
+                except FastPacketException as e:
+                    _logger.error("Shipmodul Fast packet error %s frame: %s pgn %d data %s" % (e, frame, pgn, data.hex()))
                     raise ValueError
                 if data is None:
                     raise ValueError  # no error but just to escape
             elif PGNDefinitions.pgn_definition(pgn).fast_packet():
+                _logger.debug("Shipmodul PGN %d is fast packet" % pgn)
                 try:
-                    self._fast_packet_handler.process_frame(pgn, data)
-                except FastPacketException:
-                    _logger.error("Shipmodul Fast packet error on initial frame %s data %s" % (frame, data.hex()))
+                    data = self._fast_packet_handler.process_frame(pgn, data)
+                except FastPacketException as e:
+                    _logger.error("Shipmodul Fast packet error %s on initial frame pgn %d data %s" % (e, pgn, data.hex()))
                 raise ValueError  # no error but just to escape
             msg = NMEA2000Msg(pgn, prio, addr, 0, data)
             _logger.debug("Shipmodul PGN decode:%s" % str(msg))
-            gmsg = NavGenericMsg(N2K_MSG, raw=frame, msg=msg)
+            gmsg = NavGenericMsg(N2K_MSG, msg=msg)
             return gmsg
         else:
             return m0183

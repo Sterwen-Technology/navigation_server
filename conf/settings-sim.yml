@@ -35,7 +35,7 @@ instruments:
     transport: TCP
     protocol: NMEA0183
     direction: write_only
-    trace_messages: true
+    trace_messages: false
 
 publishers:
 
@@ -45,6 +45,7 @@ publishers:
       target: YDEthernet
       queue_size: 50
       max_lost: 20
+
 
 #    - MainLog:
 #       class: LogPublisher

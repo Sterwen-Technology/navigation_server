@@ -280,7 +280,11 @@ class IPAsynchReader(threading.Thread):
                     _logger.error("Invalid frame in %s: %s %s" % (self._transport.ref(), frame, buffer))
                     #_logger.error("Partial %s start %d last %d buffer %s" % (part, start_idx, index, buffer))
                     continue
-                self._out_queue.put(msg)
+                try:
+                    self._out_queue.put(msg, timeout=1.0)
+                except queue.Full:
+                    _logger.critical("Asynchronous reader output Queue full for %s" % self._instrument.name())
+                    break
                 if self._stop_flag:
                     break
         _logger.info("Asynch reader %s stopped" % self._transport.ref())

@@ -36,9 +36,9 @@ class NavGenericMsg:
                     self._datalen = lt
 
         elif self._type == N2K_MSG:
+            self._raw = None
             if msg is None:
                 self._type = NULL_MSG
-
         elif self.type == TRANSPARENT_MSG:
             self._raw = raw
 

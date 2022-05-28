@@ -29,6 +29,9 @@ class NMEA_Publisher(Publisher):
         # reader.register(self)
 
     def process_msg(self, msg):
+        if msg.raw is None:
+            _logger.error("No transparent payload available for %s" % msg.printable())
+            return False
         return not self._client.send(msg.raw)
 
     def last_action(self):

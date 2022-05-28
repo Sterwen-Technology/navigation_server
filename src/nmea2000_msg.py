@@ -20,7 +20,8 @@ from nmea2000_pb2 import nmea2000
 from generic_msg import *
 from configuration import NavigationConfiguration
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+".nmea200msg")
+# _logger.setLevel(logging.DEBUG)
 
 
 class NMEA2000Msg:
@@ -158,6 +159,7 @@ class N2KTracePublisher(Publisher):
         self._filter = opts.getlist('filter', int, None)
         _logger.info("%s filter:%s" % (self.name(), self._filter))
         self._print_option = opts.get('output', str, 'ALL')
+        _logger.info("%s output option %s" % (self.name(), self._print_option))
         self._trace_fd = None
         filename = opts.get('file', str, None)
         if filename is not None:
@@ -183,6 +185,7 @@ class N2KTracePublisher(Publisher):
                 return True
         # print("decoding %s", msg)
         res = msg.decode()
+        # _logger.debug("Trace publisher msg:%s" % res)
         if res is not None:
             if self._print_option in ('ALL', 'PRINT'):
                 print(res)
@@ -258,8 +261,8 @@ class FastPacketException(Exception):
 
 class FastPacket:
 
-    def __init__(self, pgn):
-        self._sequence = 0
+    def __init__(self, pgn, seq ):
+        self._sequence = seq
         self._byte_length = 0
         self._length = 0
         self._pgn = pgn
@@ -267,13 +270,7 @@ class FastPacket:
         self._count = 0
         self._nbframes = 0
 
-    def first_packet(self, pgn, frame):
-        self._sequence = (frame[0] >> 5) & 7
-        counter = frame[0] & 0x1F
-        if counter != 0 or self._pgn != pgn:
-            _logger.error("Fast Packet first packet on PGN %d sequence %d count %d frame %s" %
-                          (pgn, self._sequence, counter, frame))
-            raise FastPacketException('Incorrect frame sequence')
+    def first_packet(self, frame):
         self._byte_length = frame[1]
         l7 = self._byte_length - 6
         nb7 = int(l7/7)
@@ -294,7 +291,11 @@ class FastPacket:
             _logger.error("Fast Packet on PGN %d seq %d count %d %d frame %s" % (pgn, sequence, self._count, counter, frame))
             raise FastPacketException('Frame not in sequence')
         '''
-        self._frames[counter] = frame[1:]
+        try:
+            self._frames[counter] = frame[1:]
+        except IndexError:
+            _logger.critical("Error decoding fast packet frame index  %d out fo range %d for PGN %d" % (counter, self._nbframes, self._pgn))
+            raise FastPacketException("Frame Index out of range")
         self._count += 1
         self._length += len(frame) - 1
         if self._length >= self._byte_length or self._count >= self._nbframes:
@@ -308,7 +309,7 @@ class FastPacket:
         for f in self._frames:
             if f is None:
                 _logger.error("Fast packet missing frame")
-                raise FastPacketException
+                raise FastPacketException("Missing frame")
             l = len(f)
             if start_idx + l >= self._byte_length:
                 result[start_idx:] = f[:self._byte_length - start_idx +1]
@@ -336,13 +337,24 @@ class FastPacketHandler:
     def process_frame(self, pgn, frame):
         seq = (frame[0] >> 5) & 7
         handle = self._sequences[seq]
+        counter = frame[0] & 0x1f
         _logger.debug("Fast Packet ==> PGN %d seq %d frame %s" % (pgn, seq, frame.hex()))
-        if handle is not None:
-            # let's see if this is OK
-            if handle.pgn != pgn:
+        if counter == 0:
+            # we have a new fast packet sequence
+            if handle is not None:
+                # here we have a problem
                 _logger.error("Fast Packet PGN mix expected %d actual %d seq %d frame %s" %
                               (handle.pgn, pgn, seq, frame.hex()))
-                raise FastPacketException('PGN mix in sequence')
+                # but we discard
+                self._pgn_active[handle.pgn] = False
+            # this is the first packet
+            handle = FastPacket(pgn, seq)
+            handle.first_packet(frame)
+            self._sequences[seq] = handle
+            self._pgn_active[pgn] = True
+            _logger.debug("Fast packet ==> start sequence on PGN %d with sequence %d" % (pgn, seq))
+            return None
+        elif handle is not None:
             if handle.add_packet(pgn, frame):
                 result = handle.total_frame()
                 self._sequences[seq] = None
@@ -352,13 +364,8 @@ class FastPacketHandler:
             else:
                 return None
         else:
-            # first packet
-            handle = FastPacket(pgn)
-            handle.first_packet(pgn, frame)
-            self._sequences[seq] = handle
-            self._pgn_active[pgn] = True
-            _logger.debug("Fast packet ==> start sequence on PGN %d with sequence %d" % (pgn, seq))
-            return None
+            # incorrect sequence
+            raise FastPacketException("Missing sequence start pgn %d sequence %d" % (pgn, seq) )
 
     def is_pgn_active(self, pgn, frame) -> bool:
         seq = (frame[0] >> 5) & 7

@@ -37,13 +37,17 @@ instruments:
     transport: TCP
     nmea2000: true
     server: NMEAServer
-    trace_messages: true
+    trace_messages: false
+    trace_raw: true
 
 publishers:
 
 - Trace:
     class: N2KTracePublisher
     instruments: [MiniPlex3]
+    queue_size: 40
+    filter: [129029, 129038, 129039, 129540]
+
 
 #    - MainLog:
 #       class: LogPublisher

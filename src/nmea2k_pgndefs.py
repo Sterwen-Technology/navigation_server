@@ -28,6 +28,10 @@ class N2KDecodeEOLException(N2KDecodeException):
     pass
 
 
+class N2KMissingEnumKeyException(N2KDecodeException):
+    pass
+
+
 class PGNDefinitions:
 
     pgn_definitions = None
@@ -127,6 +131,12 @@ class N2KDecodeResult:
 
 class PGNDef:
 
+    trace_enum_error = False
+
+    @staticmethod
+    def set_trace(enum_error: bool):
+        PGNDef.trace_enum_error = enum_error
+
     def __init__(self, pgnxml):
         self._id_str = pgnxml.attrib['PGN']
         self._xml = pgnxml
@@ -205,6 +215,10 @@ class PGNDef:
         for field in self._fields.values():
             try:
                 inner_result = field.decode(data, index, fields)
+            except N2KMissingEnumKeyException as e:
+                if self.trace_enum_error:
+                    _logger.info(str(e))
+                continue
             except N2KDecodeEOLException:
                 _logger.error("EOL error in PGN %s" % self._id_str)
                 break
@@ -386,17 +400,17 @@ class Field:
         if self._byte_length != 0:
             specs.end = specs.start + self._byte_length
 
-        try:
-            res = self.decode_value(payload, specs)
-            if res.valid:
-                validity = "valid"
-            else:
-                validity = "invalid"
-            _logger.debug("Result %s=%s %s" % (res.name, str(res.value),validity))
-            return res
-        except Exception as e:
+        #try:
+        res = self.decode_value(payload, specs)
+        if res.valid:
+            validity = "valid"
+        else:
+            validity = "invalid"
+        _logger.debug("Result %s=%s %s" % (res.name, str(res.value),validity))
+        return res
+        #except Exception as e:
             # _logger.error("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
-            raise N2KDecodeException("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
+            # raise N2KDecodeException("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
 
     def extract_uint_byte(self, b_dec):
         res = N2KDecodeResult(self._name)
@@ -557,7 +571,7 @@ class EnumField(Field):
         except KeyError:
             #_logger.error("Enum %s key %d non existent" % (self._name, value))
             # return None
-            raise N2KDecodeException("Enum %s key %d non existent" % (self._name, value))
+            raise N2KMissingEnumKeyException("Enum %s key %d non existent" % (self._name, value))
 
     def decode_value(self, payload, specs):
         res = self.extract_uint(payload, specs)
@@ -566,8 +580,17 @@ class EnumField(Field):
         enum_index = res.value
         # print("Enum",b_dec,enum_index)
         res.value = self.get_name(enum_index)
-        if res.value is None:
-            res.invalid()
+        return res
+
+
+class EnumIntField (EnumField):
+
+    def decode_value(self, payload, specs):
+        res = self.extract_uint(payload, specs)
+        if not res.valid:
+            return res
+        enum_index = res.value
+        res.value = self._value_pair.get(enum_index, res.value)
         return res
 
 
@@ -636,7 +659,7 @@ class RepeatedFieldSet:
                 try:
                     field_class = globals()[field.tag]
                 except KeyError:
-                    _logger.error("Field class %s not defined" % field.tag)
+                    _logger.error("Field class %s not defined in PGN %d" % (field.tag, pgn))
                     continue
                 fo = field_class(field)
                 self._subfields[fo.name] = fo
@@ -659,7 +682,7 @@ class RepeatedFieldSet:
         except KeyError:
             nb_set = 0
         if nb_set < 1:
-            _logger.info("Field set %s empty" % self._name)
+            _logger.info("Field set %s empty in PGN %d" % (self._name, self._pgn.id))
             res.invalid()
             res.actual_length = 0
             return res

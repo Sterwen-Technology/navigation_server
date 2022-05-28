@@ -2777,7 +2777,7 @@
             <EnumPair Value="1" Name="in use" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="Time Stamp">
+        <EnumIntField Name="Time Stamp">
           <Description>0-59 = UTC second when the report was generated</Description>
           <BitOffset>106</BitOffset>
           <BitLength>6</BitLength>
@@ -2787,7 +2787,7 @@
             <EnumPair Value="62" Name="Dead reckoning mode" />
             <EnumPair Value="63" Name="Positioning system is inoperative" />
           </EnumValues>
-        </EnumField>
+        </EnumIntField>
         <UDblField Name="COG">
           <BitOffset>112</BitOffset>
           <BitLength>16</BitLength>
@@ -2905,7 +2905,7 @@
             <EnumPair Value="1" Name="in use" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="Time Stamp">
+        <EnumIntField Name="Time Stamp">
           <Description>0-59 = UTC second when the report was generated</Description>
           <BitOffset>106</BitOffset>
           <BitLength>6</BitLength>
@@ -2915,7 +2915,7 @@
             <EnumPair Value="62" Name="Dead reckoning mode" />
             <EnumPair Value="63" Name="Positioning system is inoperative" />
           </EnumValues>
-        </EnumField>
+        </EnumIntField>
         <UDblField Name="COG">
           <BitOffset>112</BitOffset>
           <BitLength>16</BitLength>
@@ -2943,6 +2943,7 @@
             <EnumPair Value="3" Name="Channel B VDL transmission" />
             <EnumPair Value="4" Name="Own information not broadcast" />
             <EnumPair Value="5" Name="Reserved" />
+            <EnumPair Value="6" Name="Reserved" />
           </EnumValues>
         </EnumField>
         <UDblField Name="Heading">
@@ -3811,816 +3812,53 @@
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="Sat #">
-          <BitOffset>24</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>32</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>48</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>64</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>80</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>112</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>116</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>120</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>128</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>144</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>160</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>176</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>208</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>212</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>216</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>224</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>240</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>256</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>272</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>304</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>308</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>312</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>320</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>336</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>352</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>368</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>400</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>404</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>408</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>416</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>432</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>448</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>464</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>496</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>500</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>504</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>512</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>528</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>544</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>560</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>592</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>596</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>600</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>608</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>624</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>640</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>656</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>688</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>692</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>696</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>704</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>720</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>736</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>752</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>784</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>788</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>792</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>800</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>816</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>832</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>848</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>880</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>884</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>888</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>896</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>912</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>928</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>944</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>976</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>980</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>984</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>992</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>1008</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>1024</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>1040</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>1072</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>1076</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>1080</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>1088</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>1104</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>1120</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>1136</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>1168</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>1172</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>1176</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>1184</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>1200</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>1216</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>1232</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>1264</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>1268</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>1272</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>1280</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>1296</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>1312</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>1328</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>1360</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>1364</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>1368</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>1376</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>1392</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>1408</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>1424</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>1456</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>1460</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>1464</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>1472</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>1488</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>1504</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>1520</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>1552</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>1556</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>1560</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>1568</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>1584</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>1600</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>1616</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>1648</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>1652</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
-        <UIntField Name="Sat #">
-          <BitOffset>1656</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <DblField Name="Elevation">
-          <BitOffset>1664</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="Azimuth">
-          <BitOffset>1680</BitOffset>
-          <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Units>degrees</Units>
-          <Scale>0.0057295779513082332</Scale>
-        </DblField>
-        <DblField Name="SNR">
-          <BitOffset>1696</BitOffset>
-          <BitLength>16</BitLength>
-          <Units>dB</Units>
-          <Scale>0.01</Scale>
-        </DblField>
-        <UIntField Name="Range residuals">
-          <BitOffset>1712</BitOffset>
-          <BitLength>32</BitLength>
-        </UIntField>
-        <EnumField Name="Status">
-          <BitOffset>1744</BitOffset>
-          <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Not tracked" />
-            <EnumPair Value="1" Name="Tracked" />
-            <EnumPair Value="2" Name="Used" />
-            <EnumPair Value="3" Name="Not tracked+Diff" />
-            <EnumPair Value="4" Name="Tracked+Diff" />
-            <EnumPair Value="5" Name="Used+Diff" />
-          </EnumValues>
-        </EnumField>
-        <Field Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>1748</BitOffset>
-          <BitLength>4</BitLength>
-        </Field>
+        <RepeatedFieldSet Name="Satellites data" Count="Sats in view">
+          <UIntField Name="Sat #">
+            <BitOffset>0</BitOffset>
+            <BitLength>8</BitLength>
+          </UIntField>
+          <DblField Name="Elevation">
+            <BitOffset>8</BitOffset>
+            <BitLength>16</BitLength>
+            <FormatAs>Heading</FormatAs>
+            <Units>degrees</Units>
+            <Scale>0.0057295779513082332</Scale>
+          </DblField>
+          <DblField Name="Azimuth">
+            <BitOffset>24</BitOffset>
+            <BitLength>16</BitLength>
+            <FormatAs>Heading</FormatAs>
+            <Units>degrees</Units>
+            <Scale>0.0057295779513082332</Scale>
+          </DblField>
+          <DblField Name="SNR">
+            <BitOffset>40</BitOffset>
+            <BitLength>16</BitLength>
+            <Units>dB</Units>
+            <Scale>0.01</Scale>
+          </DblField>
+          <UIntField Name="Range residuals">
+            <BitOffset>56</BitOffset>
+            <BitLength>32</BitLength>
+          </UIntField>
+          <EnumField Name="Status">
+            <BitOffset>88</BitOffset>
+            <BitLength>4</BitLength>
+            <EnumValues>
+              <EnumPair Value="0" Name="Not tracked" />
+              <EnumPair Value="1" Name="Tracked" />
+              <EnumPair Value="2" Name="Used" />
+              <EnumPair Value="3" Name="Not tracked+Diff" />
+              <EnumPair Value="4" Name="Tracked+Diff" />
+              <EnumPair Value="5" Name="Used+Diff" />
+            </EnumValues>
+          </EnumField>
+          <Field Name="Reserved">
+            <Description>Reserved</Description>
+            <BitOffset>92</BitOffset>
+            <BitLength>4</BitLength>
+          </Field>
+        </RepeatedFieldSet>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129541">
