@@ -289,17 +289,22 @@ class Instrument(threading.Thread):
     def trace_raw(self, direction, msg):
         if self._trace_raw:
             if direction == self.TRACE_IN:
-                fc = "R# >"
+                fc = "R#>"
             else:
-                fc = "R# <"
-            l = len(msg) - self._separator_len
+                fc = "R#<"
+            # l = len(msg) - self._separator_len
+            # not all messages have the CRLF included to be further checked
             self._trace_fd.write(fc)
-            self._trace_fd.write(msg[:l].decode())
+            self._trace_fd.write(msg.decode())
             self._trace_fd.write('\n')
+
+    def trace_n2k_raw(self, pgn, sa, prio, data):
+        if self._trace_msg and self._trace_raw:
+            self._trace_fd.write("N#>%06d|%05X|%3d|%d|%s\n" % (pgn, pgn, sa, prio, data.hex()))
 
     def add_event_trace(self, message: str):
         if self._trace_msg:
-            self._trace_fd.write("## Event:")
+            self._trace_fd.write("Event#>")
             self._trace_fd.write(message)
             self._trace_fd.write('\n')
 
