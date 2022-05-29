@@ -18,6 +18,7 @@ import struct
 
 
 _logger = logging.getLogger("ShipDataServer"+".decode")
+# _logger.setLevel(logging.DEBUG)
 
 
 class N2KDecodeException(Exception):
@@ -29,6 +30,10 @@ class N2KDecodeEOLException(N2KDecodeException):
 
 
 class N2KMissingEnumKeyException(N2KDecodeException):
+    pass
+
+
+class N2KUnknownPGN(Exception):
     pass
 
 
@@ -48,6 +53,10 @@ class PGNDefinitions:
     @staticmethod
     def pgn_definition(pgn):
         return PGNDefinitions.pgn_definitions.pgn_def(pgn)
+
+    @staticmethod
+    def print_pgndef(pgn: int, output):
+        PGNDefinitions.pgn_definitions.pgn_def(pgn).print_description(output)
 
     def __init__(self, xml_file):
 
@@ -72,7 +81,7 @@ class PGNDefinitions:
     def print_summary(self):
         print("NMEA2000 PGN definitions => number of PGN:%d" % len(self._pgn_defs))
         for pgn in self._pgn_defs.values():
-            print(pgn,pgn.length,"Bytes")
+            print(pgn, pgn.length,"Bytes")
             for f in pgn.fields():
                 print("\t", f.descr())
 
@@ -82,7 +91,11 @@ class PGNDefinitions:
     def pgn_def(self, number):
         if type(number) == str:
             number = int(number)
-        return self._pgn_defs[number]
+        try:
+            return self._pgn_defs[number]
+        except KeyError:
+            _logger.error("Unknown PGN %d" % number)
+            raise N2KUnknownPGN(str(number))
 
 
 class N2KDecodeResult:
@@ -132,10 +145,12 @@ class N2KDecodeResult:
 class PGNDef:
 
     trace_enum_error = False
+    trace_decode_warning = False
 
     @staticmethod
-    def set_trace(enum_error: bool):
+    def set_trace(enum_error: bool, warning: bool):
         PGNDef.trace_enum_error = enum_error
+        PGNDef.trace_decode_warning = warning
 
     def __init__(self, pgnxml):
         self._id_str = pgnxml.attrib['PGN']
@@ -212,9 +227,12 @@ class PGNDef:
         fields: dict = {}
         _logger.debug("start decoding PGN %d %s payload(%d bytes) %s" % (self._id, self._name, len(data), data.hex()))
         index = 0
+
         for field in self._fields.values():
+            # print(field.name, field.type())
             try:
                 inner_result = field.decode(data, index, fields)
+                # print("result",inner_result.name, inner_result.valid, inner_result.value)
             except N2KMissingEnumKeyException as e:
                 if self.trace_enum_error:
                     _logger.info(str(e))
@@ -238,6 +256,11 @@ class PGNDef:
         _logger.debug("End decoding PGN %d" % self._id)
 
         return result
+
+    def print_description(self, output):
+        output.write("PGN %d: %s\n" % (self._id, self._name))
+        for f in self._fields.values():
+            f.print_description(output)
 
 
 class DecodeSpecs:
@@ -383,6 +406,9 @@ class Field:
             self._end_byte = self._start_byte + self._byte_length
         else:
             self._variable_length = True
+
+    def print_description(self, output):
+        output.write("\t Field %s (%s)\n" % (self.name, self.type()))
 
     def decode(self, payload, index, fields):
         '''
@@ -579,7 +605,7 @@ class EnumField(Field):
             return res
         enum_index = res.value
         # print("Enum",b_dec,enum_index)
-        res.value = self.get_name(enum_index)
+        res.value = self._value_pair.get(enum_index, "InvalidKey#%d" % enum_index)
         return res
 
 
@@ -680,9 +706,10 @@ class RepeatedFieldSet:
         try:
             nb_set = fields[self._count]
         except KeyError:
+            _logger.error("PGN %d missing %s field for count reference" % (self._pgn.id, self._count))
             nb_set = 0
         if nb_set < 1:
-            _logger.info("Field set %s empty in PGN %d" % (self._name, self._pgn.id))
+            _logger.debug("Field set %s empty in PGN %d" % (self._name, self._pgn.id))
             res.invalid()
             res.actual_length = 0
             return res
@@ -699,6 +726,7 @@ class RepeatedFieldSet:
                     raise N2KDecodeEOLException
                 _logger.debug("Decoding field %s type %s start %d end %d" %
                               (f.name, f.type(), specs.start, specs.end))
+
                 l_res = f.decode_value(payload, specs)
                 if l_res.valid:
                     result_fields.append((l_res.name, l_res.value))
@@ -708,8 +736,16 @@ class RepeatedFieldSet:
             decoded_set += 1
 
         res.value = result_fields
+        _logger.debug("End decoding Repeated value %s" % self._name)
         return res
 
+    def print_description(self, output):
+        output.write("Repeated field set %s" % self.name)
+        for f in self._subfields.values():
+            f.print_description(output)
+
+    def type(self):
+        return self.__class__.__name__
 
 
 

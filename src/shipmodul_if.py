@@ -95,22 +95,30 @@ class ShipModulInterface(BufferedIPInstrument):
                 pr_byte += 1
                 i_hex -= 2
             # now the PGN sentence is decoded
+
+            def check_pgn():
+                try:
+                    fp = PGNDefinitions.pgn_definition(pgn).fast_packet()
+                except N2KUnknownPGN:
+                    raise ValueError
+                return fp
+
             self.trace_n2k_raw(pgn, addr, prio, data)
             _logger.debug("start processing PGN %d" % pgn)
             if self._fast_packet_handler.is_pgn_active(pgn, data):
                 _logger.debug("Shipmodul PGN %d is active" % pgn)
                 try:
-                    data = self._fast_packet_handler.process_frame(pgn, data)
+                    data = self._fast_packet_handler.process_frame(pgn, data, self.add_event_trace)
                 except FastPacketException as e:
                     _logger.error("Shipmodul Fast packet error %s frame: %s pgn %d data %s" % (e, frame, pgn, data.hex()))
                     self.add_event_trace(str(e))
                     raise ValueError
                 if data is None:
                     raise ValueError  # no error but just to escape
-            elif PGNDefinitions.pgn_definition(pgn).fast_packet():
+            elif check_pgn():
                 _logger.debug("Shipmodul PGN %d is fast packet" % pgn)
                 try:
-                    data = self._fast_packet_handler.process_frame(pgn, data)
+                    data = self._fast_packet_handler.process_frame(pgn, data, self.add_event_trace)
                 except FastPacketException as e:
                     _logger.error("Shipmodul Fast packet error %s on initial frame pgn %d data %s" % (e, pgn, data.hex()))
                     self.add_event_trace(str(e))

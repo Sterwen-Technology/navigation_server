@@ -269,6 +269,7 @@ class FastPacket:
         self._frames = {}
         self._count = 0
         self._nbframes = 0
+        self._timestamp = time.time()
 
     def first_packet(self, frame):
         self._byte_length = frame[1]
@@ -318,6 +319,12 @@ class FastPacket:
             start_idx += l
         return result
 
+    def check_validity(self) -> bool:
+        if self._nbframes > 0:
+            if time.time() - self._timestamp < (0.01 * self._nbframes):
+                return True
+        return False
+
     @property
     def sequence(self):
         return self._sequence
@@ -333,24 +340,57 @@ class FastPacketHandler:
         self._sequences = [None for i in range(8)]
         self._pgn_active = {}
         self._instrument = instrument
+        self._overlap_handle = None
+        self._overlap_seq = -1
 
     def process_frame(self, pgn, frame, trace=None):
         seq = (frame[0] >> 5) & 7
         handle = self._sequences[seq]
         counter = frame[0] & 0x1f
+        process_overlap = False
         _logger.debug("Fast Packet ==> PGN %d seq %d frame %s" % (pgn, seq, frame.hex()))
-        if handle is None:
-            # new sequence
-            handle = FastPacket(pgn, seq)
-            self._sequences[seq] = handle
+
+        def allocate_handle():
+            l_handle = FastPacket(pgn, seq)
+            self._sequences[seq] = l_handle
             self._pgn_active[pgn] = True
             _logger.debug("Fast packet ==> start sequence on PGN %d with sequence %d" % (pgn, seq))
-        else:
-            if handle.pgn != pgn:
-                _logger.error("Fast Packet PGN mix expected %d actual %d for seq %d" %
-                              (handle.pgn, pgn, seq))
-                raise FastPacketException("PGN mix on sequence %d: %d/%d" % (seq, handle.pgn, pgn))
-            # we have a new fast packet sequence
+            return l_handle
+
+        if handle is None:
+            if self._overlap_seq != seq:
+                # new sequence
+                handle = allocate_handle()
+            else:
+                # overlap is reassigned
+                handle = self._overlap_handle
+                self._sequences[seq] = handle
+                self._overlap_handle = None
+                self._overlap_seq = -1
+                _logger.debug("Fast packet => reassign overlap sequence %d pgn %d" % (seq, pgn))
+
+        elif handle.pgn != pgn:
+            _logger.error("Fast Packet PGN mix expected %d actual %d for seq %d" %
+                          (handle.pgn, pgn, seq))
+            if trace is not None:
+                trace("PGN mix on sequence %d: %d/%d" % (seq, handle.pgn, pgn))
+            if self._overlap_seq == seq:
+                handle = self._overlap_handle
+                process_overlap = True
+            elif handle.check_validity():
+                # the current PGN is valid in progress, so we don't kill it
+                # we create a overlap handle
+                self._overlap_handle = FastPacket(pgn, seq)
+                self._overlap_seq = seq
+                self._pgn_active[pgn] = True
+                handle = self._overlap_handle
+                process_overlap = True
+                _logger.debug("Fast packet => start overlap sequence %d for PGN %d" % (seq, pgn))
+            else:
+                # nothing valid we kill the current sequence
+                _logger.debug("Fast packet - killing sequence %d with pgn %d" % (seq, handle.pgn))
+                self._pgn_active[handle.pgn] = False
+                handle = allocate_handle()
 
         if counter == 0:
             handle.first_packet(frame)
@@ -358,7 +398,11 @@ class FastPacketHandler:
             handle.add_packet(frame)
         if handle.check_complete():
             result = handle.total_frame()
-            self._sequences[seq] = None
+            if process_overlap:
+                self._overlap_seq = -1
+                self._overlap_handle = None
+            else:
+                self._sequences[seq] = None
             self._pgn_active[pgn] = False
             _logger.debug("Fast packet ==> end sequence on PGN %d" % pgn)
             return result

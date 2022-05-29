@@ -11,6 +11,7 @@
 #
 trace: INFO
 trace_dir: /mnt/meaban/Bateau/tests
+trace_decode: DEBUG
 
 servers:
 
@@ -46,7 +47,7 @@ publishers:
     class: N2KTracePublisher
     instruments: [MiniPlex3]
     queue_size: 40
-    filter: [129029, 129038, 129039, 129540]
+    filter: [129540]
 
 
 #    - MainLog:

@@ -226,6 +226,7 @@ def main():
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'SN'))
     PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
+    # PGNDefinitions.print_pgndef(129540, sys.stdout)
 
     main_server = NavigationServer()
     # create the servers

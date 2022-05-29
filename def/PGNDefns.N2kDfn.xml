@@ -3812,7 +3812,7 @@
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <RepeatedFieldSet Name="Satellites data" Count="Sats in view">
+        <RepeatedFieldSet Name="Satellites data" Count="Sats in View">
           <UIntField Name="Sat #">
             <BitOffset>0</BitOffset>
             <BitLength>8</BitLength>
