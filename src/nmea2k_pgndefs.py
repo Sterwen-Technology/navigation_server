@@ -719,6 +719,7 @@ class RepeatedFieldSet:
         result_fields: list = []
         decoded_set = 0
         while decoded_set < nb_set:
+            _logger.debug("Start decoding set %d/%d index:%d" % (decoded_set+1, nb_set, specs.start))
             for f in self._subfields.values():
                 if f.length() != 0:
                     specs.end = specs.start+f.length()
@@ -731,8 +732,9 @@ class RepeatedFieldSet:
                 if l_res.valid:
                     result_fields.append((l_res.name, l_res.value))
                 _logger.debug("Result %s=%s" % (f.name, str(l_res.value)))
-                specs.start += l_res.actual_length
-                res.actual_length += l_res.actual_length
+                if l_res.increment:
+                    specs.start += l_res.actual_length
+                    res.actual_length += l_res.actual_length
             decoded_set += 1
 
         res.value = result_fields
