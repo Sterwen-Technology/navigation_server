@@ -1,0 +1,127 @@
+#
+#  Custom template file for SolidSense provisioning
+#
+#   Navigation server on IN6
+#   ==========================================
+#    This file drives the following configuration
+#   Network
+#   ========
+#   Default
+#
+#
+#
+#
+#  Copyright Sterwen-Technology/SolidRun 2019-2022
+#
+#  **********************************************************
+#  *    WARNING                                             *
+#  * There is no consistency/ vaidity checks for parameters *
+#  * Changing any parameter will require test before        *
+#  * Any Filed application                                  *
+#  **********************************************************
+#
+#   state is used for activable services (pure data services don't need one)
+#   disabled    the service will not be configured and and started
+#   auto        the service is configured but the start and activation is done by another process or context dependant
+#   interactive the service configuration is to be done via Kura
+#   active      the service is configured and activared during provisioning
+#
+#   override    (true by default) replace the default service definition, false, combine both definitions
+#
+# Global variable definition
+#
+gateway:
+
+    snapshot_0: snapshot_0-full.xml #this is the template snapshot do not change it unless full test
+
+    
+    
+#######################################################
+#                Services definition
+#######################################################
+services:        
+#
+#   Wirepas services => enable only if Wirepas is to be used
+#   And if the right firmware has been flashed in the Nordic chips (sink)
+#
+#   Variables are here for reference and example and are not used in interactive mode
+#
+- service:
+    # MQTT connection to Kapua
+    type: KuraService
+    name: KapuaMQTT
+    state: active
+    override: false
+    
+    properties:
+        
+        topic.context.account-name: SOLIDSENSE-TEST
+        username: solidrun-internal
+        password: ^$SolidSense2019$
+        
+- service:
+    # Ethernet port 0
+    type: NetworkService
+    name: eth0
+    state: active
+    override: true
+    properties:
+        config.ip4.status: netIPv4StatusEnabledLAN
+        config.ip4.address: 172.16.0.1
+        config.dhcpServer4.enabled: true
+        config.dhcpServer4.rangeStart: 172.16.0.100
+        config.dhcpServer4.rangeEnd: 172.16.0.115
+        #
+- service:
+      # Ethernet port 1
+      type: NetworkService
+      name: eth1
+      state: active
+      override: true
+      properties:
+          config.ip4.status: netIPv4StatusEnabledLAN
+          config.ip4.address: 172.16.2.1
+          config.dhcpServer4.enabled: true
+          config.dhcpServer4.rangeStart: 172.16.2.100
+          config.dhcpServer4.rangeEnd: 172.16.2.104
+
+
+- service:
+    type: ModemGps
+    name: modem_gps
+    state: active
+    override: false
+    
+- service:
+    type: PppService
+    name: ppp0
+    state: active
+    parameters:
+        configuration: NetworkConfigurationService
+        prefix: net.interface.$service_name
+    variables:
+        APN: move.dataxs.mobi
+        DIAL_STRING: atd*99***1#
+    properties:
+        config.pppNum: 0
+        config.apn: $APN
+        config.identifier: $MODEM_MODEL
+        config.dialString: $DIAL_STRING
+        config.ip4.status: netIPv4StatusEnableWAN
+        config.dhcpClient4.enabled: true
+        config.enabled: true
+        config.autoconnect: true
+        usb.product.name: $MODEM_MODEL
+        usb.vendor.name: $MODEM_MFG
+        model: $MODEM_MODEL
+        manufacturer: $MODEM_MFG
+        
+#
+#   Bluetooth
+#
+#- service:
+#   type: BluetoothService
+#    name: hci1
+#   state: active
+#    parameters:
+#        port: ttymxc1

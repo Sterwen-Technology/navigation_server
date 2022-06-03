@@ -259,10 +259,18 @@ class FastPacketException(Exception):
     pass
 
 
+
+
+
 class FastPacket:
 
-    def __init__(self, pgn, seq ):
-        self._sequence = seq
+    @staticmethod
+    def compute_key(pgn, addr, seq):
+        return pgn + (addr << 16) + (seq << 24)
+
+    def __init__(self, pgn, addr, seq):
+        self._key = self.compute_key(pgn, addr, seq)
+        self._source = addr
         self._byte_length = 0
         self._length = 0
         self._pgn = pgn
@@ -320,14 +328,19 @@ class FastPacket:
         return result
 
     def check_validity(self) -> bool:
+        '''
+        Check the validity of the current sequence to eliminate uncomplete sequences
+        After a certain time
+        :return:
+        '''
         if self._nbframes > 0:
             if time.time() - self._timestamp < (0.01 * self._nbframes):
                 return True
         return False
 
     @property
-    def sequence(self):
-        return self._sequence
+    def key(self):
+        return self._key
 
     @property
     def pgn(self):
@@ -337,60 +350,24 @@ class FastPacket:
 class FastPacketHandler:
 
     def __init__(self, instrument):
-        self._sequences = [None for i in range(8)]
-        self._pgn_active = {}
+        self._sequences = {}
         self._instrument = instrument
-        self._overlap_handle = None
-        self._overlap_seq = -1
 
-    def process_frame(self, pgn, frame, trace=None):
+    def process_frame(self, pgn, addr, frame, trace=None):
         seq = (frame[0] >> 5) & 7
-        handle = self._sequences[seq]
+        key = FastPacket.compute_key(pgn, addr, seq)
+        handle = self._sequences.get(key, None)
         counter = frame[0] & 0x1f
-        process_overlap = False
-        _logger.debug("Fast Packet ==> PGN %d seq %d frame %s" % (pgn, seq, frame.hex()))
+        _logger.debug("Fast Packet ==> PGN %d addr %d seq %d frame %s" % (pgn, addr, seq, frame.hex()))
 
         def allocate_handle():
-            l_handle = FastPacket(pgn, seq)
-            self._sequences[seq] = l_handle
-            self._pgn_active[pgn] = True
-            _logger.debug("Fast packet ==> start sequence on PGN %d with sequence %d" % (pgn, seq))
+            l_handle = FastPacket(pgn, addr, seq)
+            self._sequences[l_handle.key] = l_handle
+            _logger.debug("Fast packet ==> start sequence on PGN %d from address %d with sequence %d" % (pgn, addr, seq))
             return l_handle
 
         if handle is None:
-            if self._overlap_seq != seq:
-                # new sequence
-                handle = allocate_handle()
-            else:
-                # overlap is reassigned
-                handle = self._overlap_handle
-                self._sequences[seq] = handle
-                self._overlap_handle = None
-                self._overlap_seq = -1
-                _logger.debug("Fast packet => reassign overlap sequence %d pgn %d" % (seq, pgn))
-
-        elif handle.pgn != pgn:
-            _logger.error("Fast Packet PGN mix expected %d actual %d for seq %d" %
-                          (handle.pgn, pgn, seq))
-            if trace is not None:
-                trace("PGN mix on sequence %d: %d/%d" % (seq, handle.pgn, pgn))
-            if self._overlap_seq == seq:
-                handle = self._overlap_handle
-                process_overlap = True
-            elif handle.check_validity():
-                # the current PGN is valid in progress, so we don't kill it
-                # we create a overlap handle
-                self._overlap_handle = FastPacket(pgn, seq)
-                self._overlap_seq = seq
-                self._pgn_active[pgn] = True
-                handle = self._overlap_handle
-                process_overlap = True
-                _logger.debug("Fast packet => start overlap sequence %d for PGN %d" % (seq, pgn))
-            else:
-                # nothing valid we kill the current sequence
-                _logger.debug("Fast packet - killing sequence %d with pgn %d" % (seq, handle.pgn))
-                self._pgn_active[handle.pgn] = False
-                handle = allocate_handle()
+            handle = allocate_handle()
 
         if counter == 0:
             handle.first_packet(frame)
@@ -398,24 +375,29 @@ class FastPacketHandler:
             handle.add_packet(frame)
         if handle.check_complete():
             result = handle.total_frame()
-            if process_overlap:
-                self._overlap_seq = -1
-                self._overlap_handle = None
-            else:
-                self._sequences[seq] = None
-            self._pgn_active[pgn] = False
+            self._sequences[key] = None
             _logger.debug("Fast packet ==> end sequence on PGN %d" % pgn)
             return result
         else:
             return None
 
-    def is_pgn_active(self, pgn, frame) -> bool:
+    def is_pgn_active(self, pgn, addr, frame) -> bool:
         seq = (frame[0] >> 5) & 7
-        handle = self._sequences[seq]
-        if handle is not None:
-            if handle.pgn == pgn:
-                return True
-        return False
+        key = FastPacket.compute_key(pgn, addr, seq)
+        try:
+            handle = self._sequences[key]
+            return True
+        except KeyError:
+            return False
+
+    def collect_garbage(self):
+        to_be_removed = []
+        for s in self._sequences.values():
+            if not s.check_validity():
+                to_be_removed.append(s.key)
+        for key in to_be_removed:
+            del self._sequences[key]
+
 
 
 

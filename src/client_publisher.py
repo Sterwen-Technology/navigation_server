@@ -114,7 +114,6 @@ class ClientConnection:
 
     def close(self):
         self._close()
-
         self._server.remove_client(self._address)
 
     def _close(self):

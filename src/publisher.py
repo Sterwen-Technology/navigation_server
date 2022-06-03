@@ -28,8 +28,8 @@ class Publisher(threading.Thread):
         if internal:
             self._opts = None
             self._instruments = instruments
-            queue_size = 20
-            self._max_lost = 100
+            queue_size = 40
+            self._max_lost = 10
         else:
             name = opts['name']
             self._opts = opts

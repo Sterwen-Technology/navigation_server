@@ -18,7 +18,7 @@ from IPInstrument import IPInstrument, BufferedIPInstrument, TCPBufferedReader
 from generic_msg import *
 from nmea0183 import process_nmea0183_frame, NMEA0183Msg
 from nmea2000_msg import FastPacketHandler, NMEA2000Msg, FastPacketException
-from nmea2k_pgndefs import PGNDefinitions
+from nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
 
 _logger = logging.getLogger("ShipDataServer"+".Shipmodul")
 # _logger.setLevel(logging.DEBUG)
@@ -105,10 +105,10 @@ class ShipModulInterface(BufferedIPInstrument):
 
             self.trace_n2k_raw(pgn, addr, prio, data)
             _logger.debug("start processing PGN %d" % pgn)
-            if self._fast_packet_handler.is_pgn_active(pgn, data):
-                _logger.debug("Shipmodul PGN %d is active" % pgn)
+            if self._fast_packet_handler.is_pgn_active(pgn, addr, data):
+                _logger.debug("Shipmodul PGN %d on address %d is active" % (pgn, addr))
                 try:
-                    data = self._fast_packet_handler.process_frame(pgn, data, self.add_event_trace)
+                    data = self._fast_packet_handler.process_frame(pgn, addr, data, self.add_event_trace)
                 except FastPacketException as e:
                     _logger.error("Shipmodul Fast packet error %s frame: %s pgn %d data %s" % (e, frame, pgn, data.hex()))
                     self.add_event_trace(str(e))
@@ -118,7 +118,7 @@ class ShipModulInterface(BufferedIPInstrument):
             elif check_pgn():
                 _logger.debug("Shipmodul PGN %d is fast packet" % pgn)
                 try:
-                    data = self._fast_packet_handler.process_frame(pgn, data, self.add_event_trace)
+                    data = self._fast_packet_handler.process_frame(pgn, addr, data, self.add_event_trace)
                 except FastPacketException as e:
                     _logger.error("Shipmodul Fast packet error %s on initial frame pgn %d data %s" % (e, pgn, data.hex()))
                     self.add_event_trace(str(e))

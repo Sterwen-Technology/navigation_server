@@ -1,0 +1,14 @@
+#!/bin/bash
+# shell script to perform the installation on systemd
+#
+cp navigation.service /lib/systemd/system
+cp vedirect.service /lib/systemd/system
+
+systemctl enable navigation
+systemctl enable vedirect
+
+systemctl start navigation
+systemctl start vedirect
+
+systemctl status navigation
+systemctl status vedirect

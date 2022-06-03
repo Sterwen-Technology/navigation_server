@@ -11,7 +11,7 @@
 #
 trace: INFO
 trace_dir: /mnt/meaban/Bateau/tests
-trace_decode: DEBUG
+trace_decode: ERROR
 
 servers:
 
