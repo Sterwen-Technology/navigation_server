@@ -68,7 +68,6 @@ class ServerProxy:
         return self._msg.DESCRIPTOR.fields_by_name['state'].enum_type.values_by_number[self._msg.state].name
 
 
-
 class ConsoleClient:
 
     def __init__(self, address):
