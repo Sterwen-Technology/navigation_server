@@ -30,9 +30,6 @@ Currently, tested instruments:
 Under preparation
 - Direct CAN Access
 
-#### Instruments instantiable classes
-
-
 #### Instruments generic parameters
 
 | Name            | Type                                 | Default                                  | Signification                            |
@@ -46,6 +43,61 @@ Under preparation
 | direction       | read_only, write_only, bidirectional | bidirectional | Direction of excahnge with device |
 | trace_messages  | boolean                              | False | Trace all messages after internal pre-processing |
 | trace_raw | boolean | False | Trace all messages in device format |
+
+#### Instruments classes
+
+##### NMEASerialPort
+This class handle serial or emulated serial line with NMEA0183 based protocols.
+Specific parameters
+
+| Name   | Type    | Default    | Signification             |
+|--------|---------|------------|---------------------------|
+| device | string  | no default | Name of the serial device |
+| baudrate| integer | 4800 | baud rate for the device |
+
+##### IPInstrument
+Generic abstract class for all IP instruments communication.
+Specific parameters
+
+| Name    | Type     | Default    | Signification            |
+|---------|----------|------------|--------------------------|
+| address | string   | no default | Address (IP or hostname) |
+| port    | integer  | no default | Port of the server       |
+| transport | TCP, UDP | TCP | Transport protocol for the server |
+| buffer_size | integer  | 256 | size in bytes of input buffer |
+
+Buffer size is to be adjusted taking into account average message size and number of messages per seconds.
+A large buffer will create some delays for messages through the system while too small buffer size will generate a lot of overhead.
+
+##### NMEA0183TCPReader (IPInstrument)
+Instantiable class to communicate with NMEA0183 protocol over TCP/IP. It includes some filtering features on the sentence format level (formatter) not on talkers.
+Specific parameters
+
+| Name       | Type  | Default | Signification                    |
+|------------|-------|---------|----------------------------------|
+| white_list | table | None    | List of formatter to be retained |
+| black_list | table | None    | list of formatter to be excluded |
+
+
+##### Shipmodul (IPInstrument)
+Instantiable class to manage Ethernet or WiFi interface for Shipmodul Miniplex3
+
+The class instance has 2 possible behavior depending on the protocol selected.
+- nmea0183: all frames are transparently transmitted as NMEA0183
+- nmea2000: All $MXPGN frames are interpreted as NMEA2000 and interpreted as such, including FastTrack reassembly. Further processing on NMEA2000 frames is explained in the dedicated paragraph.
+
+The class is allowing the pass through of configuration messages sent by the MPXconfig utility. This is requiring that a ShipModulConfig server class is setup in the configuration.
+
+##### YDInstrument (IPInstrument)
+Instantiable class to manage Yacht Device Ethernet gateway (YD02EN) for the NMEA2000 port, For NMEA0183, the generic NMEA0183TCPReader can be used.
+
+All frames are converted in internal NMEA2000 format and can then be processed further. That includes Fast Packets reassembly.
+
+##### iKonvert
+Instantiable class to manage the DigitalYacht iKonvert USB gateway in raw mode. If the device is in nMEA0183 mode and configured by the DigitalYacht utility, then the NMEASerialPort is to be used instead.
+The class does not manage the device mode itself that shall be configured via the DY utility.
+NMEA sentence !PGDY are converted internally the NMEA2000 sentences.
+
 
 
 ### Publishers
