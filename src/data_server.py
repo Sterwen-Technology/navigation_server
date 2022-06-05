@@ -20,7 +20,7 @@ from client_publisher import *
 from nmea0183 import *
 
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+".data_server")
 
 
 class NMEA_server(NavTCPServer):

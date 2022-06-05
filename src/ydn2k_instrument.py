@@ -53,12 +53,12 @@ class YDInstrument(BufferedIPInstrument):
         for db in fields[3:]:
             data[i] = int(db,16)
             i += 1
-        if self._fast_packet_handler.is_pgn_active(pgn, data):
-            data = self._fast_packet_handler.process_frame(pgn, data)
+        if self._fast_packet_handler.is_pgn_active(pgn, sa, data):
+            data = self._fast_packet_handler.process_frame(pgn, sa,  data)
             if data is None:
                 raise ValueError # no error but just to escape
         elif PGNDefinitions.pgn_definition(pgn).fast_packet():
-            self._fast_packet_handler.process_frame(pgn, data)
+            self._fast_packet_handler.process_frame(pgn, sa, data)
             raise ValueError  # no error but just to escape
 
         msg = NMEA2000Msg(pgn, prio, sa, 0, data)
