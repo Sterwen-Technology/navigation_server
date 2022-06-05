@@ -15,6 +15,7 @@ import logging
 import sys
 import socket
 import time
+import os
 from argparse import ArgumentParser
 from concurrent import futures
 
@@ -61,7 +62,7 @@ class Vedirect(threading.Thread):
         self.serialport = serialport
         try:
             self.ser = serial.Serial(serialport, 19200, timeout=timeout)
-        except serial.SerialException as e:
+        except (serial.SerialException, BrokenPipeError) as e:
             _logger.error("Cannot open VEdirect serial interface %s" % str(e))
             raise
 
@@ -313,13 +314,21 @@ def main():
     _logger.setLevel(logging.INFO)
 
     if opts.serial_port is not None:
-        ser_emu = TCPSerialEmulator(opts.serial_port)
+        try:
+            ser_emu = TCPSerialEmulator(opts.serial_port)
+        except (serial.SerialException, IOError, BrokenPipeError):
+            _logger.critical("Unrecoverable error => stopping the service")
+            os._exit(0)
     else:
         ser_emu = None
     if opts.simulator is not None:
         reader = VEdirect_simulator(opts.simulator, ser_emu)
     else:
-        reader = Vedirect(opts.interface, 10.0, ser_emu)
+        try:
+            reader = Vedirect(opts.interface, 10.0, ser_emu)
+        except (serial.SerialException, IOError, BrokenPipeError):
+            _logger.critical("Unrecoverable error => stopping the service")
+            os._exit(0)
 
     server = GrpcServer(opts, reader)
     if ser_emu is not None:

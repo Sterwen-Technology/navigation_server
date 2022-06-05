@@ -6,7 +6,7 @@ Requires=network.target
 Type=simple
 User=solidsense
 ExecStart=/usr/bin/python3  /data/solidsense/navigation/src/mppt_reader.py -i /dev/ttyUSB0
-Restart=always
+Restart=on-failure
 RestartSec=6
 
 [Install]
