@@ -16,7 +16,44 @@ The system works with a single Python process and messages are exchanged interna
 The servers are TCP servers allowing any navigation or control application to access the flow of data via TCP/IP.
 There is a generic server: NMEAServer. This server is sending all messages coming from the associated instruments to the clients.
 Client can also send messages to the server that are sent to the instrument input.
-The default protocol is NMEA0183 based even if it carries NMEA2000 messages (Digital Yacht like sentence)
+
+There are 2 server classes: NMEA0183 based protocol over TCP and binary messages over gRPC.
+
+The NMEA0183 based protocol can be understood and messages starting with '$' or '!' including only printable ASCII characters and separated by the <CR> and <LF> characters
+That is not exactly a real protocol over TCP/IP but this is working and the messages (data frames) and directly inherited from the standards NMEA0183 messages.
+Even NMEA2000 data frames are carrier over such messages like it is done for Digital Yacht or Shipmodul miniplex.
+Using efficient binary encoding with Protobuf and a real protocol like gRPC allows an increase in efficiency. THis is particularly true for NMEA2000 that is binary protocol by nature.
+
+#### NMEAServer class
+
+This class implements a TCP server that is transmitting NMEA0183 based messages over a raw TCP stream. No additional protocol elements are transmitted.
+The server works in both direction and the connection created with the client accepts NMEA0183 messages that will be forwarded to a specific instrument.
+
+Here are the parameters associated with the server
+
+| Name      | Type  | Default | Signification                  |
+|-----------|-------|---------|--------------------------------|
+| port      | int   | 4500    | listening port of the server   |
+| heartbeat | float | 30      | Period of the heartbeat  timer |
+| timeout | float | 5.0 | timeout socket receive |
+| sender | string | None | Name of the instrumnet receiving the messages sent from client |
+| nmea2000 | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see below) |
+
+
+**Format of NMEA2000 messages**
+
+*transparent*: messages are transmitted in the same format as the instrument sends them. This is valid only if the instrument is able to send NMEA0183 like NMEA2000 messages. That is also implying that the instrument(s) are configured with the nmea0183 protocol
+
+*dyfmt*: NMEA2000 messages are transmitted using the Digital Yacht !PGDY format
+
+*stfmt*: NMEA2000 messages are transmitted using the Sterwen Technology !PGNST format
+
+if dyfmt or stfmt is selected all NMEA2000 messages will be translated in the selected format including reassembly of Fast Packet. That implies that the protocol selected in the instruments is 'nmea2000'. NMEA0183 messages are transparently transmitted in any case.
+
+#### gRPCNMEAServer class
+
+
+
 
 ### Instruments
 Instrument classes are connecting to instrumentation bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
@@ -98,7 +135,9 @@ Instantiable class to manage the DigitalYacht iKonvert USB gateway in raw mode. 
 The class does not manage the device mode itself that shall be configured via the DY utility.
 NMEA sentence !PGDY are converted internally the NMEA2000 sentences.
 
-
+| Name   | Type   | Default | Signification                 |
+|--------|--------|---------|-------------------------------|
+| device | string | None    | Name of the serial USB device |
 
 ### Publishers
 Publishers concentrate messages from several instruments towards consumers. Publishers are implicitly created by Servers when a new client connection is created.

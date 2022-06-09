@@ -1,0 +1,22 @@
+
+//-------------------------------------------------------------------------------
+// Name:        nmea0183.proto
+// Purpose:     nmea0183 messages protobuf definition file
+//
+// Author:      Laurent Carré
+//
+// Created:     05/06/2022
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+// generic NMEA0183 message
+//
+
+message nmea0183 {
+  string talker=1;
+  string formatter=2;
+  repeated string values=3;
+}

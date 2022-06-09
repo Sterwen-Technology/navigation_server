@@ -23,16 +23,19 @@ from nmea0183 import *
 _logger = logging.getLogger("ShipDataServer"+".data_server")
 
 
-class NMEA_server(NavTCPServer):
+class NMEAServer(NavTCPServer):
 
     '''
     Server class for NMEA clients
 
     '''
+    publisher_class = {'transparent': NMEAPublisher, 'dyfmt': NMEA2000DYPublisher, 'stfmt': NMEA2000STPublisher}
+
     def __init__(self, options):
         super().__init__(options)
         self._instruments = []
         self._options = options
+        self._nmea2000 = options.get_choice('nmea2000', ('transparent', 'dyfmt', 'stfmt'), 'transparent')
         self._connections = {}
         self._timer = None
         self._timer_name = self.name() + "-timer"
@@ -77,10 +80,10 @@ class NMEA_server(NavTCPServer):
             client = ClientConnection(connection, address, self)
             self._connections[address] = client
             # now create a publisher for all instruments
-            pub = NMEA_Publisher(client, self._instruments)
+            pub = self.publisher_class[self._nmea2000](client, self._instruments)
             pub.start()
             if self._sender_instrument is not None and self._sender is None:
-                self._sender = NMEA_Sender(client, self._sender_instrument)
+                self._sender = NMEASender(client, self._sender_instrument)
                 self._sender.start()
             else:
                 _logger.info("No instrument (sender) to send NMEA messages for server %s" % self.name())
@@ -95,7 +98,7 @@ class NMEA_server(NavTCPServer):
             # self._sender_instrument = instrument
         # now if we had some active connections we need to create the publishers
         for client in self._connections.values():
-            pub = NMEA_Publisher(client, instrument)
+            pub = NMEAPublisher(client, instrument)
             pub.start()
 
     def remove_client(self, address):

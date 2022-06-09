@@ -15,7 +15,7 @@ from argparse import ArgumentParser
 import signal
 
 import nmea0183
-from data_server import NMEA_server
+from data_server import NMEAServer
 from shipmodul_if import *
 from console import Console
 from publisher import *
@@ -198,7 +198,7 @@ def main():
             os.chdir(default_base_dir)
     # print("Current directory", os.getcwd())
     config = NavigationConfiguration(opts.settings)
-    config.add_class(NMEA_server)
+    config.add_class(NMEAServer)
     config.add_class(Console)
     config.add_class(ShipModulConfig)
     config.add_class(ShipModulInterface)

@@ -13,6 +13,7 @@ import time
 from google.protobuf.json_format import MessageToJson
 import datetime
 import os
+import base64
 
 from nmea2k_pgndefs import *
 from publisher import Publisher
@@ -81,6 +82,15 @@ class NMEA2000Msg:
         except N2KDecodeException as e:
             _logger.error("%s ignoring" % str(e))
             return None
+
+    def asPDGY(self):
+        msg_data = b'!PDGY,%d,%1d,%d,%d,%d,%s\r\n' % (self._pgn, self._prio, self._sa, self._da, self._ts,
+                                                      base64.b64encode(self._payload))
+        return msg_data
+
+    def asPGNST(self):
+        msg_data = b'!PGNST,%d,%1d,%d,%d,%s\r\n' % (self._pgn, self._prio, self._sa, self._ts, self._payload.hex())
+        return msg_data
 
 
 class PgnRecord:

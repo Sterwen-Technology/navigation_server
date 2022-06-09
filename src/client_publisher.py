@@ -18,7 +18,7 @@ from IPInstrument import TCPBufferedReader
 _logger = logging.getLogger("ShipDataServer")
 
 
-class NMEA_Publisher(Publisher):
+class NMEAPublisher(Publisher):
 
     def __init__(self, client, instruments: list):
 
@@ -28,7 +28,7 @@ class NMEA_Publisher(Publisher):
         client.add_publisher(self)
         # reader.register(self)
 
-    def process_msg(self, msg):
+    def process_msg(self, msg: NavGenericMsg):
         if msg.raw is None:
             _logger.error("No transparent payload available for %s" % msg.printable())
             return False
@@ -42,7 +42,34 @@ class NMEA_Publisher(Publisher):
         return self._client.descr()
 
 
-class NMEA_Sender(threading.Thread):
+class NMEA2000DYPublisher(NMEAPublisher):
+
+    def __init__(self, client, instruments):
+        super().__init__(client, instruments)
+
+    def process_msg(self, msg: NavGenericMsg):
+        if msg.type == N2K_MSG:
+            data = msg.msg.asPGDY()
+            return not self._client.send(data)
+        else:
+            return super().process_msg(msg)
+
+
+class NMEA2000STPublisher(NMEAPublisher):
+
+    def __init__(self, client, instruments):
+        super().__init__(client, instruments)
+
+    def process_msg(self, msg: NavGenericMsg):
+        if msg.type == N2K_MSG:
+            data = msg.msg.asPGNST()
+            return not self._client.send(data)
+        else:
+            return super().process_msg(msg)
+
+
+
+class NMEASender(threading.Thread):
 
     def __init__(self, client, instrument):
         super().__init__(name="Sender-"+client.descr())
@@ -75,6 +102,12 @@ class NMEA_Sender(threading.Thread):
 
 
 class ClientConnection:
+    '''
+    class to implement the connection between client and server
+    perform all I/O on communication socket
+
+    Created by the server upon accept for a new client connection
+    '''
     def __init__(self, connection, address, server):
         self._socket = connection
         self._address = address
