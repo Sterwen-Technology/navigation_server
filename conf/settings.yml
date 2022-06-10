@@ -16,9 +16,10 @@ trace_decode: ERROR
 servers:
 
 - NMEAServer:
-    class: NMEA_server
+    class: NMEAServer
     port: 4500
     sender: MiniPlex3
+    nmea2000: dyfmt
 
 - Console:
     class: Console
@@ -43,11 +44,11 @@ instruments:
 
 publishers:
 
-- Trace:
-    class: N2KTracePublisher
-    instruments: [MiniPlex3]
-    queue_size: 40
-    filter: [129540]
+#- Trace:
+#    class: N2KTracePublisher
+#    instruments: [MiniPlex3]
+#   queue_size: 40
+#   filter: [129540]
 
 
 #    - MainLog:

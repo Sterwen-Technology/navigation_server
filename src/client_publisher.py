@@ -8,7 +8,7 @@
 # Copyright:   (c) Laurent Carré Sterwen Technolgy 2021
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
-
+import socket
 import threading
 import logging
 from publisher import Publisher
@@ -49,7 +49,7 @@ class NMEA2000DYPublisher(NMEAPublisher):
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.type == N2K_MSG:
-            data = msg.msg.asPGDY()
+            data = msg.msg.asPDGY()
             return not self._client.send(data)
         else:
             return super().process_msg(msg)
@@ -66,7 +66,6 @@ class NMEA2000STPublisher(NMEAPublisher):
             return not self._client.send(data)
         else:
             return super().process_msg(msg)
-
 
 
 class NMEASender(threading.Thread):
@@ -115,24 +114,26 @@ class ClientConnection:
         self._totalmsg = 0
         self._total_recmsg = 0
         self._periodmsg = 0
+        self._silent_count = 0
         self._pubs = []
         self._sender = None
 
     def send(self, msg):
         try:
-            self._socket.sendall(msg)
+            self._socket.sendall(msg, socket.MSG_DONTWAIT)
             self._totalmsg += 1
             self._periodmsg += 1
             return False
         except OSError as e:
             _logger.warning(
-                "Error writing data on %s:%d connection:%s => STOP" % (self._address[0], self._address[1], str(e)))
+                "Client:send Error writing data on %s:%d connection:%s => STOP" % (self._address[0], self._address[1], str(e)))
             return True
 
     def get(self):
         try:
             msg = self._socket.recv(512)
             self._total_recmsg += 1
+            self._periodmsg += 1
         except OSError as e:
             _logger.warning(
                 "Error reading data on %s:%d connection:%s => STOP" % (self._address[0], self._address[1], str(e)))
@@ -163,6 +164,12 @@ class ClientConnection:
 
     def msgcount(self):
         return self._periodmsg
+
+    def add_silent_period(self):
+        self._silent_count += 1
+
+    def silent_count(self):
+        return self._silent_count
 
     def add_publisher(self, pub):
         self._pubs.append(pub)

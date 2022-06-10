@@ -21,6 +21,7 @@ from nmea0183 import *
 
 
 _logger = logging.getLogger("ShipDataServer"+".data_server")
+_logger.setLevel(logging.DEBUG)
 
 
 class NMEAServer(NavTCPServer):
@@ -41,6 +42,7 @@ class NMEAServer(NavTCPServer):
         self._timer_name = self.name() + "-timer"
         self._sender = None
         self._sender_instrument = None
+        self._client_lock = threading.Lock()
 
     def start_timer(self):
         self._timer = threading.Timer(self._heartbeat, self.heartbeat)
@@ -78,7 +80,17 @@ class NMEAServer(NavTCPServer):
 
             _logger.info("New connection from IP %s port %d" % address)
             client = ClientConnection(connection, address, self)
-            self._connections[address] = client
+            # critical section for adding the new client
+            if self._client_lock.acquire(timeout=5.0):
+                _logger.debug("NMEAServer lock acquire OK")
+                self._connections[address] = client
+                self._client_lock.release()
+                _logger.debug("NMEAServer lock release OK")
+            else:
+                _logger.warning("Client add client lock acquire failed")
+                connection.close()
+                continue
+
             # now create a publisher for all instruments
             pub = self.publisher_class[self._nmea2000](client, self._instruments)
             pub.start()
@@ -86,7 +98,8 @@ class NMEAServer(NavTCPServer):
                 self._sender = NMEASender(client, self._sender_instrument)
                 self._sender.start()
             else:
-                _logger.info("No instrument (sender) to send NMEA messages for server %s" % self.name())
+                _logger.info("No instrument (sender) to send NMEA messages for server %s client %s" %
+                             (self.name(), client.descr()))
             # end of while loop => the thread stops
         _logger.info("%s thread stops" % self.name())
         self._socket.close()
@@ -94,15 +107,28 @@ class NMEAServer(NavTCPServer):
     def add_instrument(self, instrument):
         self._instruments.append(instrument)
         _logger.info("Server %s adding instrument %s" % (self.name(), instrument.name()))
-        #if instrument.default_sender():
-            # self._sender_instrument = instrument
         # now if we had some active connections we need to create the publishers
         for client in self._connections.values():
             pub = NMEAPublisher(client, instrument)
             pub.start()
 
-    def remove_client(self, address):
-        del self._connections[address]
+    def remove_client(self, address) -> None:
+        '''
+        remove is protected by lock
+        :param address:
+        '''
+        _logger.debug("NMEAServer removing client at address %s:%d" % address)
+        if self._client_lock.acquire(timeout=5.0):
+            _logger.debug("NMEAServer lock acquire OK")
+            try:
+                del self._connections[address]
+                _logger.debug("NMEAServer removing client at address %s:%d successful" % address)
+            except KeyError:
+                _logger.warning("Client remove unknown address %s:%d" % address)
+            self._client_lock.release()
+            _logger.debug("NMEAServer lock release OK")
+        else:
+            _logger.warning("Client remove client lock acquire failed")
 
     def remove_sender(self):
         self._sender = None
@@ -121,16 +147,36 @@ class NMEAServer(NavTCPServer):
             return
         self.start_timer()
         to_be_closed = []
-        for client in self._connections.values():
-            if client.msgcount() == 0:
-                # no message during period
-                _logger.info("Sending heartbeat on %s" % client.descr())
-                heartbeat_msg = ZDA().message()
-                if client.send(heartbeat_msg):
-                    to_be_closed.append(client)
+        # this is a critical section
+        if self._client_lock.acquire(timeout=2.0):
+            _logger.debug("NMEAServer heartbeat lock acquire OK")
+            for client in self._connections.values():
+                _logger.debug("Heartbeat check %s msg:%d silent period:%d" %
+                              (client.descr(), client.msgcount(), client.silent_count()))
+                if client.msgcount() == 0:
+                    client.add_silent_period()
+                    # no message during period
+                    if client.silent_count() >= self._max_silent_period:
+                        _logger.warning("No traffic on connection %s" % client.descr())
+                        to_be_closed.append(client)
+                    else:
+                        _logger.info("Sending heartbeat on %s" % client.descr())
+                        heartbeat_msg = ZDA().message()
+                        if client.send(heartbeat_msg):
+                            to_be_closed.append(client)
                 client.reset_period()
-        for client in to_be_closed:
-            client.close()
+            for client in to_be_closed:
+                _logger.debug("NMEA Server heartbeat - removing client %s" % client.descr())
+                client._close()
+                try:
+                    del self._connections[client.address()]
+                    _logger.debug("NMEAServer heartbeat removing client %s successful" % client.descr())
+                except KeyError:
+                    _logger.debug("NMEAServer heartbeat removing client %s => non existent" % client.descr())
+            self._client_lock.release()
+            _logger.debug("NMEAServer heartbeat lock release OK")
+        else:
+            _logger.warning("Cannot acquire lock during heartbeat")
 
     def stop(self):
         _logger.info("%s stopping" % self.name())

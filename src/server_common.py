@@ -58,6 +58,8 @@ class NavTCPServer(NavigationServer, threading.Thread):
         self._max_connections = options.get('max_connections', int, 10)
         self._heartbeat = options.get('heartbeat', float, 30.0)
         self._timeout = options.get('timeout', float, 5.0)
+        self._max_silent = options.get('max_silent', float, 120.0)
+        self._max_silent_period = int(self._max_silent / self._heartbeat)
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.bind(('0.0.0.0', self._port))

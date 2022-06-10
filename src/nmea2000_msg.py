@@ -34,7 +34,7 @@ class NMEA2000Msg:
         self._da = da
         if payload is not None:
             self._payload = payload
-            self._ts = time.time_ns()
+            self._ts = int(time.monotonic() * 1000)
             if len(payload) <= 8:
                 self._fast_packet = False
             else:
