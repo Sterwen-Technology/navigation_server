@@ -186,6 +186,19 @@ def print_threads():
         _logger.info("Thread:%s" % t.name)
 
 
+def adjust_log_level(config):
+    modules = config.get_option('log_module', None)
+    if modules is None:
+        return
+    # print(modules)
+    for module, level in modules.items():
+        mod_log = _logger.getChild(module)
+        if mod_log is not None:
+            mod_log.setLevel(level)
+        else:
+            _logger.error("Module %s non-existent" % module)
+
+
 def main():
     # global global_configuration
 
@@ -218,13 +231,12 @@ def main():
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
-    _logger.setLevel(config.get_option('trace', 'INFO'))
-    decode_logger = _logger.getChild('decode')
-    decode_logger.setLevel(config.get_option('trace_decode', 'INFO'))
+    _logger.setLevel(config.get_option('log_level', 'INFO'))
+    adjust_log_level(config)
 
     _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2022" % version)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
-    nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'SN'))
+    nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'ST'))
     PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
     # PGNDefinitions.print_pgndef(129540, sys.stdout)
 

@@ -5,8 +5,8 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technolgy 2021
-# Licence:     <your licence>
+# Copyright:   (c) Laurent Carré Sterwen Technolgy 2021-2022
+# Licence:     Eclipse Public License V2.0
 #-------------------------------------------------------------------------------
 
 import socket
@@ -20,13 +20,13 @@ from nmea0183 import process_nmea0183_frame, NMEA0183Msg
 from nmea2000_msg import FastPacketHandler, NMEA2000Msg, FastPacketException
 from nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
 
-_logger = logging.getLogger("ShipDataServer"+".Shipmodul")
-# _logger.setLevel(logging.DEBUG)
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 #################################################################
 #
-#   Classes for ShipModule interface
+#   Classes for ShipModule Miniplex3 interface over IP
+#
 #################################################################
 
 

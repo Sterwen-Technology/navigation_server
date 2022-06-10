@@ -15,7 +15,7 @@ import logging
 from instrument import Instrument, InstrumentReadError, InstrumentNotPresent, InstrumentTimeOut
 from nmea0183 import NMEA0183Msg, NMEAInvalidFrame
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class NMEASerialPort(Instrument):

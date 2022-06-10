@@ -22,7 +22,7 @@ from publisher import PublisherOverflow
 from generic_msg import NavGenericMsg, NULL_MSG
 
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class InstrumentReadError(Exception):

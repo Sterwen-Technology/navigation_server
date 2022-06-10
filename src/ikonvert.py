@@ -20,7 +20,7 @@ from instrument import Instrument, InstrumentReadError
 from nmea2000_msg import NMEA2000Msg
 from generic_msg import *
 
-_logger = logging.getLogger("ShipDataServer.iKonvert")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 (UNKNOWN, STATUS, NOT_CONN, ACK, NAK, N2K, N183) = range(7)
 
 

@@ -17,13 +17,13 @@ from generic_msg import *
 from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
 from nmea0183 import process_nmea0183_frame, NMEAInvalidFrame
 
-_logger = logging.getLogger("ShipDataServer"+".IPinstrument")
-# _logger.setLevel(logging.DEBUG)
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 #################################################################
 #
-#   Classes for ShipModule interface
+#   Classes for interfacing instruments over TCP or UDP
+#
 #################################################################
 
 

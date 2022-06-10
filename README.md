@@ -36,6 +36,7 @@ Here are the parameters associated with the server
 | port      | int   | 4500    | listening port of the server   |
 | heartbeat | float | 30      | Period of the heartbeat  timer |
 | timeout | float | 5.0 | timeout socket receive |
+|max_connections | int | 10 | maximum number of active connections |
 | sender | string | None | Name of the instrumnet receiving the messages sent from client |
 | nmea2000 | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see below) |
 

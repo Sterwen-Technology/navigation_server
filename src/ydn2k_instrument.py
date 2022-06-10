@@ -18,7 +18,7 @@ from nmea2k_pgndefs import PGNDefinitions
 from nmea0183 import process_nmea0183_frame
 from generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class YDInstrument(BufferedIPInstrument):

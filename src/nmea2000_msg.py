@@ -21,8 +21,7 @@ from nmea2000_pb2 import nmea2000
 from generic_msg import *
 from configuration import NavigationConfiguration
 
-_logger = logging.getLogger("ShipDataServer"+".nmea200msg")
-# _logger.setLevel(logging.DEBUG)
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class NMEA2000Msg:

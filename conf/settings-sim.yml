@@ -9,7 +9,7 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 #
-trace: INFO
+log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 
 servers:

@@ -17,7 +17,7 @@ from collections import namedtuple
 import struct
 
 
-_logger = logging.getLogger("ShipDataServer"+".decode")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 # _logger.setLevel(logging.DEBUG)
 
 

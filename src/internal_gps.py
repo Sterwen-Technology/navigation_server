@@ -17,7 +17,7 @@ import time
 import threading
 
 sys.path.insert(0, "/opt/SolidSense/modem_gps")
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 try:
     from QuectelAT_Service import *

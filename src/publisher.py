@@ -7,7 +7,7 @@ import datetime
 
 from configuration import NavigationConfiguration
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 #######################################################################
 #

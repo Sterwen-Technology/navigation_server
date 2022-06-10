@@ -15,7 +15,7 @@ import socket
 
 from configuration import NavigationConfiguration
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class NavigationServer:

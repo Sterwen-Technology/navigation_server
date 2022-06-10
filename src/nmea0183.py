@@ -18,7 +18,7 @@ import logging
 from generic_msg import *
 
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class NMEAInvalidFrame(Exception):

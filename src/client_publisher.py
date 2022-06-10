@@ -15,7 +15,7 @@ from publisher import Publisher
 from generic_msg import *
 from IPInstrument import TCPBufferedReader
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class NMEAPublisher(Publisher):

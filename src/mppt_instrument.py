@@ -16,7 +16,7 @@ from grpc import StatusCode, insecure_channel, RpcError
 from instrument import *
 from nmea0183 import XDR, NMEA0183SentenceMsg
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class MPPT_Instrument(Instrument):

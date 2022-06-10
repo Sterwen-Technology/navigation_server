@@ -17,8 +17,7 @@ from console_pb2_grpc import *
 
 from server_common import *
 
-_logger = logging.getLogger("ShipDataServer"+".console")
-# _logger.setLevel(logging.DEBUG)
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class ConsoleServicer(NavigationConsoleServicer):

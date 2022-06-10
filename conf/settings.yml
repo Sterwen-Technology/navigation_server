@@ -9,9 +9,12 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
-trace: INFO
+log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
-trace_decode: ERROR
+log_module:
+    data_server: WARNING
+    instrument: INFO
+    nmea2k_pgndefs: INFO
 
 servers:
 
