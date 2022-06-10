@@ -274,6 +274,7 @@ class Instrument(threading.Thread):
         except IOError as e:
             _logger.error("Trace file error %s" % e)
             self._trace_msg = False
+            self._trace_raw = False
 
     def trace(self, direction, msg: NavGenericMsg):
         if self._trace_msg:
