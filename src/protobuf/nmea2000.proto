@@ -21,5 +21,5 @@ message nmea2000 {
   uint32 sa=3; // source address
   uint32 da =4; // destination address
   uint64 timestamp = 5; // micro-seconds
-  bytes payload = 6;
+  bytes payload = 6; // fast packets concatenated
 }

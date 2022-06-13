@@ -8,7 +8,8 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
-
+import queue
+import threading
 import time
 from google.protobuf.json_format import MessageToJson
 import datetime
@@ -268,9 +269,6 @@ class FastPacketException(Exception):
     pass
 
 
-
-
-
 class FastPacket:
 
     @staticmethod
@@ -406,6 +404,44 @@ class FastPacketHandler:
                 to_be_removed.append(s.key)
         for key in to_be_removed:
             del self._sequences[key]
+
+
+class NMEA2000Writer(threading.Thread):
+    '''
+    This class implements the buffered write on CAN interface
+    It handles the conversion towards the actual interface protocol
+    Queuing of messages and throughput management
+
+    '''
+
+    def __init__(self, instrument, max_throughput):
+        self._instrument = instrument
+        self._max_throughput = max_throughput
+        self._queue = queue.Queue(80)
+        self._stop_flag = False
+        self._interval = 1.0 / max_throughput
+        self._last_msg_ts = time.monotonic()
+
+    def send_msg(self, msg: NMEA2000Msg):
+        for frame in self._instrument.encode_nmea2000(msg):
+            self._queue.put(frame)
+
+    def run(self):
+        while not self._stop_flag:
+            frame = self._queue.get()
+            if frame[0] == 4:
+                break
+            actual = time.monotonic()
+            delta = self._last_msg_ts - actual
+            if delta < self._interval:
+                time.sleep(self._interval-delta)
+                actual = time.monotonic()
+            self._last_msg_ts = actual
+            self._instrument.send_cmd(frame)
+
+    def stop(self):
+        self._stop_flag = True
+        self._queue.put(bytes(0x04))
 
 
 

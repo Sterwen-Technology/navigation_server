@@ -31,9 +31,9 @@ class YDInstrument(BufferedIPInstrument):
             self.set_message_processing()
         else:
             self._fast_packet_handler = FastPacketHandler(self)
-            self.set_message_processing(msg_processing=self.frame_processing)
+            self.set_message_processing(msg_processing=self.input_frame_processing)
 
-    def frame_processing(self, frame):
+    def input_frame_processing(self, frame):
         _logger.debug("frame=%s" % frame)
         if frame[0] == 4:
             return NavGenericMsg(NULL_MSG)
@@ -65,6 +65,9 @@ class YDInstrument(BufferedIPInstrument):
         gmsg = NavGenericMsg(N2K_MSG, raw=frame, msg=msg)
         _logger.debug("YD PGN decode:%s" % str(msg))
         return gmsg
+
+    def encode_nmea2000(self, msg: NMEA2000Msg) -> bytes:
+        pass
 
 
 
