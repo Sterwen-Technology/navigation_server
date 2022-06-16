@@ -19,7 +19,7 @@ import time
 # from publisher import Publisher
 from configuration import NavigationConfiguration
 from publisher import PublisherOverflow
-from generic_msg import NavGenericMsg, NULL_MSG
+from generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
 from nmea2000_msg import NMEA2000Msg, NMEA2000Writer
 
 
@@ -81,7 +81,7 @@ class Instrument(threading.Thread):
         mode = opts.get('protocol', str, 'nmea0183')
         self._mode = self.protocol_dict[mode.lower()]
         if mode == self.NMEA2000 and self._direction != self.READ_ONLY:
-            self._n2k_writer = NMEA2000Writer(self, 50)
+            self._n2k_writer = self.define_n2k_writer()
         else:
             self._n2k_writer = None
         self._app_protocol = mode.lower()
@@ -128,6 +128,13 @@ class Instrument(threading.Thread):
 
     def force_start(self):
         self._autostart = True
+
+    def define_n2k_writer(self):
+        '''
+        To be redefined in subclasses when the standard writer does not fit
+        :return: an instance of a class implementing 'send_n2k_msg'
+        '''
+        return NMEA2000Writer(self, 50)
 
     def run(self):
         self._has_run = True
@@ -219,7 +226,11 @@ class Instrument(threading.Thread):
                 _logger.error("Instrument %s attempt to write on a READ ONLY instrument" % self.name())
                 return False
             self._total_msg_s += 1
-            return self.send(msg)
+            if msg.type == N2K_MSG:
+                self._n2k_writer.send_n2k_msg(msg.msg)
+                return True
+            else:
+                return self.send(msg)
         else:
             return True
 

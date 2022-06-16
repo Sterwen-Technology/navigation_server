@@ -46,7 +46,10 @@ class YDInstrument(BufferedIPInstrument):
             raise ValueError
         if fields[1] == b'T':
             # reply on send
-            self._reply_queue.put(frame)
+            try:
+                self._reply_queue.put(frame, block=False)
+            except queue.Full:
+                _logger.critical("YD write feedback queue full")
             return
         elif fields[1] != b'R':
             _logger.error("Invalid frame %s" % frame)
@@ -86,8 +89,9 @@ class YDInstrument(BufferedIPInstrument):
     def validate_n2k_sending(self, frame):
         try:
             self._reply_queue.get(timeout=1.0)
+            _logger.debug("YD Write OK:%s" % frame)
         except queue.Empty:
-            _logger.error("YD error on frame %s" % frame)
+            _logger.error("YD write error on frame %s" % frame)
 
 
 

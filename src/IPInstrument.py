@@ -337,12 +337,12 @@ class BufferedIPInstrument(IPInstrument):
 
 class TCPBufferedReader:
 
-    def __init__(self, connection, separator, address):
+    def __init__(self, connection, separator, address, msg_processing):
         self._connection = connection
         self._address = address
         self._ref = "%s:%d" % address
         self._in_queue = queue.Queue(10)
-        self._reader = IPAsynchReader(self, self._in_queue, separator, process_nmea0183_frame)
+        self._reader = IPAsynchReader(self, self._in_queue, separator, msg_processing)
         self._reader.start()
 
     def read(self) -> NavGenericMsg:

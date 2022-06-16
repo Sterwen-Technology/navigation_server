@@ -21,6 +21,7 @@ from publisher import Publisher
 from nmea2000_pb2 import nmea2000
 from generic_msg import *
 from configuration import NavigationConfiguration
+from nmea0183 import process_nmea0183_frame
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -108,6 +109,29 @@ class NMEA2000Msg:
         msg_data = b'!PGNST,%d,%1d,%d,%d,%s\r\n' % (self._pgn, self._prio, self._sa, self._ts, self._payload.hex())
         return msg_data
 
+
+def fromPGDY(frame):
+    if frame[0] == 4:
+        return NavGenericMsg(NULL_MSG)
+    if frame[0:6] != b'!PGDY':
+        return process_nmea0183_frame(frame)
+    fields = frame.split(b',')
+    msg = NMEA2000Msg(
+        pgn=int(fields[1]),
+        prio=int(fields[2]),
+        sa=int(fields[3]),
+        da=int(fields[4]),
+        payload=base64.b64decode(fields[6])
+    )
+    return NavGenericMsg(N2K_MSG, msg=msg)
+
+
+def fromPGNST(frame):
+    if frame[0] == 4:
+        return NavGenericMsg(NULL_MSG)
+    if frame[0:6] != b'!PGDY':
+        return process_nmea0183_frame(frame)
+    raise NotImplementedError("PGNST decoding")
 
 class PgnRecord:
 
@@ -476,7 +500,7 @@ class NMEA2000Writer(threading.Thread):
         self._interval = 1.0 / max_throughput
         self._last_msg_ts = time.monotonic()
 
-    def send_msg(self, msg: NMEA2000Msg):
+    def send_n2k_msg(self, msg: NMEA2000Msg):
         for msg in self._instrument.encode_nmea2000(msg):
             self._queue.put(msg)
 

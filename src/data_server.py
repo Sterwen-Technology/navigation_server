@@ -94,7 +94,7 @@ class NMEAServer(NavTCPServer):
             pub = self.publisher_class[self._nmea2000](client, self._instruments)
             pub.start()
             if self._sender_instrument is not None and self._sender is None:
-                self._sender = NMEASender(client, self._sender_instrument)
+                self._sender = NMEASender(client, self._sender_instrument, self._nmea2000)
                 self._sender.start()
             else:
                 _logger.info("No instrument (sender) to send NMEA messages for server %s client %s" %

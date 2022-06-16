@@ -14,6 +14,9 @@ import logging
 from publisher import Publisher
 from generic_msg import *
 from IPInstrument import TCPBufferedReader
+from instrument import Instrument
+from nmea0183 import process_nmea0183_frame
+from nmea2000_msg import fromPGDY, fromPGNST
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -70,25 +73,29 @@ class NMEA2000STPublisher(NMEAPublisher):
 
 class NMEASender(threading.Thread):
 
-    def __init__(self, client, instrument):
+    msg_processing = {'transparent': process_nmea0183_frame,
+                      'dyfmt': fromPGDY, 'stfmt': fromPGNST}
+
+    def __init__(self, client, instrument: Instrument, nmea2000_mode):
         super().__init__(name="Sender-"+client.descr())
         self._client = client
         self._instrument = instrument
         self._client.set_sender(self)
         self._publisher = None
         self._stop_flag = False
+        self._msg_processing = self.msg_processing[nmea2000_mode]
 
     def add_publisher(self, publisher):
         self._publisher = publisher
 
     def run(self) -> None:
-        reader = TCPBufferedReader(self._client.connection(), b'\r\n', self._client.address())
+        reader = TCPBufferedReader(self._client.connection(), b'\r\n', self._client.address(), self._msg_processing)
         while not self._stop_flag:
             msg = reader.read()
             # print(msg.printable())
             if msg.type == NULL_MSG:
                 break
-            self._instrument.send_cmd(msg)
+            self._instrument.send_msg_gen(msg)
             if self._publisher is not None:
                 self._publisher.publish(msg)
         _logger.info("Stopping %s" % self.name)
