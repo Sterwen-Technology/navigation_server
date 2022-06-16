@@ -44,6 +44,22 @@ class NMEA2000Msg:
     def pgn(self):
         return self._pgn
 
+    @property
+    def prio(self):
+        return self._prio
+
+    @property
+    def da(self):
+        return self._da
+
+    @property
+    def payload(self):
+        return self._payload
+
+    @property
+    def fast_packet(self):
+        return self._fast_packet
+
     def display(self):
         pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
         print("PGN %d|%04X|%s|time:%d" % (self._pgn, self._pgn, pgn_def.name,self._ts))
@@ -359,6 +375,7 @@ class FastPacketHandler:
     def __init__(self, instrument):
         self._sequences = {}
         self._instrument = instrument
+        self._write_sequences = {}
 
     def process_frame(self, pgn, addr, frame, trace=None):
         seq = (frame[0] >> 5) & 7
@@ -405,6 +422,42 @@ class FastPacketHandler:
         for key in to_be_removed:
             del self._sequences[key]
 
+    def split_message(self, pgn, data) -> bytearray:
+        nb_frames = ((len(data) - 6) / 7) + 1
+        seq = self.allocate_seq(pgn)
+        seq_en = seq << 5
+        counter = 0
+        total_len = len(data)
+        data_ptr = 0
+        while counter < nb_frames:
+            frame = bytearray(8)
+            frame[0] = seq_en | counter
+            ptr = 1
+            if counter == 0:
+                frame[1] = total_len
+                ptr += 1
+            while ptr < 8:
+                if data_ptr < total_len:
+                    frame[ptr] = data[data_ptr]
+                    data_ptr += 1
+                else:
+                    frame[ptr] = 0xFF
+                ptr += 1
+            yield frame
+            counter += 1
+        self.free_seq(pgn, seq)
+
+    def allocate_seq(self, pgn):
+        seq = self._write_sequences.get(pgn, 0)
+        if seq == 0:
+            self._write_sequences[pgn] = 1
+            return 1
+        else:
+            raise ValueError
+
+    def free_seq(self, pgn, seq):
+        self._write_sequences[pgn] = 0
+
 
 class NMEA2000Writer(threading.Thread):
     '''
@@ -415,6 +468,7 @@ class NMEA2000Writer(threading.Thread):
     '''
 
     def __init__(self, instrument, max_throughput):
+        super().__init__(name=instrument.name()+'-Writer')
         self._instrument = instrument
         self._max_throughput = max_throughput
         self._queue = queue.Queue(80)
@@ -423,13 +477,13 @@ class NMEA2000Writer(threading.Thread):
         self._last_msg_ts = time.monotonic()
 
     def send_msg(self, msg: NMEA2000Msg):
-        for frame in self._instrument.encode_nmea2000(msg):
-            self._queue.put(frame)
+        for msg in self._instrument.encode_nmea2000(msg):
+            self._queue.put(msg)
 
     def run(self):
         while not self._stop_flag:
-            frame = self._queue.get()
-            if frame[0] == 4:
+            msg = self._queue.get()
+            if msg.type == NULL_MSG:
                 break
             actual = time.monotonic()
             delta = self._last_msg_ts - actual
@@ -437,11 +491,12 @@ class NMEA2000Writer(threading.Thread):
                 time.sleep(self._interval-delta)
                 actual = time.monotonic()
             self._last_msg_ts = actual
-            self._instrument.send_cmd(frame)
+            self._instrument.send(msg)
+            self._instrument.validate_n2k_frame(msg.raw)
 
     def stop(self):
         self._stop_flag = True
-        self._queue.put(bytes(0x04))
+        self._queue.put(NavGenericMsg(NULL_MSG))
 
 
 

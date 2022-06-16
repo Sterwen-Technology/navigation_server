@@ -10,13 +10,14 @@
 #-------------------------------------------------------------------------------
 
 import logging
+import queue
 
 from instrument import Instrument
 from IPInstrument import BufferedIPInstrument
 from nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
 from nmea2k_pgndefs import PGNDefinitions
 from nmea0183 import process_nmea0183_frame
-from generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG
+from generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -32,6 +33,7 @@ class YDInstrument(BufferedIPInstrument):
         else:
             self._fast_packet_handler = FastPacketHandler(self)
             self.set_message_processing(msg_processing=self.input_frame_processing)
+            self._reply_queue = queue.Queue(5)
 
     def input_frame_processing(self, frame):
         _logger.debug("frame=%s" % frame)
@@ -42,7 +44,11 @@ class YDInstrument(BufferedIPInstrument):
         if data_len <= 0:
             _logger.error("Invalid frame %s" % frame)
             raise ValueError
-        if fields[1] != b'R':
+        if fields[1] == b'T':
+            # reply on send
+            self._reply_queue.put(frame)
+            return
+        elif fields[1] != b'R':
             _logger.error("Invalid frame %s" % frame)
             raise ValueError
         pgn = int(fields[2][1:6], 16) & 0x3FFFF
@@ -51,7 +57,7 @@ class YDInstrument(BufferedIPInstrument):
         data = bytearray(data_len)
         i = 0
         for db in fields[3:]:
-            data[i] = int(db,16)
+            data[i] = int(db, 16)
             i += 1
         if self._fast_packet_handler.is_pgn_active(pgn, sa, data):
             data = self._fast_packet_handler.process_frame(pgn, sa,  data)
@@ -66,8 +72,25 @@ class YDInstrument(BufferedIPInstrument):
         _logger.debug("YD PGN decode:%s" % str(msg))
         return gmsg
 
-    def encode_nmea2000(self, msg: NMEA2000Msg) -> bytes:
-        pass
+    def encode_nmea2000(self, msg: NMEA2000Msg) -> NavGenericMsg:
+        canid = b'%08X' % msg.pgn << 8 | msg.prio << 26 | msg.da
+
+        def encode(data: bytearray):
+            return NavGenericMsg(TRANSPARENT_MSG, raw=b'%s %s\r\n' % (canid, data.hex(b' ')))
+        if msg.fast_packet:
+            for data_packet in self._fast_packet_handler.split_message(msg.pgn, msg.payload):
+                yield encode(data_packet)
+        else:
+            yield encode(msg.payload)
+
+    def validate_n2k_sending(self, frame):
+        try:
+            self._reply_queue.get(timeout=1.0)
+        except queue.Empty:
+            _logger.error("YD error on frame %s" % frame)
+
+
+
 
 
 

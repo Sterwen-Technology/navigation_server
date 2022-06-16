@@ -16,10 +16,11 @@ import socket
 import threading
 import logging
 import time
-from publisher import Publisher
+# from publisher import Publisher
 from configuration import NavigationConfiguration
 from publisher import PublisherOverflow
 from generic_msg import NavGenericMsg, NULL_MSG
+from nmea2000_msg import NMEA2000Msg, NMEA2000Writer
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -79,6 +80,10 @@ class Instrument(threading.Thread):
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
         mode = opts.get('protocol', str, 'nmea0183')
         self._mode = self.protocol_dict[mode.lower()]
+        if mode == self.NMEA2000 and self._direction != self.READ_ONLY:
+            self._n2k_writer = NMEA2000Writer(self, 50)
+        else:
+            self._n2k_writer = None
         self._app_protocol = mode.lower()
         self._stopflag = False
         self._timer = None
@@ -208,7 +213,7 @@ class Instrument(threading.Thread):
             if len(self._publishers) == 0:
                 _logger.error("Instrument %s as no publisher" % self._name)
 
-    def send_cmd(self, msg):
+    def send_msg_gen(self, msg: NavGenericMsg):
         if not self._configmode:
             if self._direction == self.READ_ONLY:
                 _logger.error("Instrument %s attempt to write on a READ ONLY instrument" % self.name())
@@ -308,4 +313,10 @@ class Instrument(threading.Thread):
             self._trace_fd.write("Event#>")
             self._trace_fd.write(message)
             self._trace_fd.write('\n')
+
+    def encode_nmea2000(self, msg: NMEA2000Msg) -> NavGenericMsg:
+        raise NotImplementedError("To be implemented in subclass")
+
+    def validate_n2k_frame(self, frame):
+        raise NotImplementedError("To be implemented in subclass")
 

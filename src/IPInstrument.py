@@ -50,18 +50,11 @@ class IPInstrument(Instrument):
         else:
             self._state = self.NOT_READY
 
-    def read(self):
-        raw = self._transport.recv()
-        # print(self._mode,raw)
-        if self._mode == self.NMEA0183:
-            msg = NavGenericMsg(N0183_MSG, raw=raw)
-        else:
-            raise InstrumentReadError("Protocol not supported")
-        if self._trace_msg:
-            self.trace(self.TRACE_IN, msg)
-        return msg
+    def read(self) -> NavGenericMsg:
+        raise NotImplementedError("To be implemented in subclasses")
 
-    def send(self, msg):
+    def send(self, msg: NavGenericMsg):
+
         _logger.debug("%s Sending %s" % (self.name(), msg.printable()))
         if self._state == self.NOT_READY:
             _logger.error("Write attempt on non ready transport: %s" % self.name())
@@ -303,7 +296,7 @@ class BufferedIPInstrument(IPInstrument):
     """
     This class provide a buffered input/output when there is a decoupling between read operation and the
     actual message read.
-    This class cannot be instantiade from the Yaml
+    This class cannot be instantiated from the Yaml
     Typical use:
     - Devices with multiple messages in a single I/O
     - N2K fast track management
@@ -325,7 +318,7 @@ class BufferedIPInstrument(IPInstrument):
         if self._state == self.CONNECTED and self._asynch_io is not None:
             self._asynch_io.start()
 
-    def read(self):
+    def read(self) -> NavGenericMsg:
         msg = self._in_queue.get()
         self.trace(self.TRACE_IN, msg)
         return msg
@@ -352,7 +345,7 @@ class TCPBufferedReader:
         self._reader = IPAsynchReader(self, self._in_queue, separator, process_nmea0183_frame)
         self._reader.start()
 
-    def read(self):
+    def read(self) -> NavGenericMsg:
         msg = self._in_queue.get()
         # self.trace(self.TRACE_IN, msg)
         return msg
