@@ -70,11 +70,11 @@ def process_nmea0183_frame(frame):
 class NMEA0183Sentences:
 
     @staticmethod
-    def checksum(nmea_str):
+    def checksum(nmea_str: str):
         return reduce(operator.xor, map(ord, nmea_str[1:]), 0)
 
     @staticmethod
-    def b_checksum(nmea_bytes):
+    def b_checksum(nmea_bytes: bytes):
         return reduce(operator.xor, nmea_bytes, 0)
 
     @staticmethod

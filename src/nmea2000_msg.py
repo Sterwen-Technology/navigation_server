@@ -458,6 +458,12 @@ class FastPacketHandler:
             del self._sequences[key]
 
     def split_message(self, pgn, data) -> bytearray:
+        '''
+        split the NMEA payload with length > 8 with Fast Packet structure
+        :param pgn:
+        :param data: NMEA 2000 payload
+        :return: iterator over Fast Packet frames
+        '''
         nb_frames = ((len(data) - 6) / 7) + 1
         seq = self.allocate_seq(pgn)
         seq_en = seq << 5

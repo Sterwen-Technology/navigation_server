@@ -238,6 +238,16 @@ class iKonvert(Instrument):
                 self._cmd_result = (NAK, msg.get('error'))
             self._wait_event = 0
             self._wait_sem.release()
+        else:
+            # unexpected ACK/NACK
+            if msg.type == ACK:
+                info = msg.get('message')
+                t = 'ACK'
+            else:
+                info = msg.get('error')
+                t = 'NAK'
+            _logger.error("iKonvert unexpected %s reason %s" % (t, info))
+
 
     def wait_status(self):
         self._wait_event = self.WAIT_MSG

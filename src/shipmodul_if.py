@@ -16,7 +16,7 @@ from server_common import NavTCPServer
 from publisher import Publisher
 from IPInstrument import IPInstrument, BufferedIPInstrument, TCPBufferedReader
 from generic_msg import *
-from nmea0183 import process_nmea0183_frame, NMEA0183Msg
+from nmea0183 import process_nmea0183_frame, NMEA0183Msg, NMEA0183Sentences
 from nmea2000_msg import FastPacketHandler, NMEA2000Msg, FastPacketException
 from nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
 
@@ -167,6 +167,32 @@ class ShipModulInterface(BufferedIPInstrument):
             self._check_in_progress = True
             self._check_ok = False
             self.send(self.msg_check)
+
+    def encode_nmea2000(self, msg: NMEA2000Msg) -> NavGenericMsg:
+        pgn = "%06X" % msg.pgn
+        priow = msg.prio << 12
+        rdata = bytearray(8)
+
+        def encode(data):
+            l = len(data)
+            id = 7
+            for b in data[:l]:
+                rdata[id] = b
+                id -= 1
+            attr = 0x8000 | priow | l << 8 | msg.da
+            sd = b'$MXPGN,%s,%4X,%s' % (pgn, attr, rdata[id+1:].hex())
+            checksum = NMEA0183Sentences.b_checksum(sd[1:])
+            frame = b'%s*%02X\r\n' % (sd, checksum)
+            return NavGenericMsg(TRANSPARENT_MSG, raw=frame)
+
+        if msg.fast_packet:
+            for data_packet in self._fast_packet_handler.split_message(msg.pgn, msg.payload):
+                yield encode(data_packet)
+        else:
+            yield encode(msg.payload)
+
+    def validate_n2k_frame(self, frame):
+        pass
 
 
 class ConfigPublisher(Publisher):
