@@ -36,6 +36,7 @@ class NMEAServer(NavTCPServer):
         self._instruments = []
         self._options = options
         self._nmea2000 = options.get_choice('nmea2000', ('transparent', 'dyfmt', 'stfmt'), 'transparent')
+        self._master = options.get('master', str, None)
         self._connections = {}
         self._timer = None
         self._timer_name = self.name() + "-timer"
@@ -93,10 +94,15 @@ class NMEAServer(NavTCPServer):
             # now create a publisher for all instruments
             pub = self.publisher_class[self._nmea2000](client, self._instruments)
             pub.start()
-            if self._sender_instrument is not None and self._sender is None:
-                self._sender = NMEASender(client, self._sender_instrument, self._nmea2000)
-                self._sender.start()
-            else:
+            if self._sender is None and self._sender_instrument is not None:
+                if self._master is not None:
+                    if address[0] == self._master:
+                        self._sender = NMEASender(client, self._sender_instrument, self._nmea2000)
+                        self._sender.start()
+                else:
+                    self._sender = NMEASender(client, self._sender_instrument, self._nmea2000)
+                    self._sender.start()
+            if self._sender is None:
                 _logger.info("No instrument (sender) to send NMEA messages for server %s client %s" %
                              (self.name(), client.descr()))
             # end of while loop => the thread stops

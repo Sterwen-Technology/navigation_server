@@ -38,6 +38,7 @@ Here are the parameters associated with the server
 | timeout | float | 5.0 | timeout socket receive |
 |max_connections | int | 10 | maximum number of active connections |
 | sender | string | None | Name of the instrumnet receiving the messages sent from client |
+| master | string | None | IP address of the client allowed to send messages towards instruments. First client by default |
 | nmea2000 | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see below) |
 
 
@@ -50,6 +51,7 @@ Here are the parameters associated with the server
 *stfmt*: NMEA2000 messages are transmitted using the Sterwen Technology !PGNST format
 
 if dyfmt or stfmt is selected all NMEA2000 messages will be translated in the selected format including reassembly of Fast Packet. That implies that the protocol selected in the instruments is 'nmea2000'. NMEA0183 messages are transparently transmitted in any case.
+
 The configuration is also valid for messages sent from the host (client), in that case NMEA0183 like messages encapsulating NMEA2000 messages will be treated internally as NMEA2000.
 
 #### gRPCNMEAServer class
