@@ -94,6 +94,7 @@ class NMEAServer(NavTCPServer):
             # now create a publisher for all instruments
             pub = self.publisher_class[self._nmea2000](client, self._instruments)
             pub.start()
+            # attach a sender to send messages to instruments
             if self._sender is None and self._sender_instrument is not None:
                 if self._master is not None:
                     if address[0] == self._master:

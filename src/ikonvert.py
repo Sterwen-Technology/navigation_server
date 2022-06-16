@@ -296,6 +296,15 @@ class iKonvert(Instrument):
             _logger.error("IKonvert write error: %s" % e)
             return False
 
+    def define_n2k_writer(self):
+        return self
+
+    def send_n2k_msg(self, msg: NMEA2000Msg):
+        # encode the message TX PGN
+        frame = b'!PGDY,%d,%d,%s\r\n' % (msg.pgn, msg.da, base64.b64encode(msg.payload))
+        rmsg = NavGenericMsg(TRANSPARENT_MSG, raw=frame)
+        return self.send(rmsg)
+
 
 
 

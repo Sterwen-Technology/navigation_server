@@ -116,13 +116,24 @@ def fromPGDY(frame):
     if frame[0:6] != b'!PGDY':
         return process_nmea0183_frame(frame)
     fields = frame.split(b',')
-    msg = NMEA2000Msg(
-        pgn=int(fields[1]),
-        prio=int(fields[2]),
-        sa=int(fields[3]),
-        da=int(fields[4]),
-        payload=base64.b64decode(fields[6])
-    )
+    if len(fields) == 7:
+        msg = NMEA2000Msg(
+            pgn=int(fields[1]),
+            prio=int(fields[2]),
+            sa=int(fields[3]),
+            da=int(fields[4]),
+            payload=base64.b64decode(fields[6])
+        )
+    elif len(fields) == 4:
+        msg = NMEA2000Msg(
+            pgn=int(fields[1]),
+            da=int(fields[2]),
+            payload=base64.b64decode(fields[3])
+        )
+    else:
+        _logger.error("Incorrect !PDGY frame %s" % frame)
+        return NavGenericMsg(NULL_MSG)
+
     return NavGenericMsg(N2K_MSG, msg=msg)
 
 
