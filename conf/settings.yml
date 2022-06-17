@@ -12,40 +12,35 @@
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    data_server: WARNING
+    data_server: INFO
     instrument: INFO
     nmea2k_pgndefs: INFO
     shipmodul_if: INFO
+    ikonvert: INFO
+
 
 servers:
 
 - NMEAServer:
     class: NMEAServer
     port: 4500
-    sender: MiniPlex3
+    sender: iKonvert1
     nmea2000: dyfmt
+    master: 192.168.1.21
 
 - Console:
     class: Console
     port: 4502
 
-- ShipModulConfig:
-    class: ShipModulConfig
-    port: 4501
-    instrument: MiniPlex3
+
 
 instruments:
 
-- MiniPlex3:
-    class: ShipModulInterface
-    address: 192.168.1.62
-    port: 10110
-    transport: TCP
-    nmea2000: true
+- iKonvert1:
+    class: iKonvert
+    device: /dev/ttyUSB0
     protocol: nmea2000
-    server: NMEAServer
-    trace_messages: false
-    trace_raw: true
+    autostart: true
 
 publishers:
 

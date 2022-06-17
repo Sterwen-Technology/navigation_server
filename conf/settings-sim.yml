@@ -14,6 +14,7 @@ trace_dir: /mnt/meaban/Bateau/tests
 log_module:
   IPInstrument: INFO
   ydn2k_instrument: INFO
+  ikonvert: DEBUG
 
 servers:
 
@@ -29,7 +30,7 @@ instruments:
     direction: read_only
     # white_list: [GGA, GLL, RMC]
     # black_list: [PGN]
-    report_timer: 60
+    report_timer: 10
 
 - YDEthernet:
     class: YDInstrument
@@ -38,7 +39,14 @@ instruments:
     transport: TCP
     protocol: nmea2000
     direction: bidirectional
-    trace_messages: true
+    trace_messages: false
+    autostart: true
+
+- iKonvert1:
+    class: iKonvert
+    device: /dev/ttyUSB0
+    protocol: nmea2000
+    autostart: false
 
 publishers:
 

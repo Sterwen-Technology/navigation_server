@@ -282,7 +282,8 @@ class iKonvert(Instrument):
         if self._ikstate > self.IKREADY:
             self.send_loc_cmd('N2NET_OFFLINE', wait=0)
             self.wait_status()
-        self._reader.stop()
+        if self._reader is not None:
+            self._reader.stop()
         self._queue.put(NavGenericMsg(NULL_MSG))
         self._ikstate = self.IKIDLE
         _logger.debug("iKonvert exiting stop state=%d" % self._ikstate)
@@ -299,6 +300,7 @@ class iKonvert(Instrument):
             return False
         if self._trace_msg:
             self.trace(self.TRACE_OUT, msg)
+        _logger.debug("iKonvert write %s" % msg.printable())
         try:
             self._tty.write(msg.raw)
             return True
@@ -308,6 +310,9 @@ class iKonvert(Instrument):
 
     def define_n2k_writer(self):
         return self
+
+    def stop_writer(self):
+        pass  # do nothing to avoid recursion
 
     def send_n2k_msg(self, msg: NMEA2000Msg):
         # encode the message TX PGN

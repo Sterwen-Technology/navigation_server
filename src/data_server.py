@@ -98,9 +98,13 @@ class NMEAServer(NavTCPServer):
             if self._sender is None and self._sender_instrument is not None:
                 if self._master is not None:
                     if address[0] == self._master:
+                        _logger.info("%s Master sender %s connected" % (self.name(), self._master))
                         self._sender = NMEASender(client, self._sender_instrument, self._nmea2000)
                         self._sender.start()
+                    else:
+                        _logger.info("Client at address %s is not master" % address[0])
                 else:
+                    _logger.info("%s client at address %s is becoming sender" % (self.name(), address[0]))
                     self._sender = NMEASender(client, self._sender_instrument, self._nmea2000)
                     self._sender.start()
             if self._sender is None:

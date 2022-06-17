@@ -117,17 +117,24 @@ def fromPGDY(frame):
         return process_nmea0183_frame(frame)
     fields = frame.split(b',')
     if len(fields) == 7:
+        da = int(fields[4])
+        if da == 0:
+            da = 255
         msg = NMEA2000Msg(
             pgn=int(fields[1]),
             prio=int(fields[2]),
             sa=int(fields[3]),
-            da=int(fields[4]),
+            da=da,
             payload=base64.b64decode(fields[6])
         )
     elif len(fields) == 4:
+        da = int(fields[2])
+        if da == 0:
+            da = 255
+
         msg = NMEA2000Msg(
             pgn=int(fields[1]),
-            da=int(fields[2]),
+            da=da,
             payload=base64.b64decode(fields[3])
         )
     else:

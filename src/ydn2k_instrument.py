@@ -15,7 +15,7 @@ import queue
 from instrument import Instrument
 from IPInstrument import BufferedIPInstrument
 from nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
-from nmea2k_pgndefs import PGNDefinitions
+from nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
 from nmea0183 import process_nmea0183_frame
 from generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG
 
@@ -63,11 +63,19 @@ class YDInstrument(BufferedIPInstrument):
         for db in fields[3:]:
             data[i] = int(db, 16)
             i += 1
+
+        def check_pgn():
+            try:
+                fp = PGNDefinitions.pgn_definition(pgn).fast_packet()
+            except N2KUnknownPGN:
+                raise ValueError
+            return fp
+
         if self._fast_packet_handler.is_pgn_active(pgn, sa, data):
             data = self._fast_packet_handler.process_frame(pgn, sa,  data)
             if data is None:
                 raise ValueError # no error but just to escape
-        elif PGNDefinitions.pgn_definition(pgn).fast_packet():
+        elif check_pgn():
             self._fast_packet_handler.process_frame(pgn, sa, data)
             raise ValueError  # no error but just to escape
 
