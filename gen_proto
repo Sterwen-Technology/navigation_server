@@ -1,3 +1,3 @@
 #!/bin/bash
 python -m grpc_tools.protoc -I src/protobuf --python_out=src/ --grpc_python_out=src/ src/protobuf/nmea2000.proto\
-  src/protobuf/vedirect.proto src/protobuf/console.proto
+  src/protobuf/vedirect.proto src/protobuf/console.proto src/protobuf/nmea0183.proto src/protobuf/server.proto

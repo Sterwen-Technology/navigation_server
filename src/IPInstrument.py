@@ -16,6 +16,7 @@ import threading
 from generic_msg import *
 from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
 from nmea0183 import process_nmea0183_frame, NMEAInvalidFrame
+from nmea2000_msg import fromPGDY, fromPGNST
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -200,7 +201,7 @@ class IPAsynchReader(threading.Thread):
             # start buffer processing
             start_idx = 0
             end_idx = len(buffer)
-            _logger.debug("%s buffer length %d" % (self._transport.ref(), end_idx))
+            # _logger.debug("%s buffer length %d" % (self._transport.ref(), end_idx))
             if end_idx == 0:
                 continue
             while True:
@@ -276,7 +277,7 @@ class IPAsynchReader(threading.Thread):
                 try:
                     self._out_queue.put(msg, timeout=1.0)
                 except queue.Full:
-                    _logger.critical("Asynchronous reader output Queue full for %s" % self._instrument.name())
+                    _logger.critical("Asynchronous reader output Queue full for %s" % self._transport.ref())
                     break
                 if self._stop_flag:
                     break
@@ -410,3 +411,15 @@ class NMEA0183TCPReader(BufferedIPInstrument):
             return msg
         _logger.debug("Rejected message %s" % frame)
         raise ValueError
+
+
+class NMEA2000TCPReader(BufferedIPInstrument):
+
+    process_function = {'dyfmt': fromPGDY, 'stfmt': fromPGNST}
+
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._mode = self.NMEA2000
+        self._format = opts.get_choice('format', ('dtfmt','stfmt'), 'dyfmt')
+        self.set_message_processing(msg_processing=self.process_function[self._format])
+

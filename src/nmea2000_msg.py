@@ -113,7 +113,7 @@ class NMEA2000Msg:
 def fromPGDY(frame):
     if frame[0] == 4:
         return NavGenericMsg(NULL_MSG)
-    if frame[0:6] != b'!PGDY':
+    if frame[0:5] != b'!PDGY':
         return process_nmea0183_frame(frame)
     fields = frame.split(b',')
     if len(fields) == 7:
@@ -509,7 +509,9 @@ class NMEA2000Writer(threading.Thread):
     '''
 
     def __init__(self, instrument, max_throughput):
-        super().__init__(name=instrument.name()+'-Writer')
+        self._name = instrument.name()+'-Writer'
+        _logger.info('Creating writer:%s' % self._name)
+        super().__init__(name=self._name)
         self._instrument = instrument
         self._max_throughput = max_throughput
         self._queue = queue.Queue(80)
@@ -534,6 +536,7 @@ class NMEA2000Writer(threading.Thread):
             self._last_msg_ts = actual
             self._instrument.send(msg)
             self._instrument.validate_n2k_frame(msg.raw)
+        _logger.info("%s thread stops" % self._name)
 
     def stop(self):
         self._stop_flag = True

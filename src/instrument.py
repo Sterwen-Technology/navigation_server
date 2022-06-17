@@ -80,7 +80,8 @@ class Instrument(threading.Thread):
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
         mode = opts.get('protocol', str, 'nmea0183')
         self._mode = self.protocol_dict[mode.lower()]
-        if mode == self.NMEA2000 and self._direction != self.READ_ONLY:
+        _logger.info("Instrument %s mode %d direction %d" % (self._name, self._mode ,self._direction))
+        if self._mode == self.NMEA2000 and self._direction != self.READ_ONLY:
             self._n2k_writer = self.define_n2k_writer()
         else:
             self._n2k_writer = None
@@ -134,7 +135,13 @@ class Instrument(threading.Thread):
         To be redefined in subclasses when the standard writer does not fit
         :return: an instance of a class implementing 'send_n2k_msg'
         '''
-        return NMEA2000Writer(self, 50)
+        writer = NMEA2000Writer(self, 50)
+        writer.start()
+        return writer
+
+    def stop_writer(self):
+        if self._n2k_writer is not None:
+            self._n2k_writer.stop()
 
     def run(self):
         self._has_run = True
@@ -227,6 +234,10 @@ class Instrument(threading.Thread):
                 return False
             self._total_msg_s += 1
             if msg.type == N2K_MSG:
+                if self._n2k_writer is None:
+                    _logger.error("%s cannot send NMEA2000 messages - protocol mismatch" % self._name)
+                    return False
+                self.trace_n2k_raw(msg.msg.pgn, msg.msg.da, msg.msg.prio, msg.msg.payload, direction=self.TRACE_OUT)
                 self._n2k_writer.send_n2k_msg(msg.msg)
                 return True
             else:
@@ -255,6 +266,7 @@ class Instrument(threading.Thread):
         if self._timer is not None:
             self._timer.cancel()
             self._timer = None
+        self.stop_writer()
 
     def open(self):
         raise NotImplementedError("To be implemented in subclass")
@@ -306,18 +318,22 @@ class Instrument(threading.Thread):
     def trace_raw(self, direction, msg):
         if self._trace_raw:
             if direction == self.TRACE_IN:
-                fc = "R#>"
+                fc = "R%d#>" % self._total_msg
             else:
-                fc = "R#<"
+                fc = "R%d#<" % self._total_msg_s
             # l = len(msg) - self._separator_len
             # not all messages have the CRLF included to be further checked
             self._trace_fd.write(fc)
             self._trace_fd.write(msg.decode())
             self._trace_fd.write('\n')
 
-    def trace_n2k_raw(self, pgn, sa, prio, data):
+    def trace_n2k_raw(self, pgn, sa, prio, data, direction=TRACE_IN):
         if self._trace_msg and self._trace_raw:
-            self._trace_fd.write("N#>%06d|%05X|%3d|%d|%s\n" % (pgn, pgn, sa, prio, data.hex()))
+            if direction == self.TRACE_IN:
+                fc = "N%d#>" % self._total_msg
+            else:
+                fc = "N#%d<" % self._total_msg_s
+            self._trace_fd.write("%s%06d|%05X|%3d|%d|%s\n" % (fc, pgn, pgn, sa, prio, data.hex()))
 
     def add_event_trace(self, message: str):
         if self._trace_msg:

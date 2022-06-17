@@ -23,7 +23,7 @@ from client_publisher import *
 from internal_gps import InternalGps
 # from simulator_input import *
 from configuration import NavigationConfiguration
-from IPInstrument import NMEA0183TCPReader
+from IPInstrument import NMEA0183TCPReader, NMEA2000TCPReader
 from ikonvert import iKonvert
 from nmea2k_pgndefs import PGNDefinitions
 from nmea2000_msg import N2KProbePublisher, N2KTracePublisher
@@ -226,6 +226,7 @@ def main():
     config.add_class(MPPT_Instrument)
     config.add_class(YDInstrument)
     config.add_class(NMEASerialPort)
+    config.add_class(NMEA2000TCPReader)
     # logger setup => stream handler for now
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")

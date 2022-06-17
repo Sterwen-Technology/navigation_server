@@ -169,7 +169,8 @@ class ShipModulInterface(BufferedIPInstrument):
             self.send(self.msg_check)
 
     def encode_nmea2000(self, msg: NMEA2000Msg) -> NavGenericMsg:
-        pgn = "%06X" % msg.pgn
+        _logger.debug("Shipmodul sending N2K message %s" % msg)
+        pgn = b'%06X' % msg.pgn
         priow = msg.prio << 12
         rdata = bytearray(8)
 
@@ -180,7 +181,8 @@ class ShipModulInterface(BufferedIPInstrument):
                 rdata[id] = b
                 id -= 1
             attr = 0x8000 | priow | l << 8 | msg.da
-            sd = b'$MXPGN,%s,%4X,%s' % (pgn, attr, rdata[id+1:].hex())
+            # print("Shipmodul encode source:", data.hex(), "result:", rdata[id+1:].hex())
+            sd = b'$MXPGN,%s,%4X,%s' % (pgn, attr, rdata[id+1:].hex().encode())
             checksum = NMEA0183Sentences.b_checksum(sd[1:])
             frame = b'%s*%02X\r\n' % (sd, checksum)
             return NavGenericMsg(TRANSPARENT_MSG, raw=frame)

@@ -11,6 +11,9 @@
 #
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+  IPInstrument: INFO
+  ydn2k_instrument: INFO
 
 servers:
 
@@ -18,24 +21,24 @@ servers:
 instruments:
 
 - ScannavReplay:
-    class: NMEA0183TCPReader
+    class: NMEA2000TCPReader
     address: 192.168.1.21
     port: 3555
     transport: TCP
     # server: NMEAServer
     direction: read_only
     # white_list: [GGA, GLL, RMC]
-    black_list: [PGN]
+    # black_list: [PGN]
     report_timer: 60
 
 - YDEthernet:
-    class: NMEA0183TCPReader
+    class: YDInstrument
     address: 192.168.1.60
-    port: 1456
+    port: 1457
     transport: TCP
-    protocol: NMEA0183
-    direction: write_only
-    trace_messages: false
+    protocol: nmea2000
+    direction: bidirectional
+    trace_messages: true
 
 publishers:
 

@@ -36,7 +36,7 @@ class YDInstrument(BufferedIPInstrument):
             self._reply_queue = queue.Queue(5)
 
     def input_frame_processing(self, frame):
-        _logger.debug("frame=%s" % frame)
+        _logger.debug("%s receive frame=%s" % (self._name, frame))
         if frame[0] == 4:
             return NavGenericMsg(NULL_MSG)
         fields = frame.split(b' ')
@@ -46,11 +46,12 @@ class YDInstrument(BufferedIPInstrument):
             raise ValueError
         if fields[1] == b'T':
             # reply on send
+            _logger.debug("%s reply on send: %s" % (self._name, frame))
             try:
                 self._reply_queue.put(frame, block=False)
             except queue.Full:
                 _logger.critical("YD write feedback queue full")
-            return
+            raise ValueError
         elif fields[1] != b'R':
             _logger.error("Invalid frame %s" % frame)
             raise ValueError
@@ -76,19 +77,19 @@ class YDInstrument(BufferedIPInstrument):
         return gmsg
 
     def encode_nmea2000(self, msg: NMEA2000Msg) -> NavGenericMsg:
-        canid = b'%08X' % msg.pgn << 8 | msg.prio << 26 | msg.da
+        canid = b'%08X' % (msg.pgn << 8 | msg.prio << 26 | msg.da)
 
         def encode(data: bytearray):
-            return NavGenericMsg(TRANSPARENT_MSG, raw=b'%s %s\r\n' % (canid, data.hex(b' ')))
+            return NavGenericMsg(TRANSPARENT_MSG, raw=b'%s %s\r\n' % (canid, data.hex(b' ').encode()))
         if msg.fast_packet:
             for data_packet in self._fast_packet_handler.split_message(msg.pgn, msg.payload):
                 yield encode(data_packet)
         else:
             yield encode(msg.payload)
 
-    def validate_n2k_sending(self, frame):
+    def validate_n2k_frame(self, frame):
         try:
-            self._reply_queue.get(timeout=1.0)
+            self._reply_queue.get(timeout=10.0)
             _logger.debug("YD Write OK:%s" % frame)
         except queue.Empty:
             _logger.error("YD write error on frame %s" % frame)

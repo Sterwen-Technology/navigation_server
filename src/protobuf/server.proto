@@ -11,8 +11,8 @@
 
 syntax = "proto3";
 
-import "protobuf/nmea2000.proto";
-import "protobuf/nmea0183.proto";
+import "nmea2000.proto";
+import "nmea0183.proto";
 
 message nmea_msg {
   oneof Message {

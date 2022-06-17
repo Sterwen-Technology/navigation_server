@@ -158,7 +158,7 @@ class Injector(Publisher):
         self._target = self.resolve_ref(opts['target'])
 
     def process_msg(self, msg):
-        return self._target.send_cmd(msg)
+        return self._target.send_msg_gen(msg)
 
     def descr(self):
         return "Injector %s" % self._name
