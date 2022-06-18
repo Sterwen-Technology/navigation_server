@@ -30,7 +30,7 @@ servers:
 instruments:
 
 - YDENN2K:
-    class: YDInstrument
+    class: YDCoupler
     address: 192.168.1.60
     port: 1457
     protocol: nmea2000

@@ -24,7 +24,7 @@ servers:
 instruments:
 
 - SolarPanel:
-    class: MPPT_Instrument
+    class: MPPT_Coupler
     port: 4505
     server: NMEAServer
     direction: read_only

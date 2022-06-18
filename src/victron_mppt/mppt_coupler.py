@@ -1,6 +1,6 @@
 #-------------------------------------------------------------------------------
 # Name:        mppt_instrument
-# Purpose:     classes to manage Victron MPPT as an instrument
+# Purpose:     classes to manage Victron MPPT as an coupler
 #
 # Author:      Laurent Carré
 #
@@ -9,17 +9,17 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-from vedirect_pb2 import *
-from vedirect_pb2_grpc import *
+from victron_mppt.vedirect_pb2 import *
+from victron_mppt.vedirect_pb2_grpc import *
 from grpc import StatusCode, insecure_channel, RpcError
 
-from instrument import *
-from nmea0183 import XDR, NMEA0183SentenceMsg
+from nmea_routing.coupler import *
+from nmea_routing.nmea0183 import XDR, NMEA0183SentenceMsg
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
-class MPPT_Instrument(Instrument):
+class MPPT_Coupler(Coupler):
 
     def __init__(self, opts):
 
@@ -51,20 +51,20 @@ class MPPT_Instrument(Instrument):
                 _logger.error("VEDirect GrPC server not present => stop")
                 self._state = self.NOT_READY
                 self._stopflag = True
-                raise InstrumentReadError
+                raise CouplerReadError
             elif err.code() == StatusCode.DEADLINE_EXCEEDED:
-                raise InstrumentTimeOut
+                raise CouplerTimeOut
             else:
                 _logger.error(str(err))
-                raise InstrumentReadError
+                raise CouplerReadError
 
     def timer_lapse(self):
-        _logger.debug("MPPT instrument timer lapse releasing lock")
+        _logger.debug("MPPT coupler timer lapse releasing lock")
         self._lock.release()
         super().timer_lapse()
 
     def read(self):
-        _logger.debug("MPPT Instrument waiting for timer")
+        _logger.debug("MPPT Coupler waiting for timer")
         self._lock.acquire()
         result = self.get_output()
         _logger.debug("MPPT output request successful")

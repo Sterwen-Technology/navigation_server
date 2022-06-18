@@ -9,12 +9,10 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 import csv
-import sys
 from argparse import ArgumentParser
-import base64
 
-from nmea2000_msg import *
-from nmea2k_pgndefs import *
+from nmea_routing.nmea2000_msg import *
+from nmea2000.nmea2k_pgndefs import *
 
 _logger = logging.getLogger("ShipDataServer")
 

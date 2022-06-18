@@ -16,12 +16,12 @@ import datetime
 import os
 import base64
 
-from nmea2k_pgndefs import *
-from publisher import Publisher
-from nmea2000_pb2 import nmea2000
-from generic_msg import *
+from nmea2000.nmea2k_pgndefs import *
+from nmea_routing.publisher import Publisher
+from nmea_routing.nmea2000_pb2 import nmea2000
+from nmea_routing.generic_msg import *
 from configuration import NavigationConfiguration
-from nmea0183 import process_nmea0183_frame
+from nmea_routing.nmea0183 import process_nmea0183_frame
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 

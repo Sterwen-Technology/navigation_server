@@ -13,7 +13,7 @@ import yaml
 import logging
 import sys
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("Configuration")
 
 
 class ConfigurationException(Exception):
@@ -153,7 +153,7 @@ class NavigationConfiguration:
         self._obj_dict = {}
         self._class_dict = {}
         self._servers = {}
-        self._instruments = {}
+        self._couplers = {}
         self._publishers = {}
         try:
             fp = open(settings_file, 'r')
@@ -174,7 +174,7 @@ class NavigationConfiguration:
         for obj in self.object_descr_iter('instruments'):
             nav_obj = NavigationServerObject(obj)
             self._obj_dict[nav_obj.name] = nav_obj
-            self._instruments[nav_obj.name] = nav_obj
+            self._couplers[nav_obj.name] = nav_obj
         for obj in self.object_descr_iter('publishers'):
             nav_obj = NavigationServerObject(obj)
             self._obj_dict[nav_obj.name] = nav_obj
@@ -199,11 +199,11 @@ class NavigationConfiguration:
     def servers(self):
         return self._servers.values()
 
-    def instruments(self):
-        return self._instruments.values()
+    def couplers(self):
+        return self._couplers.values()
 
-    def instrument(self, name):
-        return self._instruments[name]
+    def coupler(self, name):
+        return self._couplers[name]
 
     def publishers(self):
         return self._publishers.values()

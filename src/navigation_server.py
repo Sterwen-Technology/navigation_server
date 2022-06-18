@@ -14,22 +14,22 @@ import os
 from argparse import ArgumentParser
 import signal
 
-import nmea0183
-from data_server import NMEAServer
-from shipmodul_if import *
+from nmea_routing import nmea0183
+from nmea_routing.data_server import NMEAServer
+from nmea_routing.shipmodul_if import *
 from console import Console
-from publisher import *
-from client_publisher import *
-from internal_gps import InternalGps
+from nmea_routing.publisher import *
+from nmea_routing.client_publisher import *
+from nmea_routing.internal_gps import InternalGps
 # from simulator_input import *
 from configuration import NavigationConfiguration
-from IPInstrument import NMEA0183TCPReader, NMEA2000TCPReader
-from ikonvert import iKonvert
-from nmea2k_pgndefs import PGNDefinitions
-from nmea2000_msg import N2KProbePublisher, N2KTracePublisher
-from mppt_instrument import MPPT_Instrument
-from ydn2k_instrument import YDInstrument
-from serial_nmeaport import NMEASerialPort
+from nmea_routing.IPCoupler import NMEA0183TCPReader, NMEA2000TCPReader
+from nmea_routing.ikonvert import iKonvert
+from nmea2000.nmea2k_pgndefs import PGNDefinitions
+from nmea_routing.nmea2000_msg import N2KProbePublisher, N2KTracePublisher
+from victron_mppt.mppt_coupler import MPPT_Coupler
+from nmea_routing.ydn2k_coupler import YDCoupler
+from nmea_routing.serial_nmeaport import NMEASerialPort
 
 
 def _parser():
@@ -68,7 +68,7 @@ class NavigationServer:
         self._name = 'main'
         self._console = None
         self._servers = []
-        self._instruments = {}
+        self._couplers = {}
         self._publishers = []
         self._sigint_count = 0
         self._is_running = False
@@ -77,8 +77,8 @@ class NavigationServer:
         signal.signal(signal.SIGINT, self.stop_handler)
 
     @property
-    def instruments(self):
-        return self._instruments.values()
+    def couplers(self):
+        return self._couplers.values()
 
     def name(self):
         return self._name
@@ -99,15 +99,15 @@ class NavigationServer:
     def start(self):
         '''
         def start_publisher(pub):
-            for instrument in self._instruments:
-                instrument.register(pub)
+            for coupler in self._couplers:
+                coupler.register(pub)
             pub.start()
             '''
         for publisher in self._publishers:
             publisher.start()
         for server in self._servers:
             server.start()
-        for inst in self._instruments.values():
+        for inst in self._couplers.values():
             inst.request_start()
         self._is_running = True
 
@@ -115,17 +115,17 @@ class NavigationServer:
         for server in self._servers:
             server.join()
             _logger.info("%s threads joined" % server.name())
-        for inst in self._instruments.values():
+        for inst in self._couplers.values():
             if inst.is_alive():
                 inst.join()
-            _logger.info("Instrument %s thread joined" % inst.name())
+            _logger.info("Coupler %s thread joined" % inst.name())
         print_threads()
         self._is_running = False
 
     def stop_server(self):
         for server in self._servers:
             server.stop()
-        for inst in self._instruments.values():
+        for inst in self._couplers.values():
             inst.stop()
         for pub in self._publishers:
             pub.stop()
@@ -146,36 +146,37 @@ class NavigationServer:
     def request_stop(self, param):
         self.stop_server()
 
-    def add_instrument(self, instrument):
-        self._instruments[instrument.name()] = instrument
+    def add_coupler(self, coupler):
+        self._couplers[coupler.name()] = coupler
         for server in self._servers:
-            server.add_instrument(instrument)
+            server.add_coupler(coupler)
             server.update_instruments()
         if self._is_running:
-            instrument.request_start()
+            coupler.request_start()
 
     def add_publisher(self, publisher: Publisher):
         self._publishers.append(publisher)
         # publisher.start()
 
-    def start_instrument(self, name: str):
+    def start_coupler(self, name: str):
         try:
-            instrument = self._instruments[name]
+            coupler = self._couplers[name]
         except KeyError:
-            return "Unknown Instrument"
-        if instrument.is_alive():
-            return "Instrument running"
-        if instrument.has_run():
+            return "Unknown Coupler"
+        if coupler.is_alive():
+            return "Coupler running"
+
+        if coupler.has_run():
             # now we need to clean up all references
             for server in self._servers:
-                server.remove_instrument(instrument)
-            inst_descr = NavigationConfiguration.get_conf().instrument(name)
-            new_instrument = inst_descr.build_object()
-            new_instrument.force_start()
-            self.add_instrument(new_instrument)
+                server.remove_instrument(coupler)
+            inst_descr = NavigationConfiguration.get_conf().coupler(name)
+            new_coupler = inst_descr.build_object()
+            new_coupler.force_start()
+            self.add_coupler(new_coupler)
         else:
-            instrument.force_start()
-            instrument.request_start()
+            coupler.force_start()
+            coupler.request_start()
         return "Start request OK"
 
 
@@ -215,7 +216,6 @@ def main():
     config.add_class(Console)
     config.add_class(ShipModulConfig)
     config.add_class(ShipModulInterface)
-    # config.add_class(IPInstrument)
     config.add_class(NMEA0183TCPReader)
     config.add_class(LogPublisher)
     config.add_class(Injector)
@@ -223,8 +223,8 @@ def main():
     config.add_class(N2KTracePublisher)
     config.add_class(N2KProbePublisher)
     config.add_class(InternalGps)
-    config.add_class(MPPT_Instrument)
-    config.add_class(YDInstrument)
+    config.add_class(MPPT_Coupler)
+    config.add_class(YDCoupler)
     config.add_class(NMEASerialPort)
     config.add_class(NMEA2000TCPReader)
     # logger setup => stream handler for now
@@ -247,9 +247,9 @@ def main():
         server = server_descr.build_object()
         main_server.add_server(server)
     # create the instruments
-    for inst_descr in config.instruments():
-        instrument = inst_descr.build_object()
-        main_server.add_instrument(instrument)
+    for inst_descr in config.couplers():
+        coupler = inst_descr.build_object()
+        main_server.add_coupler(coupler)
     # create the publishers
     for pub_descr in config.publishers():
         publisher = pub_descr.build_object()

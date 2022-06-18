@@ -12,13 +12,13 @@
 import socket
 import logging
 
-from server_common import NavTCPServer
-from publisher import Publisher
-from IPInstrument import IPInstrument, BufferedIPInstrument, TCPBufferedReader
-from generic_msg import *
-from nmea0183 import process_nmea0183_frame, NMEA0183Msg, NMEA0183Sentences
-from nmea2000_msg import FastPacketHandler, NMEA2000Msg, FastPacketException
-from nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
+from nmea_routing.server_common import NavTCPServer
+from nmea_routing.publisher import Publisher
+from nmea_routing.IPCoupler import BufferedIPCoupler
+from nmea_routing.generic_msg import *
+from nmea_routing.nmea0183 import NMEA0183Msg, NMEA0183Sentences
+from nmea_routing.nmea2000_msg import FastPacketHandler, NMEA2000Msg, FastPacketException
+from nmea2000.nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -30,7 +30,7 @@ _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 #################################################################
 
 
-class ShipModulInterface(BufferedIPInstrument):
+class ShipModulInterface(BufferedIPCoupler):
 
     msg_check = NavGenericMsg(TRANSPARENT_MSG, b'$PSMDVER\r\n')
     version_fmt = b'$PSMDVER'
@@ -258,12 +258,12 @@ class ShipModulConfig(NavTCPServer):
 
                 msg = self._connection.recv(256)
                 if len(msg) == 0:
-                    _logger.error("Shipmodul config instrument null message received")
+                    _logger.error("Shipmodul config coupler null message received")
                     break
                 _logger.debug("Shipmodul conf msg %s" % msg)
                 int_msg = NavGenericMsg(TRANSPARENT_MSG, raw=msg)
                 if not self._reader.send(int_msg):
-                    _logger.error("Shipmodul config instrument write error")
+                    _logger.error("Shipmodul config coupler write error")
                     break
 
             _logger.info("Connection with configuration application lost running %s" % pub.is_alive())
@@ -280,9 +280,9 @@ class ShipModulConfig(NavTCPServer):
 
     def update_instruments(self):
         try:
-            self._reader = self.resolve_ref('instrument')
+            self._reader = self.resolve_ref('coupler')
         except KeyError:
-            _logger.error("%s no instrument associated => stop" % self.name())
+            _logger.error("%s no coupler associated => stop" % self.name())
             return
 
 

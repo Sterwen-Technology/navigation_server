@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name:        IP Instrument
+# Name:        IP Coupler
 # Purpose:     Abstract class for all instruments with a IP transport interface
 #
 # Author:      Laurent Carré
@@ -13,10 +13,10 @@ import socket
 import logging
 import queue
 import threading
-from generic_msg import *
-from instrument import Instrument, InstrumentReadError, InstrumentTimeOut
-from nmea0183 import process_nmea0183_frame, NMEAInvalidFrame
-from nmea2000_msg import fromPGDY, fromPGNST
+from nmea_routing.generic_msg import *
+from nmea_routing.coupler import Coupler, CouplerReadError, CouplerTimeOut
+from nmea_routing.nmea0183 import process_nmea0183_frame, NMEAInvalidFrame
+from nmea_routing.nmea2000_msg import fromPGDY, fromPGNST
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -28,7 +28,7 @@ _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 #################################################################
 
 
-class IPInstrument(Instrument):
+class IPCoupler(Coupler):
 
     def __init__(self, opts):
         super().__init__(opts)
@@ -113,7 +113,7 @@ class UDP_reader(IP_transport):
         try:
             data, address = self._socket.recvfrom(self._buffer_size)
         except OSError as e:
-            raise InstrumentReadError(e)
+            raise CouplerReadError(e)
         # print(data)
         return data
 
@@ -149,10 +149,10 @@ class TCP_reader(IP_transport):
             msg = self._socket.recv(self._buffer_size)
         except (TimeoutError, socket.timeout):
             _logger.info("Timeout error on TCP socket %s" % self._ref)
-            raise InstrumentTimeOut
+            raise CouplerTimeOut
         except socket.error as e:
             _logger.error("Error receiving from TCP socket %s: %s" % (self._ref, str(e)))
-            raise InstrumentReadError
+            raise CouplerReadError
         return msg
 
     def send(self, msg):
@@ -169,7 +169,7 @@ class IPAsynchReader(threading.Thread):
 
     def __init__(self, instrument, out_queue, separator, msg_processing):
         super().__init__()
-        if isinstance(instrument, IPInstrument):
+        if isinstance(instrument, IPCoupler):
             self._transport = instrument.transport()
             self._instrument = instrument
         else:
@@ -189,10 +189,10 @@ class IPAsynchReader(threading.Thread):
         while not self._stop_flag:
             try:
                 buffer = self._transport.recv()
-            except InstrumentTimeOut:
+            except CouplerTimeOut:
                 _logger.info("Asynchronous read transport time out")
                 continue
-            except InstrumentReadError:
+            except CouplerReadError:
                 break
             if self._transparent:
                 msg = NavGenericMsg(TRANSPARENT_MSG, raw=buffer)
@@ -265,7 +265,7 @@ class IPAsynchReader(threading.Thread):
                 if len(frame) == 0:
                     continue
                 if self._instrument is not None:
-                    self._instrument.trace_raw(Instrument.TRACE_IN, frame)
+                    self._instrument.trace_raw(Coupler.TRACE_IN, frame)
                 try:
                     msg = self._msg_processing(frame)
                 except ValueError:
@@ -293,7 +293,7 @@ class IPAsynchReader(threading.Thread):
         self._transparent = flag
 
 
-class BufferedIPInstrument(IPInstrument):
+class BufferedIPCoupler(IPCoupler):
     """
     This class provide a buffered input/output when there is a decoupling between read operation and the
     actual message read.
@@ -361,10 +361,10 @@ class TCPBufferedReader:
             msg = self._connection.recv(256)
         except (TimeoutError, socket.timeout):
             _logger.info("Timeout error on TCP socket")
-            raise InstrumentTimeOut()
+            raise CouplerTimeOut()
         except socket.error as e:
             _logger.error("Error receiving from TCP socket %s: %s" % (self.name(), e))
-            raise InstrumentReadError()
+            raise CouplerReadError()
         return msg
 
     def name(self):
@@ -374,7 +374,7 @@ class TCPBufferedReader:
         return self._ref
 
 
-class NMEA0183TCPReader(BufferedIPInstrument):
+class NMEA0183TCPReader(BufferedIPCoupler):
 
     def __init__(self, opts):
         super().__init__(opts)
@@ -413,7 +413,7 @@ class NMEA0183TCPReader(BufferedIPInstrument):
         raise ValueError
 
 
-class NMEA2000TCPReader(BufferedIPInstrument):
+class NMEA2000TCPReader(BufferedIPCoupler):
 
     process_function = {'dyfmt': fromPGDY, 'stfmt': fromPGNST}
 

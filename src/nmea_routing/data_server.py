@@ -9,15 +9,9 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-import logging
-import threading
-import socket
-import time
-
-from server_common import NavTCPServer
-from publisher import *
-from client_publisher import *
-from nmea0183 import *
+from nmea_routing.server_common import NavTCPServer
+from nmea_routing.client_publisher import *
+from nmea_routing.nmea0183 import *
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -108,7 +102,7 @@ class NMEAServer(NavTCPServer):
                     self._sender = NMEASender(client, self._sender_instrument, self._nmea2000)
                     self._sender.start()
             if self._sender is None:
-                _logger.info("No instrument (sender) to send NMEA messages for server %s client %s" %
+                _logger.info("No coupler (sender) to send NMEA messages for server %s client %s" %
                              (self.name(), client.descr()))
             # end of while loop => the thread stops
         _logger.info("%s thread stops" % self.name())
@@ -116,7 +110,7 @@ class NMEAServer(NavTCPServer):
 
     def add_instrument(self, instrument):
         self._instruments.append(instrument)
-        _logger.info("Server %s adding instrument %s" % (self.name(), instrument.name()))
+        _logger.info("Server %s adding coupler %s" % (self.name(), instrument.name()))
         # now if we had some active connections we need to create the publishers
         for client in self._connections.values():
             pub = NMEAPublisher(client, instrument)
@@ -144,11 +138,11 @@ class NMEAServer(NavTCPServer):
         self._sender = None
 
     def remove_instrument(self, instrument):
-        _logger.info("Server %s removing instrument %s" % (self.name(), instrument.name()))
+        _logger.info("Server %s removing coupler %s" % (self.name(), instrument.name()))
         try:
             self._instruments.remove(instrument)
         except ValueError:
-            _logger.error("Server %s removing instrument %s failed" % (self.name(), instrument.name()))
+            _logger.error("Server %s removing coupler %s failed" % (self.name(), instrument.name()))
 
     def heartbeat(self):
         _logger.info("%s heartbeat number of connections: %d"

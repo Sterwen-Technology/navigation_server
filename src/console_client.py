@@ -51,7 +51,7 @@ class InstrumentProxy:
         return client.send_cmd(self._msg.name, 'stop')
 
     def start(self, client):
-        return client.server_cmd('start_instrument', self._msg.name)
+        return client.server_cmd('start_coupler', self._msg.name)
 
 
 class ServerProxy:

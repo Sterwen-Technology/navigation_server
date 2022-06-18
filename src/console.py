@@ -9,13 +9,11 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-import logging
-import grpc
 from concurrent import futures
 from console_pb2 import *
 from console_pb2_grpc import *
 
-from server_common import *
+from nmea_routing.server_common import *
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -43,18 +41,18 @@ class ConsoleServicer(NavigationConsoleServicer):
     def GetInstrument(self, request, context):
         _logger.debug("Console GetInstrument name %s" % request.target)
         try:
-            i = self._console.instrument(request.target)
+            i = self._console.coupler(request.target)
             resp = self.instrument_resp(i)
         except KeyError:
-            _logger.error("Console access to non existent instrument %s" % request.target)
-            resp = InstrumentMsg(status="Instrument not found")
+            _logger.error("Console access to non existent coupler %s" % request.target)
+            resp = InstrumentMsg(status="Coupler not found")
         return resp
 
     def GetInstruments(self, request, context):
         _logger.debug("Console GetInstruments")
-        for i in self._console.instruments():
+        for i in self._console.couplers():
             resp = self.instrument_resp(i)
-            _logger.debug("Console GetInstruments sending instrument %s" % i.name())
+            _logger.debug("Console GetInstruments sending coupler %s" % i.name())
             yield resp
         return
 
@@ -62,9 +60,9 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp = Response()
         resp.id = request.id
         try:
-            instrument = self._console.instrument(request.target)
+            instrument = self._console.coupler(request.target)
         except KeyError:
-            resp.status = "Instrument %s not found" % request.target
+            resp.status = "Coupler %s not found" % request.target
             return resp
         cmd = request.cmd
         try:
@@ -90,9 +88,9 @@ class ConsoleServicer(NavigationConsoleServicer):
         if request.cmd == "stop":
             server.request_stop(0)
             resp.status = "stop requested"
-        elif request.cmd == "start_instrument":
+        elif request.cmd == "start_coupler":
             i_name = request.target
-            resp.status = server.start_instrument(i_name)
+            resp.status = server.start_coupler(i_name)
         _logger.debug("ServerCmd response %s" % resp.status)
         return resp
 

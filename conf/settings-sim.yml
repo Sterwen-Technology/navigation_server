@@ -33,7 +33,7 @@ instruments:
     report_timer: 10
 
 - YDEthernet:
-    class: YDInstrument
+    class: YDCoupler
     address: 192.168.1.60
     port: 1457
     transport: TCP

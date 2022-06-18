@@ -11,11 +11,6 @@ from google.protobuf import symbol_database as _symbol_database
 
 _sym_db = _symbol_database.Default()
 
-
-import nmea2000_pb2 as nmea2000__pb2
-import nmea0183_pb2 as nmea0183__pb2
-
-
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cserver.proto\x1a\x0enmea2000.proto\x1a\x0enmea0183.proto\"S\n\x08nmea_msg\x12\x1c\n\x07N2K_msg\x18\x01 \x01(\x0b\x32\t.nmea2000H\x00\x12\x1e\n\tN0183_msg\x18\x02 \x01(\x0b\x32\t.nmea0183H\x00\x42\t\n\x07Message2\x12\n\x10NavigationServerb\x06proto3')
 
 

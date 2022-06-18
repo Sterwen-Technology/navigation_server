@@ -12,13 +12,13 @@
 import serial
 import logging
 
-from instrument import Instrument, InstrumentReadError, InstrumentNotPresent, InstrumentTimeOut
-from nmea0183 import NMEA0183Msg, NMEAInvalidFrame
+from nmea_routing.coupler import Coupler, CouplerReadError, CouplerTimeOut
+from nmea_routing.nmea0183 import NMEA0183Msg, NMEAInvalidFrame
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
-class NMEASerialPort(Instrument):
+class NMEASerialPort(Coupler):
 
     def __init__(self, opts):
         super().__init__(opts)
@@ -51,9 +51,9 @@ class NMEASerialPort(Instrument):
             except serial.serialutil.SerialException as e:
                 if not self._stop_flag:
                     _logger.error("Serial Port %s error reading %s" % (self.name(), e))
-                    raise InstrumentReadError("Serial Port error")
+                    raise CouplerReadError("Serial Port error")
             if len(data) == 0:
-                raise InstrumentTimeOut
+                raise CouplerTimeOut
             try:
                 msg = NMEA0183Msg(data)
             except NMEAInvalidFrame:
@@ -71,7 +71,7 @@ class NMEASerialPort(Instrument):
             self._tty.write(msg.raw)
         except serial.serialutil.SerialException as e:
             _logger.error("Serial Port %s error writing %s" % (self.name(), e))
-            raise InstrumentReadError("Serial Port error")
+            raise CouplerReadError("Serial Port error")
         return True
 
     def close(self):

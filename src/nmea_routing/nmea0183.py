@@ -15,7 +15,7 @@ import datetime
 import time
 import logging
 
-from generic_msg import *
+from nmea_routing.generic_msg import *
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
