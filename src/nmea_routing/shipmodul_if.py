@@ -233,7 +233,7 @@ class ShipModulConfig(NavTCPServer):
 
     def run(self):
 
-        self.update_instruments()
+        self.update_couplers()
         _logger.info("Configuration server ready")
         while not self._stop_flag:
             _logger.debug("Configuration server waiting for new connection")
@@ -278,7 +278,7 @@ class ShipModulConfig(NavTCPServer):
         if self._connection is not None:
             self._connection.close()
 
-    def update_instruments(self):
+    def update_couplers(self):
         try:
             self._reader = self.resolve_ref('coupler')
         except KeyError:

@@ -111,7 +111,7 @@ class Console(NavigationServer):
     def add_server(self, server):
         self._servers[server.name()] = server
 
-    def add_instrument(self, instrument):
+    def add_coupler(self, instrument):
         self._instruments[instrument.name()] = instrument
 
     def instruments(self):

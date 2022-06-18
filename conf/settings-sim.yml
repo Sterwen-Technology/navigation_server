@@ -19,7 +19,7 @@ log_module:
 servers:
 
 
-instruments:
+couplers:
 
 - ScannavReplay:
     class: NMEA2000TCPReader

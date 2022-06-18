@@ -15,7 +15,7 @@ trace_dir: /mnt/meaban/Bateau/tests
 servers:
 
 
-instruments:
+couplers:
 
 - GPS:
     class: InternalGps

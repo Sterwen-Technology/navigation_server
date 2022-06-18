@@ -27,7 +27,7 @@ servers:
     port: 4501
     instrument: MiniPlex3
 
-instruments:
+couplers:
 
 - YDENN2K:
     class: YDCoupler

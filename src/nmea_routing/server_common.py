@@ -38,13 +38,13 @@ class NavigationServer:
         _logger.debug("Server resolve name %s ref %s result:%s" % (name, reference, value))
         return value
 
-    def add_instrument(self, instrument):
+    def add_coupler(self, instrument):
         pass
 
-    def remove_instrument(self, instrument):
+    def remove_coupler(self, instrument):
         pass
 
-    def update_instruments(self):
+    def update_couplers(self):
         pass
 
 

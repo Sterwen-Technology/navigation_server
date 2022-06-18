@@ -150,7 +150,7 @@ class NavigationServer:
         self._couplers[coupler.name()] = coupler
         for server in self._servers:
             server.add_coupler(coupler)
-            server.update_instruments()
+            server.update_couplers()
         if self._is_running:
             coupler.request_start()
 
@@ -169,7 +169,7 @@ class NavigationServer:
         if coupler.has_run():
             # now we need to clean up all references
             for server in self._servers:
-                server.remove_instrument(coupler)
+                server.remove_coupler(coupler)
             inst_descr = NavigationConfiguration.get_conf().coupler(name)
             new_coupler = inst_descr.build_object()
             new_coupler.force_start()

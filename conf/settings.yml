@@ -34,7 +34,7 @@ servers:
 
 
 
-instruments:
+couplers:
 
 - iKonvert1:
     class: iKonvert

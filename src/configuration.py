@@ -171,7 +171,7 @@ class NavigationConfiguration:
             nav_obj = NavigationServerObject(obj)
             self._obj_dict[nav_obj.name] = nav_obj
             self._servers[nav_obj.name] = nav_obj
-        for obj in self.object_descr_iter('instruments'):
+        for obj in self.object_descr_iter('couplers'):
             nav_obj = NavigationServerObject(obj)
             self._obj_dict[nav_obj.name] = nav_obj
             self._couplers[nav_obj.name] = nav_obj

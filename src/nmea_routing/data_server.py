@@ -27,7 +27,7 @@ class NMEAServer(NavTCPServer):
 
     def __init__(self, options):
         super().__init__(options)
-        self._instruments = []
+        self._couplers = []
         self._options = options
         self._nmea2000 = options.get_choice('nmea2000', ('transparent', 'dyfmt', 'stfmt'), 'transparent')
         self._master = options.get('master', str, None)
@@ -35,7 +35,7 @@ class NMEAServer(NavTCPServer):
         self._timer = None
         self._timer_name = self.name() + "-timer"
         self._sender = None
-        self._sender_instrument = None
+        self._sender_coupler = None
         self._client_lock = threading.Lock()
 
     def start_timer(self):
@@ -49,7 +49,7 @@ class NMEAServer(NavTCPServer):
 
     def run(self):
         _logger.info("%s ready listening on port %d" % (self.name(), self._port))
-        self._sender_instrument = self.resolve_ref('sender')
+        self._sender_coupler = self.resolve_ref('sender')
         # print("Sender:", self._sender_instrument)
         self.start_timer()
         self._socket.settimeout(5.0)
@@ -86,20 +86,20 @@ class NMEAServer(NavTCPServer):
                 continue
 
             # now create a publisher for all instruments
-            pub = self.publisher_class[self._nmea2000](client, self._instruments)
+            pub = self.publisher_class[self._nmea2000](client, self._couplers)
             pub.start()
             # attach a sender to send messages to instruments
-            if self._sender is None and self._sender_instrument is not None:
+            if self._sender is None and self._sender_coupler is not None:
                 if self._master is not None:
                     if address[0] == self._master:
                         _logger.info("%s Master sender %s connected" % (self.name(), self._master))
-                        self._sender = NMEASender(client, self._sender_instrument, self._nmea2000)
+                        self._sender = NMEASender(client, self._sender_coupler, self._nmea2000)
                         self._sender.start()
                     else:
                         _logger.info("Client at address %s is not master" % address[0])
                 else:
                     _logger.info("%s client at address %s is becoming sender" % (self.name(), address[0]))
-                    self._sender = NMEASender(client, self._sender_instrument, self._nmea2000)
+                    self._sender = NMEASender(client, self._sender_coupler, self._nmea2000)
                     self._sender.start()
             if self._sender is None:
                 _logger.info("No coupler (sender) to send NMEA messages for server %s client %s" %
@@ -108,12 +108,12 @@ class NMEAServer(NavTCPServer):
         _logger.info("%s thread stops" % self.name())
         self._socket.close()
 
-    def add_instrument(self, instrument):
-        self._instruments.append(instrument)
-        _logger.info("Server %s adding coupler %s" % (self.name(), instrument.name()))
+    def add_coupler(self, coupler):
+        self._couplers.append(coupler)
+        _logger.info("Server %s adding coupler %s" % (self.name(), coupler.name()))
         # now if we had some active connections we need to create the publishers
         for client in self._connections.values():
-            pub = NMEAPublisher(client, instrument)
+            pub = NMEAPublisher(client, coupler)
             pub.start()
 
     def remove_client(self, address) -> None:
@@ -137,12 +137,12 @@ class NMEAServer(NavTCPServer):
     def remove_sender(self):
         self._sender = None
 
-    def remove_instrument(self, instrument):
-        _logger.info("Server %s removing coupler %s" % (self.name(), instrument.name()))
+    def remove_coupler(self, coupler):
+        _logger.info("Server %s removing coupler %s" % (self.name(), coupler.name()))
         try:
-            self._instruments.remove(instrument)
+            self._couplers.remove(coupler)
         except ValueError:
-            _logger.error("Server %s removing coupler %s failed" % (self.name(), instrument.name()))
+            _logger.error("Server %s removing coupler %s failed" % (self.name(), coupler.name()))
 
     def heartbeat(self):
         _logger.info("%s heartbeat number of connections: %d"

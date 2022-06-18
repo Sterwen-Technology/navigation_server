@@ -167,14 +167,14 @@ class TCP_reader(IP_transport):
 
 class IPAsynchReader(threading.Thread):
 
-    def __init__(self, instrument, out_queue, separator, msg_processing):
+    def __init__(self, coupler, out_queue, separator, msg_processing):
         super().__init__()
-        if isinstance(instrument, IPCoupler):
-            self._transport = instrument.transport()
-            self._instrument = instrument
+        if isinstance(coupler, IPCoupler):
+            self._transport = coupler.transport()
+            self._coupler = coupler
         else:
-            self._transport = instrument
-            self._instrument = None
+            self._transport = coupler
+            self._coupler = None
 
         self._out_queue = out_queue
         self._separator = separator
@@ -240,8 +240,6 @@ class IPAsynchReader(threading.Thread):
                     else:
                         if buffer[start_idx] in self._separator:
                             start_idx += 1
-                        #if buffer[index - 2] in self._separator:
-                            #index -= 1
                         frame = part_buf + buffer[start_idx:index]
                         _logger.debug("Frame reconstruction %s %s" % (part_buf, buffer[start_idx:index]))
                     part = False
@@ -253,26 +251,18 @@ class IPAsynchReader(threading.Thread):
                         start_idx = index + 2
                         continue
                     frame = bytearray(buffer[start_idx:index])
-                    '''
-                    try:
-                        if frame[0] not in b'!$':
-                            _logger.error("Invalid frame in %s: %s" % (self._transport.ref(), frame))
-                            _logger.error("start %d last %d buffer %s" % (start_idx, index, buffer))
-                    except IndexError:
-                        _logger.error("Null Frame %s start %d end %d %s" % (type(frame), start_idx, index, buffer))
-                    '''
+
                 start_idx = index + 2
                 if len(frame) == 0:
                     continue
-                if self._instrument is not None:
-                    self._instrument.trace_raw(Coupler.TRACE_IN, frame)
+                if self._coupler is not None:
+                    self._coupler.trace_raw(Coupler.TRACE_IN, frame)
                 try:
                     msg = self._msg_processing(frame)
                 except ValueError:
                     continue
                 except NMEAInvalidFrame:
                     _logger.error("Invalid frame in %s: %s %s" % (self._transport.ref(), frame, buffer))
-                    #_logger.error("Partial %s start %d last %d buffer %s" % (part, start_idx, index, buffer))
                     continue
                 try:
                     self._out_queue.put(msg, timeout=1.0)
