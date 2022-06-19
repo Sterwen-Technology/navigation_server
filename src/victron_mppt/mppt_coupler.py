@@ -9,8 +9,8 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-from victron_mppt.vedirect_pb2 import *
-from victron_mppt.vedirect_pb2_grpc import *
+from generated.vedirect_pb2 import *
+from generated.vedirect_pb2_grpc import *
 from grpc import StatusCode, insecure_channel, RpcError
 
 from nmea_routing.coupler import *

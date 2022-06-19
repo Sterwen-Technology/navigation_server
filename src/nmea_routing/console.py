@@ -10,8 +10,8 @@
 #-------------------------------------------------------------------------------
 
 from concurrent import futures
-from console_pb2 import *
-from console_pb2_grpc import *
+from generated.console_pb2 import *
+from generated.console_pb2_grpc import *
 
 from nmea_routing.server_common import *
 

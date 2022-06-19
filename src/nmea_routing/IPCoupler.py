@@ -268,6 +268,7 @@ class IPAsynchReader(threading.Thread):
                     self._out_queue.put(msg, timeout=1.0)
                 except queue.Full:
                     _logger.critical("Asynchronous reader output Queue full for %s" % self._transport.ref())
+                    self._stop_flag = True
                     break
                 if self._stop_flag:
                     break

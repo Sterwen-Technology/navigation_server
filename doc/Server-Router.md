@@ -56,9 +56,9 @@ The configuration is also valid for messages sent from the host (client), in tha
 
 
 
-### Instruments
-Instrument classes are connecting to instrumentation bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
-Currently, tested instruments:
+### Couplers
+Couplers classes are connecting to instrumentation bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
+Currently, tested couplers:
 - Shipmodul Miniplex3 Ethernet
 - Digital Yacht iKonvert
 - Yachting Digital Ethernet
@@ -68,7 +68,7 @@ Currently, tested instruments:
 Under preparation
 - Direct CAN Access
 
-#### Instruments generic parameters
+#### Coupler generic parameters
 
 | Name            | Type                                 | Default                                  | Signification                            |
 |-----------------|--------------------------------------|------------------------------------------|------------------------------------------|
@@ -83,7 +83,7 @@ Under preparation
 | trace_raw | boolean | False | Trace all messages in device format | 
 | autostart | boolean | True | The instrument is started aumatically when the service starts, if False it needs to be started via the Console |
 
-#### Instruments classes
+#### Coupler classes
 
 ##### NMEASerialPort
 This class handle serial or emulated serial line with NMEA0183 based protocols.
@@ -146,3 +146,4 @@ Publishers concentrate messages from several instruments towards consumers. Publ
 There are also specific Publishers for tracing and logging.
 One particular Publisher is the Injector that allows sending the output of one instrument to the input of another one.
 
+### Filters

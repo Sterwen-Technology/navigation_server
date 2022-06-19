@@ -17,12 +17,12 @@ import signal
 from nmea_routing import nmea0183
 from nmea_routing.data_server import NMEAServer
 from nmea_routing.shipmodul_if import *
-from console import Console
+from nmea_routing.console import Console
 from nmea_routing.publisher import *
 from nmea_routing.client_publisher import *
 from nmea_routing.internal_gps import InternalGps
 # from simulator_input import *
-from configuration import NavigationConfiguration
+from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.IPCoupler import NMEA0183TCPReader, NMEA2000TCPReader
 from nmea_routing.ikonvert import iKonvert
 from nmea2000.nmea2k_pgndefs import PGNDefinitions

@@ -203,7 +203,7 @@ class ConfigPublisher(Publisher):
     It gains exclusive access
     '''
     def __init__(self, connection, reader, server, address):
-        super().__init__(None, internal=True, instruments=[reader], name="Shipmodul config publisher")
+        super().__init__(None, internal=True, couplers=[reader], name="Shipmodul config publisher")
         self._socket = connection
         self._address = address
         self._server = server
@@ -219,7 +219,7 @@ class ConfigPublisher(Publisher):
 
     def last_action(self):
         # print("Deregister config publisher")
-        self._instruments[0].deregister(self)
+        self._couplers[0].deregister(self)
 
 
 class ShipModulConfig(NavTCPServer):
@@ -235,6 +235,9 @@ class ShipModulConfig(NavTCPServer):
 
         self.update_couplers()
         _logger.info("Configuration server ready")
+        if self._reader is None:
+            _logger.critical("No associated Miniplex coupler => Stop server")
+            return
         while not self._stop_flag:
             _logger.debug("Configuration server waiting for new connection")
             self._socket.listen(1)
@@ -279,11 +282,11 @@ class ShipModulConfig(NavTCPServer):
             self._connection.close()
 
     def update_couplers(self):
-        try:
-            self._reader = self.resolve_ref('coupler')
-        except KeyError:
+
+        self._reader = self.resolve_ref('coupler')
+        if self._reader is None:
             _logger.error("%s no coupler associated => stop" % self.name())
-            return
+
 
 
 

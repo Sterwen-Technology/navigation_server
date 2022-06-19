@@ -100,6 +100,10 @@ class YDCoupler(BufferedIPCoupler):
         except queue.Empty:
             _logger.error("YD write error on frame %s" % frame)
 
+    def send(self, msg):
+        _logger.debug("YD N2K Write %s" % msg.printable())
+        super().send(msg)
+
 
 
 

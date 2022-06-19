@@ -13,7 +13,7 @@ import threading
 import logging
 import socket
 
-from configuration import NavigationConfiguration
+from nmea_routing.configuration import NavigationConfiguration
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -34,7 +34,10 @@ class NavigationServer:
         except KeyError:
             _logger.error("Unknown reference %s" % name)
             return None
-        value = NavigationConfiguration.get_conf().get_object(reference)
+        try:
+            value = NavigationConfiguration.get_conf().get_object(reference)
+        except KeyError:
+            return None
         _logger.debug("Server resolve name %s ref %s result:%s" % (name, reference, value))
         return value
 

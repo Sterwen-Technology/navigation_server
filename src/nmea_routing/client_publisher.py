@@ -23,9 +23,9 @@ _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 class NMEAPublisher(Publisher):
 
-    def __init__(self, client, instruments: list):
+    def __init__(self, client, couplers: list):
 
-        super().__init__(None, internal=True, instruments=instruments, name=client.descr())
+        super().__init__(None, internal=True, couplers=couplers, name=client.descr())
         self._client = client
 
         client.add_publisher(self)
@@ -47,8 +47,8 @@ class NMEAPublisher(Publisher):
 
 class NMEA2000DYPublisher(NMEAPublisher):
 
-    def __init__(self, client, instruments):
-        super().__init__(client, instruments)
+    def __init__(self, client, couplers):
+        super().__init__(client, couplers)
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.type == N2K_MSG:
@@ -60,8 +60,8 @@ class NMEA2000DYPublisher(NMEAPublisher):
 
 class NMEA2000STPublisher(NMEAPublisher):
 
-    def __init__(self, client, instruments):
-        super().__init__(client, instruments)
+    def __init__(self, client, couplers):
+        super().__init__(client, couplers)
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.type == N2K_MSG:

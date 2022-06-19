@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import victron_mppt.vedirect_pb2 as vedirect__pb2
+import generated.vedirect_pb2 as vedirect__pb2
 
 
 class solar_mpptStub(object):

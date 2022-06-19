@@ -5,7 +5,7 @@ import queue
 import logging
 import datetime
 
-from configuration import NavigationConfiguration
+from nmea_routing.configuration import NavigationConfiguration
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -24,30 +24,30 @@ class Publisher(threading.Thread):
     '''
     Super class for all publishers
     '''
-    def __init__(self, opts, internal=False, instruments=None, name=None):
+    def __init__(self, opts, internal=False, couplers=None, name=None):
         if internal:
             self._opts = None
-            self._instruments = instruments
+            self._couplers = couplers
             queue_size = 40
             self._max_lost = 10
         else:
             name = opts['name']
             self._opts = opts
-            queue_size = opts.get('queue_size', int, 20)
+            self._queue_size = opts.get('queue_size', int, 20)
             self._max_lost = opts.get('max_lost', int, 5)
-            inst_list = opts.getlist('instruments', str, [])
-            self._instruments = []
+            inst_list = opts.getlist('couplers', str, [])
+            self._couplers = []
             for inst_name in inst_list:
-                self._instruments.append(self.resolve_ref(inst_name))
+                self._couplers.append(self.resolve_ref(inst_name))
 
         super().__init__(name=name)
         self._name = name
 
-        for inst in self._instruments:
+        for inst in self._couplers:
             # print("Registering %s on %s" % (self._name, inst.name()))
             inst.register(self)
 
-        self._queue = queue.Queue(queue_size)
+        self._queue = queue.Queue(self._queue_size)
         self._stopflag = False
         self._nb_msg_lost = 0
 
@@ -62,13 +62,17 @@ class Publisher(threading.Thread):
             _logger.warning("Overflow on connection %s total message lost %d" % (self._name, self._nb_msg_lost))
             if self._nb_msg_lost >= self._max_lost:
                 raise PublisherOverflow
+        qs = self._queue.qsize()
+        if qs > self._queue_size / 2:
+            _logger.warning("%s Publisher Queue filling up size %d" % (self._name, qs))
+            time.sleep(1.0)
 
     def deregister(self):
-        for inst in self._instruments:
+        for inst in self._couplers:
             inst.deregister(self)
 
     def add_instrument(self, instrument):
-        self._instruments.append(instrument)
+        self._couplers.append(instrument)
         instrument.register(self)
 
     def stop(self):

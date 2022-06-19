@@ -12,9 +12,10 @@
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-  IPInstrument: INFO
-  ydn2k_instrument: INFO
-  ikonvert: DEBUG
+  nmea_routing.IPCoupler: INFO
+  nmea_routing.coupler: INFO
+  nmea_routing.ydn2k_coupler: INFO
+  nmea_routing.ikonvert: INFO
 
 servers:
 
@@ -52,9 +53,9 @@ publishers:
 
 - EthInjector:
       class: Injector
-      instruments: [ScannavReplay]
+      couplers: [ScannavReplay]
       target: YDEthernet
-      queue_size: 50
+      queue_size: 80
       max_lost: 20
 
 

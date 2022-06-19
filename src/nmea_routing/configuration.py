@@ -13,7 +13,7 @@ import yaml
 import logging
 import sys
 
-_logger = logging.getLogger("Configuration")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class ConfigurationException(Exception):
@@ -215,7 +215,11 @@ class NavigationConfiguration:
         return self._class_dict[name]
 
     def get_object(self, name):
-        return self._obj_dict[name].object
+        try:
+            return self._obj_dict[name].object
+        except KeyError:
+            _logger.error("No object named: %s" % name)
+            raise
 
 
 def main():

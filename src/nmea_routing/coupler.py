@@ -17,7 +17,7 @@ import threading
 import logging
 import time
 # from publisher import Publisher
-from configuration import NavigationConfiguration
+from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.publisher import PublisherOverflow
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
 from nmea_routing.nmea2000_msg import NMEA2000Msg, NMEA2000Writer
