@@ -13,26 +13,23 @@ import socket
 import sys,os
 import time
 import serial
+import threading
 
 from argparse import ArgumentParser
+
+from nmea_routing.server_common import NavTCPServer
 
 
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
-    p.add_argument("-o", "--output", action="store", type=str,
-        default='COM6', help="Serial port for the NMEA Output")
-    p.add_argument("-b", "--baudrate", action="store", type=int,
-        default=4800,
-        help="Baud rate for the NMEA output, usually 4800, which is also the default")
+
     p.add_argument('-f', '--file', action='store', default=None, help='File for input instead of server')
     p.add_argument("-p", "--port", action="store", type=int,
                    default=3555,
                    help="Listening port for NMEA input, default is 3555")
-    p.add_argument("-a", "--address", action="store", type=str,
-                   default='',
-                   help="IP address or URL for NMEA Input, default is localhost")
+
     p.add_argument("-pr", "--protocol", action="store", type=str,
-                   choices=['TCP','UDP'], default='TCP',
+                   choices=['TCP','UDP'], default='TCP')
                    help="Protocol to read NMEA sentences, default TCP")
     p.add_argument('-s','--sleep', action='store', type=float, default=0.25)
 
@@ -54,6 +51,12 @@ class Options(object):
             return getattr(self.options, name)
         except AttributeError:
             raise AttributeError(name)
+
+
+class Server(NavTCPServer):
+
+    def __init__(self, opts):
+        super().__init__(opts)
 
 
 def main():
