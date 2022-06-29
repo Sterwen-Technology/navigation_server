@@ -100,7 +100,7 @@ class Console(NavigationServer):
     def __init__(self, options):
         super().__init__(options)
         self._servers = {}
-        self._instruments = {}
+        self._couplers = {}
         self._injectors = {}
         self._connection = None
         address = "0.0.0.0:%d" % self._port
@@ -111,14 +111,14 @@ class Console(NavigationServer):
     def add_server(self, server):
         self._servers[server.name()] = server
 
-    def add_coupler(self, instrument):
-        self._instruments[instrument.name()] = instrument
+    def add_coupler(self, coupler):
+        self._couplers[coupler.name()] = coupler
 
-    def instruments(self):
-        return self._instruments.values()
+    def couplers(self):
+        return self._couplers.values()
 
-    def instrument(self, name):
-        return self._instruments[name]
+    def coupler(self, name):
+        return self._couplers[name]
 
     def main_server(self):
         return self._servers['main']
