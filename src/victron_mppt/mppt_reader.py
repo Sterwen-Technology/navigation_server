@@ -18,7 +18,7 @@ import time
 import os
 from argparse import ArgumentParser
 from concurrent import futures
-
+sys.path.insert(0, "/data/solidsense/navigation/src")
 import grpc
 from generated.vedirect_pb2 import device, solar_output, request
 from generated.vedirect_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
