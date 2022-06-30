@@ -28,7 +28,7 @@ class Publisher(threading.Thread):
         if internal:
             self._opts = None
             self._couplers = couplers
-            queue_size = 40
+            self._queue_size = 40
             self._max_lost = 10
         else:
             name = opts['name']

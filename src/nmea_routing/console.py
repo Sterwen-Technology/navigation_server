@@ -103,6 +103,7 @@ class Console(NavigationServer):
         self._couplers = {}
         self._injectors = {}
         self._connection = None
+        self._end_event = None
         address = "0.0.0.0:%d" % self._port
         self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self._grpc_server)
@@ -132,4 +133,5 @@ class Console(NavigationServer):
         self._end_event = self._grpc_server.stop(0.1)
 
     def join(self):
-        self._end_event.wait()
+        if self._end_event is not None:
+            self._end_event.wait()
