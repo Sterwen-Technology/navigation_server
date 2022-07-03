@@ -12,8 +12,8 @@
 import logging
 import grpc
 
-from console_pb2 import *
-from console_pb2_grpc import *
+from generated.console_pb2 import *
+from generated.console_pb2_grpc import *
 
 _logger = logging.getLogger("ShipDataClient")
 

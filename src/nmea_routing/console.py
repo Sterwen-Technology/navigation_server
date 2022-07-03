@@ -59,10 +59,12 @@ class ConsoleServicer(NavigationConsoleServicer):
     def InstrumentCmd(self, request, context):
         resp = Response()
         resp.id = request.id
+        _logger.debug("Coupler cmd %s %s" % (request.target, request.cmd))
         try:
             instrument = self._console.coupler(request.target)
         except KeyError:
             resp.status = "Coupler %s not found" % request.target
+            _logger.error("Console coupler cmd target not found: %s" % request.target)
             return resp
         cmd = request.cmd
         try:
@@ -105,7 +107,7 @@ class Console(NavigationServer):
         self._connection = None
         self._end_event = None
         address = "0.0.0.0:%d" % self._port
-        self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
         add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self._grpc_server)
         self._grpc_server.add_insecure_port(address)
 
