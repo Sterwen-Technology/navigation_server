@@ -1,6 +1,6 @@
 #-------------------------------------------------------------------------------
 # Name:        mppt_reader
-# Purpose:     server connected to Victron MPPT
+# Purpose:     server connected to Victron MPPT via VEDirect (RS485/USB)
 #
 # Author:      Laurent Carré
 #
@@ -18,10 +18,10 @@ import time
 import os
 from argparse import ArgumentParser
 from concurrent import futures
-
+sys.path.insert(0, "/data/solidsense/navigation/src")
 import grpc
-import vedirect_pb2
-import vedirect_pb2_grpc
+from generated.vedirect_pb2 import device, solar_output, request
+from generated.vedirect_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
 
 
 def _parser():
@@ -176,7 +176,7 @@ class Vedirect(threading.Thread):
         return self._data_dict
 
 
-class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
+class MPPT_Servicer(solar_mpptServicer):
 
     solar_output_v = [('I', 'current', float, 0.001),
                       ('V', 'voltage', float, 0.001),
@@ -200,7 +200,7 @@ class MPPT_Servicer(vedirect_pb2_grpc.solar_mpptServicer):
     def GetOutput(self, request, context):
         _logger.debug("GRPC request GetOutput")
         packet = self._reader.lock_get_data()
-        ret_val = vedirect_pb2.solar_output()
+        ret_val = solar_output()
         if packet is not None:
             data_age = time.monotonic() - packet['timestamp']
             if data_age > 30.0:
@@ -215,8 +215,8 @@ class GrpcServer:
     def __init__(self, opts, reader):
         port = opts.port
         address = "0.0.0.0:%d" % port
-        self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        vedirect_pb2_grpc.add_solar_mpptServicer_to_server(MPPT_Servicer(reader), self._server)
+        self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
+        add_solar_mpptServicer_to_server(MPPT_Servicer(reader), self._server)
         self._server.add_insecure_port(address)
         _logger.info("MPPT server ready on address:%s" % address)
 

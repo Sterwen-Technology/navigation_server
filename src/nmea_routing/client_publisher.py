@@ -11,21 +11,21 @@
 import socket
 import threading
 import logging
-from publisher import Publisher
-from generic_msg import *
-from IPInstrument import TCPBufferedReader
-from instrument import Instrument
-from nmea0183 import process_nmea0183_frame
-from nmea2000_msg import fromPGDY, fromPGNST
+from nmea_routing.publisher import Publisher
+from nmea_routing.generic_msg import *
+from nmea_routing.IPCoupler import TCPBufferedReader
+from nmea_routing.coupler import Coupler
+from nmea_routing.nmea0183 import process_nmea0183_frame
+from nmea_routing.nmea2000_msg import fromPGDY, fromPGNST
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class NMEAPublisher(Publisher):
 
-    def __init__(self, client, instruments: list):
+    def __init__(self, client, couplers: list):
 
-        super().__init__(None, internal=True, instruments=instruments, name=client.descr())
+        super().__init__(None, internal=True, couplers=couplers, name=client.descr())
         self._client = client
 
         client.add_publisher(self)
@@ -47,8 +47,8 @@ class NMEAPublisher(Publisher):
 
 class NMEA2000DYPublisher(NMEAPublisher):
 
-    def __init__(self, client, instruments):
-        super().__init__(client, instruments)
+    def __init__(self, client, couplers):
+        super().__init__(client, couplers)
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.type == N2K_MSG:
@@ -60,8 +60,8 @@ class NMEA2000DYPublisher(NMEAPublisher):
 
 class NMEA2000STPublisher(NMEAPublisher):
 
-    def __init__(self, client, instruments):
-        super().__init__(client, instruments)
+    def __init__(self, client, couplers):
+        super().__init__(client, couplers)
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.type == N2K_MSG:
@@ -76,7 +76,7 @@ class NMEASender(threading.Thread):
     msg_processing = {'transparent': process_nmea0183_frame,
                       'dyfmt': fromPGDY, 'stfmt': fromPGNST}
 
-    def __init__(self, client, instrument: Instrument, nmea2000_mode):
+    def __init__(self, client, instrument: Coupler, nmea2000_mode):
         super().__init__(name="Sender-"+client.descr())
         self._client = client
         self._instrument = instrument

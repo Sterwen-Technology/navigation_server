@@ -14,11 +14,10 @@ import logging
 import threading
 import queue
 import base64
-import datetime
 
-from instrument import Instrument, InstrumentReadError
-from nmea2000_msg import NMEA2000Msg
-from generic_msg import *
+from nmea_routing.coupler import Coupler
+from nmea_routing.nmea2000_msg import NMEA2000Msg
+from nmea_routing.generic_msg import *
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 (UNKNOWN, STATUS, NOT_CONN, ACK, NAK, N2K, N183) = range(7)
@@ -127,7 +126,7 @@ class iKonvertRead(threading.Thread):
             except serial.SerialException as e:
                 _logger.error("iKonvert read error: %s" % str(e))
                 continue
-            self._instrument.trace_raw(Instrument.TRACE_IN, data)
+            self._instrument.trace_raw(Coupler.TRACE_IN, data)
             msg = iKonvertMsg.from_bytes(data)
             if msg is not None:
                 self._instr_cbd[msg.type](msg)
@@ -139,10 +138,10 @@ class iKonvertRead(threading.Thread):
         self._stop_flag = True
 
 
-class iKonvert(Instrument):
+class iKonvert(Coupler):
     """
     This class implement the interface towards the iKonvert Digital Yacht USB-NMEA2000 device
-    Inherits from Instrument
+    Inherits from Coupler
     The full connection logic is
     """
 

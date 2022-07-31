@@ -10,12 +10,11 @@
 #-------------------------------------------------------------------------------
 
 import socket
-import sys,os
-import time
+import sys
 
 from argparse import ArgumentParser
 
-from nmea0183 import NMEA0183Filter
+from nmea_routing.nmea0183 import NMEA0183Filter
 
 
 def _parser():

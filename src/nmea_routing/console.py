@@ -9,13 +9,11 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-import logging
-import grpc
 from concurrent import futures
-from console_pb2 import *
-from console_pb2_grpc import *
+from generated.console_pb2 import *
+from generated.console_pb2_grpc import *
 
-from server_common import *
+from nmea_routing.server_common import *
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -43,28 +41,30 @@ class ConsoleServicer(NavigationConsoleServicer):
     def GetInstrument(self, request, context):
         _logger.debug("Console GetInstrument name %s" % request.target)
         try:
-            i = self._console.instrument(request.target)
+            i = self._console.coupler(request.target)
             resp = self.instrument_resp(i)
         except KeyError:
-            _logger.error("Console access to non existent instrument %s" % request.target)
-            resp = InstrumentMsg(status="Instrument not found")
+            _logger.error("Console access to non existent coupler %s" % request.target)
+            resp = InstrumentMsg(status="Coupler not found")
         return resp
 
     def GetInstruments(self, request, context):
         _logger.debug("Console GetInstruments")
-        for i in self._console.instruments():
+        for i in self._console.couplers():
             resp = self.instrument_resp(i)
-            _logger.debug("Console GetInstruments sending instrument %s" % i.name())
+            _logger.debug("Console GetInstruments sending coupler %s" % i.name())
             yield resp
         return
 
     def InstrumentCmd(self, request, context):
         resp = Response()
         resp.id = request.id
+        _logger.debug("Coupler cmd %s %s" % (request.target, request.cmd))
         try:
-            instrument = self._console.instrument(request.target)
+            instrument = self._console.coupler(request.target)
         except KeyError:
-            resp.status = "Instrument %s not found" % request.target
+            resp.status = "Coupler %s not found" % request.target
+            _logger.error("Console coupler cmd target not found: %s" % request.target)
             return resp
         cmd = request.cmd
         try:
@@ -90,9 +90,9 @@ class ConsoleServicer(NavigationConsoleServicer):
         if request.cmd == "stop":
             server.request_stop(0)
             resp.status = "stop requested"
-        elif request.cmd == "start_instrument":
+        elif request.cmd == "start_coupler":
             i_name = request.target
-            resp.status = server.start_instrument(i_name)
+            resp.status = server.start_coupler(i_name)
         _logger.debug("ServerCmd response %s" % resp.status)
         return resp
 
@@ -102,25 +102,26 @@ class Console(NavigationServer):
     def __init__(self, options):
         super().__init__(options)
         self._servers = {}
-        self._instruments = {}
+        self._couplers = {}
         self._injectors = {}
         self._connection = None
+        self._end_event = None
         address = "0.0.0.0:%d" % self._port
-        self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
         add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self._grpc_server)
         self._grpc_server.add_insecure_port(address)
 
     def add_server(self, server):
         self._servers[server.name()] = server
 
-    def add_instrument(self, instrument):
-        self._instruments[instrument.name()] = instrument
+    def add_coupler(self, coupler):
+        self._couplers[coupler.name()] = coupler
 
-    def instruments(self):
-        return self._instruments.values()
+    def couplers(self):
+        return self._couplers.values()
 
-    def instrument(self, name):
-        return self._instruments[name]
+    def coupler(self, name):
+        return self._couplers[name]
 
     def main_server(self):
         return self._servers['main']
@@ -134,4 +135,5 @@ class Console(NavigationServer):
         self._end_event = self._grpc_server.stop(0.1)
 
     def join(self):
-        self._end_event.wait()
+        if self._end_event is not None:
+            self._end_event.wait()

@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name:        IP Instrument
+# Name:        IP Coupler
 # Purpose:     Abstract class for all instruments with a IP transport interface
 #
 # Author:      Laurent Carré
@@ -12,17 +12,15 @@
 import logging
 import queue
 
-from instrument import Instrument
-from IPInstrument import BufferedIPInstrument
-from nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
-from nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
-from nmea0183 import process_nmea0183_frame
-from generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG
+from nmea_routing.IPCoupler import BufferedIPCoupler
+from nmea_routing.nmea2000_msg import NMEA2000Msg, FastPacketHandler
+from nmea2000.nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
+from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
-class YDInstrument(BufferedIPInstrument):
+class YDCoupler(BufferedIPCoupler):
 
     def __init__(self, opts):
         super().__init__(opts)
@@ -101,6 +99,10 @@ class YDInstrument(BufferedIPInstrument):
             _logger.debug("YD Write OK:%s" % frame)
         except queue.Empty:
             _logger.error("YD write error on frame %s" % frame)
+
+    def send(self, msg):
+        _logger.debug("YD N2K Write %s" % msg.printable())
+        super().send(msg)
 
 
 

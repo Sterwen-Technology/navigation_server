@@ -27,10 +27,10 @@ servers:
     port: 4501
     instrument: MiniPlex3
 
-instruments:
+couplers:
 
 - YDENN2K:
-    class: YDInstrument
+    class: YDCoupler
     address: 192.168.1.60
     port: 1457
     protocol: nmea2000
