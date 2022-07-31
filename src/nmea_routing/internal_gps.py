@@ -26,16 +26,16 @@ except ImportError as e:
     _logger.error(str(e))
     gps_present = False
 
-from instrument import Instrument, InstrumentReadError, InstrumentNotPresent
-from nmea0183 import NMEA0183Msg
+from nmea_routing.coupler import Coupler, CouplerReadError, CouplerNotPresent
+from nmea_routing.nmea0183 import NMEA0183Msg
 
 
-class InternalGps(Instrument):
+class InternalGps(Coupler):
 
     def __init__(self, opts):
 
         if not gps_present:
-            raise InstrumentNotPresent('InternalGPS')
+            raise CouplerNotPresent('InternalGPS')
 
         super().__init__(opts)
         self._separator = b'\r\n'
@@ -83,7 +83,7 @@ class InternalGps(Instrument):
                 data = self._tty.readline()
             except serial.serialutil.SerialException as e:
                 _logger.error("Internal GPS error reading %s" % str(e))
-                raise InstrumentReadError("Serial error")
+                raise CouplerReadError("Serial error")
             msg = NMEA0183Msg(data)
             self.trace(self.TRACE_IN, msg)
             if self._talker is not None:

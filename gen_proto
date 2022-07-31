@@ -1,3 +1,7 @@
 #!/bin/bash
-python -m grpc_tools.protoc -I src/protobuf --python_out=src/ --grpc_python_out=src/ src/protobuf/nmea2000.proto\
-  src/protobuf/vedirect.proto src/protobuf/console.proto src/protobuf/nmea0183.proto src/protobuf/server.proto
+# nmea_router protobuf and gRPC
+python -m grpc_tools.protoc -I src/protobuf --python_out=./src/generated --grpc_python_out=./src/generated \
+  src/protobuf/nmea2000.proto src/protobuf/console.proto src/protobuf/nmea0183.proto src/protobuf/server.proto
+# Victron VE direct protobuf and gRPC
+python -m grpc_tools.protoc -I ./src/protobuf --python_out=./src/generated --grpc_python_out=./src/generated \
+  ./src/protobuf/vedirect.proto

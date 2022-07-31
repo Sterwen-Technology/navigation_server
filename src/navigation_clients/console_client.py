@@ -12,8 +12,8 @@
 import logging
 import grpc
 
-from console_pb2 import *
-from console_pb2_grpc import *
+from generated.console_pb2 import *
+from generated.console_pb2_grpc import *
 
 _logger = logging.getLogger("ShipDataClient")
 
@@ -51,7 +51,7 @@ class InstrumentProxy:
         return client.send_cmd(self._msg.name, 'stop')
 
     def start(self, client):
-        return client.server_cmd('start_instrument', self._msg.name)
+        return client.server_cmd('start_coupler', self._msg.name)
 
 
 class ServerProxy:

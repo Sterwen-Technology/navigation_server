@@ -27,7 +27,7 @@ servers:
     port: 4501
     instrument: MiniPlex3
 
-instruments:
+couplers:
 
 - MiniPlex3:
     class: ShipModulInterface
@@ -37,7 +37,7 @@ instruments:
     server: NMEAServer
 
 - SolarPanel:
-    class: MPPT_Instrument
+    class: MPPT_Coupler
     port: 4505
     server: NMEAServer
     direction: read_only

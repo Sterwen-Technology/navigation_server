@@ -13,7 +13,7 @@ import yaml
 import logging
 import sys
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class ConfigurationException(Exception):
@@ -153,7 +153,7 @@ class NavigationConfiguration:
         self._obj_dict = {}
         self._class_dict = {}
         self._servers = {}
-        self._instruments = {}
+        self._couplers = {}
         self._publishers = {}
         try:
             fp = open(settings_file, 'r')
@@ -171,10 +171,10 @@ class NavigationConfiguration:
             nav_obj = NavigationServerObject(obj)
             self._obj_dict[nav_obj.name] = nav_obj
             self._servers[nav_obj.name] = nav_obj
-        for obj in self.object_descr_iter('instruments'):
+        for obj in self.object_descr_iter('couplers'):
             nav_obj = NavigationServerObject(obj)
             self._obj_dict[nav_obj.name] = nav_obj
-            self._instruments[nav_obj.name] = nav_obj
+            self._couplers[nav_obj.name] = nav_obj
         for obj in self.object_descr_iter('publishers'):
             nav_obj = NavigationServerObject(obj)
             self._obj_dict[nav_obj.name] = nav_obj
@@ -199,11 +199,11 @@ class NavigationConfiguration:
     def servers(self):
         return self._servers.values()
 
-    def instruments(self):
-        return self._instruments.values()
+    def couplers(self):
+        return self._couplers.values()
 
-    def instrument(self, name):
-        return self._instruments[name]
+    def coupler(self, name):
+        return self._couplers[name]
 
     def publishers(self):
         return self._publishers.values()
@@ -215,7 +215,11 @@ class NavigationConfiguration:
         return self._class_dict[name]
 
     def get_object(self, name):
-        return self._obj_dict[name].object
+        try:
+            return self._obj_dict[name].object
+        except KeyError:
+            _logger.error("No object named: %s" % name)
+            raise
 
 
 def main():

@@ -28,7 +28,7 @@ servers:
     port: 4501
     instrument: MiniPlex3
 
-instruments:
+couplers:
 
 - MiniPlex3:
     class: ShipModulInterface

@@ -21,10 +21,10 @@ servers:
     class: Console
     port: 4502
 
-instruments:
+couplers:
 
 - SolarPanel:
-    class: MPPT_Instrument
+    class: MPPT_Coupler
     port: 4505
     server: NMEAServer
     direction: read_only

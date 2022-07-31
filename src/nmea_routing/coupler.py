@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name:        Instrument
+# Name:        Coupler
 # Purpose:     Abstract super class for all instruments
 #
 # Author:      Laurent Carré
@@ -17,28 +17,28 @@ import threading
 import logging
 import time
 # from publisher import Publisher
-from configuration import NavigationConfiguration
-from publisher import PublisherOverflow
-from generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
-from nmea2000_msg import NMEA2000Msg, NMEA2000Writer
+from nmea_routing.configuration import NavigationConfiguration
+from nmea_routing.publisher import PublisherOverflow
+from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
+from nmea_routing.nmea2000_msg import NMEA2000Msg, NMEA2000Writer
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
-class InstrumentReadError(Exception):
+class CouplerReadError(Exception):
     pass
 
 
-class InstrumentTimeOut(InstrumentReadError):
+class CouplerTimeOut(CouplerReadError):
     pass
 
 
-class InstrumentNotPresent(Exception):
+class CouplerNotPresent(Exception):
     pass
 
 
-class Instrument(threading.Thread):
+class Coupler(threading.Thread):
     '''
     Base abstract class for all instruments
     '''
@@ -80,7 +80,7 @@ class Instrument(threading.Thread):
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
         mode = opts.get('protocol', str, 'nmea0183')
         self._mode = self.protocol_dict[mode.lower()]
-        _logger.info("Instrument %s mode %d direction %d" % (self._name, self._mode ,self._direction))
+        _logger.info("Coupler %s mode %d direction %d" % (self._name, self._mode ,self._direction))
         if self._mode == self.NMEA2000 and self._direction != self.READ_ONLY:
             self._n2k_writer = self.define_n2k_writer()
         else:
@@ -110,18 +110,18 @@ class Instrument(threading.Thread):
         _logger.debug("Timer lapse => total number of messages:%g" % self._total_msg)
         if self._total_msg-self._last_msg_count == 0 and self._direction != self.WRITE_ONLY:
             # no message received
-            _logger.warning("Instrument %s:No NMEA messages received in the last %4.1f sec" %
+            _logger.warning("Coupler %s:No NMEA messages received in the last %4.1f sec" %
                             (self._name, self._timeout))
             self.check_connection()
         self._last_msg_count = self._total_msg
         self._last_msg_count_s = self._total_msg_s
-        _logger.info("Instrument %s NMEA message received:%d sent:%d" % (self.name(), self._total_msg, self._total_msg_s))
+        _logger.info("Coupler %s NMEA message received:%d sent:%d" % (self.name(), self._total_msg, self._total_msg_s))
         if not self._stopflag:
             self.start_timer()
 
     def request_start(self):
         if self._autostart:
-            _logger.info("Starting instrument %s" % self._name)
+            _logger.info("Starting coupler %s" % self._name)
             super().start()
 
     def has_run(self):
@@ -153,7 +153,7 @@ class Instrument(threading.Thread):
                 if not self.open():
                     nb_attempts += 1
                     if nb_attempts > self._max_attempt:
-                        _logger.error("Failed to open %s after %d attempts => instrument stops" % (
+                        _logger.error("Failed to open %s after %d attempts => coupler stops" % (
                             self.name(), self._max_attempt
                         ))
                         break
@@ -177,16 +177,16 @@ class Instrument(threading.Thread):
                 else:
                     _logger.debug(msg.printable())
 
-            except InstrumentTimeOut:
+            except CouplerTimeOut:
                 continue
-            except (socket.timeout, InstrumentReadError):
+            except (socket.timeout, CouplerReadError):
                 if self._stopflag:
                     break
                 else:
                     continue
             except Exception as e:
                 # catch all
-                _logger.error("Un-caught exception during instrument %s read: %s" % (self._name, e))
+                _logger.error("Un-caught exception during coupler %s read: %s" % (self._name, e))
                 self.close()
                 continue
             # good data received - publish
@@ -195,11 +195,11 @@ class Instrument(threading.Thread):
             self.publish(msg)
         self.stop()
         self.close()
-        _logger.info("%s instrument thread stops"%self._name)
+        _logger.info("%s coupler thread stops"%self._name)
 
     def register(self, pub):
         self._publishers.append(pub)
-        # print("Instrument %s register %s" % (self._name, pub.name()))
+        # print("Coupler %s register %s" % (self._name, pub.name()))
 
     def deregister(self, pub):
         try:
@@ -225,12 +225,12 @@ class Instrument(threading.Thread):
             for p in faulty_pub:
                 self._publishers.remove(p)
             if len(self._publishers) == 0:
-                _logger.error("Instrument %s as no publisher" % self._name)
+                _logger.error("Coupler %s as no publisher" % self._name)
 
     def send_msg_gen(self, msg: NavGenericMsg):
         if not self._configmode:
             if self._direction == self.READ_ONLY:
-                _logger.error("Instrument %s attempt to write on a READ ONLY instrument" % self.name())
+                _logger.error("Coupler %s attempt to write on a READ ONLY coupler" % self.name())
                 return False
             self._total_msg_s += 1
             if msg.type == N2K_MSG:
@@ -261,7 +261,7 @@ class Instrument(threading.Thread):
         return self._app_protocol
 
     def stop(self):
-        _logger.info("Stopping %s instrument" % self._name)
+        _logger.info("Stopping %s coupler" % self._name)
         self._stopflag = True
         if self._timer is not None:
             self._timer.cancel()
