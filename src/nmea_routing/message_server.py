@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name:        data_server.py
+# Name:        message_server.py
 # Purpose:     module for the TCP data server
 #
 # Author:      Laurent Carré

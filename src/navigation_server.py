@@ -15,7 +15,7 @@ from argparse import ArgumentParser
 import signal
 
 from nmea_routing import nmea0183
-from nmea_routing.data_server import NMEAServer
+from nmea_routing.message_server import NMEAServer
 from nmea_routing.shipmodul_if import *
 from nmea_routing.console import Console
 from nmea_routing.publisher import *
