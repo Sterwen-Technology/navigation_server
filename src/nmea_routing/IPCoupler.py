@@ -302,7 +302,7 @@ class BufferedIPCoupler(IPCoupler):
 
     def set_message_processing(self, separator=b'\r\n', msg_processing=process_nmea0183_frame):
         if self._direction != self.WRITE_ONLY:
-            self._in_queue = queue.Queue(20)
+            self._in_queue = queue.Queue(50)
             self._asynch_io = IPAsynchReader(self, self._in_queue, separator, msg_processing)
 
     def open(self):
@@ -333,7 +333,7 @@ class TCPBufferedReader:
         self._connection = connection
         self._address = address
         self._ref = "%s:%d" % address
-        self._in_queue = queue.Queue(10)
+        self._in_queue = queue.Queue(50)
         self._reader = IPAsynchReader(self, self._in_queue, separator, msg_processing)
         self._reader.start()
 
