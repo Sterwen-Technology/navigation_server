@@ -83,6 +83,11 @@ class NavigationServer:
     def name(self):
         return self._name
 
+    @staticmethod
+    def version():
+        global version
+        return version
+
     def add_server(self, server):
         if type(server) == Console:
             if self._console is not None:
