@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import generated.console_pb2 as console__pb2
+import console_pb2 as console__pb2
 
 
 class NavigationConsoleStub(object):
