@@ -80,6 +80,7 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp = ServerMsg(id=request.id)
         server = self._console.main_server()
         resp.name = server.name()
+        resp.version = server.version()
         resp.state = State.RUNNING
         return resp
 

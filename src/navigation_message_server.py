@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name:        navigation_server.py
+# Name:        navigation_message_server.py
 # Purpose:     top module for the navigation server
 #
 # Author:      Laurent Carré

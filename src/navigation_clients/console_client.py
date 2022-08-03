@@ -10,7 +10,6 @@
 #-------------------------------------------------------------------------------
 
 import logging
-import grpc
 
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
@@ -62,6 +61,10 @@ class ServerProxy:
     @property
     def name(self):
         return self._msg.name
+
+    @property
+    def version(self):
+        return self._msg.version
 
     @property
     def state(self):

@@ -41,6 +41,7 @@ message ServerMsg {
   string protocol=4;
   string status=5;
   uint32 error=6;
+  string version=7;
 }
 
 message Request {
