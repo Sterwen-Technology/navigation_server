@@ -20,8 +20,9 @@ from argparse import ArgumentParser
 from concurrent import futures
 sys.path.insert(0, "/data/solidsense/navigation/src")
 import grpc
-from generated.vedirect_pb2 import device, solar_output, request
+from generated.vedirect_pb2 import device, solar_output, request, MPPT_device
 from generated.vedirect_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
+from utilities.protobuf_utilities import set_protobuf_data
 
 
 def _parser():
@@ -182,20 +183,27 @@ class MPPT_Servicer(solar_mpptServicer):
                       ('V', 'voltage', float, 0.001),
                       ('PPV', 'panel_power', float, 1.0)]
 
+    device_status_v = [('PID', 'product_id', str, None),
+                       ('FW', 'firmware', str, None),
+                       ('SER#', 'serial', str, None),
+                       ('ERR', 'error', int, 1),
+                       ('CS', 'state', int, 1),
+                       ('MPPT', 'mppt_state', int, 1),
+                       ('H21', 'day_max_power', float, 1.0), # W
+                       ('H20', 'day_power', float, 100.0)  # kWh
+                       ]
+
     def __init__(self, reader):
         self._reader = reader
 
-    @staticmethod
-    def set_data(result, keys, packet):
-        for key, attr, type_v, scale in keys:
-            if type_v is not None:
-                val = type_v(packet[key]) * scale
-            else:
-                val = packet[key]
-            object.__setattr__(result, attr, val)
-
     def GetDeviceInfo(self, request, context):
-        pass
+        _logger.debug("GRPC request GetDevice")
+        packet = self._reader.lock_get_data()
+        ret_data = MPPT_device()
+        if packet is not None:
+            set_protobuf_data(ret_data, self.device_status_v, packet)
+        self._reader.unlock_data()
+        return ret_data
 
     def GetOutput(self, request, context):
         _logger.debug("GRPC request GetOutput")
@@ -205,7 +213,7 @@ class MPPT_Servicer(solar_mpptServicer):
             data_age = time.monotonic() - packet['timestamp']
             if data_age > 30.0:
                 _logger.error("Vedirect outdated data by %5.1f seconds" % data_age)
-            self.set_data(ret_val, self.solar_output_v, packet)
+            set_protobuf_data(ret_val, self.solar_output_v, packet)
         self._reader.unlock_data()
         return ret_val
 
