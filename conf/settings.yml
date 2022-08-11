@@ -26,7 +26,7 @@ servers:
     class: NMEAServer
     port: 4500
     sender: iKonvert1
-    nmea2000: dyfmt
+    nmea2000: transparent
     master: 192.168.1.21
 
 - Console:
@@ -42,13 +42,13 @@ couplers:
 
 - iKonvert1:
     class: iKonvert
-    device: /dev/ttyUSB0
+    device: /dev/ttyUSB1
     protocol: nmea2000
     autostart: false
 
 - MiniPlex3:
     class: ShipModulInterface
-    address: 192.168.1.62
+    address: 192.168.1.16
     port: 10110
     transport: TCP
     server: NMEAServer
