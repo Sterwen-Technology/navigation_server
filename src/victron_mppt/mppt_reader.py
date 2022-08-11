@@ -20,7 +20,7 @@ from argparse import ArgumentParser
 from concurrent import futures
 sys.path.insert(0, "/data/solidsense/navigation/src")
 import grpc
-from generated.vedirect_pb2 import device, solar_output, request, MPPT_device
+from generated.vedirect_pb2 import solar_output, request, MPPT_device
 from generated.vedirect_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
 from utilities.protobuf_utilities import set_protobuf_data
 
@@ -30,7 +30,7 @@ def _parser():
 
     p.add_argument('-i', '--interface', action='store', type=str, default='/dev/ttyUSB4')
     p.add_argument('-p', '--port', action="store", type=int, default=4505)
-    p.add_argument('-s', '--serial_port', action="store", default=4507)
+    # p.add_argument('-s', '--serial_port', action="store", default=4507)
     p.add_argument('-sim', '--simulator', action="store")
 
     return p
@@ -232,7 +232,7 @@ class GrpcServer:
         self._server.start()
         _logger.info("MPPT server started")
 
-
+'''
 class UDPSerialEmulator:
 
     def __init__(self, port):
@@ -283,7 +283,7 @@ class TCPSerialEmulator(threading.Thread):
                 self._connection.sendall(msg)
             except (IOError, socket.error) as e:
                 _logger.error("Error sending on serial emulator" + str(e))
-
+'''
 
 class VEdirect_simulator:
 
@@ -321,6 +321,7 @@ def main():
     _logger.addHandler(loghandler)
     _logger.setLevel(logging.INFO)
 
+    '''
     if opts.serial_port is not None:
         try:
             ser_emu = TCPSerialEmulator(opts.serial_port)
@@ -328,7 +329,8 @@ def main():
             _logger.critical("Unrecoverable error => stopping the service")
             os._exit(0)
     else:
-        ser_emu = None
+    '''
+    ser_emu = None
     if opts.simulator is not None:
         reader = VEdirect_simulator(opts.simulator, ser_emu)
     else:
