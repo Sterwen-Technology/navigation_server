@@ -14,18 +14,18 @@ import grpc
 from argparse import ArgumentParser
 import sys
 
-from generated.console_pb2 import *
-from generated.console_pb2_grpc import *
+from generated.vedirect_pb2 import *
+from generated.vedirect_pb2_grpc import *
 
 
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
 
     p.add_argument("-p", "--port", action="store", type=int,
-                   default=4502,
+                   default=4505,
                    help="Console listening port, default 4502")
     p.add_argument("-a", "--address", action="store", type=str,
-                   default='127.0.0.1',
+                   default='192.168.1.12',
                    help="IP address for Navigation server, default is localhost")
 
     return p
@@ -48,21 +48,20 @@ class Options(object):
             raise AttributeError(name)
 
 
-class ConsoleClient:
+class MpptClient:
 
     def __init__(self, address):
         self._channel = grpc.insecure_channel(address)
-        self._stub = NavigationConsoleStub(self._channel)
+        self._stub = solar_mpptStub(self._channel)
         self._req_id = 0
-        print("Console on navigation server", address)
+        print("Console on MPPT server", address)
 
-    def get_instruments(self):
+    def get_device(self):
         instruments = []
-        req = Request(id=self._req_id)
+        req = request(id=self._req_id)
         try:
-            for inst in self._stub.GetInstruments(req):
-                instruments.append(inst)
-            return instruments
+            device = self._stub.GetDeviceInfo(req)
+            return device
         except Exception as err:
             print("Error accessing server:", err)
             return None
@@ -71,11 +70,10 @@ class ConsoleClient:
 def main():
     opts = Options(parser)
     server = "%s:%d" % (opts.address, opts.port)
-    console = ConsoleClient(server)
-    result = console.get_instruments()
+    console = MpptClient(server)
+    result = console.get_device()
     if result is not None:
-        for i in result:
-            print(i)
+        print(result)
 
 
 if __name__ == '__main__':
