@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import generated.vedirect_pb2 as vedirect__pb2
+import vedirect_pb2 as vedirect__pb2
 
 
 class solar_mpptStub(object):
@@ -17,7 +17,7 @@ class solar_mpptStub(object):
         self.GetDeviceInfo = channel.unary_unary(
                 '/solar_mppt/GetDeviceInfo',
                 request_serializer=vedirect__pb2.request.SerializeToString,
-                response_deserializer=vedirect__pb2.device.FromString,
+                response_deserializer=vedirect__pb2.MPPT_device.FromString,
                 )
         self.GetOutput = channel.unary_unary(
                 '/solar_mppt/GetOutput',
@@ -47,7 +47,7 @@ def add_solar_mpptServicer_to_server(servicer, server):
             'GetDeviceInfo': grpc.unary_unary_rpc_method_handler(
                     servicer.GetDeviceInfo,
                     request_deserializer=vedirect__pb2.request.FromString,
-                    response_serializer=vedirect__pb2.device.SerializeToString,
+                    response_serializer=vedirect__pb2.MPPT_device.SerializeToString,
             ),
             'GetOutput': grpc.unary_unary_rpc_method_handler(
                     servicer.GetOutput,
@@ -77,7 +77,7 @@ class solar_mppt(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/solar_mppt/GetDeviceInfo',
             vedirect__pb2.request.SerializeToString,
-            vedirect__pb2.device.FromString,
+            vedirect__pb2.MPPT_device.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
