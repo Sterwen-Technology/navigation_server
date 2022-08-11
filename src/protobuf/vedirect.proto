@@ -13,16 +13,45 @@ syntax = "proto3";
 
 // Messages to transmit Victron VE direct messages between the reader and the instrument
 
+enum VE_Error{
+  no_error=0;
+  Battery_voltage_too_high=2;
+  Bulk_time_limit_exceeded=20;
+  Current_sensor_issue=21;
+  Input_voltage_too_high=33;
+  Input_current_too_high=34;
+}
 
-message device {
+enum VE_state {
+  Off=0;
+  Low_power=1; // not used by MPPT
+  Fault=2;
+  Bulk=3;
+  Absorption=4;
+  Float=5;
+  Storage=6;
+  Equalize=7;
+  Starting_up=245;
+  Repeated_absorption=246;
+  Auto_equalize=247;
+  External_control=252;
+}
+
+enum VE_MPPT {
+  MPPT_Off=0;
+  Limited=1;
+  Active=2;
+}
+
+message MPPT_device {
   string product_id = 1;
   string firmware = 2;
   string serial = 3;
-  uint32 error =4;
-  uint32 state =5;
-  uint32 mppt_state =7;
+  VE_Error error =4;
+  VE_state state=5;
+  VE_MPPT mppt_state =7;
   float day_max_power = 6; //Watt
-  float day_power = 8; //Watt-heure
+  float day_power = 8; //kilo Watt-heure
 }
 
 message solar_output {
@@ -36,6 +65,6 @@ message request {
 }
 
 service solar_mppt {
-  rpc GetDeviceInfo(request) returns (device) {}
+  rpc GetDeviceInfo(request) returns (MPPT_device) {}
   rpc GetOutput(request) returns (solar_output) {}
 }
