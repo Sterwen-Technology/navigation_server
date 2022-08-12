@@ -308,7 +308,9 @@ class VEdirect_simulator:
             return None
         if self._ser is not None:
             self._ser.send(line.encode())
-        return json.loads(line)
+        packet = json.loads(line)
+        packet['timestamp'] = time.monotonic()
+        return packet
 
     def start(self):
         pass
