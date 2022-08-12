@@ -29,5 +29,6 @@ def set_protobuf_data(result, keys, data_dict: dict):
         except KeyError:
             continue
 
-def protob_enum_string(msg, enum_attr: str)
-    return msg.DESCRIPTOR.fields_by_name[enum_attr].enum_type.value_by_number[msg.__getattr__(enum_attr)].name
+
+def pb_enum_string(msg, enum_attr: str, value):
+    return msg.DESCRIPTOR.fields_by_name[enum_attr].enum_type.values_by_number[value].name
