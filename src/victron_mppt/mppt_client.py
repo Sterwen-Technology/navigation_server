@@ -9,12 +9,12 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
+import grpc
 from generated.vedirect_pb2 import *
 from generated.vedirect_pb2_grpc import *
-from grpc import StatusCode, insecure_channel, RpcError
 import logging
 
-_logger = logging.getLogger("MPPTDataServer"+"."+__name__)
+_logger = logging.getLogger("MPPTDataClient"+"."+__name__)
 
 
 class MPPT_device_proxy:
@@ -34,18 +34,20 @@ class MPPT_Client:
         self._address = opts.address
         self._port = opts.port
         self._server = "%s:%d" % (self._address, self._port)
-        self._channel = insecure_channel(self._address)
+        self._channel = grpc.insecure_channel(self._server)
         self._stub = solar_mpptStub(self._channel)
+        _logger.info("MPPT server stub created on %s" % self._server)
         self._req_id = 0
 
     def getDeviceInfo(self):
+        _logger.debug("Client GetDeviceInfo")
         try:
             self._req_id += 1
             req = request()
             request.id = self._req_id
             device = self._stub.GetDeviceInfo(req)
             return device
-        except RpcError as err:
+        except grpc.RpcError as err:
             print(err)
             return None
 

@@ -10,6 +10,7 @@
 #-------------------------------------------------------------------------------
 
 import logging
+from utilities.protobuf_utilities import *
 
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
@@ -28,11 +29,13 @@ class InstrumentProxy:
 
     @property
     def state(self):
-        return self._msg.DESCRIPTOR.fields_by_name['state'].enum_type.values_by_number[self._msg.state].name
+        # return self._msg.DESCRIPTOR.fields_by_name['state'].enum_type.values_by_number[self._msg.state].name
+        return pb_enum_string(self._msg, 'state', self._msg.state)
 
     @property
     def dev_state(self):
-        return self._msg.DESCRIPTOR.fields_by_name['dev_state'].enum_type.values_by_number[self._msg.dev_state].name
+        # return self._msg.DESCRIPTOR.fields_by_name['dev_state'].enum_type.values_by_number[self._msg.dev_state].name
+        return pb_enum_string(self._msg, 'dev_state', self._msg.dev_state)
 
     @property
     def protocol(self):
@@ -68,7 +71,8 @@ class ServerProxy:
 
     @property
     def state(self):
-        return self._msg.DESCRIPTOR.fields_by_name['state'].enum_type.values_by_number[self._msg.state].name
+        # return self._msg.DESCRIPTOR.fields_by_name['state'].enum_type.values_by_number[self._msg.state].name
+        return pb_enum_string(self._msg, 'state', self._msg.state)
 
 
 class ConsoleClient:
