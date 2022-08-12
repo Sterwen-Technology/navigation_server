@@ -232,6 +232,9 @@ class GrpcServer:
         self._server.start()
         _logger.info("MPPT server started")
 
+    def wait(self):
+        self._server.wait_for_termination()
+
 '''
 class UDPSerialEmulator:
 
@@ -292,15 +295,16 @@ class VEdirect_simulator:
         _logger.info("Opening simulator on file name:%s" % filename)
         self._ser = serial_emu
         self._lock = threading.Lock()
-        self._lock.acquire()
+        #self._lock.acquire()
 
     def lock_get_data(self):
 
         try:
             line = self._fd.readline()
+            _logger.debug(line)
         except IOError as e:
             _logger.error(str(e))
-            self._lock.release()
+            # self._lock.release()
             return None
         if self._ser is not None:
             self._ser.send(line.encode())
@@ -310,7 +314,11 @@ class VEdirect_simulator:
         pass
 
     def wait_lock(self):
-        self._lock.acquire()
+        pass
+        # self._lock.acquire()
+
+    def unlock_data(self):
+        pass
 
 
 def main():
@@ -319,7 +327,7 @@ def main():
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
-    _logger.setLevel(logging.INFO)
+    _logger.setLevel(logging.DEBUG)
 
     '''
     if opts.serial_port is not None:
@@ -347,7 +355,7 @@ def main():
     server.start()
 
     if opts.simulator is not None:
-        reader.wait_lock()
+        server.wait()
     else:
         reader.join()
 
