@@ -10,8 +10,11 @@ import os
 
 def main():
     full_filename = sys.argv[1]
+    if not os.path.exists(full_filename):
+        print(sys.argv[0], "File does not exists", full_filename)
+        return
     rel_dir, filename = os.path.split(full_filename)
-    print(rel_dir, filename)
+    print(sys.argv[0], "processing file", full_filename)
     prefix = sys.argv[2]
     i_grpc = filename.find('_grpc')
     module_name = filename[:i_grpc]
@@ -25,7 +28,7 @@ def main():
                     head = line[:start-1]
                     tail = line[start+len(module_name)+1:]
                     output_l = "%s %s.%s %s\n" % (head, prefix, module_name, tail)
-                    print(output_l)
+                    # print(output_l)
                     of.write(output_l)
                     continue
             of.write(line)
