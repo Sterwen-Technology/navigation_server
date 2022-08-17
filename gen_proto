@@ -1,7 +1,22 @@
 #!/bin/bash
 # nmea_router protobuf and gRPC
-python -m grpc_tools.protoc -I src/protobuf --python_out=./src/generated --grpc_python_out=./src/generated \
-  src/protobuf/nmea2000.proto src/protobuf/console.proto src/protobuf/nmea0183.proto src/protobuf/server.proto
-# Victron VE direct protobuf and gRPC
-python -m grpc_tools.protoc -I ./src/protobuf --python_out=./src/generated --grpc_python_out=./src/generated \
-  ./src/protobuf/vedirect.proto
+
+input_dir=src/protobuf
+output_dir=src/generated
+
+gen_protobuf() {
+  echo "processing:$1"
+  input_file=${input_dir}/"$1.proto"
+  python -m grpc_tools.protoc -I ./${input_dir} --python_out=./${output_dir} --grpc_python_out=./${output_dir} ${input_file}
+  output_file=${output_dir}/"$1_pb2_grpc.py"
+  if [ -e ${output_file} ]
+  then
+    python mod_pb2.py ${output_file} generated
+  fi
+}
+
+gen_protobuf vedirect
+gen_protobuf console
+gen_protobuf nmea0183
+gen_protobuf nmea2000
+gen_protobuf server

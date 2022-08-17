@@ -5,6 +5,7 @@ import grpc
 import generated.console_pb2 as console__pb2
 
 
+
 class NavigationConsoleStub(object):
     """Missing associated documentation comment in .proto file."""
 

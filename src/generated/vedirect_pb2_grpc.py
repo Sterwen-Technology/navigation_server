@@ -5,6 +5,7 @@ import grpc
 import generated.vedirect_pb2 as vedirect__pb2
 
 
+
 class solar_mpptStub(object):
     """Missing associated documentation comment in .proto file."""
 
