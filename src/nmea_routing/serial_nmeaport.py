@@ -14,6 +14,7 @@ import logging
 
 from nmea_routing.coupler import Coupler, CouplerReadError, CouplerTimeOut
 from nmea_routing.nmea0183 import NMEA0183Msg, NMEAInvalidFrame
+from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 

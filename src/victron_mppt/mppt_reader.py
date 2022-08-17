@@ -24,6 +24,8 @@ from generated.vedirect_pb2 import solar_output, request, MPPT_device
 from generated.vedirect_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
 from utilities.protobuf_utilities import set_protobuf_data
 
+_version = "V1.00"
+
 
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
@@ -288,6 +290,7 @@ class TCPSerialEmulator(threading.Thread):
                 _logger.error("Error sending on serial emulator" + str(e))
 '''
 
+
 class VEdirect_simulator:
 
     def __init__(self, filename, serial_emu=None):
@@ -329,17 +332,9 @@ def main():
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
-    _logger.setLevel(logging.DEBUG)
+    _logger.setLevel(logging.INFO)
 
-    '''
-    if opts.serial_port is not None:
-        try:
-            ser_emu = TCPSerialEmulator(opts.serial_port)
-        except (serial.SerialException, IOError, BrokenPipeError):
-            _logger.critical("Unrecoverable error => stopping the service")
-            os._exit(0)
-    else:
-    '''
+    _logger.info("Victron MPPT VEdirect reader version %s" % _version)
     ser_emu = None
     if opts.simulator is not None:
         reader = VEdirect_simulator(opts.simulator, ser_emu)
