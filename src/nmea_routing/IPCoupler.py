@@ -13,6 +13,8 @@ import socket
 import logging
 import queue
 import threading
+import time
+
 from nmea_routing.generic_msg import *
 from nmea_routing.coupler import Coupler, CouplerReadError, CouplerTimeOut
 from nmea_routing.nmea0183 import process_nmea0183_frame, NMEAInvalidFrame
@@ -42,14 +44,16 @@ class IPCoupler(Coupler):
         elif self._protocol == 'UDP':
             self._transport = UDP_reader(self._address, self._port, self._timeout, self._buffer_size)
 
-    def open(self):
+    def open(self) -> bool:
 
         if self._transport.open():
             self._state = self.OPEN
             if self._protocol == 'TCP':
                 self._state = self.CONNECTED
+            return True
         else:
             self._state = self.NOT_READY
+            return False
 
     def read(self) -> NavGenericMsg:
         raise NotImplementedError("To be implemented in subclasses")
@@ -210,7 +214,7 @@ class IPAsynchReader(threading.Thread):
                 index = buffer.find(self._separator, start_idx, end_idx)
                 if index == -1:
                     if part:
-                        #  there is contnuity needed
+                        #  there is continuity needed
                         if buffer[end_idx-1] in self._separator:
                             end_idx -= 1
                         part_buf.extend(buffer[start_idx:end_idx])
@@ -267,9 +271,12 @@ class IPAsynchReader(threading.Thread):
                 try:
                     self._out_queue.put(msg, timeout=1.0)
                 except queue.Full:
-                    _logger.critical("Asynchronous reader output Queue full for %s" % self._transport.ref())
-                    self._stop_flag = True
-                    break
+                    # _logger.critical("Asynchronous reader output Queue full for %s" % self._transport.ref())
+                    # self._stop_flag = True
+                    # break
+                    _logger.error("Message overflow from %s lost 1 message" % self._transport.ref())
+                    time.sleep(0.3)
+                    continue
                 if self._stop_flag:
                     break
         _logger.info("Asynch reader %s stopped" % self._transport.ref())
@@ -299,16 +306,19 @@ class BufferedIPCoupler(IPCoupler):
         self._in_queue = None
         self._asynch_io = None
         self._transparent = False
+        self._msg_queue_size = opts.get('msg_queue_size', int, 50)
 
     def set_message_processing(self, separator=b'\r\n', msg_processing=process_nmea0183_frame):
         if self._direction != self.WRITE_ONLY:
-            self._in_queue = queue.Queue(50)
+            self._in_queue = queue.Queue(self._msg_queue_size)
             self._asynch_io = IPAsynchReader(self, self._in_queue, separator, msg_processing)
 
-    def open(self):
-        super().open()
-        if self._state == self.CONNECTED and self._asynch_io is not None:
-            self._asynch_io.start()
+    def open(self) -> bool:
+        if super().open():
+            if self._state == self.CONNECTED and self._asynch_io is not None:
+                self._asynch_io.start()
+        else:
+            return False
 
     def read(self) -> NavGenericMsg:
         msg = self._in_queue.get()

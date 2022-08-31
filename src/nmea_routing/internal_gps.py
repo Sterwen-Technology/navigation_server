@@ -38,6 +38,7 @@ class InternalGps(Coupler):
             raise CouplerNotPresent('InternalGPS')
 
         super().__init__(opts)
+        _logger.debug("Internal GPS coupler - connecting to Quectel modem")
         self._separator = b'\r\n'
         self._separator_len = 2
         fp = open("/data/solidsense/modem_gps/parameters.json")
@@ -45,7 +46,7 @@ class InternalGps(Coupler):
         fp.close()
         self._modem = QuectelModem(self._params['modem_ctrl'])
         status = self._modem.getGpsStatus()
-        # print(status)
+        _logger.debug("Internal GPS status:%s" % status)
         if status['state'] == 'off':
             self._modem.gpsOn()
             time.sleep(0.4)
@@ -62,7 +63,7 @@ class InternalGps(Coupler):
         else:
             self._fix_event.clear()
             _logger.info("Internal GPS NOT fixed")
-        _logger.info("Internal GPS interface:%s", self._nmea_if)
+        _logger.info("Internal GPS interface:%s ready", self._nmea_if)
         self._modem.close()
 
     def open(self):

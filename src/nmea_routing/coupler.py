@@ -268,7 +268,7 @@ class Coupler(threading.Thread):
             self._timer = None
         self.stop_writer()
 
-    def open(self):
+    def open(self) -> bool:
         raise NotImplementedError("To be implemented in subclass")
 
     def close(self):

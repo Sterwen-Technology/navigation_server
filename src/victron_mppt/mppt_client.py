@@ -52,7 +52,7 @@ class MPPT_device_proxy:
         return self._device.day_max_power
 
     @property
-    def day_power(self) -> float:
+    def day_yield(self) -> float:
         return self._device.day_power
 
 
