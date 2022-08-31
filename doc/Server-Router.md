@@ -104,6 +104,7 @@ Specific parameters
 | port    | integer  | no default | Port of the server       |
 | transport | TCP, UDP | TCP | Transport protocol for the server |
 | buffer_size | integer  | 256 | size in bytes of input buffer |
+| msg_queue_size | integer | 50 | size of reading message queue |
 
 Buffer size is to be adjusted taking into account average message size and number of messages per seconds.
 A large buffer will create some delays for messages through the system while too small buffer size will generate a lot of overhead.

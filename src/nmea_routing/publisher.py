@@ -40,6 +40,7 @@ class Publisher(threading.Thread):
             for inst_name in inst_list:
                 self._couplers.append(self.resolve_ref(inst_name))
 
+        self._queue_tpass = False
         super().__init__(name=name)
         self._name = name
 
@@ -65,7 +66,12 @@ class Publisher(threading.Thread):
         qs = self._queue.qsize()
         if qs > self._queue_size / 2:
             _logger.warning("%s Publisher Queue filling up size %d" % (self._name, qs))
-            time.sleep(1.0)
+            self._queue_tpass = True
+            time.sleep(0.2)
+        if self._queue_tpass:
+            if qs < 4:
+                _logger.info("%s Publisher queue back to low level" % self._name)
+                self._queue_tpass = False
 
     def deregister(self):
         for inst in self._couplers:
