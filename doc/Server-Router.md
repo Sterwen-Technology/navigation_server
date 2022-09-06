@@ -24,19 +24,18 @@ Using efficient binary encoding with Protobuf and a real protocol like gRPC allo
 #### NMEAServer class
 
 This class implements a TCP server that is transmitting NMEA0183 based messages over a raw TCP stream. No additional protocol elements are transmitted.
-The server works in both direction and the connection created with the client accepts NMEA0183 messages that will be forwarded to a specific instrument.
+This server is only transmitting messages from the navigation networks (couplers) to the host.
 
 Here are the parameters associated with the server
 
-| Name      | Type  | Default | Signification                  |
-|-----------|-------|---------|--------------------------------|
-| port      | int   | 4500    | listening port of the server   |
-| heartbeat | float | 30      | Period of the heartbeat  timer |
-| timeout | float | 5.0 | timeout socket receive |
-|max_connections | int | 10 | maximum number of active connections |
-| sender | string | None | Name of the instrumnet receiving the messages sent from client |
-| master | string | None | IP address of the client allowed to send messages towards instruments. First client by default |
-| nmea2000 | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see below) |
+| Name            | Type  | Default | Signification                  |
+|-----------------|-------|---------|--------------------------------|
+| port            | int   | 4500    | listening port of the server   |
+| heartbeat       | float | 30      | Period of the heartbeat  timer |
+| timeout         | float | 5.0 | timeout socket receive |
+| max_silent | float | 120.0 | maximum time without traffic for a client. The connection is closed after |
+| max_connections | int | 10 | maximum number of active connections |
+| nmea2000        | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see below) |
 
 
 **Format of NMEA2000 messages**
@@ -51,9 +50,44 @@ if dyfmt or stfmt is selected all NMEA2000 messages will be translated in the se
 
 The configuration is also valid for messages sent from the host (client), in that case NMEA0183 like messages encapsulating NMEA2000 messages will be treated internally as NMEA2000.
 
-#### gRPCNMEAServer class
+#### NMEASEnderServer class
+
+This server allows to send NMEA commands towards a coupler. This is mostly used to control navigation and send tracking information to autopilot and displays
 
 
+| Name       | Type                      | Default     | Signification                                                                                  |
+|------------|---------------------------|-------------|------------------------------------------------------------------------------------------------|
+| port       | int                       | 4503        | listening port of the server                                                                   |
+| heartbeat  | float                     | 30          | Period of the heartbeat  timer                                                                 |
+| timeout    | float                     | 5.0         | timeout socket receive                                                                         |
+| max_silent | float                     | 30.0        | maximum time without traffic for a client. The connection is closed after                      |
+| coupler    | string                    | None        | Name of the instrument receiving the messages sent from client                                 |
+| master     | string                    | None        | IP address of the client allowed to send messages towards instruments. First client by default |
+| nmea2000   | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see above)                                                    |
+
+#### gRPCNMEAServer class (future)
+
+Server for NMEA information and other navigation information using the gRPC protocol.
+
+#### Console server
+
+This a gRPC server used for external monitoring and control of the navigation server router. The protobuf interface is in the src/proto/console.proto file.
+
+| Name       | Type                      | Default     | Signification                                                                                  |
+|------------|---------------------------|-------------|------------------------------------------------------------------------------------------------|
+| port       | int                       | 4502        | listening port of the server                                                                   |
+
+
+#### ShipModulConfig server
+
+TCP server allowing to bypass the routing function to the connect the Miniplex control application to a Miniplex3 device. To use this feature just configure the MPXConfig utility and assign the server IP and the port configured for it.
+
+Warning: when the application is connected to the server all traffic is re-routed to it. So no NMEA messages are transmitted to the navigation system.
+
+| Name       | Type                      | Default | Signification                                                                                  |
+|------------|---------------------------|---------|------------------------------------------------------------------------------------------------|
+| port       | int                       | 4501    | listening port of the server                                                                   |
+| coupler | string | None | Name of the Miniplex coupler in the configuration file |
 
 
 ### Couplers
@@ -70,18 +104,18 @@ Under preparation
 
 #### Coupler generic parameters
 
-| Name            | Type                                 | Default                                  | Signification                            |
-|-----------------|--------------------------------------|------------------------------------------|------------------------------------------|
-| timeout         | float                                | 10                                       | Time out on instrment read in seconds    |
- | report_timer    | float                                | 30                                       | Reporting / tracing interval in sec.     |
- | max_attempt     | integer                              | 20                                       | Max number of attempt to open the device |
-| open_delay      | float                                | 2                                        | Delay between attempt to open the device |
-| talker          | string (2)                           | None | Talker ID substitution for NMEA0183      |
-| protocol | nmea0183, nmea2000 | nmea0183 | Messsage processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 when possible |
-| direction       | read_only, write_only, bidirectional | bidirectional | Direction of excahnge with device |
-| trace_messages  | boolean                              | False | Trace all messages after internal pre-processing |
-| trace_raw | boolean | False | Trace all messages in device format | 
-| autostart | boolean | True | The instrument is started aumatically when the service starts, if False it needs to be started via the Console |
+| Name           | Type                                 | Default       | Signification                                                                                                                 |
+|----------------|--------------------------------------|---------------|-------------------------------------------------------------------------------------------------------------------------------|
+| timeout        | float                                | 10            | Time out on instrment read in seconds                                                                                         |
+ | report_timer   | float                                | 30            | Reporting / tracing interval in sec.                                                                                          |
+ | max_attempt    | integer                              | 20            | Max number of attempt to open the device                                                                                      |
+| open_delay     | float                                | 2             | Delay between attempt to open the device                                                                                      |
+| talker         | string (2)                           | None          | Talker ID substitution for NMEA0183                                                                                           |
+| protocol       | nmea0183, nmea2000                   | nmea0183      | Messsage processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 when possible |
+| direction      | read_only, write_only, bidirectional | bidirectional | Direction of excahnge with device                                                                                             |
+| trace_messages | boolean                              | False         | Trace all messages after internal pre-processing                                                                              |
+| trace_raw      | boolean                              | False         | Trace all messages in device format                                                                                           | 
+| autostart      | boolean                              | True          | The instrument is started aumatically when the service starts, if False it needs to be started via the Console                |
 
 #### Coupler classes
 

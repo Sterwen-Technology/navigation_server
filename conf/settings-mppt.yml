@@ -9,7 +9,7 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 #
-trace: DEBUG
+log_level: DEBUG
 
 servers:
 

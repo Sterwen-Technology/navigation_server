@@ -341,6 +341,7 @@ class TCPBufferedReader:
 
     def __init__(self, connection, separator, address, msg_processing):
         self._connection = connection
+        self._connection.settimeout(5.0)
         self._address = address
         self._ref = "%s:%d" % address
         self._in_queue = queue.Queue(50)
