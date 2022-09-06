@@ -26,16 +26,17 @@ class NMEAServer(NavTCPServer):
     publisher_class = {'transparent': NMEAPublisher, 'dyfmt': NMEA2000DYPublisher, 'stfmt': NMEA2000STPublisher}
 
     def __init__(self, options):
+
         super().__init__(options)
         self._couplers = []
         self._options = options
         self._nmea2000 = options.get_choice('nmea2000', ('transparent', 'dyfmt', 'stfmt'), 'transparent')
-        self._master = options.get('master', str, None)
+        # self._master = options.get('master', str, None)
         self._connections = {}
         self._timer = None
         self._timer_name = self.name() + "-timer"
-        self._sender = None
-        self._sender_coupler = None
+        # self._sender = None
+        # self._sender_coupler = None
         self._client_lock = threading.Lock()
 
     def start_timer(self):
@@ -49,7 +50,7 @@ class NMEAServer(NavTCPServer):
 
     def run(self):
         _logger.info("%s ready listening on port %d" % (self.name(), self._port))
-        self._sender_coupler = self.resolve_ref('sender')
+        # self._sender_coupler = self.resolve_ref('sender')
         # print("Sender:", self._sender_instrument)
         self.start_timer()
         self._socket.settimeout(5.0)
@@ -88,7 +89,8 @@ class NMEAServer(NavTCPServer):
             # now create a publisher for all instruments
             pub = self.publisher_class[self._nmea2000](client, self._couplers)
             pub.start()
-            # attach a sender to send messages to instruments
+            # attach a sender to send messages to instruments - removed as server becomes unidirectional
+            '''
             if self._sender is None and self._sender_coupler is not None:
                 if self._master is not None:
                     if address[0] == self._master:
@@ -104,6 +106,7 @@ class NMEAServer(NavTCPServer):
             if self._sender is None:
                 _logger.info("No coupler (sender) to send NMEA messages for server %s client %s" %
                              (self.name(), client.descr()))
+            '''
             # end of while loop => the thread stops
         _logger.info("%s thread stops" % self.name())
         self._socket.close()
@@ -134,8 +137,8 @@ class NMEAServer(NavTCPServer):
         else:
             _logger.warning("Client remove client lock acquire failed")
 
-    def remove_sender(self):
-        self._sender = None
+    #def remove_sender(self):
+    #   self._sender = None
 
     def remove_coupler(self, coupler):
         _logger.info("Server %s removing coupler %s" % (self.name(), coupler.name()))
@@ -168,6 +171,8 @@ class NMEAServer(NavTCPServer):
                         heartbeat_msg = ZDA().message()
                         if client.send(heartbeat_msg):
                             to_be_closed.append(client)
+                else:
+                    client.clear_silent_count()
                 client.reset_period()
             for client in to_be_closed:
                 _logger.debug("NMEA Server heartbeat - removing client %s" % client.descr())
@@ -204,4 +209,132 @@ class NMEAServer(NavTCPServer):
         else:
             out['connection'] = 'no connections'
         return out
+
+
+class NMEASenderServer(NavTCPServer):
+
+    '''
+    Class to hold server for NMEA messaging towards a Coupler
+    Messages are unidirectional
+    '''
+
+    def __init__(self, options):
+        super().__init__(options)
+
+        self._coupler = None
+        self._options = options
+        self._nmea2000 = options.get_choice('nmea2000', ('transparent', 'dyfmt', 'stfmt'), 'transparent')
+        self._sender = None
+        self._timer = None
+        self._address = None
+        self._timer_name = self.name() + "-timer"
+        self._master = options.get('master', str, None)
+        # print("level", _logger.getEffectiveLevel())
+
+    def start_timer(self):
+        self._timer = threading.Timer(self._heartbeat, self.heartbeat)
+        self._timer.name = self._timer_name
+        self._timer.start()
+
+    def stop_timer(self):
+        if self._timer is not None:
+            self._timer.cancel()
+
+    def run(self):
+        self._coupler = self.resolve_ref('coupler')
+        if self._coupler is None:
+            _logger.error("NMEA Sender %s Coupler %s unknown => STOP server" % (self.name(),
+                                                                                self._options.getv('coupler')))
+            return
+
+        _logger.info("%s ready listening on port %d" % (self.name(), self._port))
+
+        self.start_timer()
+        self._socket.settimeout(5.0)
+        while not self._stop_flag:
+            _logger.debug("%s waiting for new connection" % self.name())
+            self._socket.listen(1)
+            try:
+                connection, address = self._socket.accept()
+            except socket.timeout:
+                if self._stop_flag:
+                    break
+                else:
+                    continue
+            if self._stop_flag:
+                connection.close()
+                break
+
+            if self._master is not None:
+                if address[0] != self._master:
+                    _logger.error("%s not authorized to send NMEA commands" % address[0])
+                    continue
+
+            if self._sender is not None:
+                # only one input connection allowed
+                if address[0] != self._address[0]:
+                    _logger.warning("%s already in use" % self.name())
+                    connection.close()
+                    continue
+                # same address but new connection => let's close the existing one
+                # now stop the sender thread
+                self._sender.stop()
+                self._sender.join()
+
+            self._address = address
+
+            if not self._coupler.is_alive():
+                # the Coupler is not running
+                if self._coupler.has_run():
+                    # there is nothing we can do here
+                    _logger.error("%s associated coupler cannot run again" % self.name())
+                    connection.close()
+                    break
+                self._coupler.force_start()
+                self._coupler.request_start()
+
+            _logger.info("Sender new connection from IP %s port %d" % address)
+            _logger.info("%s client at address %s is becoming sender" % (self.name(), address[0]))
+            self._sender = NMEASender(connection, address, self._coupler, self._nmea2000)
+            self._sender.start()
+            # self._sender.join()
+        # end of while loop => the thread stops
+        _logger.info("%s thread stops" % self.name())
+        self._socket.close()
+
+    def heartbeat(self):
+        if self._sender is not None:
+            cs = "connected to %s:%d" % self._address
+        else:
+            cs = "not connected"
+        _logger.info("%s heartbeat  %s" % (self._name, cs))
+        self.start_timer()
+        if self._stop_flag:
+            return
+
+        if self._sender is not None:
+            _logger.debug("Send Heartbeat check %s:%d msg:%d silent period:%d" %
+                          (self._address[0], self._address[1], self._sender.msgcount(), self._sender.silent_count()))
+            if self._sender.msgcount() == 0:
+                self._sender.add_silent_period()
+                # no message during period
+                if self._sender.silent_count() >= self._max_silent_period:
+                    _logger.warning("Send: No traffic on connection %s:%d" % self._address)
+                    self._sender.stop()
+                    self._sender.join()
+                    self._sender = None
+            else:
+                self._sender.reset_period()
+
+    def remove_client(self, address) -> None:
+        pass
+
+    def stop(self):
+        _logger.info("%s stopping" % self.name())
+        self._stop_flag = True
+        self.stop_timer()
+        if self._sender is not None:
+            self._sender.stop()
+
+
 

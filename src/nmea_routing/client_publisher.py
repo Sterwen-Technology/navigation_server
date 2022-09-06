@@ -76,35 +76,54 @@ class NMEASender(threading.Thread):
     msg_processing = {'transparent': process_nmea0183_frame,
                       'dyfmt': fromPGDY, 'stfmt': fromPGNST}
 
-    def __init__(self, client, instrument: Coupler, nmea2000_mode):
-        super().__init__(name="Sender-"+client.descr())
-        self._client = client
-        self._instrument = instrument
-        self._client.set_sender(self)
+    def __init__(self, connection: socket, address, coupler: Coupler, nmea2000_mode):
+        super().__init__(name="Sender-" + "%s:%d" % address)
+        self._connection = connection
+        self._address = address
+        self._coupler = coupler
         self._publisher = None
         self._stop_flag = False
+        self._msgcount = 0
+        self._silent_count = 0
         self._msg_processing = self.msg_processing[nmea2000_mode]
 
     def add_publisher(self, publisher):
         self._publisher = publisher
 
     def run(self) -> None:
-        reader = TCPBufferedReader(self._client.connection(), b'\r\n', self._client.address(), self._msg_processing)
+        reader = TCPBufferedReader(self._connection, b'\r\n', self._address, self._msg_processing)
         while not self._stop_flag:
             msg = reader.read()
             # print(msg.printable())
             if msg.type == NULL_MSG:
                 break
-            self._instrument.send_msg_gen(msg)
+            self._msgcount += 1
+            self._coupler.send_msg_gen(msg)
             if self._publisher is not None:
                 self._publisher.publish(msg)
         _logger.info("Stopping %s" % self.name)
         reader.stop()
+        self._connection.close()
 
     def stop(self):
+        _logger.info("NMEASender stop request")
         self._stop_flag = True
         if self._publisher is not None:
             self._publisher.stop()
+        self._connection.close()
+
+    def reset_period(self):
+        self._msgcount = 0
+        self._silent_count = 0
+
+    def msgcount(self):
+        return self._msgcount
+
+    def add_silent_period(self):
+        self._silent_count += 1
+
+    def silent_count(self):
+        return self._silent_count
 
 
 class ClientConnection:
@@ -160,7 +179,7 @@ class ClientConnection:
     def _close(self):
         if self._sender is not None:
             self._sender.stop()
-            self._server.remove_sender()
+            # self._server.remove_sender()
         for p in self._pubs:
             p.deregister()
             p.stop()
@@ -178,11 +197,11 @@ class ClientConnection:
     def silent_count(self):
         return self._silent_count
 
+    def clear_silent_count(self):
+        self._silent_count = 0
+
     def add_publisher(self, pub):
         self._pubs.append(pub)
-
-    def set_sender(self, sender):
-        self._sender = sender
 
     def descr(self):
         return "Connection %s:%d" % self._address

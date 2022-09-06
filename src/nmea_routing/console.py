@@ -36,6 +36,7 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.protocol = i.protocol()
         resp.msg_in = i.total_input_msg()
         resp.msg_out = i.total_output_msg()
+        resp.input_rate = i.input_rate()
         return resp
 
     def GetInstrument(self, request, context):

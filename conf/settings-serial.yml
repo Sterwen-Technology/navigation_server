@@ -9,15 +9,23 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
-trace: INFO
+log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+    nmea_routing.message_server: DEBUG
 
 servers:
 
 - NMEAServer:
-    class: NMEA_server
+    class: NMEAServer
     port: 4500
-    sender: MiniPlex3
+
+- NMEASender:
+    class: NMEASenderServer
+    port: 4503
+    coupler: MiniPlex3
+    max_silent: 10
+    master: 192.168.1.21
 
 - Console:
     class: Console
@@ -26,7 +34,7 @@ servers:
 - ShipModulConfig:
     class: ShipModulConfig
     port: 4501
-    instrument: MiniPlex3
+    coupler: MiniPlex3
 
 couplers:
 
@@ -39,7 +47,7 @@ couplers:
 
 - MiniPlex3:
     class: ShipModulInterface
-    address: 192.168.1.62
+    address: 192.168.1.25
     port: 10110
     transport: TCP
     server: NMEAServer

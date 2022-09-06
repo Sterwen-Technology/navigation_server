@@ -15,14 +15,14 @@ from argparse import ArgumentParser
 import signal
 
 from nmea_routing import nmea0183
-from nmea_routing.message_server import NMEAServer
+from nmea_routing.message_server import NMEAServer, NMEASenderServer
 from nmea_routing.shipmodul_if import *
 from nmea_routing.console import Console
 from nmea_routing.publisher import *
 from nmea_routing.client_publisher import *
 from nmea_routing.internal_gps import InternalGps
 # from simulator_input import *
-from nmea_routing.configuration import NavigationConfiguration
+from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
 from nmea_routing.IPCoupler import NMEA0183TCPReader, NMEA2000TCPReader
 from nmea_routing.ikonvert import iKonvert
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
@@ -41,7 +41,7 @@ def _parser():
     return p
 
 
-version = "V1.02"
+version = "V1.10"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -193,6 +193,11 @@ def print_threads():
 
 
 def adjust_log_level(config):
+    '''
+    Adjust the log level for each individual module (file)
+    :param config:
+    :return:
+    '''
     modules = config.get_option('log_module', None)
     if modules is None:
         return
@@ -218,6 +223,7 @@ def main():
     # print("Current directory", os.getcwd())
     config = NavigationConfiguration(opts.settings)
     config.add_class(NMEAServer)
+    config.add_class(NMEASenderServer)
     config.add_class(Console)
     config.add_class(ShipModulConfig)
     config.add_class(ShipModulInterface)
@@ -249,7 +255,11 @@ def main():
     main_server = NavigationServer()
     # create the servers
     for server_descr in config.servers():
-        server = server_descr.build_object()
+        try:
+            server = server_descr.build_object()
+        except ConfigurationException as e:
+            _logger.error("Error building server %s" % e)
+            continue
         main_server.add_server(server)
     # create the instruments
     for inst_descr in config.couplers():

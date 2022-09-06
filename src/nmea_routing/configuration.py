@@ -58,6 +58,12 @@ class Parameters:
             _logger.error("Not supported type %s for parameter %s" % (str(p_type), p_name) )
             raise ValueError
 
+    def getv(self, p_name):
+        try:
+            return self._param[p_name]
+        except KeyError:
+            return "Unknown parameter"
+
     def get(self, p_name, p_type, default):
         try:
             value = self._param[p_name]

@@ -99,6 +99,9 @@ class Coupler(threading.Thread):
         self._separator_len = 0
         self._has_run = False
         self._status = None
+        self._count_stamp = 0
+        self._rate = 0.0
+        self._rate_s = 0.0
 
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)
@@ -113,9 +116,15 @@ class Coupler(threading.Thread):
             _logger.warning("Coupler %s:No NMEA messages received in the last %4.1f sec" %
                             (self._name, self._timeout))
             self.check_connection()
+
+        t = time.monotonic()
+        self._rate = (self._total_msg - self._last_msg_count) / (t - self._count_stamp)
+        self._rate_s = (self._total_msg_s - self._last_msg_count_s) / (t - self._count_stamp)
         self._last_msg_count = self._total_msg
         self._last_msg_count_s = self._total_msg_s
-        _logger.info("Coupler %s NMEA message received:%d sent:%d" % (self.name(), self._total_msg, self._total_msg_s))
+        self._count_stamp = t
+        _logger.info("Coupler %s NMEA message received:%d rate:%6.2f sent:%d rate:%6.2f" %
+                     (self.name(), self._total_msg, self._rate, self._total_msg_s, self._rate_s))
         if not self._stopflag:
             self.start_timer()
 
@@ -147,6 +156,7 @@ class Coupler(threading.Thread):
         self._has_run = True
         self._startTS = time.time()
         self.start_timer()
+        self._count_stamp = time.monotonic()
         nb_attempts = 0
         while not self._stopflag:
             if self._state == self.NOT_READY:
@@ -260,6 +270,9 @@ class Coupler(threading.Thread):
     def protocol(self):
         return self._app_protocol
 
+    def input_rate(self):
+        return self._rate
+
     def stop(self):
         _logger.info("Stopping %s coupler" % self._name)
         self._stopflag = True
@@ -283,9 +296,6 @@ class Coupler(threading.Thread):
     def check_connection(self):
         # raise NotImplementedError("To be implemented in subclass")
         pass
-
-    def default_sender(self):
-        return False
 
     def resolve_ref(self, name):
         reference = self._opts[name]

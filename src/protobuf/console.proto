@@ -32,6 +32,8 @@ message InstrumentMsg {
   uint32 msg_out=7;
   string status=8;
   uint32 error=9;
+  float input_rate=10;  // messages / sec
+  float output_rate=11;
 }
 
 message ServerMsg {
