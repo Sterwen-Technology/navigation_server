@@ -38,6 +38,13 @@ servers:
     port: 4501
     coupler: MiniPlex3
 
+- NMEASender:
+    class: NMEASenderServer
+    port: 4503
+    coupler: MiniPlex3
+    max_silent: 10
+    master: 192.168.1.21
+
 couplers:
 
 - iKonvert1:
