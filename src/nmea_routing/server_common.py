@@ -12,6 +12,7 @@
 import threading
 import logging
 import socket
+import collections
 
 from nmea_routing.configuration import NavigationConfiguration
 
@@ -27,6 +28,9 @@ class NavigationServer:
 
     def name(self):
         return self._name
+
+    def class_name(self):
+        return self.__class__.__name__
 
     def resolve_ref(self, name):
         try:
@@ -50,6 +54,16 @@ class NavigationServer:
     def update_couplers(self):
         pass
 
+    def server_type(self):
+        raise NotImplementedError("To be implemented in subclass")
+
+    @property
+    def port(self):
+        return self._port
+
+
+ConnectionRecord = collections.namedtuple('ConnectionRecord', ['address', 'port', 'msg_count'])
+
 
 class NavTCPServer(NavigationServer, threading.Thread):
 
@@ -68,6 +82,12 @@ class NavTCPServer(NavigationServer, threading.Thread):
         self._socket.bind(('0.0.0.0', self._port))
         self._socket.settimeout(self._timeout)
         self._stop_flag = False
+
+    def running(self) -> bool:
+        return self.is_alive()
+
+    def server_type(self):
+        return 'TCP'
 
 
 

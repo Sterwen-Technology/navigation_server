@@ -12,21 +12,20 @@
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    data_server: INFO
-    instrument: INFO
-    nmea2k_pgndefs: INFO
-    shipmodul_if: INFO
-    ikonvert: INFO
-
-
+    nmea_routing.console: DEBUG
 
 servers:
 
 - NMEAServer:
     class: NMEAServer
     port: 4500
-    sender: iKonvert1
     nmea2000: transparent
+
+- NMEASender:
+    class: NMEASenderServer
+    port: 4503
+    coupler: MiniPlex3
+    max_silent: 10
     master: 192.168.1.21
 
 - Console:
@@ -55,7 +54,7 @@ couplers:
 
 - MiniPlex3:
     class: ShipModulInterface
-    address: 192.168.1.16
+    address: 192.168.1.25
     port: 10110
     transport: TCP
     server: NMEAServer

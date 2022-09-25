@@ -13,6 +13,7 @@ import sys
 import os
 from argparse import ArgumentParser
 import signal
+import datetime
 
 from nmea_routing import nmea0183
 from nmea_routing.message_server import NMEAServer, NMEASenderServer
@@ -61,7 +62,7 @@ class Options(object):
             raise AttributeError(name)
 
 
-class NavigationServer:
+class NavigationMainServer:
 
     def __init__(self):
 
@@ -73,6 +74,8 @@ class NavigationServer:
         self._sigint_count = 0
         self._is_running = False
         self._logfile = None
+        self._start_time = 0
+        self._start_time_s = "Not started"
 
         signal.signal(signal.SIGINT, self.stop_handler)
 
@@ -82,6 +85,9 @@ class NavigationServer:
 
     def name(self):
         return self._name
+
+    def class_name(self):
+        return self.__class__.__name__
 
     @staticmethod
     def version():
@@ -115,6 +121,11 @@ class NavigationServer:
         for inst in self._couplers.values():
             inst.request_start()
         self._is_running = True
+        self._start_time = datetime.datetime.now()
+        self._start_time_s = self._start_time.strftime("%Y/%m/%d-%H:%M:%S")
+
+    def start_time_str(self):
+        return self._start_time_s
 
     def wait(self):
         for server in self._servers:
@@ -252,7 +263,7 @@ def main():
     PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
     # PGNDefinitions.print_pgndef(129540, sys.stdout)
 
-    main_server = NavigationServer()
+    main_server = NavigationMainServer()
     # create the servers
     for server_descr in config.servers():
         try:

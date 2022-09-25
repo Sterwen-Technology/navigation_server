@@ -18,14 +18,29 @@ from generated.console_pb2_grpc import *
 _logger = logging.getLogger("ShipDataClient")
 
 
-class InstrumentProxy:
+class ConsoleAccessException(Exception):
+    pass
 
-    def __init__(self, msg: InstrumentMsg):
+
+class ProtobufProxy:
+    '''
+    Abstract class to encapsulate access to protobuf message elements
+    '''
+
+    def __init__(self, msg):
         self._msg = msg
 
-    @property
-    def name(self):
-        return self._msg.name
+    def __getattr__(self, item):
+        try:
+            return getattr(self._msg, item)
+        except AttributeError:
+            raise AttributeError(item)
+
+
+class CouplerProxy(ProtobufProxy):
+
+    def __init__(self, msg: CouplerMsg):
+        super().__init__(msg)
 
     @property
     def state(self):
@@ -37,18 +52,6 @@ class InstrumentProxy:
         # return self._msg.DESCRIPTOR.fields_by_name['dev_state'].enum_type.values_by_number[self._msg.dev_state].name
         return pb_enum_string(self._msg, 'dev_state', self._msg.dev_state)
 
-    @property
-    def protocol(self):
-        return self._msg.protocol
-
-    @property
-    def msg_in(self):
-        return self._msg.msg_in
-
-    @property
-    def msg_out(self):
-        return self._msg.msg_out
-
     def stop(self, client):
         return client.send_cmd(self._msg.name, 'stop')
 
@@ -56,23 +59,31 @@ class InstrumentProxy:
         return client.server_cmd('start_coupler', self._msg.name)
 
 
-class ServerProxy:
+class SubServerProxy(ProtobufProxy):
 
     def __init__(self, msg):
-        self._msg = msg
+        super().__init__(msg)
 
-    @property
-    def name(self):
-        return self._msg.name
 
-    @property
-    def version(self):
-        return self._msg.version
+class ServerProxy(ProtobufProxy):
+
+    def __init__(self, msg):
+        super().__init__(msg)
+        self._sub_servers = []
+        for s in msg.servers:
+            self._sub_servers.append(SubServerProxy(s))
 
     @property
     def state(self):
         # return self._msg.DESCRIPTOR.fields_by_name['state'].enum_type.values_by_number[self._msg.state].name
         return pb_enum_string(self._msg, 'state', self._msg.state)
+
+    def sub_servers(self) -> SubServerProxy:
+        for s in self._sub_servers:
+            yield s
+
+    def get_sub_servers(self):
+        return self._sub_servers
 
 
 class ConsoleClient:
@@ -83,37 +94,37 @@ class ConsoleClient:
         self._req_id = 0
         _logger.info("Console on navigation server %s" % address)
 
-    def get_instruments(self):
-        instruments = []
+    def get_couplers(self):
+        couplers = []
         req = Request(id=self._req_id)
         self._req_id += 1
         try:
-            for inst in self._stub.GetInstruments(req):
-                instruments.append(InstrumentProxy(inst))
-            return instruments
+            for inst in self._stub.GetCouplers(req):
+                couplers.append(CouplerProxy(inst))
+            return couplers
         except Exception as err:
             _logger.error("Error accessing server:%s" % err)
-            return None
+            raise ConsoleAccessException
 
-    def get_instrument(self, inst_name):
-        req = Request(id=self._req_id, target=inst_name)
+    def get_coupler(self, coupler_name):
+        req = Request(id=self._req_id, target=coupler_name)
         self._req_id += 1
         try:
-            inst = self._stub.GetInstrument(req)
-            return InstrumentProxy(inst)
+            inst = self._stub.GetCoupler(req)
+            return CouplerProxy(inst)
         except Exception as err:
             _logger.error("Error accessing server:%s" % err)
-            return None
+            raise ConsoleAccessException
 
     def send_cmd(self, target, command):
         req = Request(id=self._req_id, target=target, cmd=command)
         self._req_id += 1
         try:
-            resp = self._stub.InstrumentCmd(req)
+            resp = self._stub.CouplerCmd(req)
             return resp
         except Exception as err:
             _logger.error("Error accessing server:%s" % err)
-            return None
+            raise ConsoleAccessException
 
     def server_status(self):
         req = Request(id=self._req_id)
@@ -123,7 +134,7 @@ class ConsoleClient:
             return ServerProxy(server_msg)
         except Exception as err:
             _logger.error("Error accessing server:%s" % err)
-            return None
+            raise ConsoleAccessException
 
     def server_cmd(self, cmd, target=None):
         req = Request(id=self._req_id)
@@ -137,6 +148,6 @@ class ConsoleClient:
             return response.status
         except Exception as err:
             _logger.error("Error accessing server:%s" % err)
-            return None
+            raise ConsoleAccessException
 
 
