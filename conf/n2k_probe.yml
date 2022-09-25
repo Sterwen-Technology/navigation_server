@@ -15,7 +15,7 @@ trace_dir: /mnt/meaban/Bateau/tests
 
 servers:
 
-instruments:
+couplers:
 
 - iKonvert:
     class: iKonvert
@@ -26,7 +26,7 @@ publishers:
 
     - N2KTrace:
           class: N2KTracePublisher
-          instruments: [iKonvert]
+          couplers: [iKonvert]
           file: test1
           output: FILE
           # filter: 129283,129284

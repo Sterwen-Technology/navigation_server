@@ -17,7 +17,6 @@ servers:
 - NMEAServer:
     class: NMEA_server
     port: 4500
-    sender: MiniPlex3
 
 - Console:
     class: Console
@@ -26,7 +25,7 @@ servers:
 - ShipModulConfig:
     class: ShipModulConfig
     port: 4501
-    instrument: MiniPlex3
+    coupler: MiniPlex3
 
 couplers:
 

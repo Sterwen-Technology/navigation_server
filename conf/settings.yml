@@ -12,7 +12,7 @@
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    nmea_routing.console: DEBUG
+    nmea_routing.console: INFO
 
 servers:
 
@@ -26,7 +26,6 @@ servers:
     port: 4503
     coupler: MiniPlex3
     max_silent: 10
-    master: 192.168.1.21
 
 - Console:
     class: Console

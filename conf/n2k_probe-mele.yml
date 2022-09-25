@@ -13,7 +13,7 @@ trace: INFO
 
 servers:
 
-instruments:
+couplers:
 
 - iKonvert:
     class: iKonvert
@@ -24,7 +24,7 @@ publishers:
 
 - N2KTrace:
       class: N2kTracePublisher
-      instruments: [iKonvert]
+      couplers: [iKonvert]
           # filter: 129283,129284
 
 #    - MainLog:

@@ -231,6 +231,7 @@ class NMEASenderServer(NavTCPServer):
         self._address = None
         self._timer_name = self.name() + "-timer"
         self._master = options.get('master', str, None)
+        # print("(init) master=", self._master)
         # print("level", _logger.getEffectiveLevel())
 
     def start_timer(self):
@@ -267,9 +268,11 @@ class NMEASenderServer(NavTCPServer):
                 connection.close()
                 break
 
+            # print("Master", self._master)
             if self._master is not None:
                 if address[0] != self._master:
-                    _logger.error("%s not authorized to send NMEA commands" % address[0])
+                    _logger.error("%s not authorized to send NMEA commands. Only %s is" % (address[0], self._master))
+                    connection.close()
                     continue
 
             if self._sender is not None:
