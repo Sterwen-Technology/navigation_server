@@ -9,6 +9,7 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
+from collections import namedtuple
 from concurrent import futures
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
@@ -24,10 +25,10 @@ class ConsoleServicer(NavigationConsoleServicer):
         self._console = console
 
     @staticmethod
-    def instrument_resp(i):
-        resp = InstrumentMsg()
+    def coupler_resp(i):
+        resp = CouplerMsg()
         resp.name = i.name()
-        resp.instrument_class = type(i).__name__
+        resp.coupler_class = type(i).__name__
         if i.is_alive():
             resp.state = State.RUNNING
         else:
@@ -39,37 +40,37 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.input_rate = i.input_rate()
         return resp
 
-    def GetInstrument(self, request, context):
-        _logger.debug("Console GetInstrument name %s" % request.target)
+    def GetCoupler(self, request, context):
+        _logger.debug("Console GetCoupler name %s" % request.target)
         try:
             i = self._console.coupler(request.target)
-            resp = self.instrument_resp(i)
+            resp = self.coupler_resp(i)
         except KeyError:
             _logger.error("Console access to non existent coupler %s" % request.target)
-            resp = InstrumentMsg(status="Coupler not found")
+            resp = CouplerMsg(status="Coupler not found")
         return resp
 
-    def GetInstruments(self, request, context):
-        _logger.debug("Console GetInstruments")
+    def GetCouplers(self, request, context):
+        _logger.debug("Console GetCouplers")
         for i in self._console.couplers():
-            resp = self.instrument_resp(i)
-            _logger.debug("Console GetInstruments sending coupler %s" % i.name())
+            resp = self.coupler_resp(i)
+            _logger.debug("Console GetCouplers sending coupler %s" % i.name())
             yield resp
         return
 
-    def InstrumentCmd(self, request, context):
+    def CouplerCmd(self, request, context):
         resp = Response()
         resp.id = request.id
         _logger.debug("Coupler cmd %s %s" % (request.target, request.cmd))
         try:
-            instrument = self._console.coupler(request.target)
+            coupler = self._console.coupler(request.target)
         except KeyError:
             resp.status = "Coupler %s not found" % request.target
             _logger.error("Console coupler cmd target not found: %s" % request.target)
             return resp
         cmd = request.cmd
         try:
-            ret_val = getattr(instrument, cmd)()
+            ret_val = getattr(coupler, cmd)()
         except AttributeError:
             resp.status = "Command %s not found" % cmd
             return resp
@@ -78,11 +79,32 @@ class ConsoleServicer(NavigationConsoleServicer):
 
     def ServerStatus(self, request, context):
         _logger.debug("Console server status ")
-        resp = ServerMsg(id=request.id)
+        resp = NavigationServerMsg(id=request.id)
         server = self._console.main_server()
         resp.name = server.name()
         resp.version = server.version()
+        resp.start_time = server.start_time_str()
         resp.state = State.RUNNING
+        for sr in self._console.get_servers():
+            _logger.debug("server record %s" % sr.name)
+            sub_serv = Server()
+            sub_serv.server_class = sr.class_name
+            sub_serv.name = sr.name
+            sub_serv.server_type = sr.server.server_type()
+            sub_serv.port = sr.server.port
+            sub_serv.running = sr.server.running()
+            if sr.server.running():
+                sub_serv.nb_connections = sr.server.nb_connections()
+                _logger.debug("%s nb_connections %d" % (sr.name, sub_serv.nb_connections))
+                if sub_serv.nb_connections > 0:
+                    conn = Connection()
+                    for src in sr.server.connections():
+                        _logger.debug("Connection %s %d %d" % (src.address, src.port, src.msg_count))
+                        conn.remote_ip = src.address
+                        conn.remote_port = src.port
+                        conn.total_msg = src.msg_count
+                    sub_serv.connections.append(conn)
+            resp.servers.append(sub_serv)
         return resp
 
     def ServerCmd(self, request, context):
@@ -97,6 +119,9 @@ class ConsoleServicer(NavigationConsoleServicer):
             resp.status = server.start_coupler(i_name)
         _logger.debug("ServerCmd response %s" % resp.status)
         return resp
+
+
+ServerRecord = namedtuple('ServerRecord', ['server', 'name', 'class_name'])
 
 
 class Console(NavigationServer):
@@ -114,7 +139,13 @@ class Console(NavigationServer):
         self._grpc_server.add_insecure_port(address)
 
     def add_server(self, server):
-        self._servers[server.name()] = server
+        record = ServerRecord(server, server.name(), server.class_name())
+        self._servers[server.name()] = record
+
+    def get_servers(self) -> ServerRecord:
+        for sr in self._servers.values():
+            if sr.class_name not in ('Console', 'NavigationMainServer'):
+                yield sr
 
     def add_coupler(self, coupler):
         self._couplers[coupler.name()] = coupler
@@ -126,7 +157,7 @@ class Console(NavigationServer):
         return self._couplers[name]
 
     def main_server(self):
-        return self._servers['main']
+        return self._servers['main'].server
 
     def start(self) -> None:
         _logger.info("Console starting on port %d" % self._port)

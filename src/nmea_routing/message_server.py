@@ -9,7 +9,7 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-from nmea_routing.server_common import NavTCPServer
+from nmea_routing.server_common import NavTCPServer, ConnectionRecord
 from nmea_routing.client_publisher import *
 from nmea_routing.nmea0183 import *
 
@@ -196,19 +196,21 @@ class NMEAServer(NavTCPServer):
             client._close()
         self._connections = {}
 
-    def read_status(self):
-        out = {}
-        out['object'] = 'server'
-        out['name'] = self.name()
-        out['port'] = self._port
-        if len(self._connections) > 0:
-            connections = []
+    def connections(self):
+        result = []
+        if self._client_lock.acquire(timeout=2.0):
             for c in self._connections.values():
-                connections.append(c.read_status())
-            out['connections'] = connections
+                result.append(ConnectionRecord(c.remote_ip(), c.remote_port(), c.total_msg()))
+            self._client_lock.release()
         else:
-            out['connection'] = 'no connections'
-        return out
+            _logger.warning("Cannot acquire lock during heartbeat")
+        return result
+
+    def connected(self) -> bool:
+        return len(self._connections) > 0
+
+    def nb_connections(self):
+        return len(self._connections)
 
 
 class NMEASenderServer(NavTCPServer):
@@ -335,6 +337,18 @@ class NMEASenderServer(NavTCPServer):
         self.stop_timer()
         if self._sender is not None:
             self._sender.stop()
+
+    def nb_connections(self):
+        if self._sender is None:
+            return 0
+        else:
+            return 1
+
+    def connections(self):
+        result = []
+        if self._sender is not None:
+            result.append(ConnectionRecord(self._address[0], self._address[1], self._sender.msgcount()))
+        return result
 
 
 

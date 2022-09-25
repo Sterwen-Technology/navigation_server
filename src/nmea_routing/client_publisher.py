@@ -191,6 +191,15 @@ class ClientConnection:
     def msgcount(self):
         return self._periodmsg
 
+    def total_msg(self):
+        return self._totalmsg
+
+    def remote_ip(self):
+        return self._address[0]
+
+    def remote_port(self):
+        return self._address[1]
+
     def add_silent_period(self):
         self._silent_count += 1
 

@@ -15,25 +15,25 @@ class NavigationConsoleStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GetInstruments = channel.unary_stream(
-                '/NavigationConsole/GetInstruments',
+        self.GetCouplers = channel.unary_stream(
+                '/NavigationConsole/GetCouplers',
                 request_serializer=console__pb2.Request.SerializeToString,
-                response_deserializer=console__pb2.InstrumentMsg.FromString,
+                response_deserializer=console__pb2.CouplerMsg.FromString,
                 )
-        self.GetInstrument = channel.unary_unary(
-                '/NavigationConsole/GetInstrument',
+        self.GetCoupler = channel.unary_unary(
+                '/NavigationConsole/GetCoupler',
                 request_serializer=console__pb2.Request.SerializeToString,
-                response_deserializer=console__pb2.InstrumentMsg.FromString,
+                response_deserializer=console__pb2.CouplerMsg.FromString,
                 )
-        self.InstrumentCmd = channel.unary_unary(
-                '/NavigationConsole/InstrumentCmd',
+        self.CouplerCmd = channel.unary_unary(
+                '/NavigationConsole/CouplerCmd',
                 request_serializer=console__pb2.Request.SerializeToString,
                 response_deserializer=console__pb2.Response.FromString,
                 )
         self.ServerStatus = channel.unary_unary(
                 '/NavigationConsole/ServerStatus',
                 request_serializer=console__pb2.Request.SerializeToString,
-                response_deserializer=console__pb2.ServerMsg.FromString,
+                response_deserializer=console__pb2.NavigationServerMsg.FromString,
                 )
         self.ServerCmd = channel.unary_unary(
                 '/NavigationConsole/ServerCmd',
@@ -45,19 +45,19 @@ class NavigationConsoleStub(object):
 class NavigationConsoleServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def GetInstruments(self, request, context):
+    def GetCouplers(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetInstrument(self, request, context):
+    def GetCoupler(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def InstrumentCmd(self, request, context):
+    def CouplerCmd(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -78,25 +78,25 @@ class NavigationConsoleServicer(object):
 
 def add_NavigationConsoleServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetInstruments': grpc.unary_stream_rpc_method_handler(
-                    servicer.GetInstruments,
+            'GetCouplers': grpc.unary_stream_rpc_method_handler(
+                    servicer.GetCouplers,
                     request_deserializer=console__pb2.Request.FromString,
-                    response_serializer=console__pb2.InstrumentMsg.SerializeToString,
+                    response_serializer=console__pb2.CouplerMsg.SerializeToString,
             ),
-            'GetInstrument': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetInstrument,
+            'GetCoupler': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetCoupler,
                     request_deserializer=console__pb2.Request.FromString,
-                    response_serializer=console__pb2.InstrumentMsg.SerializeToString,
+                    response_serializer=console__pb2.CouplerMsg.SerializeToString,
             ),
-            'InstrumentCmd': grpc.unary_unary_rpc_method_handler(
-                    servicer.InstrumentCmd,
+            'CouplerCmd': grpc.unary_unary_rpc_method_handler(
+                    servicer.CouplerCmd,
                     request_deserializer=console__pb2.Request.FromString,
                     response_serializer=console__pb2.Response.SerializeToString,
             ),
             'ServerStatus': grpc.unary_unary_rpc_method_handler(
                     servicer.ServerStatus,
                     request_deserializer=console__pb2.Request.FromString,
-                    response_serializer=console__pb2.ServerMsg.SerializeToString,
+                    response_serializer=console__pb2.NavigationServerMsg.SerializeToString,
             ),
             'ServerCmd': grpc.unary_unary_rpc_method_handler(
                     servicer.ServerCmd,
@@ -114,7 +114,7 @@ class NavigationConsole(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetInstruments(request,
+    def GetCouplers(request,
             target,
             options=(),
             channel_credentials=None,
@@ -124,14 +124,14 @@ class NavigationConsole(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/NavigationConsole/GetInstruments',
+        return grpc.experimental.unary_stream(request, target, '/NavigationConsole/GetCouplers',
             console__pb2.Request.SerializeToString,
-            console__pb2.InstrumentMsg.FromString,
+            console__pb2.CouplerMsg.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def GetInstrument(request,
+    def GetCoupler(request,
             target,
             options=(),
             channel_credentials=None,
@@ -141,14 +141,14 @@ class NavigationConsole(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/NavigationConsole/GetInstrument',
+        return grpc.experimental.unary_unary(request, target, '/NavigationConsole/GetCoupler',
             console__pb2.Request.SerializeToString,
-            console__pb2.InstrumentMsg.FromString,
+            console__pb2.CouplerMsg.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def InstrumentCmd(request,
+    def CouplerCmd(request,
             target,
             options=(),
             channel_credentials=None,
@@ -158,7 +158,7 @@ class NavigationConsole(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/NavigationConsole/InstrumentCmd',
+        return grpc.experimental.unary_unary(request, target, '/NavigationConsole/CouplerCmd',
             console__pb2.Request.SerializeToString,
             console__pb2.Response.FromString,
             options, channel_credentials,
@@ -177,7 +177,7 @@ class NavigationConsole(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/NavigationConsole/ServerStatus',
             console__pb2.Request.SerializeToString,
-            console__pb2.ServerMsg.FromString,
+            console__pb2.NavigationServerMsg.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

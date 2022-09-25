@@ -12,7 +12,7 @@
 import socket
 import logging
 
-from nmea_routing.server_common import NavTCPServer
+from nmea_routing.server_common import NavTCPServer, ConnectionRecord
 from nmea_routing.publisher import Publisher
 from nmea_routing.IPCoupler import BufferedIPCoupler
 from nmea_routing.generic_msg import *
@@ -230,6 +230,7 @@ class ShipModulConfig(NavTCPServer):
         self._reader = None
         self._pub = None
         self._connection = None
+        self._address = None
 
     def run(self):
 
@@ -242,13 +243,13 @@ class ShipModulConfig(NavTCPServer):
             _logger.debug("Configuration server waiting for new connection")
             self._socket.listen(1)
             try:
-                self._connection, address = self._socket.accept()
+                self._connection, self._address = self._socket.accept()
             except socket.timeout:
                 continue
             except OSError:
                 break
-            _logger.info("New configuration connection from %s:%d" % address)
-            pub = ConfigPublisher(self._connection, self._reader, self, address)
+            _logger.info("New configuration connection from %s:%d" % self._address)
+            pub = ConfigPublisher(self._connection, self._reader, self, self._address)
             if not self._reader.configModeOn(pub):
                 self._connection.close()
                 continue
@@ -273,6 +274,7 @@ class ShipModulConfig(NavTCPServer):
             self._reader.set_transparency(False)
             self._pub.stop()
             self._connection.close()
+            self._connection = None
         _logger.info("Configuration server thread stops")
         self._socket.close()
 
@@ -287,6 +289,17 @@ class ShipModulConfig(NavTCPServer):
         if self._reader is None:
             _logger.error("%s no coupler associated => stop" % self.name())
 
+    def nb_connections(self):
+        if self._connection is not None:
+            return 1
+        else:
+            return 0
+
+    def connections(self):
+        result = []
+        if self._connection is not None:
+            result.append(ConnectionRecord(self._address[0], self._address[1], 0))
+        return result
 
 
 
