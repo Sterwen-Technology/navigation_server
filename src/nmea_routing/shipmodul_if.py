@@ -68,6 +68,7 @@ class ShipModulInterface(BufferedIPCoupler):
         else:
             self._configmode = True
             self._configpub = pub
+            self._check_in_progress = False  # In any case no check during configuration session
             _logger.info("Switching to configuration mode for Shipmodul")
             return True
 
@@ -163,7 +164,8 @@ class ShipModulInterface(BufferedIPCoupler):
                 _logger.error("Shipmodul no answer on version request")
                 self.close()
             self._check_in_progress = False
-        else:
+        elif not self._configmode:
+            # configuration session in progress no check
             self._check_in_progress = True
             self._check_ok = False
             self.send(self.msg_check)
