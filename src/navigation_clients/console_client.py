@@ -10,6 +10,9 @@
 #-------------------------------------------------------------------------------
 
 import logging
+
+import grpc
+
 from utilities.protobuf_utilities import *
 
 from generated.console_pb2 import *
@@ -91,6 +94,7 @@ class ConsoleClient:
     def __init__(self, address):
         self._channel = grpc.insecure_channel(address)
         self._stub = NavigationConsoleStub(self._channel)
+        self._address = address
         self._req_id = 0
         _logger.info("Console on navigation server %s" % address)
 
@@ -102,8 +106,11 @@ class ConsoleClient:
             for inst in self._stub.GetCouplers(req):
                 couplers.append(CouplerProxy(inst))
             return couplers
-        except Exception as err:
-            _logger.error("Error accessing server:%s" % err)
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.info("Server not accessible")
+            else:
+                _logger.error("Get Couplers - Error accessing server:%s" % err)
             raise ConsoleAccessException
 
     def get_coupler(self, coupler_name):
@@ -112,8 +119,11 @@ class ConsoleClient:
         try:
             inst = self._stub.GetCoupler(req)
             return CouplerProxy(inst)
-        except Exception as err:
-            _logger.error("Error accessing server:%s" % err)
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.info("Server not accessible")
+            else:
+                _logger.error("Get Coupler - Error accessing server:%s" % err)
             raise ConsoleAccessException
 
     def send_cmd(self, target, command):
@@ -122,8 +132,11 @@ class ConsoleClient:
         try:
             resp = self._stub.CouplerCmd(req)
             return resp
-        except Exception as err:
-            _logger.error("Error accessing server:%s" % err)
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.info("Server not accessible")
+            else:
+                _logger.error("Send Cmd - Error accessing server:%s" % err)
             raise ConsoleAccessException
 
     def server_status(self):
@@ -132,8 +145,12 @@ class ConsoleClient:
         try:
             server_msg = self._stub.ServerStatus(req)
             return ServerProxy(server_msg)
-        except Exception as err:
-            _logger.error("Error accessing server:%s" % err)
+        except grpc.RpcError as err:
+            # print(err.code(), err.details())
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.error("Server Status - Error accessing server:%s" % err)
+            else:
+                _logger.info("Server not accessible")
             raise ConsoleAccessException
 
     def server_cmd(self, cmd, target=None):
@@ -144,10 +161,16 @@ class ConsoleClient:
             req.target = target
         try:
             response = self._stub.ServerCmd(req)
-            _logger.info('Response status %s' % response.status)
+            _logger.info('Server Response status %s' % response.status)
             return response.status
-        except Exception as err:
-            _logger.error("Error accessing server:%s" % err)
+        except grpc.RpcError as err:
+
+            # print(err.code(), err.details())
+            if cmd == 'stop' and err.details().startswith('GOAWAY'):
+                _logger.debug("Server Cmd - Error accessing server:%s" % err)
+                return
+            else:
+                _logger.error("Server Cmd - Error accessing server:%s" % err)
             raise ConsoleAccessException
 
 
