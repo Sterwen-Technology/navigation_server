@@ -42,7 +42,7 @@ def _parser():
     return p
 
 
-version = "V1.10"
+version = "V1.11"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")

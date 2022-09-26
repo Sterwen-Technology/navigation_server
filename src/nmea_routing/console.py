@@ -38,6 +38,7 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.msg_in = i.total_input_msg()
         resp.msg_out = i.total_output_msg()
         resp.input_rate = i.input_rate()
+        resp.output_rate = i.output_rate()
         return resp
 
     def GetCoupler(self, request, context):

@@ -273,6 +273,9 @@ class Coupler(threading.Thread):
     def input_rate(self):
         return self._rate
 
+    def output_rate(self):
+        return self._rate_s
+
     def stop(self):
         _logger.info("Stopping %s coupler" % self._name)
         self._stopflag = True
