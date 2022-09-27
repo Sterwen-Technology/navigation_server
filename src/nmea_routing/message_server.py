@@ -229,6 +229,8 @@ class NMEASenderServer(NavTCPServer):
         self._sender = None
         self._timer = None
         self._address = None
+        self._buffer_size = options.get('buffer_size', int, 256)
+        self._timeout = options.get('timeout', float, 5.0)
         self._timer_name = self.name() + "-timer"
         self._master = options.get('master', str, None)
         # print("(init) master=", self._master)
@@ -300,7 +302,8 @@ class NMEASenderServer(NavTCPServer):
 
             _logger.info("Sender new connection from IP %s port %d" % address)
             _logger.info("%s client at address %s is becoming sender" % (self.name(), address[0]))
-            self._sender = NMEASender(connection, address, self._coupler, self._nmea2000)
+            self._sender = NMEASender(connection, address, self._coupler, self._nmea2000,
+                                      self._buffer_size, self._timeout)
             self._sender.start()
             # self._sender.join()
         # end of while loop => the thread stops

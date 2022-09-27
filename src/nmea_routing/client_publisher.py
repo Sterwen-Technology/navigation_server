@@ -76,11 +76,13 @@ class NMEASender(threading.Thread):
     msg_processing = {'transparent': process_nmea0183_frame,
                       'dyfmt': fromPGDY, 'stfmt': fromPGNST}
 
-    def __init__(self, connection: socket, address, coupler: Coupler, nmea2000_mode):
+    def __init__(self, connection: socket, address, coupler: Coupler, nmea2000_mode, buffer_size, timeout):
         super().__init__(name="Sender-" + "%s:%d" % address)
         self._connection = connection
         self._address = address
         self._coupler = coupler
+        self._buffer_size = buffer_size
+        self._timeout = timeout
         self._publisher = None
         self._stop_flag = False
         self._msgcount = 0
@@ -91,7 +93,8 @@ class NMEASender(threading.Thread):
         self._publisher = publisher
 
     def run(self) -> None:
-        reader = TCPBufferedReader(self._connection, b'\r\n', self._address, self._msg_processing)
+        reader = TCPBufferedReader(self._connection, b'\r\n', self._address, self._msg_processing,
+                                   self._buffer_size, self._timeout)
         while not self._stop_flag:
             msg = reader.read()
             # print(msg.printable())

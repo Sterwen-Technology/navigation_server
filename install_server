@@ -4,7 +4,7 @@
 cp navigation.service /lib/systemd/system
 cp vedirect.service /lib/systemd/system
 
-sysemctl daemon-reload
+systemctl daemon-reload
 
 systemctl enable navigation
 systemctl enable vedirect

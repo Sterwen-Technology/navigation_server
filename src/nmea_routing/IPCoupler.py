@@ -176,9 +176,11 @@ class IPAsynchReader(threading.Thread):
         if isinstance(coupler, IPCoupler):
             self._transport = coupler.transport()
             self._coupler = coupler
+            self._cname = "Coupler %s" % coupler.name()
         else:
             self._transport = coupler
             self._coupler = None
+            self._cname = "Transport %s" % self._transport.ref()
 
         self._out_queue = out_queue
         self._separator = separator
@@ -194,7 +196,7 @@ class IPAsynchReader(threading.Thread):
             try:
                 buffer = self._transport.recv()
             except CouplerTimeOut:
-                _logger.info("Asynchronous read transport time out")
+                _logger.info("%s Asynchronous read transport time out" % self._cname)
                 continue
             except CouplerReadError:
                 break
@@ -339,9 +341,10 @@ class BufferedIPCoupler(IPCoupler):
 
 class TCPBufferedReader:
 
-    def __init__(self, connection, separator, address, msg_processing):
+    def __init__(self, connection, separator, address, msg_processing, buffer_size=128, timeout=10.):
         self._connection = connection
-        self._connection.settimeout(5.0)
+        self._connection.settimeout(timeout)
+        self._buffer_size = buffer_size
         self._address = address
         self._ref = "%s:%d" % address
         self._in_queue = queue.Queue(50)
@@ -359,14 +362,17 @@ class TCPBufferedReader:
         _logger.info("TCP Buffered read stopped")
 
     def recv(self):
+        start_time = time.monotonic()
+        # _logger.info("TCPBufferedReader - start read to= %4.1f time=%f" % (self._connection.gettimeout(), start_time))
         try:
-            msg = self._connection.recv(256)
+            msg = self._connection.recv(self._buffer_size)
         except (TimeoutError, socket.timeout):
-            _logger.info("Timeout error on TCP socket")
+            _logger.info("TCPBufferedReader - Timeout error on TCP socket duration %f" % (time.monotonic() - start_time))
             raise CouplerTimeOut()
         except socket.error as e:
-            _logger.error("Error receiving from TCP socket %s: %s" % (self.name(), e))
+            _logger.error("TCPBufferedReader - Error receiving from TCP socket %s: %s" % (self.name(), e))
             raise CouplerReadError()
+        # _logger.info("TCPBufferedReader - read OK %d" % len(msg))
         return msg
 
     def name(self):
