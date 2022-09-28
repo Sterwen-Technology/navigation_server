@@ -52,18 +52,20 @@ The configuration is also valid for messages sent from the host (client), in tha
 
 #### NMEASEnderServer class
 
-This server allows to send NMEA commands towards a coupler. This is mostly used to control navigation and send tracking information to autopilot and displays
+This server allows sending NMEA commands towards a coupler. This is mostly used to control navigation and send tracking information to autopilot and displays
 
 
-| Name       | Type                      | Default     | Signification                                                                                  |
-|------------|---------------------------|-------------|------------------------------------------------------------------------------------------------|
-| port       | int                       | 4503        | listening port of the server                                                                   |
-| heartbeat  | float                     | 30          | Period of the heartbeat  timer                                                                 |
-| timeout    | float                     | 5.0         | timeout socket receive                                                                         |
-| max_silent | float                     | 30.0        | maximum time without traffic for a client. The connection is closed after                      |
-| coupler    | string                    | None        | Name of the instrument receiving the messages sent from client                                 |
-| master     | string                    | None        | IP address of the client allowed to send messages towards instruments. First client by default |
-| nmea2000   | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see above)                                                    |
+| Name        | Type                      | Default     | Signification                                                                                  |
+|-------------|---------------------------|-------------|------------------------------------------------------------------------------------------------|
+| port        | int                       | 4503        | listening port of the server                                                                   |
+| heartbeat   | float                     | 30          | Period of the heartbeat  timer                                                                 |
+| timeout     | float                     | 5.0         | timeout socket receive. On some systems this value is too low                                  |
+| max_silent  | float                     | 30.0        | maximum time without traffic for a client. The connection is closed after                      |
+| coupler     | string                    | None        | Name of the instrument receiving the messages sent from client                                 |
+| master      | string                    | None        | IP address of the client allowed to send messages towards instruments. First client by default |
+| nmea2000    | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see above)                                                    |
+| buffer_size | int                       | 256         | Size of the receive buffer. Smaller size are useful for low message rate on the interface      |
+
 
 #### gRPCNMEAServer class (future)
 
@@ -84,19 +86,20 @@ TCP server allowing to bypass the routing function to the connect the Miniplex c
 
 Warning: when the application is connected to the server all traffic is re-routed to it. So no NMEA messages are transmitted to the navigation system.
 
-| Name       | Type                      | Default | Signification                                                                                  |
-|------------|---------------------------|---------|------------------------------------------------------------------------------------------------|
-| port       | int                       | 4501    | listening port of the server                                                                   |
-| coupler | string | None | Name of the Miniplex coupler in the configuration file |
+| Name    | Type   | Default | Signification                                          |
+|---------|--------|---------|--------------------------------------------------------|
+| port    | int    | 4501    | listening port of the server                           |
+| coupler | string | None    | Name of the Miniplex coupler in the configuration file |
 
 
 ### Couplers
 Couplers classes are connecting to instrumentation bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
 Currently, tested couplers:
-- Shipmodul Miniplex3 Ethernet
+- Shipmodul Miniplex3 Ethernet (or WiFi)
 - Digital Yacht iKonvert
 - Yachting Digital Ethernet
 - Direct serial link on NMEA0183
+- NMEA0183 over TCP/IP
 - Victron energy device with VEDirect serial line
 
 Under preparation
@@ -104,18 +107,18 @@ Under preparation
 
 #### Coupler generic parameters
 
-| Name           | Type                                 | Default       | Signification                                                                                                                 |
-|----------------|--------------------------------------|---------------|-------------------------------------------------------------------------------------------------------------------------------|
-| timeout        | float                                | 10            | Time out on instrment read in seconds                                                                                         |
- | report_timer   | float                                | 30            | Reporting / tracing interval in sec.                                                                                          |
- | max_attempt    | integer                              | 20            | Max number of attempt to open the device                                                                                      |
-| open_delay     | float                                | 2             | Delay between attempt to open the device                                                                                      |
-| talker         | string (2)                           | None          | Talker ID substitution for NMEA0183                                                                                           |
-| protocol       | nmea0183, nmea2000                   | nmea0183      | Messsage processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 when possible |
-| direction      | read_only, write_only, bidirectional | bidirectional | Direction of excahnge with device                                                                                             |
-| trace_messages | boolean                              | False         | Trace all messages after internal pre-processing                                                                              |
-| trace_raw      | boolean                              | False         | Trace all messages in device format                                                                                           | 
-| autostart      | boolean                              | True          | The instrument is started aumatically when the service starts, if False it needs to be started via the Console                |
+| Name           | Type                                 | Default       | Signification                                                                                                                |
+|----------------|--------------------------------------|---------------|------------------------------------------------------------------------------------------------------------------------------|
+| timeout        | float                                | 10            | Time out on coupler read in seconds                                                                                          |
+ | report_timer   | float                                | 30            | Reporting / tracing interval in sec.                                                                                         |
+ | max_attempt    | integer                              | 20            | Max number of attempt to open the device                                                                                     |
+| open_delay     | float                                | 2             | Delay between attempt to open the device                                                                                     |
+| talker         | string (2)                           | None          | Talker ID substitution for NMEA0183                                                                                          |
+| protocol       | nmea0183, nmea2000                   | nmea0183      | Message processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 when possible |
+| direction      | read_only, write_only, bidirectional | bidirectional | Direction of exchange with device                                                                                            |
+| trace_messages | boolean                              | False         | Trace all messages after internal pre-processing                                                                             |
+| trace_raw      | boolean                              | False         | Trace all messages in device format                                                                                          | 
+| autostart      | boolean                              | True          | The coupler is started automatically when the service starts, if False it needs to be started via the Console                |
 
 #### Coupler classes
 
@@ -123,22 +126,22 @@ Under preparation
 This class handle serial or emulated serial line with NMEA0183 based protocols.
 Specific parameters
 
-| Name   | Type    | Default    | Signification             |
-|--------|---------|------------|---------------------------|
-| device | string  | no default | Name of the serial device |
-| baudrate| integer | 4800 | baud rate for the device |
+| Name     | Type    | Default    | Signification             |
+|----------|---------|------------|---------------------------|
+| device   | string  | no default | Name of the serial device |
+| baudrate | integer | 4800       | baud rate for the device  |
 
 ##### IPCoupler
 Generic abstract class for all IP instruments communication.
 Specific parameters
 
-| Name    | Type     | Default    | Signification            |
-|---------|----------|------------|--------------------------|
-| address | string   | no default | Address (IP or hostname) |
-| port    | integer  | no default | Port of the server       |
-| transport | TCP, UDP | TCP | Transport protocol for the server |
-| buffer_size | integer  | 256 | size in bytes of input buffer |
-| msg_queue_size | integer | 50 | size of reading message queue |
+| Name           | Type     | Default    | Signification                     |
+|----------------|----------|------------|-----------------------------------|
+| address        | string   | no default | Address (IP or hostname)          |
+| port           | integer  | no default | Port of the server                |
+| transport      | TCP, UDP | TCP        | Transport protocol for the server |
+| buffer_size    | integer  | 256        | size in bytes of input buffer     |
+| msg_queue_size | integer  | 50         | size of reading message queue     |
 
 Buffer size is to be adjusted taking into account average message size and number of messages per seconds.
 A large buffer will create some delays for messages through the system while too small buffer size will generate a lot of overhead.
@@ -182,3 +185,7 @@ There are also specific Publishers for tracing and logging.
 One particular Publisher is the Injector that allows sending the output of one instrument to the input of another one.
 
 ### Filters
+
+### Configuration Yaml file
+
+The file includes the global parameters 

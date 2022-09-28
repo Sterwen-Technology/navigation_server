@@ -230,7 +230,6 @@ class NMEASenderServer(NavTCPServer):
         self._timer = None
         self._address = None
         self._buffer_size = options.get('buffer_size', int, 256)
-        self._timeout = options.get('timeout', float, 5.0)
         self._timer_name = self.name() + "-timer"
         self._master = options.get('master', str, None)
         # print("(init) master=", self._master)
