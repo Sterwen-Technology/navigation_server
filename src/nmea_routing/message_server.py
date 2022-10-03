@@ -288,7 +288,8 @@ class NMEASenderServer(NavTCPServer):
                 self._sender.join()
 
             self._address = address
-
+            # we must check that a new coupler has not been instanced and run
+            self._coupler = self.resolve_ref('coupler')
             if not self._coupler.is_alive():
                 # the Coupler is not running
                 if self._coupler.has_run():
