@@ -28,12 +28,10 @@ servers:
 couplers:
 
 - SNReplay:
-    class: NMEATCPReader
+    class: NMEA0183TCPReader
     address: 192.168.1.21
     port: 3555
     autostart: true
-    trace_messages: true
-    trace_raw: true
 
 publishers:
 
