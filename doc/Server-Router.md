@@ -28,14 +28,14 @@ This server is only transmitting messages from the navigation networks (couplers
 
 Here are the parameters associated with the server
 
-| Name            | Type  | Default | Signification                  |
-|-----------------|-------|---------|--------------------------------|
-| port            | int   | 4500    | listening port of the server   |
-| heartbeat       | float | 30      | Period of the heartbeat  timer |
-| timeout         | float | 5.0 | timeout socket receive |
-| max_silent | float | 120.0 | maximum time without traffic for a client. The connection is closed after |
-| max_connections | int | 10 | maximum number of active connections |
-| nmea2000        | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see below) |
+| Name            | Type                      | Default     | Signification                                                             |
+|-----------------|---------------------------|-------------|---------------------------------------------------------------------------|
+| port            | int                       | 4500        | listening port of the server                                              |
+| heartbeat       | float                     | 30          | Period of the heartbeat  timer                                            |
+| timeout         | float                     | 5.0         | timeout socket receive                                                    |
+| max_silent      | float                     | 120.0       | maximum time without traffic for a client. The connection is closed after |
+| max_connections | int                       | 10          | maximum number of active connections                                      |
+| nmea2000        | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see below)                               |
 
 
 **Format of NMEA2000 messages**
