@@ -10,15 +10,14 @@
 #-------------------------------------------------------------------------------
 
 import logging
-import sys
-import xml.etree.ElementTree as ET
+import struct
 from collections import namedtuple
 
-import struct
+from utilities.xml_utilities import XMLDefinitionFile, XMLDecodeError
+from nmea2000.nmea2k_manufacturers import Manufacturers
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
-# _logger.setLevel(logging.DEBUG)
 
 
 class N2KDecodeException(Exception):
@@ -37,7 +36,11 @@ class N2KUnknownPGN(Exception):
     pass
 
 
-class PGNDefinitions:
+class N2KDefinitionError(Exception):
+    pass
+
+
+class PGNDefinitions(XMLDefinitionFile):
 
     pgn_definitions = None
 
@@ -60,23 +63,15 @@ class PGNDefinitions:
 
     def __init__(self, xml_file):
 
-        try:
-            self._tree = ET.parse(xml_file)
-        except ET.ParseError as e:
-            _logger.error("Error parsing XML file %s: %s" % (xml_file, str(e)))
-            raise
-
-        self._root = self._tree.getroot()
-        # print(self._root.tag)
-        defs = self._root.find('PGNDefns')
-        if defs is None:
-            print('missing root tag')
-            return
+        super().__init__(xml_file, 'PGNDefns')
         self._pgn_defs = {}
-        pgndefs = defs.findall('PGNDefn')
-        for pgnxml in defs.iterfind('PGNDefn'):
-            pgn = PGNDef(pgnxml)
-            self._pgn_defs[pgn.id] = pgn
+        #  pgndefs = defs.findall('PGNDefn')
+        for pgnxml in self._definitions.iterfind('PGNDefn'):
+            try:
+                pgn = PGNDef(pgnxml)
+                self._pgn_defs[pgn.id] = pgn
+            except N2KDefinitionError as e:
+                _logger.error("%s PGN ignored" % e)
 
     def print_summary(self):
         print("NMEA2000 PGN definitions => number of PGN:%d" % len(self._pgn_defs))
@@ -94,8 +89,8 @@ class PGNDefinitions:
         try:
             return self._pgn_defs[number]
         except KeyError:
-            _logger.error("Unknown PGN %d" % number)
-            raise N2KUnknownPGN(str(number))
+            # _logger.error("Unknown PGN %d" % number)
+            raise N2KUnknownPGN("Unknown PGN %d" % number)
 
 
 class N2KDecodeResult:
@@ -142,20 +137,82 @@ class N2KDecodeResult:
         self._increment = False
 
 
+PGNRange = namedtuple('PGNRange', ['start', 'to', 'pdu', 'value', 'description'])
+
+
+
+
+
 class PGNDef:
 
     trace_enum_error = False
     trace_decode_warning = False
+    (PDU1, PDU2) = range(1, 3)
+    (CAN_J1939, STD_SINGLE_FRAME_ADDRESSED, PROP_SINGLE_FRAME_ADDRESSED, STD_SINGLE_FRAME, PROP_SINGLE_FRAME,
+     STD_FAST_PACKET_ADDRESSED, PROP_FAST_PACKET_ADDRESSED, STD_MIXED, PROP_FAST_PACKET) = range(0, 9)
+
+    pgn_range = [
+        PGNRange(0, 0xE7FF, PDU1, CAN_J1939, 'CAN J1939 PGN'),
+        PGNRange(0xE800, 0xEEFF, PDU1, STD_SINGLE_FRAME_ADDRESSED, 'Standard single-frame addressed'),
+        PGNRange(0xEF00, 0xEFFF, PDU1, PROP_SINGLE_FRAME_ADDRESSED, 'Proprietary single-frame addressed'),
+        PGNRange(0xF000, 0xFEFF, PDU2, STD_SINGLE_FRAME, 'Standard single-frame non-addressed'),
+        PGNRange(0xFF00, 0xFFFF, PDU2, PROP_SINGLE_FRAME, 'Proprietary single-frame non-addressed'),
+        PGNRange(0x10000, 0x1EE00, PDU1, STD_FAST_PACKET_ADDRESSED, "Standard fast packet addressed"),
+        PGNRange(0x1EF00, 0x1EFFF, PDU1, PROP_FAST_PACKET_ADDRESSED, 'Proprietary fast packet addressed'),
+        PGNRange(0x1F000, 0x1FEFF, PDU2, STD_MIXED, 'Standard mixed (fast/single) packet non addressed'),
+        PGNRange(0x1FF00, 0x1FFFF, PDU2, PROP_FAST_PACKET, 'Proprietary fast packet non-addressed')
+    ]
 
     @staticmethod
     def set_trace(enum_error: bool, warning: bool):
         PGNDef.trace_enum_error = enum_error
         PGNDef.trace_decode_warning = warning
 
+    @staticmethod
+    def find_range(pgn) -> PGNRange:
+        if pgn <= PGNDef.pgn_range[4].to:
+            for r in PGNDef.pgn_range[:5]:
+                if pgn <= r.to:
+                    return r
+        else:
+            for r in PGNDef.pgn_range[5:]:
+                if pgn <= r.to:
+                    return r
+        raise N2KDefinitionError("Invalid PGN %d" % pgn)
+
+    @staticmethod
+    def pgn_pdu1_adjust(pgn):
+        pdu_format = (pgn >> 8) & 0xFF
+        if pdu_format < 240:
+            # PDU1
+            return pgn & 0x1FF00, pgn & 0xFF
+        else:
+            return pgn, 0
+
+    @staticmethod
+    def fast_packet_check(pgn) -> bool:
+        if pgn <= PGNDef.pgn_range[4].to:
+            return False
+        r = PGNDef.find_range(pgn)
+        if r.value != PGNDef.STD_MIXED:
+            return True
+        pgn_def = PGNDefinitions.pgn_definitions.pgn_def(pgn)
+        return pgn_def.fast_packet()
+
     def __init__(self, pgnxml):
         self._id_str = pgnxml.attrib['PGN']
         self._xml = pgnxml
         self._id = int(self._id_str)
+        # now determine the type of PGN we have
+        self._pdu_format = (self._id >> 8) & 0xFF
+        if self._pdu_format < 240:
+            self.pdu_type = self.PDU1
+            if self._id & 0xFF != 0:
+                _logger.error("Invalid PGN with PDU type 1 PGN%X" % self._id)
+                raise N2KDefinitionError("Invalid PGN %d" % self._id)
+        else:
+            self.pdu_type = self.PDU2
+        self._range = self.find_range(self._id)
         self._name = pgnxml.find('Name').text
         self._fields = {}
         self._fast_packet = False
@@ -225,7 +282,7 @@ class PGNDef:
 
         result = {}
         fields: dict = {}
-        _logger.debug("start decoding PGN %d %s payload(%d bytes) %s" % (self._id, self._name, len(data), data.hex()))
+        _logger.debug("start decoding PGN %d %s payload(%d bytes %s" % (self._id, self._name, len(data), data.hex()))
         index = 0
 
         for field in self._fields.values():
@@ -242,6 +299,7 @@ class PGNDef:
                 break
             except N2KDecodeException as e:
                 _logger.error("Decoding error in PGN %s: %s" % (self._id_str, str(e)))
+                _logger.error("PGN %d %s payload(%d bytes %s" % (self._id, self._name, len(data), data.hex()))
                 continue
             if inner_result.increment:
                 index += inner_result.actual_length
@@ -308,6 +366,17 @@ class Field:
         0x07FF,
         0x03FF,
         0x01FF
+    ]
+
+    bit_mask16_u = [
+        0x1FF,
+        0x3FF,
+        0x7FF,
+        0xFFF,
+        0x1FFF,
+        0x3FFF,
+        0x7FFF,
+        0xFFFF
     ]
 
     bit_mask_l = [
@@ -426,8 +495,13 @@ class Field:
         if self._byte_length != 0:
             specs.end = specs.start + self._byte_length
 
-        #try:
-        res = self.decode_value(payload, specs)
+        try:
+            res = self.decode_value(payload, specs)
+        except Exception as e:
+            raise N2KDecodeException("Error in field %s type %s: %s" % (self._name, self.type(), e))
+        if res is None:
+            raise N2KDecodeException("Error in field %s type %s" % (self._name, self.type()))
+
         if res.valid:
             validity = "valid"
         else:
@@ -523,13 +597,16 @@ class Field:
             # convert the 2 bytes into an integer big endian
             res = N2KDecodeResult(self._name)
             res.actual_length = 2
-            val = struct.unpack('>H', b_dec)
+            val = struct.unpack('<H', b_dec)
             val = val[0]
             # mask upper bits
-            val = val & self.bit_mask16[self._bit_offset]
-            remaining_bits = 16 - (self._bit_offset + self.BitLength)
-            if remaining_bits > 0:
-                val >>= remaining_bits
+            if self._bit_offset > 0:
+                val = val & self.bit_mask16[self._bit_offset]
+                remaining_bits = 16 - (self._bit_offset + self.BitLength)
+                if remaining_bits > 0:
+                    val >>= remaining_bits
+            else:
+                val = val & self.bit_mask16_u[self.BitLength - 9]
             res.value = val
             if val == 0xFF:
                 res.invalid()

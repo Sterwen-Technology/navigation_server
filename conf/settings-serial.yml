@@ -12,7 +12,7 @@
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    nmea_routing.message_server: DEBUG
+    nmea_routing.message_server: INFO
 
 servers:
 
@@ -20,39 +20,20 @@ servers:
     class: NMEAServer
     port: 4500
 
-- NMEASender:
-    class: NMEASenderServer
-    port: 4503
-    coupler: MiniPlex3
-    max_silent: 10
-    master: 192.168.1.21
-
 - Console:
     class: Console
     port: 4502
 
-- ShipModulConfig:
-    class: ShipModulConfig
-    port: 4501
-    coupler: MiniPlex3
 
 couplers:
 
-#- Serial1:
- #    class: NMEASerialPort
- #    device: /dev/ttyUSB1
-  #  baudrate: 57600
-  #   server: NMEAServer
-   #  trace_messages: false
-
-- MiniPlex3:
-    class: ShipModulInterface
-    address: 192.168.1.25
-    port: 10110
-    transport: TCP
-    server: NMEAServer
+- SNReplay:
+    class: NMEATCPReader
+    address: 192.168.1.21
+    port: 3555
+    autostart: true
     trace_messages: true
-
+    trace_raw: true
 
 publishers:
 

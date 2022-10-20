@@ -36,20 +36,38 @@ class NMEA0183Msg(NavGenericMsg):
         if self._checksum != NMEA0183Sentences.b_checksum(self._raw[1:self._datalen - 3]):
             _logger.error("Checksum error %h %s" % (self._checksum, self._raw[:self._datalen].hex()))
             raise NMEAInvalidFrame
-        self._datafields_s = self._raw.index(b',') + 1
+        ind_comma = self._raw.index(b',')
+        self._datafields_s = ind_comma + 1
+        self._address = self._raw[1: ind_comma]
+        if self._address[0] == b'P':
+            self._proprietary = True
+        else:
+            self._proprietary = False
 
     def talker(self):
-        return self._raw[1:3]
+        if not self._proprietary:
+            return self._address[:2]
+        else:
+            raise ValueError
 
     def formatter(self):
-        return self._raw[3:6]
+        if not self._proprietary:
+            return self._address[2:]
+        else:
+            raise ValueError
+
+    def address(self):
+        return self._address
+
+    def proprietary(self):
+        return self._proprietary
 
     def replace_talker(self, talker: bytes):
         self._raw[1:3] = talker[:2]
+        self._address[0:2] = talker[:2]
 
     def fields(self):
         return self._raw[self._datafields_s:self._datalen-3].split(b',')
-
 
 
 class NMEA0183SentenceMsg(NMEA0183Msg):
