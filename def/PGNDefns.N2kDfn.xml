@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <PGNDefnCollection xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="0.1">
-  <Date>$Date: 2022-02-01$</Date>
+  <Date>$Date: 2022-10-06$</Date>
   <Comment>Test Version</Comment>
   <CreatorCode>Sterwen Technology from Keversoft NMEA2000 Analyzer</CreatorCode>
   <PGNDefns>
@@ -489,6 +489,84 @@
         </EnumField>
       </Fields>
     </PGNDefn>
+    <PGNDefn PGN="65359">
+      <Name>Raymarine: Pilot heading</Name>
+      <ByteLength>7</ByteLength>
+      <Fields>
+        <Field Name="Manufacturer Code">
+          <Description>Raymarine</Description>
+          <BitOffset>0</BitOffset>
+          <BitLength>11</BitLength>
+        </Field>
+        <Field Name="SID">
+          <BitOffset>16</BitOffset>
+          <BitLength>8</BitLength>
+        </Field>
+        <UDblField Name="True Heading">
+          <BitOffset>24</BitOffset>
+          <BitLength>16</BitLength>
+          <Scale>0.0057295779513082332</Scale>
+        </UDblField>
+        <UDblField Name="Magnetic Heading">
+          <BitOffset>40</BitOffset>
+          <BitLength>16</BitLength>
+          <Scale>0.0057295779513082332</Scale>
+        </UDblField>
+      </Fields>
+    </PGNDefn>
+    <PGNDefn PGN="65360">
+      <Name>Raymarine: Pilot locked heading</Name>
+      <ByteLength>7</ByteLength>
+      <Fields>
+        <Field Name="Manufacturer Code">
+          <Description>Raymarine</Description>
+          <BitOffset>0</BitOffset>
+          <BitLength>11</BitLength>
+        </Field>
+        <Field Name="SID">
+          <BitOffset>16</BitOffset>
+          <BitLength>8</BitLength>
+        </Field>
+        <UDblField Name="True Heading">
+          <BitOffset>24</BitOffset>
+          <BitLength>16</BitLength>
+          <Scale>0.0057295779513082332</Scale>
+        </UDblField>
+        <UDblField Name="Magnetic Heading">
+          <BitOffset>40</BitOffset>
+          <BitLength>16</BitLength>
+          <Scale>0.0057295779513082332</Scale>
+        </UDblField>
+      </Fields>
+    </PGNDefn>
+     <PGNDefn PGN="65379">
+       <Comment>Partial reverse engineering</Comment>
+      <Name>Raymarine: Pilot mode</Name>
+      <ByteLength>7</ByteLength>
+      <Fields>
+        <Field Name="Manufacturer Code">
+          <Description>Raymarine</Description>
+          <BitOffset>0</BitOffset>
+          <BitLength>11</BitLength>
+        </Field>
+        <Field Name="SID">
+          <BitOffset>16</BitOffset>
+          <BitLength>8</BitLength>
+        </Field>
+        <Field Name="Pilot Mode">
+          <BitOffset>24</BitOffset>
+          <BitLength>8</BitLength>
+        </Field>
+        <Field Name="Sub Mode">
+          <BitOffset>32</BitOffset>
+          <BitLength>8</BitLength>
+        </Field>
+        <Field Name="Pilot Mode Data">
+          <BitOffset>40</BitOffset>
+          <BitLength>8</BitLength>
+        </Field>
+      </Fields>
+    </PGNDefn>
     <PGNDefn PGN="65408">
       <Name>Airmar: Depth Quality Factor</Name>
       <ByteLength>4</ByteLength>
@@ -697,7 +775,7 @@
         </IntField>
       </Fields>
     </PGNDefn>
-    <PGNDefn PGN="126270">
+    <PGNDefn PGN="126720">
       <Name>Maretron: Slave Response</Name>
       <ByteLength>8</ByteLength>
       <Fields>
@@ -755,7 +833,7 @@
         </UIntField>
       </Fields>
     </PGNDefn>
-    <PGNDefn PGN="996720">
+    <PGNDefn PGN="126720">
       <Name>Airmar: Calibrate Compass</Name>
       <ByteLength>24</ByteLength>
       <Fields>
@@ -864,7 +942,7 @@
         </DblField>
       </Fields>
     </PGNDefn>
-    <PGNDefn PGN="996720">
+    <PGNDefn PGN="126720">
       <Name>Airmar: Attitude Offset</Name>
       <ByteLength>9</ByteLength>
       <Fields>
@@ -911,7 +989,7 @@
         </DblField>
       </Fields>
     </PGNDefn>
-    <PGNDefn PGN="996720">
+    <PGNDefn PGN="126720">
       <Name>Airmar: True Wind Options</Name>
       <ByteLength>24</ByteLength>
       <Fields>
@@ -1017,8 +1095,8 @@
         </DblField>
       </Fields>
     </PGNDefn>
-    <PGNDefn PGN="996720">
-      <Name>Manufacturer Propietary: Addressable Multi-Frame</Name>
+    <PGNDefn PGN="126720">
+      <Name>Manufacturer Proprietary: Addressable Multi-Frame</Name>
       <ByteLength>2</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
@@ -1146,28 +1224,28 @@
           <BitLength>16</BitLength>
         </UIntField>
         <ASCIIField Name="Model ID">
-          <BitOffset>32</BitOffset>
-          <BitLength>256</BitLength>
+          <BitOffset>0</BitOffset>
+          <BitLength>-1</BitLength>
         </ASCIIField>
         <ASCIIField Name="Software Version Code">
-          <BitOffset>288</BitOffset>
-          <BitLength>256</BitLength>
+          <BitOffset>0</BitOffset>
+          <BitLength>-1</BitLength>
         </ASCIIField>
         <ASCIIField Name="Model Version">
-          <BitOffset>544</BitOffset>
-          <BitLength>256</BitLength>
+          <BitOffset>0</BitOffset>
+          <BitLength>-1</BitLength>
         </ASCIIField>
         <ASCIIField Name="Model Serial Code">
-          <BitOffset>800</BitOffset>
-          <BitLength>256</BitLength>
+          <BitOffset>0</BitOffset>
+          <BitLength>-1</BitLength>
         </ASCIIField>
         <UIntField Name="Certification Level">
-          <BitOffset>1056</BitOffset>
+          <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
         <UIntField Name="Load Equivalency">
           <Description>Bus load for this device is x*50 mA</Description>
-          <BitOffset>1064</BitOffset>
+          <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
       </Fields>
@@ -7717,7 +7795,7 @@
           <BitOffset>256</BitOffset>
           <BitLength>32</BitLength>
         </IntField>
-        <UIntField Name="">
+        <UIntField Name="Reserved">
           <BitOffset>288</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>

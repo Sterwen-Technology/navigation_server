@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technolgy 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
 # Licence:     Eclipse Public License V2.0
 #-------------------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ class ShipModulInterface(BufferedIPCoupler):
         super().__init__(opts)
         self._separator = b'\r\n'
         self._separator_len = 2
-        if opts.get('nmea2000', bool, False):
+        if self._mode in (self.NMEA2000, self.NMEA_MIX):
             self._fast_packet_handler = FastPacketHandler(self)
             self.set_message_processing(msg_processing=self.shipmodul_extract_nmea2000)
         else:
@@ -81,53 +81,7 @@ class ShipModulInterface(BufferedIPCoupler):
             return NavGenericMsg(NULL_MSG)
         m0183 = self.shipmodul_process_frame(frame)
         if m0183.formatter() == b'PGN':
-            fields = m0183.fields()
-            pgn = int(fields[0], 16)
-            attribute = int(fields[1], 16)
-            prio = attribute >> 12 & 7
-            dlc = attribute >> 8 & 0xF
-            addr = attribute & 0xFF
-            data = bytearray(dlc)
-            pr_byte = 0
-            l_hex = len(fields[2])
-            i_hex = l_hex - 2
-            while pr_byte < dlc:
-                data[pr_byte] = int(fields[2][i_hex:i_hex+2], 16)
-                pr_byte += 1
-                i_hex -= 2
-            # now the PGN sentence is decoded
-
-            def check_pgn():
-                try:
-                    fp = PGNDefinitions.pgn_definition(pgn).fast_packet()
-                except N2KUnknownPGN:
-                    raise ValueError
-                return fp
-
-            self.trace_n2k_raw(pgn, addr, prio, data)
-            _logger.debug("start processing PGN %d" % pgn)
-            if self._fast_packet_handler.is_pgn_active(pgn, addr, data):
-                _logger.debug("Shipmodul PGN %d on address %d is active" % (pgn, addr))
-                try:
-                    data = self._fast_packet_handler.process_frame(pgn, addr, data, self.add_event_trace)
-                except FastPacketException as e:
-                    _logger.error("Shipmodul Fast packet error %s frame: %s pgn %d data %s" % (e, frame, pgn, data.hex()))
-                    self.add_event_trace(str(e))
-                    raise ValueError
-                if data is None:
-                    raise ValueError  # no error but just to escape
-            elif check_pgn():
-                _logger.debug("Shipmodul PGN %d is fast packet" % pgn)
-                try:
-                    data = self._fast_packet_handler.process_frame(pgn, addr, data, self.add_event_trace)
-                except FastPacketException as e:
-                    _logger.error("Shipmodul Fast packet error %s on initial frame pgn %d data %s" % (e, pgn, data.hex()))
-                    self.add_event_trace(str(e))
-                raise ValueError  # no error but just to escape
-            msg = NMEA2000Msg(pgn, prio, addr, 0, data)
-            _logger.debug("Shipmodul PGN decode:%s" % str(msg))
-            gmsg = NavGenericMsg(N2K_MSG, msg=msg)
-            return gmsg
+            return self.mxpgn_decode(m0183)
         else:
             return m0183
 
