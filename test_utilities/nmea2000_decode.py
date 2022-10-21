@@ -9,6 +9,7 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 import csv
+import sys
 from argparse import ArgumentParser
 
 from nmea_routing.nmea2000_msg import *
@@ -26,7 +27,7 @@ def _parser():
     p.add_argument('-o', '--csv_out', action="store", type=str)
     p.add_argument('-i', '--input', action='store', type=str)
     p.add_argument('-d', '--trace_level', action="store", type=str,
-                   choices=["CRITICAL","ERROR", "WARNING", "INFO", "DEBUG"],
+                   choices=["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"],
                    default="INFO",
                    help="Level of traces, default INFO")
     p.add_argument('-p', '--print', action='store', type=str,
@@ -36,39 +37,52 @@ def _parser():
     p.add_argument("-t", "--trace", action="store", type=str)
     p.add_argument('-f', '--filter', action='store', type=str)
     p.add_argument('-of', '--output_file', action='store', type=str)
+    p.add_argument('-c', '--count', action='store', type=int, default=0)
     return p
 
 
-def file_input(filename, pgn_active, outfd=sys.stdout):
+def decode_trace(line, pgn_active):
+    sep_index = line.index('>')
+    # print(line, sep_index, timestamp)
+    if line[sep_index + 1] == '$':
+        return  None
+    fields = line[sep_index + 1:].split('|')
+    if fields[0] != '2K':
+        print("Wrong line:%s" % line)
+        return None
+    pgn = int(fields[1])
+    if len(pgn_active) != 0:
+        if pgn not in pgn_active:
+            return None
+    prio = int(fields[3])
+    sa = int(fields[4])
+    da = int(fields[5])
+    payload = bytearray.fromhex(fields[7])
+    msg = NMEA2000Msg(pgn, prio, sa, da, payload)
+    return msg
+
+
+def file_input(filename, pgn_active, outfd=sys.stdout, max_occurence=0):
     fd = open(filename, "r")
     print(pgn_active)
+    occurrence = 0
     for line in fd.readlines():
         line = line.strip('\n\r')
         # print(line)
-        sep_index = line.index('|')
-        timestamp = line[:sep_index]
-        # print(line, sep_index, timestamp)
-        fields = line[sep_index+1:].split(',')
-        pgn = int(fields[1])
-        if len(pgn_active) != 0:
-            if pgn not in pgn_active:
-                continue
-        prio = int(fields[2])
-        sa = int(fields[3])
-        da = int(fields[4])
-        payload = base64.b64decode(fields[6])
-        msg = NMEA2000Msg(pgn, prio, sa, da, payload)
-        outfd.write(timestamp)
-        outfd.write('|')
+        msg = decode_trace(line, pgn_active)
+        if msg is None:
+            continue
+        occurrence += 1
         outfd.write(str(msg))
         outfd.write('\n')
         res = msg.decode()
         if res is not None:
             outfd.write(str(res))
             outfd.write('\n')
-            if msg.pgn == 126992:
-                o = NMEA2000Factory.build(msg, res['fields'])
         outfd.flush()
+        if 0 < max_occurence <= occurrence:
+            break
+
 
 
 parser = _parser()
@@ -98,8 +112,11 @@ def main():
     if opts.xml is None:
         print("Missing XML definitions")
         return
-    print("analyzing file:", opts.xml)
-    defs = PGNDefinitions.build_definitions(opts.xml)
+
+    def_file = os.path.join("..\\def", opts.xml)
+    print("analyzing file:", def_file)
+    Manufacturers.build_manufacturers(os.path.join("..\\def", "Manufacturers.N2kDfn.xml"))
+    defs = PGNDefinitions.build_definitions(def_file)
     if opts.print == 'ALL':
         defs.print_summary()
     if opts.csv_out is not None:
@@ -118,7 +135,7 @@ def main():
             ofd = open(opts.output_file, "w")
         else:
             ofd = sys.stdout
-        file_input(opts.input, pgn_active, ofd)
+        file_input(opts.input, pgn_active, ofd, opts.count)
 
 
 if __name__ == '__main__':

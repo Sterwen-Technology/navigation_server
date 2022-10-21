@@ -24,9 +24,10 @@ from nmea_routing.client_publisher import *
 from nmea_routing.internal_gps import InternalGps
 # from simulator_input import *
 from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
-from nmea_routing.IPCoupler import NMEA0183TCPReader, NMEA2000TCPReader
+from nmea_routing.IPCoupler import NMEATCPReader
 from nmea_routing.ikonvert import iKonvert
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
+from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea_routing.nmea2000_msg import N2KProbePublisher, N2KTracePublisher
 from victron_mppt.mppt_coupler import MPPT_Coupler
 from nmea_routing.ydn2k_coupler import YDCoupler
@@ -238,7 +239,7 @@ def main():
     config.add_class(Console)
     config.add_class(ShipModulConfig)
     config.add_class(ShipModulInterface)
-    config.add_class(NMEA0183TCPReader)
+    config.add_class(NMEATCPReader)
     config.add_class(LogPublisher)
     config.add_class(Injector)
     config.add_class(iKonvert)
@@ -248,7 +249,6 @@ def main():
     config.add_class(MPPT_Coupler)
     config.add_class(YDCoupler)
     config.add_class(NMEASerialPort)
-    config.add_class(NMEA2000TCPReader)
     # logger setup => stream handler for now
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
@@ -260,8 +260,8 @@ def main():
     _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2022" % version)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'ST'))
+    Manufacturers.build_manufacturers(config.get_option('manufacturer_xml', './def/Manufacturers.N2kDfn.xml'))
     PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
-    # PGNDefinitions.print_pgndef(129540, sys.stdout)
 
     main_server = NavigationMainServer()
     # create the servers

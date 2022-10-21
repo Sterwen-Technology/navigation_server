@@ -50,8 +50,7 @@ if dyfmt or stfmt is selected all NMEA2000 messages will be translated in the se
 
 The configuration is also valid for messages sent from the host (client), in that case NMEA0183 like messages encapsulating NMEA2000 messages will be treated internally as NMEA2000.
 
-#### NMEASEnderServer class
-
+#### NMEASenderServer class
 This server allows sending NMEA commands towards a coupler. This is mostly used to control navigation and send tracking information to autopilot and displays
 
 
@@ -146,14 +145,13 @@ Specific parameters
 Buffer size is to be adjusted taking into account average message size and number of messages per seconds.
 A large buffer will create some delays for messages through the system while too small buffer size will generate a lot of overhead.
 
-##### NMEA0183TCPReader (IPCoupler)
-Instantiable class to communicate with NMEA0183 protocol over TCP/IP. It includes some filtering features on the sentence format level (formatter) not on talkers.
-Specific parameters
+##### NMEATCPReader (IPCoupler)
+Instantiable class to communicate with NMEA0183 based protocol over TCP/IP. It can work in 2 modes: nmea0183 (default) or nmea2000/nmea_mixed.
+This is set via the 'protocol' parameter of the base class.
+In nmea0183 mode, all frames are transmitted without any transformation.
+In nmea2000 (or nmea_mixed) $MXPGN from the Miniplex sentences are transformed in NMEA2000 messages. 
+The format of transmission to the server shall be either 'dyfmt' or 'stfmt'. Transparent mode will not work as the messages are transformed.
 
-| Name       | Type  | Default | Signification                    |
-|------------|-------|---------|----------------------------------|
-| white_list | table | None    | List of formatter to be retained |
-| black_list | table | None    | list of formatter to be excluded |
 
 
 ##### Shipmodul (IPCoupler)
@@ -161,9 +159,9 @@ Instantiable class to manage Ethernet or WiFi interface for Shipmodul Miniplex3
 
 The class instance has 2 possible behavior depending on the protocol selected.
 - nmea0183: all frames are transparently transmitted as NMEA0183
-- nmea2000: All $MXPGN frames are interpreted as NMEA2000 and interpreted as such, including FastTrack reassembly. Further processing on NMEA2000 frames is explained in the dedicated paragraph.
+- nmea2000: All $MXPGN frames are interpreted as NMEA2000 and interpreted as such, including Fast Packet reassembly. Further processing on NMEA2000 frames is explained in the dedicated paragraph.
 
-The class is allowing the pass through of configuration messages sent by the MPXconfig utility. This is requiring that a ShipModulConfig server class is setup in the configuration.
+The class is allowing the pass through of configuration messages sent by the MPXconfig utility. This is requiring that a ShipModulConfig server class is setup in the configuration. During the connection of the MPXConfig utility, all messages are directed to it, so no messages sent to clients.
 
 ##### YDCoupler (IPCoupler)
 Instantiable class to manage Yacht Device Ethernet gateway (YD02EN) for the NMEA2000 port, For NMEA0183, the generic NMEA0183TCPReader can be used.
@@ -171,9 +169,12 @@ Instantiable class to manage Yacht Device Ethernet gateway (YD02EN) for the NMEA
 All frames are converted in internal NMEA2000 format and can then be processed further. That includes Fast Packets reassembly.
 
 ##### iKonvert
-Instantiable class to manage the DigitalYacht iKonvert USB gateway in raw mode. If the device is in nMEA0183 mode and configured by the DigitalYacht utility, then the NMEASerialPort is to be used instead.
+Instantiable class to manage the DigitalYacht iKonvert USB gateway in raw mode. If the device is in MEA0183 mode and configured by the DigitalYacht utility, then the NMEASerialPort is to be used instead.
 The class does not manage the device mode itself that shall be configured via the DY utility.
-NMEA sentence !PGDY are converted internally the NMEA2000 sentences.
+
+The device connection and initialisation logic is directly managed by the coupler. The only action needed on the device outside the scope of this coupler is only the configuration in raw mode.
+
+**NMEA sentence !PGDY are converted internally the NMEA2000 sentences.**
 
 | Name   | Type   | Default | Signification                 |
 |--------|--------|---------|-------------------------------|

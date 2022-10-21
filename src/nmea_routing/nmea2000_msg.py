@@ -1,4 +1,4 @@
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # Name:        nmea2000_msg
 # Purpose:     Manages all NMEA2000 messages internal representation
 #
@@ -7,7 +7,7 @@
 # Created:     26/12/2021
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
 # Licence:     Eclipse Public License 2.0
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 import queue
 import threading
 import time
@@ -21,9 +21,13 @@ from nmea_routing.publisher import Publisher
 from generated.nmea2000_pb2 import nmea2000
 from nmea_routing.generic_msg import *
 from nmea_routing.configuration import NavigationConfiguration
-from nmea_routing.nmea0183 import process_nmea0183_frame
+from nmea_routing.nmea0183 import process_nmea0183_frame, NMEA0183Msg
 
-_logger = logging.getLogger("ShipDataServer"+"."+__name__)
+_logger = logging.getLogger("ShipDataServer" + "." + __name__)
+
+
+class N2KRawDecodeError(Exception):
+    pass
 
 
 class NMEA2000Msg:
@@ -63,15 +67,26 @@ class NMEA2000Msg:
 
     def display(self):
         pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
-        print("PGN %d|%04X|%s|time:%d" % (self._pgn, self._pgn, pgn_def.name,self._ts))
+        print("PGN %d|%04X|%s|time:%d" % (self._pgn, self._pgn, pgn_def.name, self._ts))
 
     def __str__(self):
         if self._pgn == 0:
             return "Dummy PGN 0"
         else:
+            return self.format2()
+
+    def format1(self):
+        try:
             pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
-            return "PGN %d|%04X|%s sa=%d time=%d data:%s" % (self._pgn, self._pgn, pgn_def.name, self._sa, self._ts,
-                                                             self._payload.hex())
+            name = pgn_def.name
+        except N2KUnknownPGN:
+            name = "Unknown PGN"
+        return "PGN %d|%04X|%s sa=%d da=%d time=%d data:%s" % (self._pgn, self._pgn, name, self._sa, self._da,
+                                                               self._ts, self._payload.hex())
+
+    def format2(self):
+        return "2K|%d|%04X|%d|%d|%d|%d|%s" % (self._pgn, self._pgn, self._prio, self._sa, self._da,
+                                        self._ts, self._payload.hex())
 
     def as_protobuf(self):
         res = nmea2000()
@@ -93,7 +108,11 @@ class NMEA2000Msg:
         return MessageToJson(self.as_protobuf())
 
     def decode(self):
-        pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
+        try:
+            pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
+        except N2KUnknownPGN:
+            _logger.error("No definition for PGN %d => cannot decode" % self._pgn)
+            return
         try:
             return pgn_def.decode_pgn_data(self._payload)
         except N2KDecodeException as e:
@@ -110,46 +129,53 @@ class NMEA2000Msg:
         return msg_data
 
 
-def fromPGDY(frame):
-    if frame[0] == 4:
-        return NavGenericMsg(NULL_MSG)
-    if frame[0:5] != b'!PDGY':
-        return process_nmea0183_frame(frame)
-    fields = frame.split(b',')
-    if len(fields) == 7:
-        da = int(fields[4])
-        if da == 0:
-            da = 255
-        msg = NMEA2000Msg(
-            pgn=int(fields[1]),
-            prio=int(fields[2]),
-            sa=int(fields[3]),
-            da=da,
-            payload=base64.b64decode(fields[6])
-        )
-    elif len(fields) == 4:
-        da = int(fields[2])
-        if da == 0:
-            da = 255
+def fromProprietaryNmea(msg: NMEA0183Msg):
+    if msg.address() == b'PDGY':
+        fields = msg.fields()
+        if len(fields) == 7:
+            da = int(fields[4])
+            if da == 0:
+                da = 255
+            rmsg = NMEA2000Msg(
+                pgn=int(fields[1]),
+                prio=int(fields[2]),
+                sa=int(fields[3]),
+                da=da,
+                payload=base64.b64decode(fields[6])
+            )
+        elif len(fields) == 4:
+            da = int(fields[2])
+            if da == 0:
+                da = 255
 
-        msg = NMEA2000Msg(
-            pgn=int(fields[1]),
-            da=da,
-            payload=base64.b64decode(fields[3])
-        )
+            rmsg = NMEA2000Msg(
+                pgn=int(fields[1]),
+                da=da,
+                payload=base64.b64decode(fields[3])
+            )
+        else:
+            raise N2KRawDecodeError("PDGY message format error")
+        return rmsg
     else:
-        _logger.error("Incorrect !PDGY frame %s" % frame)
-        return NavGenericMsg(NULL_MSG)
+        return msg
 
-    return NavGenericMsg(N2K_MSG, msg=msg)
+
+def fromPGDY(frame):
+    '''
+    Directly transform a PDGY NMEA0183 proprietary frame into a N2K internal message
+    If this is not a PDGY message, then return that message without processing
+    :param frame: bytearray with the NMEA0183 frame
+    :return a NavGenericMsg:
+    '''
+    msg = process_nmea0183_frame(frame)
+    if msg.type == NULL_MSG:
+        return msg
+    return fromProprietaryNmea(msg)
 
 
 def fromPGNST(frame):
-    if frame[0] == 4:
-        return NavGenericMsg(NULL_MSG)
-    if frame[0:6] != b'!PGDY':
-        return process_nmea0183_frame(frame)
     raise NotImplementedError("PGNST decoding")
+
 
 class PgnRecord:
 
@@ -276,7 +302,7 @@ def pgn_list(str_filter):
         pgn = int(str_pgn)
         try:
             pgn_d = pgn_defs.pgn_def(pgn)
-        except KeyError:
+        except N2KUnknownPGN:
             print("Invalid PGN:", pgn, "Ignored")
             continue
         res.append(pgn)
@@ -297,7 +323,6 @@ class NMEA2000Object:
 
 
 class SystemTime(NMEA2000Object):
-
     secondsperday = 3600. * 24.
 
     def __init__(self, message, **kwargs):
@@ -347,7 +372,7 @@ class FastPacket:
     def first_packet(self, frame):
         self._byte_length = frame[1]
         l7 = self._byte_length - 6
-        nb7 = int(l7/7)
+        nb7 = int(l7 / 7)
         if l7 % 7 != 0:
             nb7 += 1
         self._nbframes = nb7 + 1
@@ -386,7 +411,7 @@ class FastPacket:
                 raise FastPacketException("Missing frame %d" % i)
             l = len(f)
             if start_idx + l >= self._byte_length:
-                result[start_idx:] = f[:self._byte_length - start_idx +1]
+                result[start_idx:] = f[:self._byte_length - start_idx + 1]
             else:
                 result[start_idx:] = f
             start_idx += l
@@ -429,7 +454,8 @@ class FastPacketHandler:
         def allocate_handle():
             l_handle = FastPacket(pgn, addr, seq)
             self._sequences[l_handle.key] = l_handle
-            _logger.debug("Fast packet ==> start sequence on PGN %d from address %d with sequence %d" % (pgn, addr, seq))
+            _logger.debug(
+                "Fast packet ==> start sequence on PGN %d from address %d with sequence %d" % (pgn, addr, seq))
             return l_handle
 
         if handle is None:
@@ -516,7 +542,7 @@ class NMEA2000Writer(threading.Thread):
     '''
 
     def __init__(self, instrument, max_throughput):
-        self._name = instrument.name()+'-Writer'
+        self._name = instrument.name() + '-Writer'
         _logger.info('Creating writer:%s' % self._name)
         super().__init__(name=self._name)
         self._instrument = instrument
@@ -538,7 +564,7 @@ class NMEA2000Writer(threading.Thread):
             actual = time.monotonic()
             delta = self._last_msg_ts - actual
             if delta < self._interval:
-                time.sleep(self._interval-delta)
+                time.sleep(self._interval - delta)
                 actual = time.monotonic()
             self._last_msg_ts = actual
             self._instrument.send(msg)
@@ -548,13 +574,3 @@ class NMEA2000Writer(threading.Thread):
     def stop(self):
         self._stop_flag = True
         self._queue.put(NavGenericMsg(NULL_MSG))
-
-
-
-
-
-
-
-
-
-
