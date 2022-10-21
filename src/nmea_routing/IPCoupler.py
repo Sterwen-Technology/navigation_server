@@ -32,7 +32,9 @@ _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 class IPCoupler(Coupler):
-
+    '''
+    abstract class for all couplers based on IP protocol communication
+    '''
     def __init__(self, opts):
         super().__init__(opts)
         self._address = opts.get('address', str, 'localhost')
@@ -171,6 +173,16 @@ class TCP_reader(IP_transport):
 
 
 class IPAsynchReader(threading.Thread):
+    '''
+    This class provides asynchronous messages reassembly over IP protocol. Preferably TCP/IP to avoid messages loss
+    It acts as an intermediate between the IP transport and the coupler.
+    Communication is done via a queue in which complete messages are pushed
+    ASCII based messages separated by delimiters, usually <CR><LF> for NMEA0183
+    Messages delimiter is configurable
+    The syntax analysis is performed by the _msg_processing configurable method. A ValueError exception is raised when
+    Additional low level messages are needed to complete the message to process NMEA2000 FastPacket for instance.
+    Transport errors, except timeout, lead to the push of a specific <EOF> messages indicating the end of the flow
+    '''
 
     def __init__(self, coupler, out_queue, separator, msg_processing):
         super().__init__()
@@ -222,9 +234,6 @@ class IPAsynchReader(threading.Thread):
                             end_idx -= 1
                         part_buf.extend(buffer[start_idx:end_idx])
                         break
-                        #else:
-                            #_logger.error("Frame missing delimiter start %d end %d" % (start_idx, end_idx))
-                            #_logger.error("Frame missing delimiter %s" % buffer[start_idx: end_idx].hex(' ', 2))
                     else:
                         _logger.debug("No separator found before end of buffer %s" % buffer[start_idx:end_idx])
                         if buffer[end_idx - 1] in self._separator:
@@ -325,8 +334,14 @@ class BufferedIPCoupler(IPCoupler):
             return False
 
     def read(self) -> NavGenericMsg:
-        msg = self._in_queue.get()
-        self.trace(self.TRACE_IN, msg)
+        fetch_next = True
+        while fetch_next:
+            msg = self._in_queue.get()
+            self.trace(self.TRACE_IN, msg)
+            if msg.type == N2K_MSG:
+                fetch_next = self.check_ctlr_msg(msg)
+            else:
+                fetch_next = False
         return msg
 
     def stop(self):
@@ -401,6 +416,12 @@ class BufferedIPCoupler(IPCoupler):
 
 
 class TCPBufferedReader:
+    '''
+    This class implement buffered read of NMEA streams over IP for other interfaces than couplers
+    Used to read commands issued by client towards the coupler via the server
+
+    NOTE => To be moved to another module
+    '''
 
     def __init__(self, connection, separator, address, msg_processing, buffer_size=128, timeout=10.):
         self._connection = connection

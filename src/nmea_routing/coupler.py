@@ -21,6 +21,7 @@ from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.publisher import PublisherOverflow
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
 from nmea_routing.nmea2000_msg import NMEA2000Msg, NMEA2000Writer
+from nmea2000.nmea2k_pgndefs import PGNDef
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -40,7 +41,7 @@ class CouplerNotPresent(Exception):
 
 class Coupler(threading.Thread):
     '''
-    Base abstract class for all instruments
+    Base abstract class for all couplers
     '''
 
     (NOT_READY, OPEN, CONNECTED, ACTIVE) = range(4)
@@ -102,6 +103,13 @@ class Coupler(threading.Thread):
         self._count_stamp = 0
         self._rate = 0.0
         self._rate_s = 0.0
+        #
+        #  message filtering and automatic processing
+        #
+        self._filter_function = None
+        self._filter_name = opts.get('filter', str, None)
+        self._n2k_controller = None
+        self._n2k_ctlr_name = opts.get('nmea2000_controller', str, None)
 
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)
@@ -152,6 +160,12 @@ class Coupler(threading.Thread):
         if self._n2k_writer is not None:
             self._n2k_writer.stop()
 
+    def process_filter(self, msg: NavGenericMsg) -> bool:
+        if self._filter_function is not None:
+            return self._filter_function(msg)
+        else:
+            return True
+
     def run(self):
         self._has_run = True
         self._startTS = time.time()
@@ -199,10 +213,12 @@ class Coupler(threading.Thread):
                 _logger.error("Un-caught exception during coupler %s read: %s" % (self._name, e))
                 self.close()
                 continue
-            # good data received - publish
+            # good data received - filter and publish
             self._total_msg += 1
             self._state = self.ACTIVE
-            self.publish(msg)
+            if self.process_filter(msg):
+                # unfiltered data are published
+                self.publish(msg)
         self.stop()
         self.close()
         _logger.info("%s coupler thread stops"%self._name)
@@ -359,4 +375,18 @@ class Coupler(threading.Thread):
 
     def validate_n2k_frame(self, frame):
         raise NotImplementedError("To be implemented in subclass")
+
+    def check_ctlr_msg(self, msg) -> bool:
+        '''
+        Check if the message is a service message for the NMEA2000 controller
+        :param msg:
+        :return: True if the message is directed to the NMEA2000 controller
+        '''
+
+        if self._n2k_controller is not None:
+            n2kmsg = msg.msg()
+            if PGNDef.pgn_for_controller(n2kmsg.pgn):
+                self._n2k_controller(msg)
+                return True
+        return False
 

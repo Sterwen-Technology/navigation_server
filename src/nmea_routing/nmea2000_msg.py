@@ -86,7 +86,7 @@ class NMEA2000Msg:
 
     def format2(self):
         return "2K|%d|%04X|%d|%d|%d|%d|%s" % (self._pgn, self._pgn, self._prio, self._sa, self._da,
-                                        self._ts, self._payload.hex())
+                                              self._ts, self._payload.hex())
 
     def as_protobuf(self):
         res = nmea2000()
