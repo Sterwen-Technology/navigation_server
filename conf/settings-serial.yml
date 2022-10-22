@@ -13,25 +13,32 @@ log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
     nmea_routing.message_server: INFO
+    nmea2000.nmea2k_controller: DEBUG
 
 servers:
 
 - NMEAServer:
     class: NMEAServer
     port: 4500
+    nmea2000: transparent
 
 - Console:
     class: Console
     port: 4502
 
+- NMEANetwork:
+    class: NMEA2KController
+
 
 couplers:
 
 - SNReplay:
-    class: NMEA0183TCPReader
+    class: NMEATCPReader
     address: 192.168.1.21
     port: 3555
     autostart: true
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
 
 publishers:
 

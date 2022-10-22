@@ -168,6 +168,13 @@ class Coupler(threading.Thread):
 
     def run(self):
         self._has_run = True
+        # now resolve internal references
+        if self._n2k_ctlr_name is not None:
+            try:
+                self._n2k_controller = self.resolve_ref(self._n2k_ctlr_name)
+                _logger.info("%s attached NMEA2000 controller %s" % (self.name(), self._n2k_controller.name()))
+            except KeyError:
+                _logger.error("Wrong reference for NMEA2000 controller:%s ignoring" % self._n2k_ctlr_name)
         self._startTS = time.time()
         self.start_timer()
         self._count_stamp = time.monotonic()
@@ -300,13 +307,29 @@ class Coupler(threading.Thread):
             self._timer = None
         self.stop_writer()
 
+    def read(self) -> NavGenericMsg:
+        fetch_next = True
+        while fetch_next:
+            msg = self._read()
+            self.trace(self.TRACE_IN, msg)
+            # print(msg.printable())
+            if msg.type == N2K_MSG:
+                fetch_next = self.check_ctlr_msg(msg)
+            else:
+                fetch_next = False
+        return msg
+
+    def _read(self) -> NavGenericMsg:
+        '''
+        This method only perform a basic read function without any filtering / processing
+        :return: a NMEA message (either NMEA0183 or NMEA2000)
+        '''
+        raise NotImplementedError("Method _read To be implemented in subclass")
+
     def open(self) -> bool:
         raise NotImplementedError("To be implemented in subclass")
 
     def close(self):
-        raise NotImplementedError("To be implemented in subclass")
-
-    def read(self) -> NavGenericMsg:
         raise NotImplementedError("To be implemented in subclass")
 
     def send(self, msg: NavGenericMsg):
@@ -384,9 +407,9 @@ class Coupler(threading.Thread):
         '''
 
         if self._n2k_controller is not None:
-            n2kmsg = msg.msg()
+            n2kmsg = msg.msg
             if PGNDef.pgn_for_controller(n2kmsg.pgn):
-                self._n2k_controller(msg)
+                self._n2k_controller.send_message(n2kmsg)
                 return True
         return False
 

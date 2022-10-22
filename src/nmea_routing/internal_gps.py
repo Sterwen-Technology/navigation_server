@@ -75,7 +75,7 @@ class InternalGps(Coupler):
         self._state = self.CONNECTED
         return True
 
-    def read(self):
+    def _read(self):
         self._fix_event.wait()
         if self._stopflag:
             return None
@@ -86,7 +86,6 @@ class InternalGps(Coupler):
                 _logger.error("Internal GPS error reading %s" % str(e))
                 raise CouplerReadError("Serial error")
             msg = NMEA0183Msg(data)
-            self.trace(self.TRACE_IN, msg)
             if self._talker is not None:
                 msg.replace_talker(self._talker)
             return msg

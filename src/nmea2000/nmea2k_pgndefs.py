@@ -200,7 +200,6 @@ class PGNDef:
 
     @staticmethod
     def pgn_for_controller(pgn: int) -> bool:
-        pgn, addr = PGNDef.pgn_pdu1_adjust(pgn)
         if pgn <= PGNDef.pgn_range[0].to:
             return True
         elif pgn in PGNDef.pgn_service:

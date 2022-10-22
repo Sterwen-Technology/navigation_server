@@ -164,13 +164,11 @@ class NavigationConfiguration:
         try:
             fp = open(settings_file, 'r')
         except IOError as e:
-            print(e)
-            _logger.error("Settings file %s" % str(e))
+            _logger.error("Settings file %s error %s" % (settings_file, e))
             raise
         try:
             self._configuration = yaml.load(fp, yaml.FullLoader)
         except yaml.YAMLError as e:
-            print(e)
             _logger.error("Settings file decoding error %s" % str(e))
             raise
         for obj in self.object_descr_iter('servers'):

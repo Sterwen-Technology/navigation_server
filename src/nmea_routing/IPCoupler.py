@@ -58,9 +58,6 @@ class IPCoupler(Coupler):
             self._state = self.NOT_READY
             return False
 
-    def read(self) -> NavGenericMsg:
-        raise NotImplementedError("To be implemented in subclasses")
-
     def send(self, msg: NavGenericMsg):
 
         _logger.debug("%s Sending %s" % (self.name(), msg.printable()))
@@ -333,16 +330,8 @@ class BufferedIPCoupler(IPCoupler):
         else:
             return False
 
-    def read(self) -> NavGenericMsg:
-        fetch_next = True
-        while fetch_next:
-            msg = self._in_queue.get()
-            self.trace(self.TRACE_IN, msg)
-            if msg.type == N2K_MSG:
-                fetch_next = self.check_ctlr_msg(msg)
-            else:
-                fetch_next = False
-        return msg
+    def _read(self) -> NavGenericMsg:
+        return self._in_queue.get()
 
     def stop(self):
         super().stop()

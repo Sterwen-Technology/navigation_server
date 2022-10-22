@@ -27,6 +27,7 @@ class NMEA2KController(NavigationServer, threading.Thread):
         queue_size = opts.get('queue_size', int, 20)
         self._input_queue = queue.Queue(queue_size)
         self._stop_flag = False
+        _logger.info("%s debug level %d" % (__name__, _logger.getEffectiveLevel()))
 
     def server_type(self):
         return 'NMEA200_CONTROLLER'

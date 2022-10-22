@@ -247,7 +247,6 @@ class iKonvert(Coupler):
                 t = 'NAK'
             _logger.error("iKonvert unexpected %s reason %s" % (t, info))
 
-
     def wait_status(self):
         self._wait_event = self.WAIT_MSG
         self._wait_sem.acquire()
@@ -272,7 +271,7 @@ class iKonvert(Coupler):
             else:
                 _logger.error("iKonvert CMD error %s" % self._cmd_result[1])
 
-    def read(self):
+    def _read(self):
         return self._queue.get()
 
     def stop(self):
