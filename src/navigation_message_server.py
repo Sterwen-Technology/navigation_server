@@ -282,6 +282,8 @@ def main():
     for pub_descr in config.publishers():
         publisher = pub_descr.build_object()
         main_server.add_publisher(publisher)
+    for data_s in config.data_sinks():
+        data_s.build_object()
 
     main_server.start()
     # print_threads()

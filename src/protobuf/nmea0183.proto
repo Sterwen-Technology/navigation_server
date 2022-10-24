@@ -17,6 +17,7 @@ syntax = "proto3";
 
 message nmea0183 {
   string talker=1;
-  string formatter=2;
+  string formatter=2;   // not existing for proprietary sentences
+  uint64 timestamp = 4; //micro-seconds
   repeated string values=3;
 }

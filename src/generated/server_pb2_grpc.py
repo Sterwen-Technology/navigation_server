@@ -2,6 +2,8 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
+import generated.server_pb2 as server__pb2
+
 
 
 class NavigationServerStub(object):
@@ -13,14 +15,30 @@ class NavigationServerStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.pushNMEA = channel.unary_unary(
+                '/NavigationServer/pushNMEA',
+                request_serializer=server__pb2.nmea_msg.SerializeToString,
+                response_deserializer=server__pb2.server_resp.FromString,
+                )
 
 
 class NavigationServerServicer(object):
     """Missing associated documentation comment in .proto file."""
 
+    def pushNMEA(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_NavigationServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'pushNMEA': grpc.unary_unary_rpc_method_handler(
+                    servicer.pushNMEA,
+                    request_deserializer=server__pb2.nmea_msg.FromString,
+                    response_serializer=server__pb2.server_resp.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
             'NavigationServer', rpc_method_handlers)
@@ -30,3 +48,20 @@ def add_NavigationServerServicer_to_server(servicer, server):
  # This class is part of an EXPERIMENTAL API.
 class NavigationServer(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def pushNMEA(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/NavigationServer/pushNMEA',
+            server__pb2.nmea_msg.SerializeToString,
+            server__pb2.server_resp.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

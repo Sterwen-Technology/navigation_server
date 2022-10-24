@@ -39,7 +39,7 @@ class NMEA2000Msg:
         self._da = da
         if payload is not None:
             self._payload = payload
-            self._ts = int(time.monotonic() * 1000)
+            self._ts = int(time.monotonic() * 1e6)
             if len(payload) <= 8:
                 self._fast_packet = False
             else:
@@ -93,8 +93,9 @@ class NMEA2000Msg:
         res.pgn = self._pgn
         res.priority = self._prio
         res.sa = self._sa
+        res.da = self._da
         try:
-            val = int(self._ts / 1000)
+            val = self._ts
             res.timestamp = val
         except ValueError:
             _logger.error("Invalid time stamp %s %d on PGN %d" % (type(val), val, self._pgn))

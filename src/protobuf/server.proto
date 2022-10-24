@@ -21,7 +21,11 @@ message nmea_msg {
   }
 }
 
+message server_resp {
+  uint32 reportCode = 1;
+}
+
 service NavigationServer {
-  
+  rpc pushNMEA( nmea_msg ) returns (server_resp) {}
 }
 

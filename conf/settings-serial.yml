@@ -47,7 +47,11 @@ publishers:
 #        file: /data/solidsense/log/navigation.log
 #        instruments: [MiniPlex3]
 
+data_sinks:
 
+- DataAnalyser:
+      class: NMEADataClient
+      couplers: [SNReplay]
 
 
 
