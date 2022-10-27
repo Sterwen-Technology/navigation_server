@@ -110,6 +110,8 @@ class Coupler(threading.Thread):
         self._filter_name = opts.get('filter', str, None)
         self._n2k_controller = None
         self._n2k_ctlr_name = opts.get('nmea2000_controller', str, None)
+        self._data_sink = None
+        self._data_sink_name = opts.get('data_sink', str, None)
 
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)
@@ -169,12 +171,9 @@ class Coupler(threading.Thread):
     def run(self):
         self._has_run = True
         # now resolve internal references
-        if self._n2k_ctlr_name is not None:
-            try:
-                self._n2k_controller = self.resolve_ref(self._n2k_ctlr_name)
-                _logger.info("%s attached NMEA2000 controller %s" % (self.name(), self._n2k_controller.name()))
-            except KeyError:
-                _logger.error("Wrong reference for NMEA2000 controller:%s ignoring" % self._n2k_ctlr_name)
+        self._n2k_controller = self.resolve_ref(self._n2k_ctlr_name, 'NMEA2000 controller')
+        self._data_sink = self.resolve_ref(self._data_sink_name, "Data sink")
+
         self._startTS = time.time()
         self.start_timer()
         self._count_stamp = time.monotonic()
@@ -312,6 +311,8 @@ class Coupler(threading.Thread):
         while fetch_next:
             msg = self._read()
             self.trace(self.TRACE_IN, msg)
+            if self._data_sink is not None:
+                self._data_sink.send_msg(msg)
             # print(msg.printable())
             if msg.type == N2K_MSG:
                 fetch_next = self.check_ctlr_msg(msg)
@@ -339,9 +340,17 @@ class Coupler(threading.Thread):
         # raise NotImplementedError("To be implemented in subclass")
         pass
 
-    def resolve_ref(self, name):
-        reference = self._opts[name]
-        return NavigationConfiguration.get_conf().get_object(reference)
+    def resolve_ref(self, name: str, descr):
+        if name is None:
+            return None
+        try:
+            ref = NavigationConfiguration.get_conf().get_object(name)
+            _logger.info("%s attached %s %s" % (self.name(), descr, name))
+            return ref
+        except KeyError:
+            _logger.error("%s Wrong reference for %s: %s" % (self.name(), name, descr))
+            return None
+
 
     def open_trace_file(self):
         trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')

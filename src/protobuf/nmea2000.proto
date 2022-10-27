@@ -15,7 +15,7 @@ syntax = "proto3";
 // generic NMEA2000 message with all fast packets concatenated
 // so the payload length can be > 8 bytes
 
-message nmea2000 {
+message nmea2000pb {
   uint32 pgn=1;
   uint32 priority=2;
   uint32 sa=3; // source address

@@ -14,21 +14,21 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enmea0183.proto\"P\n\x08nmea0183\x12\x0e\n\x06talker\x18\x01 \x01(\t\x12\x11\n\tformatter\x18\x02 \x01(\t\x12\x11\n\ttimestamp\x18\x04 \x01(\x04\x12\x0e\n\x06values\x18\x03 \x03(\tb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enmea0183.proto\"R\n\nnmea0183pb\x12\x0e\n\x06talker\x18\x01 \x01(\t\x12\x11\n\tformatter\x18\x02 \x01(\t\x12\x11\n\ttimestamp\x18\x04 \x01(\x04\x12\x0e\n\x06values\x18\x03 \x03(\tb\x06proto3')
 
 
 
-_NMEA0183 = DESCRIPTOR.message_types_by_name['nmea0183']
-nmea0183 = _reflection.GeneratedProtocolMessageType('nmea0183', (_message.Message,), {
-  'DESCRIPTOR' : _NMEA0183,
+_NMEA0183PB = DESCRIPTOR.message_types_by_name['nmea0183pb']
+nmea0183pb = _reflection.GeneratedProtocolMessageType('nmea0183pb', (_message.Message,), {
+  'DESCRIPTOR' : _NMEA0183PB,
   '__module__' : 'nmea0183_pb2'
-  # @@protoc_insertion_point(class_scope:nmea0183)
+  # @@protoc_insertion_point(class_scope:nmea0183pb)
   })
-_sym_db.RegisterMessage(nmea0183)
+_sym_db.RegisterMessage(nmea0183pb)
 
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _NMEA0183._serialized_start=18
-  _NMEA0183._serialized_end=98
+  _NMEA0183PB._serialized_start=18
+  _NMEA0183PB._serialized_end=100
 # @@protoc_insertion_point(module_scope)

@@ -15,7 +15,7 @@ syntax = "proto3";
 // generic NMEA0183 message
 //
 
-message nmea0183 {
+message nmea0183pb {
   string talker=1;
   string formatter=2;   // not existing for proprietary sentences
   uint64 timestamp = 4; //micro-seconds

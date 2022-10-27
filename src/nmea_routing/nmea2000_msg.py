@@ -18,7 +18,7 @@ import base64
 
 from nmea2000.nmea2k_pgndefs import *
 from nmea_routing.publisher import Publisher
-from generated.nmea2000_pb2 import nmea2000
+from generated.nmea2000_pb2 import nmea2000pb
 from nmea_routing.generic_msg import *
 from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.nmea0183 import process_nmea0183_frame, NMEA0183Msg
@@ -88,8 +88,8 @@ class NMEA2000Msg:
         return "2K|%d|%04X|%d|%d|%d|%d|%s" % (self._pgn, self._pgn, self._prio, self._sa, self._da,
                                               self._ts, self._payload.hex())
 
-    def as_protobuf(self):
-        res = nmea2000()
+    def as_protobuf(self, res: nmea2000pb):
+
         res.pgn = self._pgn
         res.priority = self._prio
         res.sa = self._sa

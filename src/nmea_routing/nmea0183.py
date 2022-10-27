@@ -16,7 +16,7 @@ import time
 import logging
 
 from nmea_routing.generic_msg import *
-from generated.nmea0183_pb2 import nmea0183
+from generated.nmea0183_pb2 import nmea0183pb
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -71,13 +71,13 @@ class NMEA0183Msg(NavGenericMsg):
     def fields(self):
         return self._raw[self._datafields_s:self._datalen-3].split(b',')
 
-    def as_protobuf(self) -> nmea0183:
-        r = nmea0183()
+    def as_protobuf(self, r: nmea0183pb) -> nmea0183pb:
+
         try:
-            r.talker = self.talker()
-            r.formatter = self.formatter()
+            r.talker = self.talker().decode()
+            r.formatter = self.formatter().decode()
         except ValueError:
-            r.talker = self.address()
+            r.talker = self.address().decode()
         r.timestamp = self._ts
         # r.values.extend(self.fields())
         for f in self.fields():

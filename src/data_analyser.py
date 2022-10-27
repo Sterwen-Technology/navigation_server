@@ -14,12 +14,16 @@ import logging
 from argparse import ArgumentParser
 from concurrent import futures
 import grpc
+import signal
+import time
 from generated.server_pb2_grpc import NavigationServerServicer, add_NavigationServerServicer_to_server
 from generated.server_pb2 import server_resp
-
+from nmea2000.nmea2k_manufacturers import Manufacturers
+from nmea2000.nmea2k_pgndefs import PGNDefinitions
+from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
 
 _version = "V1.00"
-
+n2kstats = None
 
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
@@ -59,8 +63,12 @@ class DataServicer(NavigationServerServicer):
         resp.reportCode = 0
         if request.HasField("N2K_msg"):
             _logger.debug("NMEA2000 message received")
+            msg = request.N2K_msg
+            self._dataset.add_n2kentry(msg.pgn, msg.sa)
         elif request.HasField("N0183_msg"):
             _logger.debug("NMEA0183 message received")
+            msg = request.N0183_msg
+            self._dataset.add_n183entry(msg.talker, msg.formatter)
         return resp
 
 
@@ -81,8 +89,39 @@ class GrpcServer:
     def wait(self):
         self._server.wait_for_termination()
 
+    def stop(self):
+        self._server.stop(0.1)
+
+
+class DataStatistics:
+
+    def __init__(self):
+        self._n2kstats = N2KStatistics()
+        self._n183stats = NMEA183Statistics()
+        self._server = None
+        self._sigtime = 0
+        signal.signal(signal.SIGINT, self.handler)
+
+    def handler(self, signum, frame):
+        t = time.monotonic()
+        if t - self._sigtime > 10.0:
+            self._sigtime = t
+            self._n2kstats.print_entries()
+            self._n183stats.print_entries()
+        else:
+            self._server.stop()
+
+    def set_server(self, server):
+        self._server = server
+
+    def add_n2kentry(self, pgn, sa):
+        self._n2kstats.add_entry(pgn, sa)
+
+    def add_n183entry(self, talker, formatter):
+        self._n183stats.add_entry(talker, formatter)
 
 def main():
+
     opts = parser.parse_args()
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
@@ -90,7 +129,11 @@ def main():
     _logger.addHandler(loghandler)
     _logger.setLevel(logging.INFO)
 
-    grpc_server = GrpcServer(opts, None)
+    Manufacturers.build_manufacturers('./def/Manufacturers.N2kDfn.xml')
+    PGNDefinitions.build_definitions('./def/PGNDefns.N2kDfn.xml')
+    stats = DataStatistics()
+    grpc_server = GrpcServer(opts, stats)
+    stats.set_server(grpc_server)
     grpc_server.start()
     grpc_server.wait()
 

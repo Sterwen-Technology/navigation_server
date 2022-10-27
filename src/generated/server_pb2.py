@@ -18,7 +18,7 @@ import generated.nmea0183_pb2 as nmea0183__pb2
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cserver.proto\x1a\x0enmea2000.proto\x1a\x0enmea0183.proto\"S\n\x08nmea_msg\x12\x1c\n\x07N2K_msg\x18\x01 \x01(\x0b\x32\t.nmea2000H\x00\x12\x1e\n\tN0183_msg\x18\x02 \x01(\x0b\x32\t.nmea0183H\x00\x42\t\n\x07Message\"!\n\x0bserver_resp\x12\x12\n\nreportCode\x18\x01 \x01(\r29\n\x10NavigationServer\x12%\n\x08pushNMEA\x12\t.nmea_msg\x1a\x0c.server_resp\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cserver.proto\x1a\x0enmea2000.proto\x1a\x0enmea0183.proto\"W\n\x08nmea_msg\x12\x1e\n\x07N2K_msg\x18\x01 \x01(\x0b\x32\x0b.nmea2000pbH\x00\x12 \n\tN0183_msg\x18\x02 \x01(\x0b\x32\x0b.nmea0183pbH\x00\x42\t\n\x07Message\"!\n\x0bserver_resp\x12\x12\n\nreportCode\x18\x01 \x01(\r29\n\x10NavigationServer\x12%\n\x08pushNMEA\x12\t.nmea_msg\x1a\x0c.server_resp\"\x00\x62\x06proto3')
 
 
 
@@ -43,9 +43,9 @@ if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
   _NMEA_MSG._serialized_start=48
-  _NMEA_MSG._serialized_end=131
-  _SERVER_RESP._serialized_start=133
-  _SERVER_RESP._serialized_end=166
-  _NAVIGATIONSERVER._serialized_start=168
-  _NAVIGATIONSERVER._serialized_end=225
+  _NMEA_MSG._serialized_end=135
+  _SERVER_RESP._serialized_start=137
+  _SERVER_RESP._serialized_end=170
+  _NAVIGATIONSERVER._serialized_start=172
+  _NAVIGATIONSERVER._serialized_end=229
 # @@protoc_insertion_point(module_scope)
