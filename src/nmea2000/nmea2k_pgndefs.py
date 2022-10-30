@@ -160,7 +160,7 @@ class PGNDef:
         PGNRange(0x1FF00, 0x1FFFF, PDU2, PROP_FAST_PACKET, 'Proprietary fast packet non-addressed')
     ]
 
-    pgn_service = [59392, 59904, 60928, 65240, 126208, 126464, 126996]
+    pgn_service = [59392, 59904, 60928, 65240, 126208, 126464, 126993, 126996]
 
     @staticmethod
     def set_trace(enum_error: bool, warning: bool):
@@ -230,7 +230,7 @@ class PGNDef:
                 self._variable_length = True
             else:
                 self._variable_length = False
-            if self._byte_length > 8:
+            if self._byte_length <= 0 or self._byte_length > 8:
                 self._fast_packet = True
         else:
             self._byte_length = 0
@@ -279,6 +279,18 @@ class PGNDef:
 
     def field(self, name):
         return self._fields[name]
+
+    def pgn_data(self):
+        data = [
+            self._id,
+            self._name,
+            self._byte_length,
+            self._range.description,
+            self._fast_packet,
+            len(self._fields)
+        ]
+        return data
+
 
     def decode_pgn_data(self, data: bytes):
         '''
@@ -520,6 +532,7 @@ class Field:
             # raise N2KDecodeException("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
 
     def extract_uint_byte(self, b_dec):
+        print(self._name, "[%s]" % b_dec.hex(), self._byte_length, self._bit_offset, self.BitLength)
         res = N2KDecodeResult(self._name)
         res.actual_length = 1
         val2 = struct.unpack('<B', b_dec)
@@ -527,10 +540,11 @@ class Field:
         val = val2[0]
         # print("Byte decode",self._name,"byte:",b_dec,"Offset",self._bit_offset,"length",self.BitLength,":%X"%val)
         if self._bit_offset != 0:
-            val >>= 8-(self._bit_offset + self.BitLength)
+            val >>= self._bit_offset
         res.value = val & self.bit_mask_l[self.BitLength]
         if self._bit_offset + self.BitLength < 8:
             res.no_increment()
+        print(self._name, "=%d (%X)" % (res.value, res.value))
         return res
 
     def extract_uint(self, payload, specs):
@@ -597,29 +611,52 @@ class Field:
         return value
 
     def decode_value(self, payload, specs):
+        print(self._name,"[%d:%d]" % (specs.start, specs.end), self._byte_length, self._bit_offset, self.BitLength)
         b_dec = payload[specs.start:specs.end]
         if self._byte_length == 1:
             return self.extract_uint_byte(b_dec)
         elif self._byte_length == 2:
             # convert the 2 bytes into an integer big endian
             res = N2KDecodeResult(self._name)
-            res.actual_length = 2
+            if (self.BitLength + self._bit_offset) % 8 == 0:
+                res.actual_length = 2
+            else:
+                res.actual_length = 1
             val = struct.unpack('<H', b_dec)
             val = val[0]
             # mask upper bits
             if self._bit_offset > 0:
-                val = val & self.bit_mask16[self._bit_offset]
+                val >>= self._bit_offset
                 remaining_bits = 16 - (self._bit_offset + self.BitLength)
                 if remaining_bits > 0:
-                    val >>= remaining_bits
+                    val = val & self.bit_mask16[16 - remaining_bits]
             else:
                 val = val & self.bit_mask16_u[self.BitLength - 9]
             res.value = val
-            if val == 0xFF:
+            print(self._name, "=%d (%X)" % (val, val))
+            # validity check to be finalized
+            if val == self.bit_mask16_u[self.BitLength - 8]:
                 res.invalid()
             return res
-        elif self._byte_length == 3 or self._byte_length == 4:
-            return self.extract_uint(payload, specs)
+        elif self._byte_length == 3:
+            res = N2KDecodeResult(self._name)
+
+            if (self.BitLength + self._bit_offset) % 8 == 0:
+                res.actual_length = 3
+            else:
+                res.actual_length = 2
+            # first decode the first word
+            val = struct.unpack('<H', payload[specs.start:specs.start+2])
+            val = val[0]
+            ad_byte = struct.unpack('<B', payload[specs.start+2:specs.start+3])
+            ad_byte = ad_byte[0]
+            remaining_bits = 24 - self.BitLength
+            val <<= remaining_bits
+            ad_byte &= self.bit_mask_l[remaining_bits]
+            val += ad_byte
+            print(self._name, "=%d (%X)" % (val, val))
+            res.value = val
+            return res
         else:
             # _logger.error("Cannot decode bit fields over 3 bytes %s %s" % (self._name, self.type()))
             raise N2KDecodeException("Cannot decode bit fields over 3 bytes %s %s" % (self._name, self.type()))

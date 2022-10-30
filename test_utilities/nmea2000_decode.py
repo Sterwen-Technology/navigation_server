@@ -48,7 +48,7 @@ def decode_trace(line, pgn_active):
         return  None
     fields = line[sep_index + 1:].split('|')
     if fields[0] != '2K':
-        print("Wrong line:%s" % line)
+        # print("Wrong line:%s" % line)
         return None
     pgn = int(fields[1])
     if len(pgn_active) != 0:
@@ -113,9 +113,9 @@ def main():
         print("Missing XML definitions")
         return
 
-    def_file = os.path.join("..\\def", opts.xml)
+    def_file = os.path.join("../def", opts.xml)
     print("analyzing file:", def_file)
-    Manufacturers.build_manufacturers(os.path.join("..\\def", "Manufacturers.N2kDfn.xml"))
+    Manufacturers.build_manufacturers(os.path.join("../def", "Manufacturers.N2kDfn.xml"))
     defs = PGNDefinitions.build_definitions(def_file)
     if opts.print == 'ALL':
         defs.print_summary()
@@ -124,7 +124,7 @@ def main():
         fp = open(opts.csv_out, 'w')
         w = csv.writer(fp, dialect='excel')
         for pgn in defs.pgns():
-            w.writerow([pgn.id, pgn.name])
+            w.writerow(pgn.pgn_data())
         fp.close()
     elif opts.input is not None:
         pgn_active = []

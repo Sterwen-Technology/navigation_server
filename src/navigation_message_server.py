@@ -257,11 +257,25 @@ def main():
     config.add_class(NMEASerialPort)
     config.add_class(NMEA2KController)
     config.add_class(NMEADataClient)
-    # logger setup => stream handler for now
+    # logger setup => stream handler for now or file
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
+    log_file = config.get_option("log_file", None)
+    if log_file is not None:
+        log_dir = config.get_option('trace_dir', None)
+        if log_dir is not None:
+            log_fullname = os.path.join(log_dir, log_file)
+        else:
+            log_fullname = log_file
+        try:
+            fp = open(log_fullname, 'w')
+            loghandler.setStream(fp)
+        except IOError as e:
+            _logger.error("Error opening log file %s %s" % (log_fullname, e))
+            pass
+
     _logger.setLevel(config.get_option('log_level', 'INFO'))
     adjust_log_level(config)
 

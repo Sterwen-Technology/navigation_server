@@ -381,7 +381,7 @@ class BufferedIPCoupler(IPCoupler):
         self.trace_n2k_raw(pgn, source_addr, prio, data)
         _logger.debug("start processing PGN %d" % pgn)
         if self._fast_packet_handler.is_pgn_active(pgn, source_addr, data):
-            _logger.debug("Shipmodul PGN %d on address %d is active" % (pgn, source_addr))
+            _logger.debug("Shipmodul PGN %d on address %d fast packet active" % (pgn, source_addr))
             try:
                 data = self._fast_packet_handler.process_frame(pgn, source_addr, data, self.add_event_trace)
             except FastPacketException as e:

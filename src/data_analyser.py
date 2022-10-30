@@ -23,7 +23,7 @@ from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
 
 _version = "V1.00"
-n2kstats = None
+
 
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
@@ -62,13 +62,13 @@ class DataServicer(NavigationServerServicer):
         resp = server_resp()
         resp.reportCode = 0
         if request.HasField("N2K_msg"):
-            _logger.debug("NMEA2000 message received")
             msg = request.N2K_msg
             self._dataset.add_n2kentry(msg.pgn, msg.sa)
         elif request.HasField("N0183_msg"):
-            _logger.debug("NMEA0183 message received")
             msg = request.N0183_msg
             self._dataset.add_n183entry(msg.talker, msg.formatter)
+        else:
+            _logger.error("pushNMEA unknown type of message")
         return resp
 
 
@@ -119,6 +119,7 @@ class DataStatistics:
 
     def add_n183entry(self, talker, formatter):
         self._n183stats.add_entry(talker, formatter)
+
 
 def main():
 

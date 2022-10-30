@@ -11,10 +11,12 @@
 #
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
+# log_file: test_log
 log_module:
     nmea_routing.message_server: INFO
-    nmea2000.nmea2k_controller: INFO
+    nmea2000.nmea2k_controller: DEBUG
     nmea_data.data_client: INFO
+    nmea_routing.IPCoupler: INFO
 
 servers:
 
@@ -40,7 +42,9 @@ couplers:
     autostart: true
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
-    data_sink: DataAnalyser
+    # data_sink: DataAnalyser
+    trace_messages: true
+    trace_raw: true
 
 publishers:
 

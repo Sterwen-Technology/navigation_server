@@ -54,6 +54,10 @@ class NMEA2000Msg:
         return self._prio
 
     @property
+    def sa(self):
+        return self._sa
+
+    @property
     def da(self):
         return self._da
 
@@ -192,7 +196,7 @@ class PgnRecord:
 
     @property
     def pgn_def(self):
-        return self.pgn_def
+        return self._pgn_def
 
     def tick(self):
         self._count += 1
