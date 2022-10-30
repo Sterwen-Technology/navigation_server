@@ -28,10 +28,12 @@ from nmea_routing.IPCoupler import NMEATCPReader
 from nmea_routing.ikonvert import iKonvert
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea2000.nmea2k_manufacturers import Manufacturers
+from nmea2000.nmea2k_controller import NMEA2KController
 from nmea_routing.nmea2000_msg import N2KProbePublisher, N2KTracePublisher
 from victron_mppt.mppt_coupler import MPPT_Coupler
 from nmea_routing.ydn2k_coupler import YDCoupler
 from nmea_routing.serial_nmeaport import NMEASerialPort
+from nmea_data.data_client import NMEADataClient
 
 
 def _parser():
@@ -43,7 +45,7 @@ def _parser():
     return p
 
 
-version = "V1.11"
+version = "V1.20"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -72,6 +74,7 @@ class NavigationMainServer:
         self._servers = []
         self._couplers = {}
         self._publishers = []
+        self._data_client = []
         self._sigint_count = 0
         self._is_running = False
         self._logfile = None
@@ -175,6 +178,9 @@ class NavigationMainServer:
         self._publishers.append(publisher)
         # publisher.start()
 
+    def add_data_client(self, client):
+        self._data_client.append(client)
+
     def start_coupler(self, name: str):
         try:
             coupler = self._couplers[name]
@@ -249,6 +255,8 @@ def main():
     config.add_class(MPPT_Coupler)
     config.add_class(YDCoupler)
     config.add_class(NMEASerialPort)
+    config.add_class(NMEA2KController)
+    config.add_class(NMEADataClient)
     # logger setup => stream handler for now
     loghandler = logging.StreamHandler()
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
@@ -280,6 +288,9 @@ def main():
     for pub_descr in config.publishers():
         publisher = pub_descr.build_object()
         main_server.add_publisher(publisher)
+    for data_s in config.data_sinks():
+        client = data_s.build_object()
+        main_server.add_data_client(client)
 
     main_server.start()
     # print_threads()

@@ -21,6 +21,7 @@ from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.publisher import PublisherOverflow
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
 from nmea_routing.nmea2000_msg import NMEA2000Msg, NMEA2000Writer
+from nmea2000.nmea2k_pgndefs import PGNDef
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -40,7 +41,7 @@ class CouplerNotPresent(Exception):
 
 class Coupler(threading.Thread):
     '''
-    Base abstract class for all instruments
+    Base abstract class for all couplers
     '''
 
     (NOT_READY, OPEN, CONNECTED, ACTIVE) = range(4)
@@ -102,6 +103,15 @@ class Coupler(threading.Thread):
         self._count_stamp = 0
         self._rate = 0.0
         self._rate_s = 0.0
+        #
+        #  message filtering and automatic processing
+        #
+        self._filter_function = None
+        self._filter_name = opts.get('filter', str, None)
+        self._n2k_controller = None
+        self._n2k_ctlr_name = opts.get('nmea2000_controller', str, None)
+        self._data_sink = None
+        self._data_sink_name = opts.get('data_sink', str, None)
 
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)
@@ -152,8 +162,18 @@ class Coupler(threading.Thread):
         if self._n2k_writer is not None:
             self._n2k_writer.stop()
 
+    def process_filter(self, msg: NavGenericMsg) -> bool:
+        if self._filter_function is not None:
+            return self._filter_function(msg)
+        else:
+            return True
+
     def run(self):
         self._has_run = True
+        # now resolve internal references
+        self._n2k_controller = self.resolve_ref(self._n2k_ctlr_name, 'NMEA2000 controller')
+        self._data_sink = self.resolve_ref(self._data_sink_name, "Data sink")
+
         self._startTS = time.time()
         self.start_timer()
         self._count_stamp = time.monotonic()
@@ -199,10 +219,12 @@ class Coupler(threading.Thread):
                 _logger.error("Un-caught exception during coupler %s read: %s" % (self._name, e))
                 self.close()
                 continue
-            # good data received - publish
+            # good data received - filter and publish
             self._total_msg += 1
             self._state = self.ACTIVE
-            self.publish(msg)
+            if self.process_filter(msg):
+                # unfiltered data are published
+                self.publish(msg)
         self.stop()
         self.close()
         _logger.info("%s coupler thread stops"%self._name)
@@ -284,13 +306,31 @@ class Coupler(threading.Thread):
             self._timer = None
         self.stop_writer()
 
+    def read(self) -> NavGenericMsg:
+        fetch_next = True
+        while fetch_next:
+            msg = self._read()
+            self.trace(self.TRACE_IN, msg)
+            if self._data_sink is not None:
+                self._data_sink.send_msg(msg)
+            # print(msg.printable())
+            if msg.type == N2K_MSG:
+                fetch_next = self.check_ctlr_msg(msg)
+            else:
+                fetch_next = False
+        return msg
+
+    def _read(self) -> NavGenericMsg:
+        '''
+        This method only perform a basic read function without any filtering / processing
+        :return: a NMEA message (either NMEA0183 or NMEA2000)
+        '''
+        raise NotImplementedError("Method _read To be implemented in subclass")
+
     def open(self) -> bool:
         raise NotImplementedError("To be implemented in subclass")
 
     def close(self):
-        raise NotImplementedError("To be implemented in subclass")
-
-    def read(self) -> NavGenericMsg:
         raise NotImplementedError("To be implemented in subclass")
 
     def send(self, msg: NavGenericMsg):
@@ -300,9 +340,17 @@ class Coupler(threading.Thread):
         # raise NotImplementedError("To be implemented in subclass")
         pass
 
-    def resolve_ref(self, name):
-        reference = self._opts[name]
-        return NavigationConfiguration.get_conf().get_object(reference)
+    def resolve_ref(self, name: str, descr):
+        if name is None:
+            return None
+        try:
+            ref = NavigationConfiguration.get_conf().get_object(name)
+            _logger.info("%s attached %s %s" % (self.name(), descr, name))
+            return ref
+        except KeyError:
+            _logger.error("%s Wrong reference for %s: %s" % (self.name(), name, descr))
+            return None
+
 
     def open_trace_file(self):
         trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')
@@ -359,4 +407,18 @@ class Coupler(threading.Thread):
 
     def validate_n2k_frame(self, frame):
         raise NotImplementedError("To be implemented in subclass")
+
+    def check_ctlr_msg(self, msg) -> bool:
+        '''
+        Check if the message is a service message for the NMEA2000 controller
+        :param msg:
+        :return: True if the message is directed to the NMEA2000 controller
+        '''
+
+        if self._n2k_controller is not None:
+            n2kmsg = msg.msg
+            if PGNDef.pgn_for_controller(n2kmsg.pgn):
+                self._n2k_controller.send_message(n2kmsg)
+                return True
+        return False
 

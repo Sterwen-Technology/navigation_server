@@ -140,9 +140,6 @@ class N2KDecodeResult:
 PGNRange = namedtuple('PGNRange', ['start', 'to', 'pdu', 'value', 'description'])
 
 
-
-
-
 class PGNDef:
 
     trace_enum_error = False
@@ -162,6 +159,8 @@ class PGNDef:
         PGNRange(0x1F000, 0x1FEFF, PDU2, STD_MIXED, 'Standard mixed (fast/single) packet non addressed'),
         PGNRange(0x1FF00, 0x1FFFF, PDU2, PROP_FAST_PACKET, 'Proprietary fast packet non-addressed')
     ]
+
+    pgn_service = [59392, 59904, 60928, 65240, 126208, 126464, 126996]
 
     @staticmethod
     def set_trace(enum_error: bool, warning: bool):
@@ -198,6 +197,14 @@ class PGNDef:
             return True
         pgn_def = PGNDefinitions.pgn_definitions.pgn_def(pgn)
         return pgn_def.fast_packet()
+
+    @staticmethod
+    def pgn_for_controller(pgn: int) -> bool:
+        if pgn <= PGNDef.pgn_range[0].to:
+            return True
+        elif pgn in PGNDef.pgn_service:
+            return True
+        return False
 
     def __init__(self, pgnxml):
         self._id_str = pgnxml.attrib['PGN']

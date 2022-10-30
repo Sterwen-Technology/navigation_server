@@ -13,16 +13,22 @@ log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
     nmea_routing.message_server: INFO
+    nmea2000.nmea2k_controller: INFO
+    nmea_data.data_client: INFO
 
 servers:
 
 - NMEAServer:
     class: NMEAServer
     port: 4500
+    nmea2000: transparent
 
 - Console:
     class: Console
     port: 4502
+
+- NMEANetwork:
+    class: NMEA2KController
 
 
 couplers:
@@ -32,8 +38,9 @@ couplers:
     address: 192.168.1.21
     port: 3555
     autostart: true
-    trace_messages: true
-    trace_raw: true
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
+    data_sink: DataAnalyser
 
 publishers:
 
@@ -42,7 +49,10 @@ publishers:
 #        file: /data/solidsense/log/navigation.log
 #        instruments: [MiniPlex3]
 
+data_sinks:
 
+- DataAnalyser:
+      class: NMEADataClient
 
 
 

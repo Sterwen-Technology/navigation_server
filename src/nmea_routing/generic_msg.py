@@ -63,3 +63,15 @@ class NavGenericMsg:
             return self._raw.decode().strip('\r\n')
         else:
             return "NULL"
+
+    def as_protobuf(self, msg):
+        '''
+        For NMEA0183 messages the method is called directly (subclass)
+        So this is only for NMEA2000
+        Other cases are illegal
+        :return:
+        '''
+        if self._type == N2K_MSG:
+            return self._msg.as_protobuf(msg)
+        else:
+            raise ValueError

@@ -63,7 +63,7 @@ class MPPT_Coupler(Coupler):
         self._lock.release()
         super().timer_lapse()
 
-    def read(self):
+    def _read(self):
         _logger.debug("MPPT Coupler waiting for timer")
         self._lock.acquire()
         result = self.get_output()

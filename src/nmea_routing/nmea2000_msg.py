@@ -18,7 +18,7 @@ import base64
 
 from nmea2000.nmea2k_pgndefs import *
 from nmea_routing.publisher import Publisher
-from generated.nmea2000_pb2 import nmea2000
+from generated.nmea2000_pb2 import nmea2000pb
 from nmea_routing.generic_msg import *
 from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.nmea0183 import process_nmea0183_frame, NMEA0183Msg
@@ -39,7 +39,7 @@ class NMEA2000Msg:
         self._da = da
         if payload is not None:
             self._payload = payload
-            self._ts = int(time.monotonic() * 1000)
+            self._ts = int(time.monotonic() * 1e6)
             if len(payload) <= 8:
                 self._fast_packet = False
             else:
@@ -86,15 +86,16 @@ class NMEA2000Msg:
 
     def format2(self):
         return "2K|%d|%04X|%d|%d|%d|%d|%s" % (self._pgn, self._pgn, self._prio, self._sa, self._da,
-                                        self._ts, self._payload.hex())
+                                              self._ts, self._payload.hex())
 
-    def as_protobuf(self):
-        res = nmea2000()
+    def as_protobuf(self, res: nmea2000pb):
+
         res.pgn = self._pgn
         res.priority = self._prio
         res.sa = self._sa
+        res.da = self._da
         try:
-            val = int(self._ts / 1000)
+            val = self._ts
             res.timestamp = val
         except ValueError:
             _logger.error("Invalid time stamp %s %d on PGN %d" % (type(val), val, self._pgn))

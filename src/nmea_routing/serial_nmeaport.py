@@ -42,7 +42,7 @@ class NMEASerialPort(Coupler):
         self._state = self.CONNECTED
         return True
 
-    def read(self):
+    def _read(self):
 
         while True:
             if self._stopflag:
@@ -61,8 +61,6 @@ class NMEASerialPort(Coupler):
                 _logger.error("Frame error: %s" % data)
                 continue
             break
-        if self._trace_msg:
-            self.trace(self.TRACE_IN, msg)
         return msg
 
     def send(self, msg):

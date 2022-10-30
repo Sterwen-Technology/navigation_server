@@ -16,18 +16,27 @@ def main():
     rel_dir, filename = os.path.split(full_filename)
     print(sys.argv[0], "processing file", full_filename)
     prefix = sys.argv[2]
-    i_grpc = filename.find('_grpc')
-    module_name = filename[:i_grpc]
+    keywords = []
+    if len(sys.argv) > 3:
+        for k in sys.argv[3:]:
+            keywords.append(k+"_pb2")
+    else:
+        i_grpc = filename.find('_grpc')
+        keywords.append(filename[:i_grpc])
+    # print(keywords)
     output_filename = os.path.join(rel_dir, "tmpFile")
     of = open(output_filename, "w")
     with open(full_filename, "r") as input_f:
         for line in input_f:
             if line.startswith('import'):
-                start = line.find(module_name)
+                for k in keywords:
+                    start = line.find(k)
+                    if start != -1: break
+                # print("==>", line, k, start)
                 if start != -1:
                     head = line[:start-1]
-                    tail = line[start+len(module_name)+1:]
-                    output_l = "%s %s.%s %s\n" % (head, prefix, module_name, tail)
+                    tail = line[start+len(k)+1:]
+                    output_l = "%s %s.%s %s\n" % (head, prefix, k, tail)
                     # print(output_l)
                     of.write(output_l)
                     continue

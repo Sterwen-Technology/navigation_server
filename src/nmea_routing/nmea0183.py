@@ -16,6 +16,7 @@ import time
 import logging
 
 from nmea_routing.generic_msg import *
+from generated.nmea0183_pb2 import nmea0183pb
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -32,6 +33,7 @@ class NMEA0183Msg(NavGenericMsg):
         # verify that we have a checksum
         if self._raw[self._datalen - 3] != ord('*'):
             raise NMEAInvalidFrame
+        self._ts = int(time.monotonic() * 1e6)  # in microseconds
         self._checksum = int(self._raw[self._datalen-2:self._datalen], 16)
         if self._checksum != NMEA0183Sentences.b_checksum(self._raw[1:self._datalen - 3]):
             _logger.error("Checksum error %h %s" % (self._checksum, self._raw[:self._datalen].hex()))
@@ -68,6 +70,19 @@ class NMEA0183Msg(NavGenericMsg):
 
     def fields(self):
         return self._raw[self._datafields_s:self._datalen-3].split(b',')
+
+    def as_protobuf(self, r: nmea0183pb) -> nmea0183pb:
+
+        try:
+            r.talker = self.talker().decode()
+            r.formatter = self.formatter().decode()
+        except ValueError:
+            r.talker = self.address().decode()
+        r.timestamp = self._ts
+        # r.values.extend(self.fields())
+        for f in self.fields():
+            r.values.append(f.decode())
+        return r
 
 
 class NMEA0183SentenceMsg(NMEA0183Msg):
@@ -146,30 +161,6 @@ class XDR(NMEA0183Sentences):
         if self._nbt > 4:
             return
         self._sentence += ",%s,%s,%s,%s" % (t_type, data, unit, t_id)
-
-
-class NMEA0183Filter:
-
-    def __init__(self, filter_string, sep):
-        self._formatters = []
-        flist = filter_string.split(sep)
-        for f in flist:
-            if len(f) != 3:
-                print('Invalid formatter', f)
-                continue
-            if type(f) == str:
-                f = f.encode()
-            self._formatters.append(f)
-
-    def valid_sentence(self, msg):
-        if msg[0] != ord('$') and msg[0] != ord('!'):
-            print('Invalid NMEA message', msg[0])
-            return False
-        if msg[3:6] in self._formatters:
-            return True
-        else:
-            return False
-
 
 if __name__ == "__main__":
 

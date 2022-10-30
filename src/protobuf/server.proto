@@ -16,12 +16,16 @@ import "nmea0183.proto";
 
 message nmea_msg {
   oneof Message {
-    nmea2000 N2K_msg = 1;
-    nmea0183 N0183_msg = 2;
+    nmea2000pb N2K_msg = 1;
+    nmea0183pb N0183_msg = 2;
   }
 }
 
+message server_resp {
+  uint32 reportCode = 1;
+}
+
 service NavigationServer {
-  
+  rpc pushNMEA( nmea_msg ) returns (server_resp) {}
 }
 

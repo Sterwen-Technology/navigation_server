@@ -15,8 +15,16 @@ gen_protobuf() {
   fi
 }
 
+adjust_protobuf() {
+  echo "adjusting:$1"
+  process_file=${output_dir}/"$1_pb2.py"
+  shift
+  python mod_pb2.py "${process_file}" generated $*
+}
+
 gen_protobuf vedirect
 gen_protobuf console
 gen_protobuf nmea0183
 gen_protobuf nmea2000
 gen_protobuf server
+adjust_protobuf server nmea0183 nmea2000

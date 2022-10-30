@@ -88,7 +88,7 @@ class Parameters:
             _logger.warning("Parameter %s expected a list" % p_name)
             return default
 
-    def get_choice(self, p_name, p_list , default):
+    def get_choice(self, p_name, p_list, default):
         try:
             value = self._param[p_name]
         except KeyError:
@@ -161,17 +161,18 @@ class NavigationConfiguration:
         self._servers = {}
         self._couplers = {}
         self._publishers = {}
+        self._data_sink = {}
+        self._filters = {}
         try:
             fp = open(settings_file, 'r')
         except IOError as e:
-            print(e)
-            _logger.error("Settings file %s" % str(e))
+            _logger.error("Settings file %s error %s" % (settings_file, e))
             raise
         try:
             self._configuration = yaml.load(fp, yaml.FullLoader)
         except yaml.YAMLError as e:
-            print(e)
             _logger.error("Settings file decoding error %s" % str(e))
+            fp.close()
             raise
         for obj in self.object_descr_iter('servers'):
             nav_obj = NavigationServerObject(obj)
@@ -185,6 +186,10 @@ class NavigationConfiguration:
             nav_obj = NavigationServerObject(obj)
             self._obj_dict[nav_obj.name] = nav_obj
             self._publishers[nav_obj.name] = nav_obj
+        for obj in self.object_descr_iter('data_sinks'):
+            nav_obj = NavigationServerObject(obj)
+            self._obj_dict[nav_obj.name] = nav_obj
+            self._data_sink[nav_obj.name] = nav_obj
         NavigationConfiguration._instance = self
 
     def dump(self):
@@ -213,6 +218,9 @@ class NavigationConfiguration:
 
     def publishers(self):
         return self._publishers.values()
+
+    def data_sinks(self):
+        return self._data_sink.values()
 
     def add_class(self, class_object):
         self._class_dict[class_object.__name__] = class_object
