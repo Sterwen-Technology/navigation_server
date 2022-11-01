@@ -20,6 +20,7 @@ The NMEA0183 based protocol can be understood and messages starting with '$' or 
 That is not exactly a real protocol over TCP/IP but this is working and the messages (data frames) and directly inherited from the standards NMEA0183 messages.
 Even NMEA2000 data frames are carrier over such messages like it is done for Digital Yacht or Shipmodul miniplex.
 Using efficient binary encoding with Protobuf and a real protocol like gRPC allows an increase in efficiency. THis is particularly true for NMEA2000 that is binary protocol by nature.
+For more information on [gPRC](https://grpc.io/) and [Protobuf](https://developers.google.com/protocol-buffers/)
 
 #### NMEAServer class
 
@@ -40,7 +41,8 @@ Here are the parameters associated with the server
 
 **Format of NMEA2000 messages**
 
-*transparent*: messages are transmitted in the same format as the instrument sends them. This is valid only if the instrument is able to send NMEA0183 like NMEA2000 messages. That is also implying that the instrument(s) are configured with the nmea0183 protocol
+*transparent*: messages are transmitted in the same format as the coupler sends them. This is valid only if the coupler is able to send NMEA0183 like NMEA2000 messages. That is also implying that there is no message loss between coupler and server, so the coupler(s) are configured with the nmea0183 protocol.
+When configured in NMEA2000, due to fast packet reassembly, there is no transparency possible.
 
 *dyfmt*: NMEA2000 messages are transmitted using the Digital Yacht !PGDY format
 
@@ -81,7 +83,7 @@ This a gRPC server used for external monitoring and control of the navigation se
 
 #### ShipModulConfig server
 
-TCP server allowing to bypass the routing function to the connect the Miniplex control application to a Miniplex3 device. To use this feature just configure the MPXConfig utility and assign the server IP and the port configured for it.
+TCP server allowing to bypass the routing function to connect the Miniplex control application to a Miniplex3 device. To use this feature just configure the MPXConfig utility and assign the server IP and the port configured for it.
 
 Warning: when the application is connected to the server all traffic is re-routed to it. So no NMEA messages are transmitted to the navigation system.
 
@@ -103,6 +105,7 @@ Currently, tested couplers:
 
 Under preparation
 - Direct CAN Access
+- Actisense adapter (NGT-1-USB)
 
 #### Coupler generic parameters
 
@@ -174,11 +177,20 @@ The class does not manage the device mode itself that shall be configured via th
 
 The device connection and initialisation logic is directly managed by the coupler. The only action needed on the device outside the scope of this coupler is only the configuration in raw mode.
 
-**NMEA sentence !PGDY are converted internally the NMEA2000 sentences.**
+**NMEA sentence !PGDY are converted internally the NMEA2000 sentences when the coupler is set in nmea2000 mode.**
 
 | Name   | Type   | Default | Signification                 |
 |--------|--------|---------|-------------------------------|
 | device | string | None    | Name of the serial USB device |
+
+#### VEDirect
+
+This class manages the interface with the VEDirect interface service (see)
+
+| Name    | Type   | Default   | Signification            |
+|---------|--------|-----------|--------------------------|
+| address | string | 127.0.0.1 | IP address of the server |
+| port    | int    | 4505      | listening port           |
 
 ### Publishers
 Publishers concentrate messages from several instruments towards consumers. Publishers are implicitly created by Servers when a new client connection is created.
@@ -190,3 +202,33 @@ One particular Publisher is the Injector that allows sending the output of one i
 ### Configuration Yaml file
 
 The file includes the global parameters 
+
+## Victron VE Direct gRPC server
+This service is permanently reading the VEDirect (RS485 over USB) of the MPPT device.
+Data are available via the gRPC interface.
+
+
+
+
+
+## Configuration files
+
+All configurations files are using the [Yaml language](https://yaml.org/spec/1.2.2/)
+Keywords used and structure(s) are explained here below
+
+### Messages server configuration file
+
+
+### Default port assignments for services
+
+| service                       | port | transport protocol | application protocol |
+|-------------------------------|------|--------------------|----------------------|
+| NMEA Messages server          | 4500 | TCP                | NMEA0183 like        |
+| Miniplex configuration server | 4501 | TCP                | Miniplex specific    |
+| NMEA router console           | 4502 | gRPC               | see console.proto    |
+| NMEA message sender           | 4503 | TCP                | NMEA0183 like        |
+| NMEA data analyser            | 4504 | gRPC               | see server.proto     |
+| VE Direct MPPT server         | 4505 | gRPC               | see vedirect.proto   |
+
+
+
