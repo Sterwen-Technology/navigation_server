@@ -291,7 +291,6 @@ class PGNDef:
         ]
         return data
 
-
     def decode_pgn_data(self, data: bytes):
         '''
         if len(data) != self._byte_length:
@@ -532,7 +531,7 @@ class Field:
             # raise N2KDecodeException("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
 
     def extract_uint_byte(self, b_dec):
-        print(self._name, "[%s]" % b_dec.hex(), self._byte_length, self._bit_offset, self.BitLength)
+        # print(self._name, "[%s]" % b_dec.hex(), self._byte_length, self._bit_offset, self.BitLength)
         res = N2KDecodeResult(self._name)
         res.actual_length = 1
         val2 = struct.unpack('<B', b_dec)
@@ -544,7 +543,7 @@ class Field:
         res.value = val & self.bit_mask_l[self.BitLength]
         if self._bit_offset + self.BitLength < 8:
             res.no_increment()
-        print(self._name, "=%d (%X)" % (res.value, res.value))
+        # print(self._name, "=%d (%X)" % (res.value, res.value))
         return res
 
     def extract_uint(self, payload, specs):
@@ -576,7 +575,7 @@ class Field:
         b_dec = payload[specs.start: specs.end]
         res = N2KDecodeResult(self._name)
         res.actual_length = self._byte_length
-        if self._bit_offset != 0 or self.BitLength < 8:
+        if self._bit_offset != 0 or self.BitLength % 8 != 0:
             raise N2KDecodeException("Cannot decode Int with bit offset or not byte")
 
         if self._byte_length == 1:
@@ -611,7 +610,7 @@ class Field:
         return value
 
     def decode_value(self, payload, specs):
-        print(self._name,"[%d:%d]" % (specs.start, specs.end), self._byte_length, self._bit_offset, self.BitLength)
+        # print(self._name,"[%d:%d]" % (specs.start, specs.end), self._byte_length, self._bit_offset, self.BitLength)
         b_dec = payload[specs.start:specs.end]
         if self._byte_length == 1:
             return self.extract_uint_byte(b_dec)
@@ -633,7 +632,7 @@ class Field:
             else:
                 val = val & self.bit_mask16_u[self.BitLength - 9]
             res.value = val
-            print(self._name, "=%d (%X)" % (val, val))
+            # print(self._name, "=%d (%X)" % (val, val))
             # validity check to be finalized
             if val == self.bit_mask16_u[self.BitLength - 8]:
                 res.invalid()
@@ -654,7 +653,7 @@ class Field:
             val <<= remaining_bits
             ad_byte &= self.bit_mask_l[remaining_bits]
             val += ad_byte
-            print(self._name, "=%d (%X)" % (val, val))
+            # print(self._name, "=%d (%X)" % (val, val))
             res.value = val
             return res
         else:
@@ -870,6 +869,19 @@ class RepeatedFieldSet:
     def type(self):
         return self.__class__.__name__
 
+
+class ASCIIFixField(Field):
+
+    def __init__(self, xml):
+        super().__init__(xml, do_not_process=['SubString'])
+        # print(self._name, self._bit_offset, self._byte_length, self.BitOffset, self.BitLength)
+        self._subfields = []
+
+    def decode_value(self, payload, specs):
+        res = N2KDecodeResult(self._name)
+        res.value = payload[specs.start:specs.end].decode()
+        # print(self._name, specs.start, specs.end, self._byte_length,":", res.value)
+        return res
 
 
 

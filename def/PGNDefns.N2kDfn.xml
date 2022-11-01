@@ -1223,22 +1223,18 @@
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <ASCIIField Name="Model ID">
-          <BitOffset>0</BitOffset>
-          <BitLength>-1</BitLength>
-        </ASCIIField>
-        <ASCIIField Name="Software Version Code">
-          <BitOffset>0</BitOffset>
-          <BitLength>-1</BitLength>
-        </ASCIIField>
-        <ASCIIField Name="Model Version">
-          <BitOffset>0</BitOffset>
-          <BitLength>-1</BitLength>
-        </ASCIIField>
-        <ASCIIField Name="Model Serial Code">
-          <BitOffset>0</BitOffset>
-          <BitLength>-1</BitLength>
-        </ASCIIField>
+        <ASCIIFixField Name="Product information">
+          <BitOffset>32</BitOffset>
+          <BitLength>1024</BitLength>
+          <SubString Name="Model ID">
+          </SubString>
+          <SubString Name="Software Version Code">
+          </SubString>
+          <SubString Name="Model Version">
+          </SubString>
+          <SubString Name="Model Serial Code">
+          </SubString>
+        </ASCIIFixField>
         <UIntField Name="Certification Level">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>

@@ -17,6 +17,7 @@ import time
 from nmea_routing.server_common import NavigationServer
 from nmea_routing.nmea2000_msg import NMEA2000Msg, PgnRecord
 from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeResult
+from nmea2000.nmea2k_manufacturers import Manufacturers
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -34,6 +35,8 @@ class NMEA2000Device:
         self._process_vector = { 60928: self.p60928,
                                  126996: self.p126996
                                  }
+        self._fields_60928 = None
+        self._fields_126996 = None
 
     def receive_msg(self, msg: NMEA2000Msg):
         _logger.debug("New message PGN %d for device @%d" % (msg.pgn, self._address))
@@ -63,11 +66,18 @@ class NMEA2000Device:
 
     def p60928(self, msg_data):
         _logger.debug("Processing ISO address claim for address %d" % self._address)
-        _logger.debug("PGN data= %s" % msg_data)
-        self._mfg_code = msg_data['fields']["Manufacturer Code"]
+        # _logger.debug("PGN data= %s" % msg_data)
+        if self._fields_60928 is None:
+            self._fields_60928 = msg_data['fields']
+            mfg_code = self._fields_60928['Manufacturer Code']
+            try:
+                self._fields_60928['Manufacturer Name'] = Manufacturers.get_from_code(mfg_code)
+            except KeyError:
+                self._fields_60928['Manufacturer Name'] = "Manufacturer#%d" % mfg_code
 
     def p126996(self, msg_data):
         _logger.debug("Processing Product information for address %d" % self._address)
+        self._fields_126996 = msg_data['fields']
 
 
 class NMEA2KController(NavigationServer, threading.Thread):
@@ -117,3 +127,9 @@ class NMEA2KController(NavigationServer, threading.Thread):
     def process_msg(self, msg: NMEA2000Msg):
         device = self.check_device(msg.sa)
         device.receive_msg(msg)
+
+    def store_devices(self):
+        filename = self._options.get('store', str, None)
+        if filename is None:
+            return
+
