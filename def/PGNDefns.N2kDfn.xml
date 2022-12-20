@@ -1236,12 +1236,12 @@
           </SubString>
         </ASCIIFixField>
         <UIntField Name="Certification Level">
-          <BitOffset>0</BitOffset>
+          <BitOffset>1056</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
         <UIntField Name="Load Equivalency">
           <Description>Bus load for this device is x*50 mA</Description>
-          <BitOffset>0</BitOffset>
+          <BitOffset>1064</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
       </Fields>
