@@ -27,7 +27,7 @@ except ImportError as e:
     gps_present = False
 
 from nmea_routing.coupler import Coupler, CouplerReadError, CouplerNotPresent
-from nmea_routing.nmea0183 import NMEA0183Msg
+from nmea_routing.nmea0183 import NMEA0183Msg, NMEAInvalidFrame
 
 
 class InternalGps(Coupler):
@@ -80,12 +80,20 @@ class InternalGps(Coupler):
         if self._stopflag:
             return None
         if self._fix:
+            _logger.debug("GPS read => fix OK")
             try:
                 data = self._tty.readline()
-            except serial.serialutil.SerialException as e:
-                _logger.error("Internal GPS error reading %s" % str(e))
+            except serial.serialutil.SerialException as e_read:
+                _logger.error("Internal GPS error reading %s" % str(e_read))
                 raise CouplerReadError("Serial error")
-            msg = NMEA0183Msg(data)
+            data = data.rstrip(b'\r\n')  # sometimes <CR> is duplicated
+            _logger.debug(data)
+            try:
+                msg = NMEA0183Msg(data)
+            except NMEAInvalidFrame:
+                _logger.error("GPS read invalid frame")
+                raise CouplerReadError("Frame error")
+
             self.trace(self.TRACE_IN, msg)
             if self._talker is not None:
                 msg.replace_talker(self._talker)
@@ -101,12 +109,14 @@ class InternalGps(Coupler):
         status = self._modem.getGpsStatus()
         fix = status['fix']
         self._modem.close()
+        _logger.debug("Internal GPS check fix %r" % fix)
         if not self._fix and fix:
             _logger.info("Internal GPS become fixed")
             self._fix = True
             self._fix_event.set()
         elif self._fix and not fix:
             self._fix_event.clear()
+            self._fix = False
             _logger.info("Internal GPS lost fix")
         super().timer_lapse()
 
