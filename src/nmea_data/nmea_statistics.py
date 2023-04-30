@@ -50,7 +50,7 @@ class NMEA183Statistics:
             self._entries[key] = entry
 
     def print_entries(self):
-        print("Total number of N2K messages:%d" % self._total_msg)
+        print("Total number of N0183 messages:%d" % self._total_msg)
         for entry in self._entries.values():
             print(entry)
 
