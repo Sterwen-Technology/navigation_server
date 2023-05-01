@@ -87,11 +87,10 @@ class InternalGps(Coupler):
                 _logger.error("Internal GPS error reading %s" % str(e_read))
                 raise CouplerReadError("Serial error")
             data = data.rstrip(b'\r\n')  # sometimes <CR> is duplicated
-            _logger.debug(data)
             try:
                 msg = NMEA0183Msg(data)
             except NMEAInvalidFrame:
-                _logger.error("GPS read invalid frame")
+                _logger.error("GPS read invalid frame:%s" % data)
                 raise CouplerReadError("Frame error")
 
             self.trace(self.TRACE_IN, msg)
