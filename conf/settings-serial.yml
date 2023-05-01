@@ -42,7 +42,7 @@ couplers:
     autostart: true
     # nmea2000_controller: NMEANetwork
     protocol: nmea2000
-    # data_sink: DataAnalyser
+    data_sink: DataAnalyser
     trace_messages: true
     trace_raw: true
 

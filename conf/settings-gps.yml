@@ -13,7 +13,13 @@ trace: DEBUG
 trace_dir: /mnt/meaban/Bateau/tests
 
 servers:
+- NMEAServer:
+    class: NMEA_server
+    port: 4500
 
+- Console:
+    class: Console
+    port: 4502
 
 couplers:
 
