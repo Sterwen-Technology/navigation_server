@@ -256,7 +256,11 @@ class N2KTracePublisher(Publisher):
     def __init__(self, opts):
         super().__init__(opts)
         self._filter = opts.getlist('filter', int, None)
-        _logger.info("%s filter:%s" % (self.name(), self._filter))
+        if self._filter is not None:
+            _logger.info("%s filter:%s" % (self.name(), self._filter))
+        self._sources = opts.getlist('sources', int, None)
+        if self._sources is not None:
+            _logger.info("%s sources:%s" % self.name(), self._sources)
         self._print_option = opts.get('output', str, 'ALL')
         _logger.info("%s output option %s" % (self.name(), self._print_option))
         self._trace_fd = None

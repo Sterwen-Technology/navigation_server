@@ -2553,7 +2553,7 @@
             <EnumPair Value="1" Name="Magnetic" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <Field Name="Reserved1">
           <Description>Reserved</Description>
           <BitOffset>10</BitOffset>
           <BitLength>6</BitLength>
@@ -2570,7 +2570,7 @@
           <FormatAs>Speed</FormatAs>
           <Scale>0.01</Scale>
         </UDblField>
-        <Field Name="Reserved">
+        <Field Name="Reserved2">
           <Description>Reserved</Description>
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>

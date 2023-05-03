@@ -634,7 +634,8 @@ class Field:
             res.value = val
             # print(self._name, "=%d (%X)" % (val, val))
             # validity check to be finalized
-            if val == self.bit_mask16_u[self.BitLength - 8]:
+            # correction on 02/05/2023 bitmask index (-9) instead of -8
+            if val == self.bit_mask16_u[self.BitLength - 9]:
                 res.invalid()
             return res
         elif self._byte_length == 3:

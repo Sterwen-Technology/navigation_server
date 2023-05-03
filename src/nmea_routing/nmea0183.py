@@ -162,6 +162,7 @@ class XDR(NMEA0183Sentences):
             return
         self._sentence += ",%s,%s,%s,%s" % (t_type, data, unit, t_id)
 
+
 if __name__ == "__main__":
 
     print("=====================")

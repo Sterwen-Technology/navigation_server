@@ -52,6 +52,12 @@ publishers:
 #       class: LogPublisher
 #        file: /data/solidsense/log/navigation.log
 #        instruments: [MiniPlex3]
+- TraceN2K:
+      class: N2KTracePublisher
+      couplers: [SNReplay]
+      filter: [129026]
+      file: trace129026
+
 
 data_sinks:
 
