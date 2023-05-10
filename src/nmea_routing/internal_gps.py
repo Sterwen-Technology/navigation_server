@@ -46,12 +46,12 @@ class InternalGps(Coupler):
         fp.close()
         self._modem = QuectelModem(self._params['modem_ctrl'])
         status = self._modem.getGpsStatus()
-        _logger.debug("Internal GPS status:%s" % status)
+        _logger.info("Internal GPS status:%s" % status)
         if status['state'] == 'off':
             self._modem.gpsOn()
             time.sleep(0.4)
             status = self._modem.getGpsStatus()
-            print(status)
+            _logger.info("Internal GPS status after GPS on:%s", status)
 
         self._nmea_if = self._params['nmea_tty']
         self._tty = None
@@ -69,8 +69,8 @@ class InternalGps(Coupler):
     def open(self):
         try:
             self._tty = serial.Serial(self._nmea_if, baudrate=9600, timeout=10.)
-        except serial.serialutil.SerialException as e:
-            _logger.error("Internal GPS cannot open TTY:%s"% str(e))
+        except (serial.serialutil.SerialException, BrokenPipeError) as e:
+            _logger.error("Internal GPS cannot open TTY %s :%s" % (self._nmea_if, str(e)))
             return False
         self._state = self.CONNECTED
         return True
@@ -100,7 +100,8 @@ class InternalGps(Coupler):
 
     def close(self):
         self._state = self.NOT_READY
-        self._tty.close()
+        if self._tty is not None:
+            self._tty.close()
         self._fix_event.set()
 
     def timer_lapse(self):
