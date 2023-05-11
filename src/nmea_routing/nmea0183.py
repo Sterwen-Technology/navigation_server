@@ -32,6 +32,7 @@ class NMEA0183Msg(NavGenericMsg):
         super().__init__(N0183_MSG, raw=data)
         # verify that we have a checksum
         if self._raw[self._datalen - 3] != ord('*'):
+            _logger.error("NMEA183 Frame without checksum")
             raise NMEAInvalidFrame
         self._ts = int(time.monotonic() * 1e6)  # in microseconds
         self._checksum = int(self._raw[self._datalen-2:self._datalen], 16)
