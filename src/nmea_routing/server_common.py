@@ -57,6 +57,9 @@ class NavigationServer:
     def server_type(self):
         raise NotImplementedError("To be implemented in subclass")
 
+    def nb_connections(self):
+        return 0
+
     @property
     def port(self):
         return self._port

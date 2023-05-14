@@ -14,7 +14,8 @@ from concurrent import futures
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
 
-from nmea_routing.server_common import *
+from nmea_routing.server_common import NavigationServer
+from nmea2000.nmea2k_controller import NMEA2000Device
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -121,6 +122,31 @@ class ConsoleServicer(NavigationConsoleServicer):
         _logger.debug("ServerCmd response %s" % resp.status)
         return resp
 
+    dev_attr_table = (('Manufacturer Code', 'manufacturer_code'),
+                      ('Manufacturer Name', 'manufacturer_name'),
+                      ('Product Code', 'product_code'),
+                      ('Product name', 'product_name'),
+                      ('Description', 'description')
+                       )
+
+    def GetDevices(self, request, context):
+        _logger.debug("Get NMEA200 devices request")
+        n2k_svr = self._console.get_server_by_type('NMEA2KController')
+        if n2k_svr is None:
+            _logger.error("No NMEA200 Server present")
+            return
+        for device in n2k_svr.get_device():
+            resp = N2KDeviceMsg()
+            resp.address = device.address
+            for prop, attr in self.dev_attr_table:
+                try:
+                    val = device.property(prop)
+                except KeyError:
+                    continue
+                object.__setattr__(resp, attr, val)
+            yield resp
+        return
+
 
 ServerRecord = namedtuple('ServerRecord', ['server', 'name', 'class_name'])
 
@@ -147,6 +173,12 @@ class Console(NavigationServer):
         for sr in self._servers.values():
             if sr.class_name not in ('Console', 'NavigationMainServer'):
                 yield sr
+
+    def get_server_by_type(self, server_type:str) -> NavigationServer:
+        for sr in self._servers.values():
+            if sr.class_name == server_type:
+                return sr.server
+        return None
 
     def add_coupler(self, coupler):
         self._couplers[coupler.name()] = coupler

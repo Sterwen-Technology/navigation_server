@@ -173,4 +173,19 @@ class ConsoleClient:
                 _logger.error("Server Cmd - Error accessing server:%s" % err)
             raise ConsoleAccessException
 
+    def get_devices(self):
+        req = Request(id=self._req_id)
+        self._req_id += 1
+        devices = []
+        try:
+            for dev in self._stub.GetDevices(req):
+                devices.append(dev)
+            return devices
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.info("Server not accessible")
+            else:
+                _logger.error("Get Coupler - Error accessing server:%s" % err)
+            raise ConsoleAccessException
+
 

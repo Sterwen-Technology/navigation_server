@@ -30,12 +30,14 @@ class Publisher(threading.Thread):
             self._couplers = couplers
             self._queue_size = 40
             self._max_lost = 10
+            self._active = True
         else:
             name = opts['name']
             self._opts = opts
             self._queue_size = opts.get('queue_size', int, 20)
             self._max_lost = opts.get('max_lost', int, 5)
             inst_list = opts.getlist('couplers', str, [])
+            self._active = opts.get('active', bool, True)
             self._couplers = []
             for inst_name in inst_list:
                 self._couplers.append(self.resolve_ref(inst_name))
@@ -43,14 +45,18 @@ class Publisher(threading.Thread):
         self._queue_tpass = False
         super().__init__(name=name)
         self._name = name
-
-        for inst in self._couplers:
-            # print("Registering %s on %s" % (self._name, inst.name()))
-            inst.register(self)
-
+        # moving registration to start
         self._queue = queue.Queue(self._queue_size)
         self._stopflag = False
         self._nb_msg_lost = 0
+
+    def start(self):
+        _logger.debug("Publisher %s start flag %s" % (self._name, self._active))
+        if self._active:
+            for inst in self._couplers:
+                # print("Registering %s on %s" % (self._name, inst.name()))
+                inst.register(self)
+            super().start()
 
     def publish(self, msg):
         # print("Publisher %s publish msg:%s" % (self._name, msg.decode().strip('\n\r')))
