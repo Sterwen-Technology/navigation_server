@@ -88,7 +88,7 @@ class NMEA2000Device:
             mfg_code = self._fields_60928['Manufacturer Code']
             self._properties['Manufacturer Code'] = mfg_code
             try:
-                self._properties['Manufacturer Name'] = Manufacturers.get_from_code(mfg_code)
+                self._properties['Manufacturer Name'] = Manufacturers.get_from_code(mfg_code).name
             except KeyError:
                 self._properties['Manufacturer Name'] = "Manufacturer#%d" % mfg_code
 
