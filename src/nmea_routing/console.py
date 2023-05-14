@@ -138,7 +138,7 @@ class ConsoleServicer(NavigationConsoleServicer):
             return
         for device in n2k_svr.get_device():
             resp = N2KDeviceMsg()
-            resp.address = device.address
+            resp.address = device.address()
             for prop, attr in self.dev_attr_table:
                 try:
                     val = device.property(prop)
