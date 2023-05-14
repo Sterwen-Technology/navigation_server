@@ -94,6 +94,8 @@ class DeviceProxy(ProtobufProxy):
     def __init__(self, msg: N2KDeviceMsg):
         super().__init__(msg)
 
+    def manufacturer(self):
+        return self._msg.manufacturer
 
 class ConsoleClient:
 
