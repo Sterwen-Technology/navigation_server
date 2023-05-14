@@ -40,6 +40,11 @@ class NavigationConsoleStub(object):
                 request_serializer=console__pb2.Request.SerializeToString,
                 response_deserializer=console__pb2.Response.FromString,
                 )
+        self.GetDevices = channel.unary_stream(
+                '/NavigationConsole/GetDevices',
+                request_serializer=console__pb2.Request.SerializeToString,
+                response_deserializer=console__pb2.N2KDeviceMsg.FromString,
+                )
 
 
 class NavigationConsoleServicer(object):
@@ -75,6 +80,12 @@ class NavigationConsoleServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetDevices(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_NavigationConsoleServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -102,6 +113,11 @@ def add_NavigationConsoleServicer_to_server(servicer, server):
                     servicer.ServerCmd,
                     request_deserializer=console__pb2.Request.FromString,
                     response_serializer=console__pb2.Response.SerializeToString,
+            ),
+            'GetDevices': grpc.unary_stream_rpc_method_handler(
+                    servicer.GetDevices,
+                    request_deserializer=console__pb2.Request.FromString,
+                    response_serializer=console__pb2.N2KDeviceMsg.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -195,5 +211,22 @@ class NavigationConsole(object):
         return grpc.experimental.unary_unary(request, target, '/NavigationConsole/ServerCmd',
             console__pb2.Request.SerializeToString,
             console__pb2.Response.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetDevices(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(request, target, '/NavigationConsole/GetDevices',
+            console__pb2.Request.SerializeToString,
+            console__pb2.N2KDeviceMsg.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

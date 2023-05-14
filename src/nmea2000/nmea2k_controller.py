@@ -37,6 +37,7 @@ class NMEA2000Device:
                                  }
         self._fields_60928 = None
         self._fields_126996 = None
+        self._properties = {}
 
     def receive_msg(self, msg: NMEA2000Msg):
         _logger.debug("New message PGN %d for device @%d" % (msg.pgn, self._address))
@@ -55,6 +56,20 @@ class NMEA2000Device:
             return
         process_function(pgn_data)
 
+    def set_property(self, source, property_name):
+        try:
+            p = source[property_name]
+        except KeyError:
+            _logger.error("Device address %d missing property %s" % (self._address, property_name))
+            return
+        self._properties[property_name] = p
+
+    def property(self, name):
+        return self._properties[name]
+
+    def address(self):
+        return self._address
+
     def add_pgn_count(self, pgn) -> PgnRecord:
         try:
             pgn_def = self._pgn_received[pgn]
@@ -65,19 +80,36 @@ class NMEA2000Device:
         return pgn_def
 
     def p60928(self, msg_data):
-        _logger.debug("Processing ISO address claim for address %d" % self._address)
+
         # _logger.debug("PGN data= %s" % msg_data)
         if self._fields_60928 is None:
+            _logger.info("Processing ISO address claim for address %d" % self._address)
             self._fields_60928 = msg_data['fields']
             mfg_code = self._fields_60928['Manufacturer Code']
+            self._properties['Manufacturer Code'] = mfg_code
             try:
-                self._fields_60928['Manufacturer Name'] = Manufacturers.get_from_code(mfg_code)
+                self._properties['Manufacturer Name'] = Manufacturers.get_from_code(mfg_code)
             except KeyError:
-                self._fields_60928['Manufacturer Name'] = "Manufacturer#%d" % mfg_code
+                self._properties['Manufacturer Name'] = "Manufacturer#%d" % mfg_code
 
     def p126996(self, msg_data):
-        _logger.debug("Processing Product information for address %d" % self._address)
-        self._fields_126996 = msg_data['fields']
+
+        if self._fields_126996 is None:
+            _logger.info("Processing Product information for address %d: %s" % (self._address, msg_data['fields']))
+            self._fields_126996 = msg_data['fields']
+            self.set_property(self._fields_126996, 'NMEA 2000 Version')
+            self.set_property(self._fields_126996, 'Product Code')
+            self.set_property(self._fields_126996, 'Certification Level')
+            self.set_property(self._fields_126996, 'Load Equivalency')
+            pi = self._fields_126996['Product information']
+            self._properties['Product name'] = pi[0:32].rstrip(' ')
+            self._properties['Product version'] = pi[32:64].rstrip(' ')
+            self._properties['Description'] = pi[64:96].rstrip(' ')
+            self._properties['Firmware'] = pi[96:128].rstrip(' ')
+            # print(product_name,"|", product_version,"|", description, "|", firmware)
+
+
+
 
 
 class NMEA2KController(NavigationServer, threading.Thread):
@@ -89,10 +121,12 @@ class NMEA2KController(NavigationServer, threading.Thread):
         self._input_queue = queue.Queue(queue_size)
         self._stop_flag = False
         self._devices = {}
-        _logger.info("%s debug level %d" % (__name__, _logger.getEffectiveLevel()))
 
     def server_type(self):
         return 'NMEA200_CONTROLLER'
+
+    def running(self) -> bool:
+        return self.is_alive()
 
     def send_message(self, msg: NMEA2000Msg):
         try:
@@ -132,4 +166,8 @@ class NMEA2KController(NavigationServer, threading.Thread):
         filename = self._options.get('store', str, None)
         if filename is None:
             return
+
+    def get_device(self) -> NMEA2000Device:
+        for device in self._devices.values():
+            yield device
 

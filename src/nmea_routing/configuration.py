@@ -182,14 +182,20 @@ class NavigationConfiguration:
             nav_obj = NavigationServerObject(obj)
             self._obj_dict[nav_obj.name] = nav_obj
             self._couplers[nav_obj.name] = nav_obj
-        for obj in self.object_descr_iter('publishers'):
-            nav_obj = NavigationServerObject(obj)
-            self._obj_dict[nav_obj.name] = nav_obj
-            self._publishers[nav_obj.name] = nav_obj
-        for obj in self.object_descr_iter('data_sinks'):
-            nav_obj = NavigationServerObject(obj)
-            self._obj_dict[nav_obj.name] = nav_obj
-            self._data_sink[nav_obj.name] = nav_obj
+        try:
+            for obj in self.object_descr_iter('publishers'):
+                nav_obj = NavigationServerObject(obj)
+                self._obj_dict[nav_obj.name] = nav_obj
+                self._publishers[nav_obj.name] = nav_obj
+        except KeyError:
+            _logger.info("No publishers")
+        try:
+            for obj in self.object_descr_iter('data_sinks'):
+                nav_obj = NavigationServerObject(obj)
+                self._obj_dict[nav_obj.name] = nav_obj
+                self._data_sink[nav_obj.name] = nav_obj
+        except KeyError:
+            _logger.info("No data sink")
         NavigationConfiguration._instance = self
 
     def dump(self):

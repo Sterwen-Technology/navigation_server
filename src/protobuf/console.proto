@@ -64,6 +64,15 @@ message NavigationServerMsg {
   repeated Server servers=9;
 }
 
+message N2KDeviceMsg {
+  uint32 address=1;
+  uint32 manufacturer_code=2;
+  string manufacturer_name=3;
+  uint32 product_code=4;
+  string product_name=5;
+  string description=6;
+}
+
 message Request {
   uint32 id=1;
   string cmd=2;
@@ -81,5 +90,6 @@ service NavigationConsole {
   rpc CouplerCmd(Request) returns (Response) {}
   rpc ServerStatus(Request) returns (NavigationServerMsg) {}
   rpc ServerCmd(Request) returns (Response) {}
+  rpc GetDevices(Request) returns (stream N2KDeviceMsg) {}
 }
 

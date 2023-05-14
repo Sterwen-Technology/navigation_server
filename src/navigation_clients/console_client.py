@@ -89,6 +89,12 @@ class ServerProxy(ProtobufProxy):
         return self._sub_servers
 
 
+class DeviceProxy(ProtobufProxy):
+
+    def __init__(self, msg: N2KDeviceMsg):
+        super().__init__(msg)
+
+
 class ConsoleClient:
 
     def __init__(self, address):
@@ -171,6 +177,21 @@ class ConsoleClient:
                 return
             else:
                 _logger.error("Server Cmd - Error accessing server:%s" % err)
+            raise ConsoleAccessException
+
+    def get_devices(self):
+        req = Request(id=self._req_id)
+        self._req_id += 1
+        devices = []
+        try:
+            for dev in self._stub.GetDevices(req):
+                devices.append(DeviceProxy(dev))
+            return devices
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.info("Server not accessible")
+            else:
+                _logger.error("Get Coupler - Error accessing server:%s" % err)
             raise ConsoleAccessException
 
 

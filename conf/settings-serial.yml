@@ -14,9 +14,10 @@ trace_dir: /mnt/meaban/Bateau/tests
 # log_file: test_log
 log_module:
     nmea_routing.message_server: INFO
-    nmea2000.nmea2k_controller: DEBUG
+    nmea2000.nmea2k_controller: INFO
     nmea_data.data_client: INFO
     nmea_routing.IPCoupler: INFO
+    nmea_routing.publisher: DEBUG
 
 servers:
 
@@ -40,11 +41,11 @@ couplers:
     address: 192.168.1.21
     port: 3555
     autostart: true
-    # nmea2000_controller: NMEANetwork
+    nmea2000_controller: NMEANetwork
     protocol: nmea2000
-    data_sink: DataAnalyser
-    trace_messages: true
-    trace_raw: true
+    # data_sink: DataAnalyser
+    trace_messages: false
+    trace_raw: false
 
 publishers:
 
@@ -55,6 +56,7 @@ publishers:
 - TraceN2K:
       class: N2KTracePublisher
       couplers: [SNReplay]
+      active: false
       filter: [129026]
       file: trace129026
 
