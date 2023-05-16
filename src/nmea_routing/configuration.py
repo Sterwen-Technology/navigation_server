@@ -155,6 +155,7 @@ class NavigationConfiguration:
         return NavigationConfiguration._instance
 
     def __init__(self, settings_file):
+        # print ("Logger", _logger.getEffectiveLevel(), _logger.name)
         self._configuration = None
         self._obj_dict = {}
         self._class_dict = {}
@@ -196,7 +197,15 @@ class NavigationConfiguration:
                 self._data_sink[nav_obj.name] = nav_obj
         except KeyError:
             _logger.info("No data sink")
+        try:
+            for obj in self.object_descr_iter('filters'):
+                nav_obj = NavigationServerObject(obj)
+                self._obj_dict[nav_obj.name] = nav_obj
+                self._filters[nav_obj.name] = nav_obj
+        except KeyError:
+            _logger.info("No filters")
         NavigationConfiguration._instance = self
+        _logger.info("Finished analyzing settings file:%s " % settings_file)
 
     def dump(self):
         print(self._configuration)
@@ -227,6 +236,9 @@ class NavigationConfiguration:
 
     def data_sinks(self):
         return self._data_sink.values()
+
+    def filters(self):
+        return self._filters.values()
 
     def add_class(self, class_object):
         self._class_dict[class_object.__name__] = class_object

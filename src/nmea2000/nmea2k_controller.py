@@ -15,7 +15,8 @@ import queue
 import time
 
 from nmea_routing.server_common import NavigationServer
-from nmea_routing.nmea2000_msg import NMEA2000Msg, PgnRecord
+from nmea_routing.nmea2000_msg import NMEA2000Msg
+from nmea_routing.nmea2000_publisher import PgnRecord
 from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeResult
 from nmea2000.nmea2k_manufacturers import Manufacturers
 

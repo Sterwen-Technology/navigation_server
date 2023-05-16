@@ -87,7 +87,7 @@ class NMEAServer(NavTCPServer):
                 continue
 
             # now create a publisher for all instruments
-            pub = self.publisher_class[self._nmea2000](client, self._couplers)
+            pub = self.publisher_class[self._nmea2000](client, self._couplers, self._filters)
             pub.start()
             # attach a sender to send messages to instruments - removed as server becomes unidirectional
             '''

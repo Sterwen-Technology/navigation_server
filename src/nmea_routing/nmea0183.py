@@ -65,6 +65,9 @@ class NMEA0183Msg(NavGenericMsg):
     def proprietary(self):
         return self._proprietary
 
+    def __str__(self):
+        return self._raw[:self._datalen].decode()
+
     def replace_talker(self, talker: bytes):
         self._raw[1:3] = talker[:2]
         self._address[0:2] = talker[:2]
