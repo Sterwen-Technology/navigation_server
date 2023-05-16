@@ -109,9 +109,6 @@ class NMEA2000Device:
             # print(product_name,"|", product_version,"|", description, "|", firmware)
 
 
-
-
-
 class NMEA2KController(NavigationServer, threading.Thread):
 
     def __init__(self, opts):

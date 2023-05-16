@@ -359,6 +359,15 @@ class BufferedIPCoupler(IPCoupler):
         dlc = attribute >> 8 & 0xF
         source_addr = attribute & 0xFF
         pgn, dest_addr = PGNDef.pgn_pdu1_adjust(pgn)
+        # now decide what to do next
+        # if NMEA_MIX, return without decoding except for protocol messages when N2KController is present
+        if self._mode == self.NMEA_MIX:
+            if self._n2k_controller is None or not PGNDef.pgn_for_controller(pgn):
+                # return a partially decoded NMEA2000 message
+                msg = NMEA2000Msg(pgn, prio, source_addr, dest_addr)
+                gmsg = NavGenericMsg(N2K_MSG, raw=m0183.raw, msg=msg)
+                return gmsg
+        # here we continue decoding
         data = bytearray(dlc)
         pr_byte = 0
         l_hex = len(fields[2])

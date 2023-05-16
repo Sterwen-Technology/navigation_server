@@ -66,6 +66,8 @@ This server allows sending NMEA commands towards a coupler. This is mostly used 
 | master      | string                    | None        | IP address of the client allowed to send messages towards instruments. First client by default |
 | nmea2000    | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see above)                                                    |
 | buffer_size | int                       | 256         | Size of the receive buffer. Smaller size are useful for low message rate on the interface      |
+| filters     | filter id list            | None        | List of the filters applicable for the server (see corresponding section                       |
+
 
 
 #### gRPCNMEAServer class (future)
@@ -92,6 +94,10 @@ Warning: when the application is connected to the server all traffic is re-route
 | port    | int    | 4501    | listening port of the server                           |
 | coupler | string | None    | Name of the Miniplex coupler in the configuration file |
 
+### NMEAKController server
+
+This is an internal server that has no direct TCP access. All accesses to this server are via the Console. This server maintain the list of devices connected on the NMEA2000 network along with the information they are sending.
+
 
 ### Couplers
 Couplers classes are connecting to instrumentation bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
@@ -116,11 +122,19 @@ Under preparation
  | max_attempt    | integer                              | 20            | Max number of attempt to open the device                                                                                     |
 | open_delay     | float                                | 2             | Delay between attempt to open the device                                                                                     |
 | talker         | string (2)                           | None          | Talker ID substitution for NMEA0183                                                                                          |
-| protocol       | nmea0183, nmea2000                   | nmea0183      | Message processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 when possible |
+| protocol       | nmea0183, nmea2000, nmea_mix         | nmea0183      | Message processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 when possible |
 | direction      | read_only, write_only, bidirectional | bidirectional | Direction of exchange with device                                                                                            |
 | trace_messages | boolean                              | False         | Trace all messages after internal pre-processing                                                                             |
 | trace_raw      | boolean                              | False         | Trace all messages in device format                                                                                          | 
 | autostart      | boolean                              | True          | The coupler is started automatically when the service starts, if False it needs to be started via the Console                |
+
+Remarks on protocol behavior:
+
+a) When nmea2000 is selected, NMEA0183 messages are anyway routed transparently when the coupler encodes NMEA2000 frames in pseudo NMEA0183 messages, only NMEA2000 messages (encoded via NMEA0183) are partially decoded in order to reformat them in one of the supported NMEA2000 format. PGN that are part of the ISO protocol are fully decoded and processed locally in the NMEA2KController instance.
+
+b) When nmea0183 is selected, all messages are routed in NMEA0183 and no decoding of possible NMEA2000 is performed.
+
+c) When nmea_mix is selected, the protocol PGN are decoded and processed in the corresponding NMEA2KController instance to give a view of the network. All other messages are routed internally as NMEA2000, but externally they stay in their input format. That mode is only working if a NMEA2KController has been instanced.
 
 #### Coupler classes
 

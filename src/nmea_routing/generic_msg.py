@@ -75,3 +75,9 @@ class NavGenericMsg:
             return self._msg.as_protobuf(msg)
         else:
             raise ValueError
+
+    def is_iso_protocol(self) -> bool:
+        if self._type == N2K_MSG:
+            if self._msg.is_iso_protocol():
+                return True
+        return False

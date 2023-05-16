@@ -37,13 +37,18 @@ class NMEA2000Msg:
         self._prio = prio
         self._sa = sa
         self._da = da
+        self._is_proto = PGNDef.pgn_for_controller(pgn)
+        self._ts = int(time.monotonic() * 1e6)
         if payload is not None:
             self._payload = payload
-            self._ts = int(time.monotonic() * 1e6)
+
             if len(payload) <= 8:
                 self._fast_packet = False
             else:
                 self._fast_packet = True
+        else:
+            self._payload = None
+
 
     @property
     def pgn(self):
@@ -69,6 +74,9 @@ class NMEA2000Msg:
     def fast_packet(self):
         return self._fast_packet
 
+    def is_iso_protocol(self):
+        return self._is_proto
+
     def display(self):
         pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
         print("PGN %d|%04X|%s|time:%d" % (self._pgn, self._pgn, pgn_def.name, self._ts))
@@ -85,12 +93,20 @@ class NMEA2000Msg:
             name = pgn_def.name
         except N2KUnknownPGN:
             name = "Unknown PGN"
+        if self._payload is None:
+            payload = " "
+        else:
+            payload = self._payload.hex()
         return "PGN %d|%04X|%s sa=%d da=%d time=%d data:%s" % (self._pgn, self._pgn, name, self._sa, self._da,
-                                                               self._ts, self._payload.hex())
+                                                               self._ts, payload)
 
     def format2(self):
+        if self._payload is None:
+            payload = " "
+        else:
+            payload = self._payload.hex()
         return "2K|%d|%04X|%d|%d|%d|%d|%s" % (self._pgn, self._pgn, self._prio, self._sa, self._da,
-                                              self._ts, self._payload.hex())
+                                              self._ts, payload)
 
     def as_protobuf(self, res: nmea2000pb):
 
