@@ -297,8 +297,8 @@ def main():
     main_server = NavigationMainServer()
     # create the filters upfront
     for inst_descr in config.filters():
-        nmea_filter = inst_descr.build_object()
-        print(nmea_filter)
+        inst_descr.build_object()
+
     # create the servers
     for server_descr in config.servers():
         try:

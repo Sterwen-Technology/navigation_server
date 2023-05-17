@@ -35,7 +35,11 @@ class NMEA0183Filter(NMEAFilter):
     def __init__(self, opts):
         super().__init__(opts)
         self._talker = opts.get('talker', str, None)
+        if self._talker is not None:
+            self._talker = self._talker.encode()
         self._formatter = opts.get('formatter', str, None)
+        if self._formatter is not None:
+            self._formatter = self._formatter.encode()
 
     def valid(self) -> bool:
         if self._talker is not None or self._formatter is not None:
@@ -45,16 +49,19 @@ class NMEA0183Filter(NMEAFilter):
 
     def process_nmea0183(self, msg: NMEA0183Msg) -> bool:
 
-        if self._talker is None or self._talker == msg.talker:
+        if self._talker is None or self._talker == msg.talker():
             talker = True
         else:
             talker = False
-        if self._formatter is None or self._formatter == msg.formatter:
+        # _logger.debug("Filter formatter %s with %s" % (self._formatter, msg.formatter()))
+        if self._formatter is None or self._formatter == msg.formatter():
             formatter = True
         else:
             formatter = False
-        _logger.debug("Processing NMEA0183 filter %s with message %s result %s" % (self._name, msg, talker or formatter))
-        return talker or formatter
+        result = talker and formatter
+        if result:
+            _logger.debug("Processing NMEA0183 filter %s with message %s ==>> discard" % (self._name, msg))
+        return result
 
 
 class NMEA2000Filter(NMEAFilter):
@@ -80,8 +87,10 @@ class NMEA2000Filter(NMEAFilter):
             pgn = True
         else:
             pgn = False
-        _logger.debug("Processing N2K filter %s with message %s result %s" % (self._name, msg.format2(), sa or pgn))
-        return sa or pgn
+        result = sa and pgn
+        if result:
+            _logger.debug("Processing N2K filter %s with message %s ==>> discard" % (self._name, msg.format2()))
+        return result
 
 
 class FilterSet:
@@ -99,6 +108,7 @@ class FilterSet:
                 self.add_filter(f)
 
     def add_filter(self, f):
+        _logger.debug("Adding filter in set name:%s valid: %s" % (f.name, f.valid()))
         if f.valid():
             if isinstance(f, NMEA0183Filter):
                 _logger.debug("Adding NMEA0183 Filter %s" % f.name)
@@ -109,13 +119,16 @@ class FilterSet:
 
     def process_filter(self, msg) -> bool:
         _logger.debug("Filtering %s" % msg.printable())
-        if msg.type == N0183_MSG:
-            for f in self._nmea0183_filters:
-                if f.process_nmea0183(msg.msg):
-                    return True
-        elif msg.type == N2K_MSG:
-            for f in self._n2k_filters:
-                if f.process_n2k(msg.msg):
-                    return True
+        try:
+            if msg.type == N0183_MSG:
+                for f in self._nmea0183_filters:
+                    if f.process_nmea0183(msg.msg):
+                        return True
+            elif msg.type == N2K_MSG:
+                for f in self._n2k_filters:
+                    if f.process_n2k(msg.msg):
+                        return True
+        except Exception as e_all:
+            _logger.error("Filtering error: %s" % e_all)
         return False
 

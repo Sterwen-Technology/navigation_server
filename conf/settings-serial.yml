@@ -17,8 +17,8 @@ log_module:
     nmea2000.nmea2k_controller: INFO
     nmea_data.data_client: INFO
     nmea_routing.IPCoupler: INFO
-    nmea_routing.publisher: DEBUG
-    nmea_routing.filters: DEBUG
+    nmea_routing.publisher: INFO
+    nmea_routing.filters: INFO
 
 servers:
 
@@ -26,7 +26,7 @@ servers:
     class: NMEAServer
     port: 4500
     nmea2000: transparent
-    filters: [DiscardAISGPS]
+    filters: [DiscardAISGPS, RemoveGPS]
 
 - Console:
     class: Console
@@ -72,7 +72,8 @@ filters:
 
 - RemoveGPS:
      class: NMEA0183Filter
-     formatter: [GGA, GSV]
+     talker: GP
+     formatter: GSV
      action: discard
 
 - DiscardAISGPS:

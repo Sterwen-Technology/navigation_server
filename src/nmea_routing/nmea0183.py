@@ -29,7 +29,7 @@ class NMEAInvalidFrame(Exception):
 class NMEA0183Msg(NavGenericMsg):
 
     def __init__(self, data):
-        super().__init__(N0183_MSG, raw=data)
+        super().__init__(N0183_MSG, raw=data, msg=self)
         # verify that we have a checksum
         if self._raw[self._datalen - 3] != ord('*'):
             _logger.error("NMEA183 Frame without checksum")
