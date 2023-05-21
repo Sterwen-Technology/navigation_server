@@ -1,11 +1,14 @@
 #-------------------------------------------------------------------------------
 # Name:        IP Coupler
-# Purpose:     Abstract class for all instruments with a IP transport interface
+# Purpose:     Abstract class and implementation classes for all
+#               instruments with a IP transport interface
+#               Includes NMEA0183 messages buffering reassembly
+#               Includes Shipmodul MXPGN NMEA2000 frame decoding (no payload decoding)
 #
 # Author:      Laurent Carré
 #
 # Created:     27/02/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -360,7 +363,7 @@ class BufferedIPCoupler(IPCoupler):
         source_addr = attribute & 0xFF
         pgn, dest_addr = PGNDef.pgn_pdu1_adjust(pgn)
         # now decide what to do next
-        # if NMEA_MIX, return without decoding except for protocol messages when N2KController is present
+        # if NMEA_MIX, return without decoding except for ISO protocol messages when N2KController is present
         if self._mode == self.NMEA_MIX:
             if self._n2k_controller is None or not PGNDef.pgn_for_controller(pgn):
                 # return a partially decoded NMEA2000 message

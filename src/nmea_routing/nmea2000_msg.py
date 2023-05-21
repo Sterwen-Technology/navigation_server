@@ -13,7 +13,7 @@ import threading
 import time
 from google.protobuf.json_format import MessageToJson
 import datetime
-import os
+import logging
 import base64
 
 from nmea2000.nmea2k_pgndefs import *
@@ -37,11 +37,11 @@ class NMEA2000Msg:
         self._prio = prio
         self._sa = sa
         self._da = da
-        self._is_proto = PGNDef.pgn_for_controller(pgn)
+        # define if the PGN is part of ISO and base protocol (do not carry navigation data)
+        self._is_iso = PGNDef.pgn_for_controller(pgn)
         self._ts = int(time.monotonic() * 1e6)
         if payload is not None:
             self._payload = payload
-
             if len(payload) <= 8:
                 self._fast_packet = False
             else:
@@ -74,8 +74,9 @@ class NMEA2000Msg:
     def fast_packet(self):
         return self._fast_packet
 
+    @property
     def is_iso_protocol(self):
-        return self._is_proto
+        return self._is_iso
 
     def display(self):
         pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
@@ -88,6 +89,9 @@ class NMEA2000Msg:
             return self.format2()
 
     def format1(self):
+        '''
+        Generate a string to display the message with PGN name
+        '''
         try:
             pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
             name = pgn_def.name
@@ -101,6 +105,9 @@ class NMEA2000Msg:
                                                                self._ts, payload)
 
     def format2(self):
+        '''
+        Generate a string to display the message with PGN number
+        '''
         if self._payload is None:
             payload = " "
         else:
@@ -237,12 +244,21 @@ class NMEA2000Factory:
         except KeyError:
             return NMEA2000Object(message.pgn, message, kwargs=fields)
 
+#-----------------------------------------------------------------------------------
+#
+#   Set of classes to manage reassembly of Fast Packet messages payload
+#
+#-----------------------------------------------------------------------------------
 
 class FastPacketException(Exception):
     pass
 
 
 class FastPacket:
+    '''
+    This manage the reassembly for one NMEA2000 with payload > 8 bytes
+    An instance is created each time a new sequence is detected
+    '''
 
     @staticmethod
     def compute_key(pgn, addr, seq):
@@ -328,6 +344,11 @@ class FastPacket:
 
 
 class FastPacketHandler:
+
+    '''
+    This class is linked to one Coupler instance and handle the reassembly of fast Packets payload
+
+    '''
 
     def __init__(self, instrument):
         self._sequences = {}
