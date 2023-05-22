@@ -19,6 +19,7 @@ log_module:
     nmea_routing.IPCoupler: INFO
     nmea_routing.publisher: INFO
     nmea_routing.filters: INFO
+    nmea_routing.coupler: INFO
 
 servers:
 
@@ -26,7 +27,7 @@ servers:
     class: NMEAServer
     port: 4500
     nmea2000: transparent
-    filters: [DiscardAISGPS, RemoveGPS]
+    filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K]
 
 - Console:
     class: Console
@@ -59,8 +60,9 @@ publishers:
       class: N2KTracePublisher
       couplers: [SNReplay]
       active: false
-      filter: [129026]
-      file: trace129026
+      filters: [AutoPilotN2K]
+      output: PRINT
+      # file: trace129026
 
 
 data_sinks:
@@ -81,6 +83,11 @@ filters:
      source: 43
      pgn: [129025, 129026]
      action: discard
+
+- AutoPilotN2K:
+    class: NMEA2000Filter
+    source: 7
+    action: discard
 
 
 

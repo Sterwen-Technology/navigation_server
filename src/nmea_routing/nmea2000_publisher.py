@@ -14,6 +14,7 @@ import datetime
 import os
 from nmea_routing.publisher import Publisher
 from nmea2000.nmea2k_pgndefs import *
+from nmea_routing.filters import FilterSet
 
 
 from nmea_routing.generic_msg import *
@@ -21,6 +22,7 @@ from nmea_routing.configuration import NavigationConfiguration
 
 
 _logger = logging.getLogger("ShipDataServer" + "." + __name__)
+
 
 class PgnRecord:
 
@@ -95,12 +97,10 @@ class N2KTracePublisher(Publisher):
 
     def __init__(self, opts):
         super().__init__(opts)
-        self._filter = opts.getlist('filter', int, None)
-        if self._filter is not None:
-            _logger.info("%s filter:%s" % (self.name(), self._filter))
-        self._sources = opts.getlist('sources', int, None)
-        if self._sources is not None:
-            _logger.info("%s sources:%s" % self.name(), self._sources)
+        filter_names = opts.getlist('filters', str)
+        if filter_names is not None and len(filter_names) > 0:
+            _logger.info("Publisher:%s filter set:%s" % (self.name(), filter_names))
+            self._filters = FilterSet(filter_names)
         self._print_option = opts.get('output', str, 'ALL')
         _logger.info("%s output option %s" % (self.name(), self._print_option))
         self._trace_fd = None
@@ -123,11 +123,14 @@ class N2KTracePublisher(Publisher):
         msg = gen_msg.msg
         if self._print_option == 'NONE':
             return True
-        if self._filter is not None:
-            if msg.pgn not in self._filter:
+        if self._filters is not None:
+            if not self._filters.process_filter(msg, execute_action=False):
                 return True
         # print("decoding %s", msg)
-        res = msg.decode()
+        try:
+            res = msg.decode()
+        except N2KDecodeException:
+            return True
         # _logger.debug("Trace publisher msg:%s" % res)
         if res is not None:
             if self._print_option in ('ALL', 'PRINT'):

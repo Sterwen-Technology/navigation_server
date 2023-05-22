@@ -197,7 +197,7 @@ class Coupler(threading.Thread):
                     self.close()
                     continue
                 else:
-                    _logger.debug(msg.printable())
+                    _logger.debug("%s push:%s" % (self.name(), msg))
 
             except CouplerTimeOut:
                 continue
@@ -303,12 +303,16 @@ class Coupler(threading.Thread):
         while fetch_next:
             msg = self._read()
             self.trace(self.TRACE_IN, msg)
+            # _logger.debug("Read:%s", msg)
             if self._data_sink is not None:
                 self._data_sink.send_msg(msg)
             # print(msg.printable())
-            if self._n2k_controller is not None and msg.is_iso_protocol():
-                fetch_next = True
-                self._n2k_controller.send_message(msg.msg)
+            if msg.type == N2K_MSG:
+                if self._n2k_controller is not None and msg.is_iso_protocol():
+                    fetch_next = True
+                    self._n2k_controller.send_message(msg.msg)
+                else:
+                    fetch_next = False
             else:
                 fetch_next = False
         return msg

@@ -370,7 +370,7 @@ class BufferedIPCoupler(IPCoupler):
                 msg = NMEA2000Msg(pgn, prio, source_addr, dest_addr)
                 gmsg = NavGenericMsg(N2K_MSG, raw=m0183.raw, msg=msg)
                 return gmsg
-        # here we continue decoding
+        # here we continue decoding in NMEA2000 mode and for ISO messages
         data = bytearray(dlc)
         pr_byte = 0
         l_hex = len(fields[2])
@@ -490,7 +490,9 @@ class NMEATCPReader(BufferedIPCoupler):
         if msg0183.proprietary():
             return fromProprietaryNmea(msg0183)
         elif msg0183.address() == b'MXPGN':
-            return self.mxpgn_decode(msg0183)
+            msg = self.mxpgn_decode(msg0183)
+            # print(msg.dump())
+            return msg
         else:
             return msg0183
 

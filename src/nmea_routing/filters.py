@@ -29,6 +29,17 @@ class NMEAFilter:
     def name(self):
         return self._name
 
+    def action(self) -> bool:
+        '''
+        process the possible action if the message pass the filter
+        return True if the message is to be discarded
+        '''
+        if self._action is None:
+            return False
+        if self._action == 'discard':
+            return True
+        # more processing options to come
+
 
 class NMEA0183Filter(NMEAFilter):
 
@@ -60,7 +71,7 @@ class NMEA0183Filter(NMEAFilter):
             formatter = False
         result = talker and formatter
         if result:
-            _logger.debug("Processing NMEA0183 filter %s with message %s ==>> discard" % (self._name, msg))
+            _logger.debug("Processing NMEA0183 filter %s with message %s ==>> OK" % (self._name, msg))
         return result
 
 
@@ -89,7 +100,7 @@ class NMEA2000Filter(NMEAFilter):
             pgn = False
         result = sa and pgn
         if result:
-            _logger.debug("Processing N2K filter %s with message %s ==>> discard" % (self._name, msg.format2()))
+            _logger.debug("Processing N2K filter %s with message %s ==>> OK" % (self._name, msg.format2()))
         return result
 
 
@@ -106,6 +117,9 @@ class FilterSet:
                     _logger.error("Filter reference %s non existent" % fn)
                     continue
                 self.add_filter(f)
+        if len(self._n2k_filters) + len(self._nmea0183_filters) <= 0:
+            _logger.error("FilterSet has no filters")
+            raise ValueError
 
     def add_filter(self, f):
         _logger.debug("Adding filter in set name:%s valid: %s" % (f.name, f.valid()))
@@ -117,18 +131,26 @@ class FilterSet:
                 _logger.debug("Adding NMEA2000 Filter %s" % f.name)
                 self._n2k_filters.append(f)
 
-    def process_filter(self, msg) -> bool:
-        _logger.debug("Filtering %s" % msg.printable())
+    def process_filter(self, msg, execute_action=True) -> bool:
+        _logger.debug("Filtering %s" % msg)
+        result = False
         try:
             if msg.type == N0183_MSG:
                 for f in self._nmea0183_filters:
                     if f.process_nmea0183(msg.msg):
-                        return True
+                        result = True
+                        break
             elif msg.type == N2K_MSG:
                 for f in self._n2k_filters:
                     if f.process_n2k(msg.msg):
-                        return True
+                        result = True
+                        break
         except Exception as e_all:
             _logger.error("Filtering error: %s" % e_all)
-        return False
+        if result:
+            if execute_action:
+                result = f.action()
+            if result:
+                _logger.debug("Filter %s => True" % f.name)
+        return result
 

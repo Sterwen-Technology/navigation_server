@@ -29,12 +29,12 @@ class NMEAPublisher(Publisher):
         self._client = client
 
         client.add_publisher(self)
-        # reader.register(self)
+        _logger.info("NMEA Publisher %s created" % self.name())
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.raw is None:
-            _logger.error("No transparent payload available for %s" % msg.printable())
-            return False
+            _logger.error("No transparent payload available for %s => wrong nmea2000 mode on input ?" % msg.dump())
+            return True
         return not self._client.send(msg.raw)
 
     def last_action(self):

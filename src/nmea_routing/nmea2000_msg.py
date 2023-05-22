@@ -78,6 +78,15 @@ class NMEA2000Msg:
     def is_iso_protocol(self):
         return self._is_iso
 
+    # The following 2 methods are for compatibility with NavGenericMsg
+    @property
+    def type(self):
+        return N2K_MSG
+
+    @property
+    def msg(self):
+        return self
+
     def display(self):
         pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
         print("PGN %d|%04X|%s|time:%d" % (self._pgn, self._pgn, pgn_def.name, self._ts))
@@ -141,6 +150,9 @@ class NMEA2000Msg:
         except N2KUnknownPGN:
             _logger.error("No definition for PGN %d => cannot decode" % self._pgn)
             return
+        if self._payload is None:
+            _logger.error("NMEA2000 Decode with no payload: %s" % self.format1())
+            raise N2KDecodeException
         try:
             return pgn_def.decode_pgn_data(self._payload)
         except N2KDecodeException as e:
