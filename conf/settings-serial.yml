@@ -26,7 +26,7 @@ servers:
 - NMEAServer:
     class: NMEAServer
     port: 4500
-    nmea2000: transparent
+    nmea2000: dyfmt
     filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K]
 
 - Console:
@@ -45,7 +45,7 @@ couplers:
     port: 3555
     autostart: true
     nmea2000_controller: NMEANetwork
-    protocol: nmea_mix
+    protocol: nmea2000
     # data_sink: DataAnalyser
     trace_messages: false
     trace_raw: false

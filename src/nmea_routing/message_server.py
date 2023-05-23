@@ -160,6 +160,7 @@ class NMEAServer(NavTCPServer):
             for client in self._connections.values():
                 _logger.debug("Heartbeat check %s msg:%d silent period:%d" %
                               (client.descr(), client.msgcount(), client.silent_count()))
+                _logger.info("%s - number of messages sent:%d" % (client.descr(), client.total_msg()))
                 if client.msgcount() == 0:
                     client.add_silent_period()
                     # no message during period
