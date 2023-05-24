@@ -10,6 +10,7 @@
 #-------------------------------------------------------------------------------
 
 import logging
+import time
 from nmea_routing.generic_msg import N0183_MSG, N2K_MSG, NavGenericMsg
 from nmea_routing.nmea0183 import NMEA0183Msg
 from nmea_routing.nmea2000_msg import NMEA2000Msg
@@ -22,7 +23,11 @@ class NMEAFilter:
 
     def __init__(self, opts):
         self._name = opts['name']
-        self._action = opts.get('action', str, None)
+        self._action = opts.get_choice('action', ('discard', 'time_filter'), None)
+        if self._action == 'time_filter':
+            self._period = opts.get('period', float, 0.0)
+            self._tick_time = time.monotonic()
+
         _logger.debug("Creating filter %s" % self._name)
 
     @property
@@ -38,7 +43,21 @@ class NMEAFilter:
             return False
         if self._action == 'discard':
             return True
+        elif self._action == 'time_filter':
+            t = time.monotonic()
+            if t - self._tick_time > self._period:
+                self._tick_time += self._period
+                return False
+            else:
+                return True
         # more processing options to come
+
+    def valid(self):
+        if self._action == 'time_filter':
+            if self._period <= 0.0:
+                return False
+        else:
+            return True
 
 
 class NMEA0183Filter(NMEAFilter):
@@ -54,7 +73,7 @@ class NMEA0183Filter(NMEAFilter):
 
     def valid(self) -> bool:
         if self._talker is not None or self._formatter is not None:
-            return True
+            return super().valid()
         else:
             return False
 
@@ -70,6 +89,8 @@ class NMEA0183Filter(NMEAFilter):
         else:
             formatter = False
         result = talker and formatter
+        if result:
+            result = super().valid()
         if result:
             _logger.debug("Processing NMEA0183 filter %s with message %s ==>> OK" % (self._name, msg))
         return result

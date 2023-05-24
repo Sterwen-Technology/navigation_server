@@ -1,4 +1,4 @@
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # Name:        NMEA2K-controller
 # Purpose:     Analyse and process NMEA2000 network control messages
 #
@@ -7,7 +7,7 @@
 # Created:     21/10/2022
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
 # Licence:     Eclipse Public License 2.0
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 import logging
 import threading
@@ -19,8 +19,9 @@ from nmea_routing.nmea2000_msg import NMEA2000Msg
 from nmea_routing.nmea2000_publisher import PgnRecord
 from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeResult
 from nmea2000.nmea2k_manufacturers import Manufacturers
+from nmea_routing.configuration import NavigationConfiguration
 
-_logger = logging.getLogger("ShipDataServer"+"."+__name__)
+_logger = logging.getLogger("ShipDataServer" + "." + __name__)
 
 
 class NMEA2000Device:
@@ -33,9 +34,9 @@ class NMEA2000Device:
         _logger.info("NMEA Controller new device detected at address %d" % address)
         self._lastmsg_ts = 0
         self._pgn_received = {}
-        self._process_vector = { 60928: self.p60928,
-                                 126996: self.p126996
-                                 }
+        self._process_vector = {60928: self.p60928,
+                                126996: self.p126996
+                                }
         self._fields_60928 = None
         self._fields_126996 = None
         self._properties = {}
@@ -119,6 +120,7 @@ class NMEA2KController(NavigationServer, threading.Thread):
         self._input_queue = queue.Queue(queue_size)
         self._stop_flag = False
         self._devices = {}
+        NavigationConfiguration.get_conf().set_global('N2KController', self)
 
     def server_type(self):
         return 'NMEA200_CONTROLLER'
@@ -166,6 +168,27 @@ class NMEA2KController(NavigationServer, threading.Thread):
             return
 
     def get_device(self) -> NMEA2000Device:
-        for device in self._devices.values():
+        sorted_dict = sorted(self._devices.items())
+        for addr, device in sorted_dict:
             yield device
+
+    def sort_devices(self):
+        return sorted(self._devices.items())
+
+    def get_device_by_address(self, address: int):
+        try:
+            return self._devices[address]
+        except KeyError:
+            _logger.warning('N2K No device with address:%d' % address)
+        raise
+
+    def get_device_with_property_value(self, d_property, value):
+        # we use brute search
+        for dev in self._devices:
+            try:
+                if dev.property[d_property] == value:
+                    return dev
+            except KeyError:
+                continue
+        raise KeyError
 

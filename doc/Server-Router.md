@@ -225,10 +225,10 @@ On all matching messages the defined action is applied.
 
 Abstract class holding action parameters
 
-| Name   | Type            | Default | Signification                                                                         |
-|--------|-----------------|---------|---------------------------------------------------------------------------------------|
-| action | discard, period | none    | if no action defined, the filter is disabled                                          |
-| period | float           | none    | minimum period in seconds between messages, if undefined or 0, the filter is disabled |
+| Name   | Type                 | Default | Signification                                                                         |
+|--------|----------------------|---------|---------------------------------------------------------------------------------------|
+| action | discard, time_filter | none    | if no action defined, the filter is disabled                                          |
+| period | float                | none    | minimum period in seconds between messages, if undefined or 0, the filter is disabled |
 
 #### NMEA0183filter (NMEAFilter)
 

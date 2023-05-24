@@ -164,6 +164,7 @@ class NavigationConfiguration:
         self._publishers = {}
         self._data_sink = {}
         self._filters = {}
+        self._globals = {}
         try:
             fp = open(settings_file, 'r')
         except IOError as e:
@@ -252,6 +253,15 @@ class NavigationConfiguration:
         except KeyError:
             _logger.error("No object named: %s" % name)
             raise
+
+    def set_global(self, key, obj):
+        self._globals[key] = obj
+
+    def get_global(self, key):
+        try:
+            return self._globals[key]
+        except KeyError:
+            _logger.error("Global reference %s non existent" % key)
 
 
 def main():
