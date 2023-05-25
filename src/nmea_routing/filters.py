@@ -45,8 +45,10 @@ class NMEAFilter:
             return True
         elif self._action == 'time_filter':
             t = time.monotonic()
+            # print("Time filter", self._name,t, self._tick_time, self._period, t-self._tick_time)
             if t - self._tick_time > self._period:
                 self._tick_time += self._period
+                _logger.debug("Time filter for %s => go" % self._name)
                 return False
             else:
                 return True
@@ -89,8 +91,6 @@ class NMEA0183Filter(NMEAFilter):
         else:
             formatter = False
         result = talker and formatter
-        if result:
-            result = super().valid()
         if result:
             _logger.debug("Processing NMEA0183 filter %s with message %s ==>> OK" % (self._name, msg))
         return result
@@ -171,6 +171,8 @@ class FilterSet:
         if result:
             if execute_action:
                 result = f.action()
+                #if not result:
+                    #print("Filter", f.name, "Validated by action")
             if result:
                 _logger.debug("Filter %s => True" % f.name)
         return result
