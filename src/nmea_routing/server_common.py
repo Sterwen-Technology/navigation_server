@@ -13,6 +13,8 @@ import threading
 import logging
 import socket
 import collections
+import grpc
+from concurrent import futures
 
 from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.filters import FilterSet
@@ -98,4 +100,26 @@ class NavTCPServer(NavigationServer, threading.Thread):
         return 'TCP'
 
 
+class NavigationGrpcServer(NavigationServer):
 
+    def __init__(self, options):
+
+        super().__init__(options)
+        if self._port == 0:
+            raise ValueError
+        self._end_event = None
+        address = "0.0.0.0:%d" % self._port
+        self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
+        self._grpc_server.add_insecure_port(address)
+
+    def start(self) -> None:
+        _logger.info("Server %s starting on port %d" % (self._name, self._port))
+        self._grpc_server.start()
+
+    def stop(self):
+        _logger.info("Stopping %s GRPC Server" % self._name)
+        self._end_event = self._grpc_server.stop(0.1)
+
+    def join(self):
+        if self._end_event is not None:
+            self._end_event.wait()

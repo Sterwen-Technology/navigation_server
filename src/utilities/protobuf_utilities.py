@@ -32,3 +32,22 @@ def set_protobuf_data(result, keys, data_dict: dict):
 
 def pb_enum_string(msg, enum_attr: str, value):
     return msg.DESCRIPTOR.fields_by_name[enum_attr].enum_type.values_by_number[value].name
+
+
+class ProtobufProxy:
+    '''
+    Abstract class to encapsulate access to protobuf message elements
+    '''
+
+    def __init__(self, msg):
+        self._msg = msg
+
+    def __getattr__(self, item):
+        try:
+            return getattr(self._msg, item)
+        except AttributeError:
+            raise AttributeError(item)
+
+
+class GrpcAccessException(Exception):
+    pass

@@ -15,7 +15,7 @@ from concurrent import futures
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
 
-from nmea_routing.server_common import NavigationServer
+from nmea_routing.server_common import NavigationServer, NavigationGrpcServer
 from nmea2000.nmea2k_controller import NMEA2000Device
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -152,19 +152,15 @@ class ConsoleServicer(NavigationConsoleServicer):
 ServerRecord = namedtuple('ServerRecord', ['server', 'name', 'class_name'])
 
 
-class Console(NavigationServer):
+class Console(NavigationGrpcServer):
 
     def __init__(self, options):
         super().__init__(options)
         self._servers = {}
         self._couplers = {}
         self._injectors = {}
-        self._connection = None
-        self._end_event = None
-        address = "0.0.0.0:%d" % self._port
-        self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
+
         add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self._grpc_server)
-        self._grpc_server.add_insecure_port(address)
 
     def add_server(self, server):
         record = ServerRecord(server, server.name(), server.class_name())
@@ -175,7 +171,7 @@ class Console(NavigationServer):
             if sr.class_name not in ('Console', 'NavigationMainServer'):
                 yield sr
 
-    def get_server_by_type(self, server_type:str) -> NavigationServer:
+    def get_server_by_type(self, server_type: str) -> NavigationServer:
         for sr in self._servers.values():
             if sr.class_name == server_type:
                 return sr.server
@@ -193,14 +189,3 @@ class Console(NavigationServer):
     def main_server(self):
         return self._servers['main'].server
 
-    def start(self) -> None:
-        _logger.info("Console starting on port %d" % self._port)
-        self._grpc_server.start()
-
-    def stop(self):
-        _logger.info("Stopping Console GRPC Server")
-        self._end_event = self._grpc_server.stop(0.1)
-
-    def join(self):
-        if self._end_event is not None:
-            self._end_event.wait()

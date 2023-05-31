@@ -25,21 +25,6 @@ class ConsoleAccessException(Exception):
     pass
 
 
-class ProtobufProxy:
-    '''
-    Abstract class to encapsulate access to protobuf message elements
-    '''
-
-    def __init__(self, msg):
-        self._msg = msg
-
-    def __getattr__(self, item):
-        try:
-            return getattr(self._msg, item)
-        except AttributeError:
-            raise AttributeError(item)
-
-
 class CouplerProxy(ProtobufProxy):
 
     def __init__(self, msg: CouplerMsg):

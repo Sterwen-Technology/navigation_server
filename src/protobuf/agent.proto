@@ -1,0 +1,26 @@
+//-------------------------------------------------------------------------------
+// Name:        agent.proto
+// Purpose:     protobuf and grpc for remote agent
+//
+// Author:      Laurent Carré
+//
+// Created:     30/05/2023
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+message AgentMsg {
+  uint32 id=1;
+  string cmd=2;
+}
+
+message AgentResponse {
+  string resp=1;
+}
+
+
+service Agent {
+  rpc SendCmd(AgentMsg) returns (stream AgentResponse){}
+}
