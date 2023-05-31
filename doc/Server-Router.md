@@ -277,6 +277,97 @@ That is the main file read by the application upon starts and that instanciate a
 
 
 
+The file is divided in 2 main sections: global section and objects section. The file is read only upon the server startup, so to update the server parameters a restart is needed.
+
+The global section includes the definition of the following global parameters:
+
+| Name             | Type                     | Default                        | Signification                                                   |
+|------------------|--------------------------|--------------------------------|-----------------------------------------------------------------|
+| log_level        | DEBUG/INFO/WARNING/ERROR | INFO                           | Level of logging (traces)                                       |
+| manufacturer_xml | string                   | ./def/Manufacturers.N2kDfn.xml | XML file containing NMEA Manufacturers definition               |
+| nmea2000_xml     | string                   | ./def/PGNDefns.N2kDfn.xml      | XML file containing NMEA2000 PGN definitions                    |
+| trace_dir        | string                   | /var/log                       | Directory where all the traces and logs will be stored          |
+| log_file         | string                   | None                           | Filename for all program traces, if None stderr is used instead |
+
+There is is also a subsection (log_module) allowing to adjust the log level per module for fine grain debugging
+
+The per object section includes a list oh object and each object as the following syntax:
+
+-<object name>:
+   class: <Class name of the object>
+   Then all other parameters as defined in the corresponding section
+
+The following sections are recognized:
+
+- servers
+- couplers
+- publishers
+- data_sinks
+- filters
+
+Sections are not mandatory
+
+#### Exemple configuration file
+```
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+# log_file: test_log
+log_module:
+    nmea_routing.message_server: INFO
+    nmea2000.nmea2k_controller: INFO
+    nmea_data.data_client: INFO
+    nmea_routing.IPCoupler: INFO
+    nmea_routing.publisher: DEBUG
+
+servers:
+
+- NMEAServer:
+    class: NMEAServer
+    port: 4500
+    nmea2000: transparent
+
+- Console:
+    class: Console
+    port: 4502
+
+- NMEANetwork:
+    class: NMEA2KController
+
+
+couplers:
+
+- SNReplay:
+    class: NMEATCPReader
+    address: 192.168.1.21
+    port: 3555
+    autostart: true
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
+    # data_sink: DataAnalyser
+    trace_messages: false
+    trace_raw: false
+
+publishers:
+
+#    - MainLog:
+#       class: LogPublisher
+#        file: /data/solidsense/log/navigation.log
+#        instruments: [MiniPlex3]
+- TraceN2K:
+      class: N2KTracePublisher
+      couplers: [SNReplay]
+      active: false
+      filter: [129026]
+      file: trace129026
+
+
+data_sinks:
+
+- DataAnalyser:
+      class: NMEADataClient
+
+
+```
 
 ### Default port assignments for services
 
@@ -288,6 +379,12 @@ That is the main file read by the application upon starts and that instanciate a
 | NMEA message sender           | 4503 | TCP                | NMEA0183 like        |
 | NMEA data analyser            | 4504 | gRPC               | see server.proto     |
 | VE Direct MPPT server         | 4505 | gRPC               | see vedirect.proto   |
+| Local Linux agent             | 4506 | gRPC               | see agent.proto      |
+
+## Implementation structure
+
+
+
 
 
 
