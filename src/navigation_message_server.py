@@ -22,6 +22,7 @@ from nmea_routing.console import Console
 from nmea_routing.publisher import *
 from nmea_routing.client_publisher import *
 from nmea_routing.internal_gps import InternalGps
+from nmea_routing.nmea2000_publisher import N2KProbePublisher, N2KTracePublisher
 # from simulator_input import *
 from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
 from nmea_routing.IPCoupler import NMEATCPReader
@@ -29,11 +30,11 @@ from nmea_routing.ikonvert import iKonvert
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_controller import NMEA2KController
-from nmea_routing.nmea2000_msg import N2KProbePublisher, N2KTracePublisher
 from victron_mppt.mppt_coupler import MPPT_Coupler
 from nmea_routing.ydn2k_coupler import YDCoupler
 from nmea_routing.serial_nmeaport import NMEASerialPort
 from nmea_data.data_client import NMEADataClient
+from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter
 
 
 def _parser():
@@ -45,7 +46,7 @@ def _parser():
     return p
 
 
-version = "V1.20"
+version = "V1.21"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -75,6 +76,7 @@ class NavigationMainServer:
         self._couplers = {}
         self._publishers = []
         self._data_client = []
+        self._filters = []
         self._sigint_count = 0
         self._is_running = False
         self._logfile = None
@@ -239,6 +241,15 @@ def main():
         if os.getcwd() != default_base_dir:
             os.chdir(default_base_dir)
     # print("Current directory", os.getcwd())
+    # set log for the configuration phase
+    loghandler = logging.StreamHandler()
+    logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
+    loghandler.setFormatter(logformat)
+    _logger.addHandler(loghandler)
+    _logger.setLevel('INFO')
+    _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2023" % version)
+
+    # build the configuration from the file
     config = NavigationConfiguration(opts.settings)
     config.add_class(NMEAServer)
     config.add_class(NMEASenderServer)
@@ -257,11 +268,10 @@ def main():
     config.add_class(NMEASerialPort)
     config.add_class(NMEA2KController)
     config.add_class(NMEADataClient)
+    config.add_class(NMEA0183Filter)
+    config.add_class(NMEA2000Filter)
     # logger setup => stream handler for now or file
-    loghandler = logging.StreamHandler()
-    logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
-    loghandler.setFormatter(logformat)
-    _logger.addHandler(loghandler)
+
     log_file = config.get_option("log_file", None)
     if log_file is not None:
         log_dir = config.get_option('trace_dir', None)
@@ -279,13 +289,16 @@ def main():
     _logger.setLevel(config.get_option('log_level', 'INFO'))
     adjust_log_level(config)
 
-    _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2022" % version)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'ST'))
     Manufacturers.build_manufacturers(config.get_option('manufacturer_xml', './def/Manufacturers.N2kDfn.xml'))
     PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
 
     main_server = NavigationMainServer()
+    # create the filters upfront
+    for inst_descr in config.filters():
+        inst_descr.build_object()
+
     # create the servers
     for server_descr in config.servers():
         try:

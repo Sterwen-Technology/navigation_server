@@ -1,4 +1,13 @@
-
+#-------------------------------------------------------------------------------
+# Name:        publisher
+# Purpose:     Abstract class for all publishers
+#
+# Author:      Laurent Carré
+#
+# Created:     25/10/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
 import threading
 import time
 import queue
@@ -24,7 +33,7 @@ class Publisher(threading.Thread):
     '''
     Super class for all publishers
     '''
-    def __init__(self, opts, internal=False, couplers=None, name=None):
+    def __init__(self, opts, internal=False, couplers=None, name=None, filters=None):
         if internal:
             self._opts = None
             self._couplers = couplers
@@ -49,6 +58,7 @@ class Publisher(threading.Thread):
         self._queue = queue.Queue(self._queue_size)
         self._stopflag = False
         self._nb_msg_lost = 0
+        self._filters = filters
 
     def start(self):
         _logger.debug("Publisher %s start flag %s" % (self._name, self._active))
@@ -60,6 +70,13 @@ class Publisher(threading.Thread):
 
     def publish(self, msg):
         # print("Publisher %s publish msg:%s" % (self._name, msg.decode().strip('\n\r')))
+        # here we implement the filtering, no need to fill the queue with useless messages
+        # that is also implying that the filtering is processed in the Coupler thread
+        # print("Publisher %s publish msg:%s %s" % (self._name, msg, self._filters))
+        if self._filters is not None:
+            # print("Publisher %s publish with filter msg:%s" % (self._name, msg))
+            if self._filters.process_filter(msg):
+                return
         try:
             self._queue.put(msg, block=False)
             self._nb_msg_lost = 0

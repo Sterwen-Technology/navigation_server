@@ -64,6 +64,13 @@ class NavGenericMsg:
         else:
             return "NULL"
 
+    def dump(self) -> str :
+        if self._raw is not None:
+            raw_str = self._raw.hex().decode()
+        else:
+            raw_str = "None"
+        return "%s raw:%s" % (self.printable(), raw_str)
+
     def as_protobuf(self, msg):
         '''
         For NMEA0183 messages the method is called directly (subclass)
@@ -75,3 +82,12 @@ class NavGenericMsg:
             return self._msg.as_protobuf(msg)
         else:
             raise ValueError
+
+    def is_iso_protocol(self) -> bool:
+        if self._type == N2K_MSG:
+            if self._msg.is_iso_protocol:
+                return True
+        return False
+
+    def __str__(self):
+        return self.printable()

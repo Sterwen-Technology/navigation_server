@@ -3,18 +3,18 @@ The navigation server-router aggregate and distribute navigation and other opera
 It is a focal point and server for all kind of data needed to control the course and operational condition of the boat.
 The system is based on the building blocks described here below. 
 The configuration and parameters of the system are described in a Yaml file.
-All building blocks are optional, but if there is no Instrument or Publisher nothing will happen.
+All building blocks are optional, but if there is no Coupler or Publisher nothing will happen.
 
 The system works with a single Python process and messages are exchanged internally. This can lead to a scalability problem but this was not observed so far.
 
 
 
 ### Servers
-The servers are TCP servers allowing any navigation or control application to access the flow of data via TCP/IP.
+The servers are servers allowing any navigation or control application to access the flow of data via TCP/IP.
 There is a generic server: NMEAServer. This server is sending all messages coming from the associated instruments to the clients.
 Client can also send messages to the server that are sent to the instrument input.
 
-There are 2 server classes: NMEA0183 based protocol over TCP and binary messages over gRPC.
+There are 2 server classes with external access: NMEA0183 based protocol over TCP and binary messages over gRPC. And some other internal servers.
 
 The NMEA0183 based protocol can be understood and messages starting with '$' or '!' including only printable ASCII characters and separated by the <CR> and <LF> characters
 That is not exactly a real protocol over TCP/IP but this is working and the messages (data frames) and directly inherited from the standards NMEA0183 messages.
@@ -66,6 +66,8 @@ This server allows sending NMEA commands towards a coupler. This is mostly used 
 | master      | string                    | None        | IP address of the client allowed to send messages towards instruments. First client by default |
 | nmea2000    | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see above)                                                    |
 | buffer_size | int                       | 256         | Size of the receive buffer. Smaller size are useful for low message rate on the interface      |
+| filters     | filter id list            | None        | List of the filters applicable for the server (see corresponding section)                      |
+
 
 
 #### gRPCNMEAServer class (future)
@@ -92,6 +94,10 @@ Warning: when the application is connected to the server all traffic is re-route
 | port    | int    | 4501    | listening port of the server                           |
 | coupler | string | None    | Name of the Miniplex coupler in the configuration file |
 
+### NMEAKController server
+
+This is an internal server that has no direct TCP access. All accesses to this server are via the Console. This server maintain the list of devices connected on the NMEA2000 network along with the information they are sending.
+
 
 ### Couplers
 Couplers classes are connecting to instrumentation bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
@@ -109,18 +115,29 @@ Under preparation
 
 #### Coupler generic parameters
 
-| Name           | Type                                 | Default       | Signification                                                                                                                |
-|----------------|--------------------------------------|---------------|------------------------------------------------------------------------------------------------------------------------------|
-| timeout        | float                                | 10            | Time out on coupler read in seconds                                                                                          |
- | report_timer   | float                                | 30            | Reporting / tracing interval in sec.                                                                                         |
- | max_attempt    | integer                              | 20            | Max number of attempt to open the device                                                                                     |
-| open_delay     | float                                | 2             | Delay between attempt to open the device                                                                                     |
-| talker         | string (2)                           | None          | Talker ID substitution for NMEA0183                                                                                          |
-| protocol       | nmea0183, nmea2000                   | nmea0183      | Message processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 when possible |
-| direction      | read_only, write_only, bidirectional | bidirectional | Direction of exchange with device                                                                                            |
-| trace_messages | boolean                              | False         | Trace all messages after internal pre-processing                                                                             |
-| trace_raw      | boolean                              | False         | Trace all messages in device format                                                                                          | 
-| autostart      | boolean                              | True          | The coupler is started automatically when the service starts, if False it needs to be started via the Console                |
+| Name                | Type                                 | Default       | Signification                                                                                                                |
+|---------------------|--------------------------------------|---------------|------------------------------------------------------------------------------------------------------------------------------|
+| timeout             | float                                | 10            | Time out on coupler read in seconds                                                                                          |
+ | report_timer        | float                                | 30            | Reporting / tracing interval in sec.                                                                                         |
+ | max_attempt         | integer                              | 20            | Max number of attempt to open the device                                                                                     |
+| open_delay          | float                                | 2             | Delay between attempt to open the device                                                                                     |
+| talker              | string (2)                           | None          | Talker ID substitution for NMEA0183                                                                                          |
+| protocol            | nmea0183, nmea2000, nmea_mix         | nmea0183      | Message processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 when possible |
+| direction           | read_only, write_only, bidirectional | bidirectional | Direction of exchange with device                                                                                            |
+| trace_messages      | boolean                              | False         | Trace all messages after internal pre-processing                                                                             |
+| trace_raw           | boolean                              | False         | Trace all messages in device format                                                                                          | 
+| autostart           | boolean                              | True          | The coupler is started automatically when the service starts, if False it needs to be started via the Console                |
+| nmea2000_controller | string                               | None          | Name of the server of class NMEA2KController                                                                                 |
+
+Remarks on protocol behavior:
+
+a) When nmea2000 is selected, NMEA0183 messages are anyway routed transparently when the coupler encodes NMEA2000 frames in pseudo NMEA0183 messages, only NMEA2000 messages (encoded via NMEA0183) are partially decoded in order to reformat them in one of the supported NMEA2000 format. PGN that are part of the ISO protocol are fully decoded and processed locally in the NMEA2KController instance.
+
+b) When nmea0183 is selected, all messages are routed in NMEA0183 and no decoding of possible NMEA2000 is performed.
+
+c) When nmea_mix is selected, the protocol PGN are decoded and processed in the corresponding NMEA2KController instance to give a view of the network. All other messages are routed internally as NMEA2000, but externally they stay in their input format. That mode is only working if a NMEA2KController has been instanced.
+
+**When a NMEA2KController is defined, all ISO protocol messages are processed locally and not forwarded to the message server, so they are not visible by the client**
 
 #### Coupler classes
 
@@ -199,9 +216,47 @@ One particular Publisher is the Injector that allows sending the output of one i
 
 ### Filters
 
-### Configuration Yaml file
+Each filter is described in a specific object, there are 2 main classes to process the 2 message protocols. The action definition is common to both.
+On all matching messages the defined action is applied.
 
-The file includes the global parameters 
+### Filter classes
+
+#### NMEAFilter
+
+Abstract class holding action parameters
+
+| Name   | Type                 | Default | Signification                                                                         |
+|--------|----------------------|---------|---------------------------------------------------------------------------------------|
+| action | discard, time_filter | none    | if no action defined, the filter is disabled                                          |
+| period | float                | none    | minimum period in seconds between messages, if undefined or 0, the filter is disabled |
+
+#### NMEA0183filter (NMEAFilter)
+
+All NMEA0183 messages are processed by the filter. For Coupler in nmea_mix mode, NMEA2000 messages are processed as such, not as NMEA0183.
+
+
+| Name      | Type                     | Default | Signification                                                                                      |
+|-----------|--------------------------|---------|----------------------------------------------------------------------------------------------------|
+| talker    | string or list of string | none    | Talker ID of the message, or list of talker ID (2 letters), if none, all talker will be processed  |
+| formatter | string or list of string | none    | Formatter of the message (3 letters), or list of formatters, if none, all formatters are processed |
+
+If no talker or formatter is defined, then the filter is discarded
+
+#### NMEA2000Filter (NMEAFilter)
+
+All NMEA2000 Messages are processed through this filter is the Coupler is in nmea2000 or nmea_mix mode.
+
+| Name         | Type     | Default | Signification                                                      |
+|--------------|----------|---------|--------------------------------------------------------------------|
+| source       | int      | none    | source address of the message. If none, all messages are processed |
+| pgn          | int list | none    | list of the PGN to be filtered. If none, all PGN are processed     |
+| mfg_id       | int      | none    | Manufacturer NMEA2000 ID (see NMEA200 site)                        |
+| mfg_name     | string   | None    | Manufacturer name as per NMEA2000 official table                   |
+| product_name | string   | None    | Product name as published by the PGN 126996. Not always present    |
+
+
+
+
 
 ## Victron VE Direct gRPC server
 This service is permanently reading the VEDirect (RS485 over USB) of the MPPT device.
@@ -217,6 +272,10 @@ All configurations files are using the [Yaml language](https://yaml.org/spec/1.2
 Keywords used and structure(s) are explained here below
 
 ### Messages server configuration file
+
+That is the main file read by the application upon starts and that instanciate all objects that are declared in the file with the corresponding parameters. There are also some global parameters
+
+
 
 The file is divided in 2 main sections: global section and objects section. The file is read only upon the server startup, so to update the server parameters a restart is needed.
 

@@ -1,11 +1,14 @@
 #-------------------------------------------------------------------------------
 # Name:        IP Coupler
-# Purpose:     Abstract class for all instruments with a IP transport interface
+# Purpose:     Abstract class and implementation classes for all
+#               instruments with a IP transport interface
+#               Includes NMEA0183 messages buffering reassembly
+#               Includes Shipmodul MXPGN NMEA2000 frame decoding (no payload decoding)
 #
 # Author:      Laurent Carré
 #
 # Created:     27/02/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -359,6 +362,15 @@ class BufferedIPCoupler(IPCoupler):
         dlc = attribute >> 8 & 0xF
         source_addr = attribute & 0xFF
         pgn, dest_addr = PGNDef.pgn_pdu1_adjust(pgn)
+        # now decide what to do next
+        # if NMEA_MIX, return without decoding except for ISO protocol messages when N2KController is present
+        if self._mode == self.NMEA_MIX:
+            if self._n2k_controller is None or not PGNDef.pgn_for_controller(pgn):
+                # return a partially decoded NMEA2000 message
+                msg = NMEA2000Msg(pgn, prio, source_addr, dest_addr)
+                gmsg = NavGenericMsg(N2K_MSG, raw=m0183.raw, msg=msg)
+                return gmsg
+        # here we continue decoding in NMEA2000 mode and for ISO messages
         data = bytearray(dlc)
         pr_byte = 0
         l_hex = len(fields[2])
@@ -478,7 +490,9 @@ class NMEATCPReader(BufferedIPCoupler):
         if msg0183.proprietary():
             return fromProprietaryNmea(msg0183)
         elif msg0183.address() == b'MXPGN':
-            return self.mxpgn_decode(msg0183)
+            msg = self.mxpgn_decode(msg0183)
+            # print(msg.dump())
+            return msg
         else:
             return msg0183
 

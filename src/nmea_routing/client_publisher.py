@@ -23,18 +23,18 @@ _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 class NMEAPublisher(Publisher):
 
-    def __init__(self, client, couplers: list):
+    def __init__(self, client, couplers: list, filters):
 
-        super().__init__(None, internal=True, couplers=couplers, name=client.descr())
+        super().__init__(None, internal=True, couplers=couplers, name=client.descr(), filters=filters)
         self._client = client
 
         client.add_publisher(self)
-        # reader.register(self)
+        _logger.info("NMEA Publisher %s created" % self.name())
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.raw is None:
-            _logger.error("No transparent payload available for %s" % msg.printable())
-            return False
+            _logger.error("No transparent payload available for %s => wrong nmea2000 mode on input ?" % msg.dump())
+            return True
         return not self._client.send(msg.raw)
 
     def last_action(self):
@@ -47,8 +47,8 @@ class NMEAPublisher(Publisher):
 
 class NMEA2000DYPublisher(NMEAPublisher):
 
-    def __init__(self, client, couplers):
-        super().__init__(client, couplers)
+    def __init__(self, client, couplers, filters):
+        super().__init__(client, couplers, filters)
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.type == N2K_MSG:
@@ -60,8 +60,8 @@ class NMEA2000DYPublisher(NMEAPublisher):
 
 class NMEA2000STPublisher(NMEAPublisher):
 
-    def __init__(self, client, couplers):
-        super().__init__(client, couplers)
+    def __init__(self, client, couplers, filters):
+        super().__init__(client, couplers, filters)
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.type == N2K_MSG:

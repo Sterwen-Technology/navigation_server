@@ -13,11 +13,11 @@ import threading
 import time
 from google.protobuf.json_format import MessageToJson
 import datetime
-import os
+import logging
 import base64
 
 from nmea2000.nmea2k_pgndefs import *
-from nmea_routing.publisher import Publisher
+
 from generated.nmea2000_pb2 import nmea2000pb
 from nmea_routing.generic_msg import *
 from nmea_routing.configuration import NavigationConfiguration
@@ -37,13 +37,18 @@ class NMEA2000Msg:
         self._prio = prio
         self._sa = sa
         self._da = da
+        # define if the PGN is part of ISO and base protocol (do not carry navigation data)
+        self._is_iso = PGNDef.pgn_for_controller(pgn)
+        self._ts = int(time.monotonic() * 1e6)
         if payload is not None:
             self._payload = payload
-            self._ts = int(time.monotonic() * 1e6)
             if len(payload) <= 8:
                 self._fast_packet = False
             else:
                 self._fast_packet = True
+        else:
+            self._payload = None
+
 
     @property
     def pgn(self):
@@ -69,6 +74,19 @@ class NMEA2000Msg:
     def fast_packet(self):
         return self._fast_packet
 
+    @property
+    def is_iso_protocol(self):
+        return self._is_iso
+
+    # The following 2 methods are for compatibility with NavGenericMsg
+    @property
+    def type(self):
+        return N2K_MSG
+
+    @property
+    def msg(self):
+        return self
+
     def display(self):
         pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
         print("PGN %d|%04X|%s|time:%d" % (self._pgn, self._pgn, pgn_def.name, self._ts))
@@ -80,17 +98,31 @@ class NMEA2000Msg:
             return self.format2()
 
     def format1(self):
+        '''
+        Generate a string to display the message with PGN name
+        '''
         try:
             pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
             name = pgn_def.name
         except N2KUnknownPGN:
             name = "Unknown PGN"
+        if self._payload is None:
+            payload = " "
+        else:
+            payload = self._payload.hex()
         return "PGN %d|%04X|%s sa=%d da=%d time=%d data:%s" % (self._pgn, self._pgn, name, self._sa, self._da,
-                                                               self._ts, self._payload.hex())
+                                                               self._ts, payload)
 
     def format2(self):
+        '''
+        Generate a string to display the message with PGN number
+        '''
+        if self._payload is None:
+            payload = " "
+        else:
+            payload = self._payload.hex()
         return "2K|%d|%04X|%d|%d|%d|%d|%s" % (self._pgn, self._pgn, self._prio, self._sa, self._da,
-                                              self._ts, self._payload.hex())
+                                              self._ts, payload)
 
     def as_protobuf(self, res: nmea2000pb):
 
@@ -118,6 +150,9 @@ class NMEA2000Msg:
         except N2KUnknownPGN:
             _logger.error("No definition for PGN %d => cannot decode" % self._pgn)
             return
+        if self._payload is None:
+            _logger.error("NMEA2000 Decode with no payload: %s" % self.format1())
+            raise N2KDecodeException
         try:
             return pgn_def.decode_pgn_data(self._payload)
         except N2KDecodeException as e:
@@ -182,141 +217,6 @@ def fromPGNST(frame):
     raise NotImplementedError("PGNST decoding")
 
 
-class PgnRecord:
-
-    def __init__(self, pgn: int, clock: int):
-        self._pgn = pgn
-        self._pgn_def = PGNDefinitions.pgn_defs().pgn_def(pgn)
-        self._clock = clock
-        self._count = 1
-
-    @property
-    def pgn(self):
-        return self._pgn
-
-    @property
-    def pgn_def(self):
-        return self._pgn_def
-
-    def tick(self):
-        self._count += 1
-
-    def check(self, clock, interval) -> bool:
-        if clock - self._clock >= interval:
-            self._clock = clock
-            return True
-        else:
-            return False
-
-    def __str__(self):
-        if self._pgn == 0:
-            return "Dummy PGN 0"
-        else:
-            return "PGN %d|%04X|%s|count:%d" % (self._pgn, self._pgn, self._pgn_def, self._count)
-
-
-class N2KProbePublisher(Publisher):
-
-    def __init__(self, opts):
-        _logger.info("Instantiating N2KProbePublisher")
-        self._interval = int(opts['interval']) * 1e9
-        self._records = {}
-        super().__init__(opts)
-
-    def process_msg(self, gen_msg):
-        # print("Process msg pgn", msg.pgn)
-        if gen_msg.type != N2K_MSG:
-            return
-        msg = gen_msg.msg
-        clock = time.time_ns()
-        display = False
-        if msg.pgn == 0:
-            return False
-        try:
-            rec = self._records[msg.pgn]
-        except KeyError:
-            display = True
-            rec = PgnRecord(msg.pgn, clock)
-            self._records[msg.pgn] = rec
-        else:
-            rec.tick()
-            if rec.check(clock, self._interval):
-                display = True
-        if display:
-            print(rec)
-        return True
-
-    def dump_records(self):
-        for rec in self._records.values():
-            print(rec)
-
-
-class N2KTracePublisher(Publisher):
-
-    def __init__(self, opts):
-        super().__init__(opts)
-        self._filter = opts.getlist('filter', int, None)
-        if self._filter is not None:
-            _logger.info("%s filter:%s" % (self.name(), self._filter))
-        self._sources = opts.getlist('sources', int, None)
-        if self._sources is not None:
-            _logger.info("%s sources:%s" % self.name(), self._sources)
-        self._print_option = opts.get('output', str, 'ALL')
-        _logger.info("%s output option %s" % (self.name(), self._print_option))
-        self._trace_fd = None
-        filename = opts.get('file', str, None)
-        if filename is not None:
-            trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')
-            date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
-            filename = "%s-N2K-%s.log" % (filename, date_stamp)
-            filepath = os.path.join(trace_dir, filename)
-            _logger.info("Opening trace file %s" % filepath)
-            try:
-                self._trace_fd = open(filepath, "w")
-            except IOError as e:
-                _logger.error("Trace file error %s" % e)
-                self._trace_fd = None
-
-    def process_msg(self, gen_msg):
-        if gen_msg.type != N2K_MSG:
-            return True
-        msg = gen_msg.msg
-        if self._print_option == 'NONE':
-            return True
-        if self._filter is not None:
-            if msg.pgn not in self._filter:
-                return True
-        # print("decoding %s", msg)
-        res = msg.decode()
-        # _logger.debug("Trace publisher msg:%s" % res)
-        if res is not None:
-            if self._print_option in ('ALL', 'PRINT'):
-                print(res)
-            if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
-                self._trace_fd.write(str(res))
-                self._trace_fd.write('\n')
-        return True
-
-    def stop(self):
-        if self._trace_fd is not None:
-            self._trace_fd.close()
-        super().stop()
-
-
-def pgn_list(str_filter):
-    res = []
-    str_pgn_list = str_filter.split(',')
-    pgn_defs = PGNDefinitions.pgn_defs()
-    for str_pgn in str_pgn_list:
-        pgn = int(str_pgn)
-        try:
-            pgn_d = pgn_defs.pgn_def(pgn)
-        except N2KUnknownPGN:
-            print("Invalid PGN:", pgn, "Ignored")
-            continue
-        res.append(pgn)
-    return res
-
 
 class NMEA2000Object:
     '''
@@ -356,12 +256,21 @@ class NMEA2000Factory:
         except KeyError:
             return NMEA2000Object(message.pgn, message, kwargs=fields)
 
+#-----------------------------------------------------------------------------------
+#
+#   Set of classes to manage reassembly of Fast Packet messages payload
+#
+#-----------------------------------------------------------------------------------
 
 class FastPacketException(Exception):
     pass
 
 
 class FastPacket:
+    '''
+    This manage the reassembly for one NMEA2000 with payload > 8 bytes
+    An instance is created each time a new sequence is detected
+    '''
 
     @staticmethod
     def compute_key(pgn, addr, seq):
@@ -447,6 +356,11 @@ class FastPacket:
 
 
 class FastPacketHandler:
+
+    '''
+    This class is linked to one Coupler instance and handle the reassembly of fast Packets payload
+
+    '''
 
     def __init__(self, instrument):
         self._sequences = {}

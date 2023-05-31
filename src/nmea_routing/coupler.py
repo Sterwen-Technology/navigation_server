@@ -104,10 +104,8 @@ class Coupler(threading.Thread):
         self._rate = 0.0
         self._rate_s = 0.0
         #
-        #  message filtering and automatic processing
+        #  message automatic processing
         #
-        self._filter_function = None
-        self._filter_name = opts.get('filter', str, None)
         self._n2k_controller = None
         self._n2k_ctlr_name = opts.get('nmea2000_controller', str, None)
         self._data_sink = None
@@ -162,12 +160,6 @@ class Coupler(threading.Thread):
         if self._n2k_writer is not None:
             self._n2k_writer.stop()
 
-    def process_filter(self, msg: NavGenericMsg) -> bool:
-        if self._filter_function is not None:
-            return self._filter_function(msg)
-        else:
-            return True
-
     def run(self):
         self._has_run = True
         # now resolve internal references
@@ -205,7 +197,7 @@ class Coupler(threading.Thread):
                     self.close()
                     continue
                 else:
-                    _logger.debug(msg.printable())
+                    _logger.debug("%s push:%s" % (self.name(), msg))
 
             except CouplerTimeOut:
                 continue
@@ -222,9 +214,9 @@ class Coupler(threading.Thread):
             # good data received - filter and publish
             self._total_msg += 1
             self._state = self.ACTIVE
-            if self.process_filter(msg):
-                # unfiltered data are published
-                self.publish(msg)
+            self.publish(msg)
+            # end of run loop
+
         self.stop()
         self.close()
         _logger.info("%s coupler thread stops"%self._name)
@@ -311,11 +303,16 @@ class Coupler(threading.Thread):
         while fetch_next:
             msg = self._read()
             self.trace(self.TRACE_IN, msg)
+            # _logger.debug("Read:%s", msg)
             if self._data_sink is not None:
                 self._data_sink.send_msg(msg)
             # print(msg.printable())
             if msg.type == N2K_MSG:
-                fetch_next = self.check_ctlr_msg(msg)
+                if self._n2k_controller is not None and msg.is_iso_protocol():
+                    fetch_next = True
+                    self._n2k_controller.send_message(msg.msg)
+                else:
+                    fetch_next = False
             else:
                 fetch_next = False
         return msg
@@ -350,7 +347,6 @@ class Coupler(threading.Thread):
         except KeyError:
             _logger.error("%s Wrong reference for %s: %s" % (self.name(), name, descr))
             return None
-
 
     def open_trace_file(self):
         trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')

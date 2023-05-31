@@ -17,14 +17,17 @@ log_module:
     nmea2000.nmea2k_controller: INFO
     nmea_data.data_client: INFO
     nmea_routing.IPCoupler: INFO
-    nmea_routing.publisher: DEBUG
+    nmea_routing.publisher: INFO
+    nmea_routing.filters: INFO
+    nmea_routing.coupler: INFO
 
 servers:
 
 - NMEAServer:
     class: NMEAServer
     port: 4500
-    nmea2000: transparent
+    nmea2000: dyfmt
+    filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K, Barometer]
 
 - Console:
     class: Console
@@ -57,14 +60,41 @@ publishers:
       class: N2KTracePublisher
       couplers: [SNReplay]
       active: false
-      filter: [129026]
-      file: trace129026
+      filters: [AutoPilotN2K]
+      output: PRINT
+      # file: trace129026
 
 
 data_sinks:
 
 - DataAnalyser:
       class: NMEADataClient
+
+filters:
+
+- RemoveGPS:
+     class: NMEA0183Filter
+     talker: GP
+     formatter: GSV
+     action: discard
+
+- DiscardAISGPS:
+     class: NMEA2000Filter
+     source: 43
+     pgn: [129025, 129026]
+     action: discard
+
+- AutoPilotN2K:
+    class: NMEA2000Filter
+    source: 7
+    action: discard
+
+- Barometer:
+    class: NMEA2000Filter
+    source: 52
+    pgn: [130310, 130311, 130314]
+    action: time_filter
+    period: 60.0
 
 
 

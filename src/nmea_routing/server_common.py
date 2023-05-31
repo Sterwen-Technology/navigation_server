@@ -15,6 +15,7 @@ import socket
 import collections
 
 from nmea_routing.configuration import NavigationConfiguration
+from nmea_routing.filters import FilterSet
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -85,6 +86,10 @@ class NavTCPServer(NavigationServer, threading.Thread):
         self._socket.bind(('0.0.0.0', self._port))
         self._socket.settimeout(self._timeout)
         self._stop_flag = False
+        self._filters = None
+        filter_names = options.getlist('filters', str)
+        if filter_names is not None and len(filter_names) > 0:
+            self._filters = FilterSet(filter_names)
 
     def running(self) -> bool:
         return self.is_alive()

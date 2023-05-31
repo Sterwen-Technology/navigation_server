@@ -29,7 +29,7 @@ class NMEAInvalidFrame(Exception):
 class NMEA0183Msg(NavGenericMsg):
 
     def __init__(self, data):
-        super().__init__(N0183_MSG, raw=data)
+        super().__init__(N0183_MSG, raw=data, msg=self)
         # verify that we have a checksum
         if self._raw[self._datalen - 3] != ord('*'):
             _logger.error("NMEA183 Frame without checksum")
@@ -64,6 +64,9 @@ class NMEA0183Msg(NavGenericMsg):
 
     def proprietary(self):
         return self._proprietary
+
+    def __str__(self):
+        return self._raw[:self._datalen].decode()
 
     def replace_talker(self, talker: bytes):
         self._raw[1:3] = talker[:2]
@@ -117,12 +120,14 @@ class NMEA0183Sentences:
         hex_val = "%2X" % val
         return hex_val
 
-    _sender_id = ''
+    _sender_id = b'XX'
     _local_hours = 0
     _local_minutes = 0
 
     @staticmethod
     def init(sender_id):
+        if type(sender_id) == str:
+            sender_id = sender_id.encode()
         NMEA0183Sentences._sender_id = sender_id
         NMEA0183Sentences._local_hours = time.timezone / 3600
         NMEA0183Sentences._local_minutes = time.timezone % 3600
@@ -135,6 +140,12 @@ class NMEA0183Sentences:
         checksum = NMEA0183Sentences.checksum(self._sentence)
         msg = ("%s*%2X\r\n" % (self._sentence, checksum)).encode()
         return msg
+
+    def talker(self):
+        return self._sender_id
+
+    def formatter(self):
+        raise NotImplementedError
 
 
 class ZDA(NMEA0183Sentences):
@@ -150,6 +161,9 @@ class ZDA(NMEA0183Sentences):
                                                      NMEA0183Sentences._local_hours,
                                                      NMEA0183Sentences._local_minutes)
 
+    def formatter(self):
+        return b'ZDA'
+
 
 class XDR(NMEA0183Sentences):
 
@@ -162,6 +176,9 @@ class XDR(NMEA0183Sentences):
         if self._nbt > 4:
             return
         self._sentence += ",%s,%s,%s,%s" % (t_type, data, unit, t_id)
+
+    def formatter(self):
+        return b'XDR'
 
 
 if __name__ == "__main__":
