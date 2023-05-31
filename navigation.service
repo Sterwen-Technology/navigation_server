@@ -1,5 +1,5 @@
 [Unit]
-Description=Navigation Data Server
+Description=Navigation Local Agent
 Requires=network.target
 
 [Service]

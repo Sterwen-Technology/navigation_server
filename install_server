@@ -3,14 +3,18 @@
 #
 cp navigation.service /lib/systemd/system
 cp vedirect.service /lib/systemd/system
+cp navigation_agent.service /lib/systemd/system
 
 systemctl daemon-reload
 
 systemctl enable navigation
 systemctl enable vedirect
+systemctl enable navigation_agent
 
 systemctl start navigation
 systemctl start vedirect
+systemctl start navigation_agent
 
 systemctl status navigation
 systemctl status vedirect
+systemctl status navigation_agent

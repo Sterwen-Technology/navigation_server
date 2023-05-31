@@ -1,0 +1,13 @@
+[Unit]
+Description=Navigation Local Agent
+Requires=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3  /data/solidsense/navigation/src/local_agent.py -d /data/solidsense/navigation
+Restart=always
+RestartSec=6
+
+[Install]
+WantedBy=multi-user.target

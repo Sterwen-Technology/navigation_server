@@ -14,6 +14,8 @@ import logging
 import os
 import time
 from argparse import ArgumentParser
+import subprocess
+import shlex
 import signal
 
 from generated.agent_pb2 import *
@@ -58,16 +60,30 @@ class Options(object):
         return self.__getattr__(attr)
 
 
+def run_cmd(args: list):
+    try:
+        r = subprocess.run(args, capture_output=True, encoding='utf-8')
+    except Exception as e:
+        _logger.error('SendCmd %s error %s' % (args[0], e))
+        return [str(e)]
+    if r.returncode != 0:
+        _logger.error("Agent error for command:%s" % args[0])
+        return ['Process return code %s' % r.returncode]
+    lines = r.stdout.split('\n')
+    return lines
+
+
 class AgentServicerImpl(AgentServicer):
 
     def SendCmd(self, request, context):
         cmd = request.cmd
         _logger.info("Agent send cmd:%s" % cmd)
-        with os.popen(cmd) as fd:
-            l_resp = fd.readline()
+        args = shlex.split(cmd)
+        lines = run_cmd(args)
+        for l_resp in lines:
             resp = AgentResponse()
             resp.resp = l_resp
-            _logger.info("Resp:%s" % l_resp)
+            _logger.debug("Resp:%s" % l_resp)
             yield resp
         return
 
@@ -77,7 +93,7 @@ class AgentServer(NavigationGrpcServer):
     def __init__(self, options):
 
         super().__init__(options)
-        add_AgentServicer_to_server(AgentServicerImpl, self._grpc_server)
+        add_AgentServicer_to_server(AgentServicerImpl(), self._grpc_server)
 
 
 def main():
