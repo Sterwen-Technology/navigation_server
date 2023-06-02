@@ -49,7 +49,7 @@ def main():
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
     _logger.setLevel('INFO')
-    client = AgentClient("localhost:4506")
+    client = AgentClient("192.168.1.30:4506")
     try:
         for r in client.send_cmd('ls'):
             print(r)
