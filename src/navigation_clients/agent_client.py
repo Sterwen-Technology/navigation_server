@@ -48,7 +48,7 @@ class AgentClient:
         self._req_id += 1
         request.cmd = cmd
         try:
-            resp = self._stub.SendCmdMultipleResp(request)
+            resp = self._stub.SendCmdSingleResp(request)
             return resp.resp
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
