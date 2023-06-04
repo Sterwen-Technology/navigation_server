@@ -27,7 +27,7 @@ class AgentClient:
         self._req_id = 0
         _logger.info("Console on agent server %s" % address)
 
-    def send_cmd(self, cmd):
+    def send_cmd_multiple_resp(self, cmd):
         request = AgentMsg()
         request.id = self._req_id
         self._req_id += 1
@@ -37,7 +37,7 @@ class AgentClient:
                 yield resp.resp
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info("Server not accessible")
+                _logger.info("Server %s not accessible" % self._address)
             else:
                 _logger.error("SendCmd - Error accessing server:%s" % err)
             raise GrpcAccessException
