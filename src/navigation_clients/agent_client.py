@@ -33,8 +33,23 @@ class AgentClient:
         self._req_id += 1
         request.cmd = cmd
         try:
-            for resp in self._stub.SendCmd(request):
+            for resp in self._stub.SendCmdMultipleResp(request):
                 yield resp.resp
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.info("Server %s not accessible" % self._address)
+            else:
+                _logger.error("SendCmd - Error accessing server:%s" % err)
+            raise GrpcAccessException
+
+    def send_cmd_single_resp(self, cmd):
+        request = AgentMsg()
+        request.id = self._req_id
+        self._req_id += 1
+        request.cmd = cmd
+        try:
+            resp = self._stub.SendCmdMultipleResp(request)
+            return resp.resp
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
                 _logger.info("Server %s not accessible" % self._address)

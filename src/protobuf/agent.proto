@@ -17,10 +17,13 @@ message AgentMsg {
 }
 
 message AgentResponse {
-  string resp=1;
+  uint32 err_code=1;
+  string resp=2;
 }
 
 
 service Agent {
-  rpc SendCmd(AgentMsg) returns (stream AgentResponse){}
+  rpc SendCmdMultipleResp(AgentMsg) returns (stream AgentResponse){}
+  rpc SendCmdSingleResp(AgentMsg) returns (AgentResponse) {}
+  rpc SendCmdNoResp(AgentMsg) returns (AgentResponse) {}
 }

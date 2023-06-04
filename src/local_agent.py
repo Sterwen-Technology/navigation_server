@@ -60,32 +60,56 @@ class Options(object):
         return self.__getattr__(attr)
 
 
-def run_cmd(args: list):
+def run_cmd(cmd: str):
+    args = shlex.split(cmd)
     try:
         r = subprocess.run(args, capture_output=True, encoding='utf-8')
     except Exception as e:
         _logger.error('SendCmd %s error %s' % (args[0], e))
-        return [str(e)]
+        return -1, str(e)
     if r.returncode != 0:
         _logger.error("Agent error for command:%s" % args[0])
-        return ['Process return code %s' % r.returncode]
+        return r.returncode, 'Process return code %s' % r.returncode
     lines = r.stdout.split('\n')
-    return lines
+    return 0, lines
 
 
 class AgentServicerImpl(AgentServicer):
 
-    def SendCmd(self, request, context):
+    def SendCmdMultipleResp(self, request, context):
         cmd = request.cmd
-        _logger.info("Agent send cmd:%s" % cmd)
-        args = shlex.split(cmd)
-        lines = run_cmd(args)
+        _logger.info("Agent send cmd multiple responses:%s" % cmd)
+        return_code, lines = run_cmd(cmd)
+        if return_code != 0:
+            resp = AgentResponse()
+            resp.err_code = return_code
+            resp.resp = lines
+            yield resp
+            return
+        first_resp = True
         for l_resp in lines:
             resp = AgentResponse()
+            if first_resp:
+                resp.err_code = 0
+                first_resp = False
             resp.resp = l_resp
             _logger.debug("Resp:%s" % l_resp)
             yield resp
         return
+
+    def SendCmdSingleResp(self, request, context):
+        cmd = request.cmd
+        _logger.info("Agent send cmd simple responses:%s" % cmd)
+        return_code, lines = run_cmd(cmd)
+        if isinstance(lines, list):
+            line = lines[0]
+        else:
+            line = lines
+        resp = AgentResponse()
+        resp.err_code = return_code
+        resp.resp = line
+        return resp
+
 
 
 class AgentServer(NavigationGrpcServer):

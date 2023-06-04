@@ -15,8 +15,18 @@ class AgentStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.SendCmd = channel.unary_stream(
-                '/Agent/SendCmd',
+        self.SendCmdMultipleResp = channel.unary_stream(
+                '/Agent/SendCmdMultipleResp',
+                request_serializer=agent__pb2.AgentMsg.SerializeToString,
+                response_deserializer=agent__pb2.AgentResponse.FromString,
+                )
+        self.SendCmdSingleResp = channel.unary_unary(
+                '/Agent/SendCmdSingleResp',
+                request_serializer=agent__pb2.AgentMsg.SerializeToString,
+                response_deserializer=agent__pb2.AgentResponse.FromString,
+                )
+        self.SendCmdNoResp = channel.unary_unary(
+                '/Agent/SendCmdNoResp',
                 request_serializer=agent__pb2.AgentMsg.SerializeToString,
                 response_deserializer=agent__pb2.AgentResponse.FromString,
                 )
@@ -25,7 +35,19 @@ class AgentStub(object):
 class AgentServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def SendCmd(self, request, context):
+    def SendCmdMultipleResp(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SendCmdSingleResp(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SendCmdNoResp(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -34,8 +56,18 @@ class AgentServicer(object):
 
 def add_AgentServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'SendCmd': grpc.unary_stream_rpc_method_handler(
-                    servicer.SendCmd,
+            'SendCmdMultipleResp': grpc.unary_stream_rpc_method_handler(
+                    servicer.SendCmdMultipleResp,
+                    request_deserializer=agent__pb2.AgentMsg.FromString,
+                    response_serializer=agent__pb2.AgentResponse.SerializeToString,
+            ),
+            'SendCmdSingleResp': grpc.unary_unary_rpc_method_handler(
+                    servicer.SendCmdSingleResp,
+                    request_deserializer=agent__pb2.AgentMsg.FromString,
+                    response_serializer=agent__pb2.AgentResponse.SerializeToString,
+            ),
+            'SendCmdNoResp': grpc.unary_unary_rpc_method_handler(
+                    servicer.SendCmdNoResp,
                     request_deserializer=agent__pb2.AgentMsg.FromString,
                     response_serializer=agent__pb2.AgentResponse.SerializeToString,
             ),
@@ -50,7 +82,7 @@ class Agent(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def SendCmd(request,
+    def SendCmdMultipleResp(request,
             target,
             options=(),
             channel_credentials=None,
@@ -60,7 +92,41 @@ class Agent(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/Agent/SendCmd',
+        return grpc.experimental.unary_stream(request, target, '/Agent/SendCmdMultipleResp',
+            agent__pb2.AgentMsg.SerializeToString,
+            agent__pb2.AgentResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def SendCmdSingleResp(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Agent/SendCmdSingleResp',
+            agent__pb2.AgentMsg.SerializeToString,
+            agent__pb2.AgentResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def SendCmdNoResp(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Agent/SendCmdNoResp',
             agent__pb2.AgentMsg.SerializeToString,
             agent__pb2.AgentResponse.FromString,
             options, channel_credentials,
