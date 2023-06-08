@@ -16,6 +16,7 @@ import time
 from argparse import ArgumentParser
 import subprocess
 import shlex
+import threading
 import signal
 
 from generated.agent_pb2 import *
@@ -74,6 +75,30 @@ def run_cmd(cmd: str):
     return 0, lines
 
 
+def run_systemd(cmd: str, service: str):
+    if cmd not in ('start', 'stop', 'restart', 'status'):
+        raise ValueError
+    args = []
+    args[0] = 'systemctl'
+    args[1] = cmd
+    args[2] = service
+    r = subprocess.run(args, capture_output=True, encoding='utf-8')
+    if r.returncode != 0:
+        return r.returncode, "Agent error on systemctl %s %s %d" % (cmd, service, r.returncode)
+    else:
+        return 0, r.stdout.split('\n')
+
+
+class AgentExecutor(threading.Thread):
+
+    def __init__(self, cmd: str):
+        self._cmd = cmd
+        super().__init__()
+
+    def run(self):
+        run_cmd(self._cmd)
+
+
 class AgentServicerImpl(AgentServicer):
 
     def SendCmdMultipleResp(self, request, context):
@@ -110,6 +135,28 @@ class AgentServicerImpl(AgentServicer):
         resp.resp = line
         return resp
 
+    def SendCmdNoResp(self, request, context):
+        cmd = request.cmd
+        _logger.info("Agent send cmd no responses:%s" % cmd)
+        executor = AgentExecutor(cmd)
+        resp = AgentResponse()
+        resp.err_code = 0
+        executor.start()
+        return resp
+
+    def SystemdCmd(self, request, context):
+        cmd = request.cmd
+        service = request.service
+        _logger.info("Agent systemctl %s %s" % (cmd, service))
+        return_code, lines = run_systemd(cmd, service)
+        if isinstance(lines, list):
+            line = lines[0]
+        else:
+            line = lines
+        resp = AgentResponse()
+        resp.err_code = return_code
+        resp.resp = line
+        return resp
 
 
 class AgentServer(NavigationGrpcServer):

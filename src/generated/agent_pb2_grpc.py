@@ -30,6 +30,11 @@ class AgentStub(object):
                 request_serializer=agent__pb2.AgentMsg.SerializeToString,
                 response_deserializer=agent__pb2.AgentResponse.FromString,
                 )
+        self.SystemdCmd = channel.unary_unary(
+                '/Agent/SystemdCmd',
+                request_serializer=agent__pb2.SystemdCmdMsg.SerializeToString,
+                response_deserializer=agent__pb2.AgentResponse.FromString,
+                )
 
 
 class AgentServicer(object):
@@ -53,6 +58,12 @@ class AgentServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def SystemdCmd(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AgentServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -69,6 +80,11 @@ def add_AgentServicer_to_server(servicer, server):
             'SendCmdNoResp': grpc.unary_unary_rpc_method_handler(
                     servicer.SendCmdNoResp,
                     request_deserializer=agent__pb2.AgentMsg.FromString,
+                    response_serializer=agent__pb2.AgentResponse.SerializeToString,
+            ),
+            'SystemdCmd': grpc.unary_unary_rpc_method_handler(
+                    servicer.SystemdCmd,
+                    request_deserializer=agent__pb2.SystemdCmdMsg.FromString,
                     response_serializer=agent__pb2.AgentResponse.SerializeToString,
             ),
     }
@@ -128,6 +144,23 @@ class Agent(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/Agent/SendCmdNoResp',
             agent__pb2.AgentMsg.SerializeToString,
+            agent__pb2.AgentResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def SystemdCmd(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Agent/SystemdCmd',
+            agent__pb2.SystemdCmdMsg.SerializeToString,
             agent__pb2.AgentResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

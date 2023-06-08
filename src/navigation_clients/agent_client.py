@@ -57,6 +57,37 @@ class AgentClient:
                 _logger.error("SendCmd - Error accessing server:%s" % err)
             raise GrpcAccessException
 
+    def send_cmd_no_resp(self, cmd):
+        request = AgentMsg()
+        request.id = self._req_id
+        self._req_id += 1
+        request.cmd = cmd
+        try:
+            resp = self._stub.SendCmdNoResp(request)
+            return resp.resp
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.info("Server %s not accessible" % self._address)
+            else:
+                _logger.error("SendCmd - Error accessing server:%s" % err)
+            raise GrpcAccessException
+
+    def systemd_cmd(self, cmd, service):
+        request = SystemdCmdMsg()
+        request.id = self._req_id
+        self._req_id += 1
+        request.cmd = cmd
+        request.service = service
+        try:
+            resp = self._stub.SystemdCmd(request)
+            return resp.resp
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.info("Server %s not accessible" % self._address)
+            else:
+                _logger.error("SystemdCmd - Error accessing server:%s" % err)
+            raise GrpcAccessException
+
 
 def main():
     loghandler = logging.StreamHandler()

@@ -21,9 +21,16 @@ message AgentResponse {
   string resp=2;
 }
 
+message SystemdCmdMsg {
+  uint32 id=1;
+  string cmd=2;
+  string service=3;
+}
+
 
 service Agent {
   rpc SendCmdMultipleResp(AgentMsg) returns (stream AgentResponse){}
   rpc SendCmdSingleResp(AgentMsg) returns (AgentResponse) {}
   rpc SendCmdNoResp(AgentMsg) returns (AgentResponse) {}
+  rpc SystemdCmd(SystemdCmdMsg) returns (AgentResponse) {}
 }
