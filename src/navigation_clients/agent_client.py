@@ -80,10 +80,10 @@ class AgentClient:
         request.service = service
         try:
             resp = self._stub.SystemdCmd(request)
-            return resp.resp
+            return resp.lines
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info("Server %s not accessible error:%" % (self._address, err))
+                _logger.info("Server %s not accessible error:%s" % (self._address, err))
             else:
                 _logger.error("SystemdCmd - Error accessing server:%s" % err)
             raise GrpcAccessException
