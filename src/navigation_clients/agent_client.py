@@ -83,7 +83,7 @@ class AgentClient:
             return resp.resp
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info("Server %s not accessible" % self._address)
+                _logger.info("Server %s not accessible error:%" % (self._address, err))
             else:
                 _logger.error("SystemdCmd - Error accessing server:%s" % err)
             raise GrpcAccessException
