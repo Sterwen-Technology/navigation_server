@@ -31,6 +31,7 @@ def _parser():
     p.add_argument('-p', '--port', action='store', type=int, default=4506)
     p.add_argument('-n', '--name', type=str, default='NavigationAgentServer')
     p.add_argument('-d', '--working_dir', action='store', type=str)
+    p.add_argument('-t', '--trace', action='store', type=str, default='INFO')
 
     return p
 
@@ -38,7 +39,7 @@ def _parser():
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
-version = "0.6"
+version = "1.0"
 
 
 class Options(object):
@@ -84,9 +85,9 @@ def run_systemd(cmd: str, service: str):
     except Exception as e:
         _logger.error("systemctl execution error: %s" % e)
         return -1
-    _logger.info("systemctl return code:%d" % r.returncode)
+    _logger.debug("systemctl return code:%d" % r.returncode)
     lines = r.stdout.split('\n')
-    _logger.info("stdout=%s" % lines)
+    _logger.debug("stdout=%s" % lines)
     return r.returncode, lines
 
 
@@ -153,11 +154,10 @@ class AgentServicerImpl(AgentServicer):
         return_code, lines = run_systemd(cmd, service)
         resp = AgentResponseML()
         resp.err_code = return_code
-        if len(lines) > 0:
-            for l in lines:
-                resp.lines.add(l)
+        if len(lines) > 1:
+            resp.lines.extend(lines)
         else:
-            resp.lines.add("%s %s return code:%d" % (cmd, service, return_code))
+            resp.lines.extend(["%s %s return code:%d" % (cmd, service, return_code)])
         return resp
 
 
@@ -182,7 +182,7 @@ def main():
     logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
-    _logger.setLevel('INFO')
+    _logger.setLevel(opts.trace)
     _logger.info("Starting Navigation local agent %s - copyright Sterwen Technology 2021-2023" % version)
 
     server = AgentServer(opts)
