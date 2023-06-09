@@ -21,6 +21,11 @@ message AgentResponse {
   string resp=2;
 }
 
+message AgentResponseML {
+  uint32 err_code=1;
+  repeated string lines=2;
+}
+
 message SystemdCmdMsg {
   uint32 id=1;
   string cmd=2;
@@ -32,5 +37,5 @@ service Agent {
   rpc SendCmdMultipleResp(AgentMsg) returns (stream AgentResponse){}
   rpc SendCmdSingleResp(AgentMsg) returns (AgentResponse) {}
   rpc SendCmdNoResp(AgentMsg) returns (AgentResponse) {}
-  rpc SystemdCmd(SystemdCmdMsg) returns (AgentResponse) {}
+  rpc SystemdCmd(SystemdCmdMsg) returns (AgentResponseML) {}
 }

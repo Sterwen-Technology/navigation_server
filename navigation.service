@@ -1,5 +1,5 @@
 [Unit]
-Description=Navigation Local Agent
+Description=Navigation Messages Router
 Requires=network.target
 
 [Service]

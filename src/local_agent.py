@@ -38,7 +38,7 @@ def _parser():
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
-version = "0.5"
+version = "0.6"
 
 
 class Options(object):
@@ -78,15 +78,16 @@ def run_cmd(cmd: str):
 def run_systemd(cmd: str, service: str):
     if cmd not in ('start', 'stop', 'restart', 'status'):
         raise ValueError
-    args = []
-    args[0] = 'systemctl'
-    args[1] = cmd
-    args[2] = service
-    r = subprocess.run(args, capture_output=True, encoding='utf-8')
-    if r.returncode != 0:
-        return r.returncode, "Agent error on systemctl %s %s %d" % (cmd, service, r.returncode)
-    else:
-        return 0, r.stdout.split('\n')
+    args = ['systemctl', cmd, service]
+    try:
+        r = subprocess.run(args, capture_output=True, encoding='utf-8')
+    except Exception as e:
+        _logger.error("systemctl execution error: %s" % e)
+        return -1
+    _logger.info("systemctl return code:%d" % r.returncode)
+    lines = r.stdout.split('\n')
+    _logger.info("stdout=%s" % lines)
+    return r.returncode, lines
 
 
 class AgentExecutor(threading.Thread):
@@ -96,6 +97,7 @@ class AgentExecutor(threading.Thread):
         super().__init__()
 
     def run(self):
+        time.sleep(3.0)
         run_cmd(self._cmd)
 
 
@@ -149,13 +151,13 @@ class AgentServicerImpl(AgentServicer):
         service = request.service
         _logger.info("Agent systemctl %s %s" % (cmd, service))
         return_code, lines = run_systemd(cmd, service)
-        if isinstance(lines, list):
-            line = lines[0]
-        else:
-            line = lines
-        resp = AgentResponse()
+        resp = AgentResponseML()
         resp.err_code = return_code
-        resp.resp = line
+        if len(lines) > 0:
+            for l in lines:
+                resp.lines.add(l)
+        else:
+            resp.lines.add("%s %s return code:%d" % (cmd, service, return_code))
         return resp
 
 

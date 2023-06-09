@@ -33,7 +33,7 @@ class AgentStub(object):
         self.SystemdCmd = channel.unary_unary(
                 '/Agent/SystemdCmd',
                 request_serializer=agent__pb2.SystemdCmdMsg.SerializeToString,
-                response_deserializer=agent__pb2.AgentResponse.FromString,
+                response_deserializer=agent__pb2.AgentResponseML.FromString,
                 )
 
 
@@ -85,7 +85,7 @@ def add_AgentServicer_to_server(servicer, server):
             'SystemdCmd': grpc.unary_unary_rpc_method_handler(
                     servicer.SystemdCmd,
                     request_deserializer=agent__pb2.SystemdCmdMsg.FromString,
-                    response_serializer=agent__pb2.AgentResponse.SerializeToString,
+                    response_serializer=agent__pb2.AgentResponseML.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -161,6 +161,6 @@ class Agent(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/Agent/SystemdCmd',
             agent__pb2.SystemdCmdMsg.SerializeToString,
-            agent__pb2.AgentResponse.FromString,
+            agent__pb2.AgentResponseML.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
