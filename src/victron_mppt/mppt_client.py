@@ -77,10 +77,8 @@ class MPPT_output_proxy:
 
 class MPPT_Client:
 
-    def __init__(self, opts):
-        self._address = opts.address
-        self._port = opts.port
-        self._server = "%s:%d" % (self._address, self._port)
+    def __init__(self, server):
+        self._server = server
         self._channel = grpc.insecure_channel(self._server)
         self._stub = solar_mpptStub(self._channel)
         _logger.info("MPPT server stub created on %s" % self._server)
