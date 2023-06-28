@@ -29,7 +29,7 @@ class NMEA2000Device:
     This class holds the view of the devices on the NMEA2000 Network
     '''
 
-    def __init__(self, address):
+    def __init__(self, address, properties=None):
         self._address = address
         _logger.info("NMEA Controller new device detected at address %d" % address)
         self._lastmsg_ts = 0
@@ -39,7 +39,10 @@ class NMEA2000Device:
                                 }
         self._fields_60928 = None
         self._fields_126996 = None
-        self._properties = {}
+        if properties is None:
+            self._properties = {}
+        else:
+            self._properties = properties
 
     def receive_msg(self, msg: NMEA2000Msg):
         _logger.debug("New message PGN %d for device @%d" % (msg.pgn, self._address))
@@ -104,11 +107,14 @@ class NMEA2000Device:
             self.set_property(self._fields_126996, 'Certification Level')
             self.set_property(self._fields_126996, 'Load Equivalency')
             pi = self._fields_126996['Product information']
-            self._properties['Product name'] = pi[0:32].rstrip(' ')
-            self._properties['Product version'] = pi[32:64].rstrip(' ')
-            self._properties['Description'] = pi[64:96].rstrip(' ')
-            self._properties['Firmware'] = pi[96:128].rstrip(' ')
+            self._properties['Product name'] = pi[0:32].rstrip(' \x00')
+            self._properties['Product version'] = pi[32:64].rstrip(' \x00')
+            self._properties['Description'] = pi[64:96].rstrip(' \x00')
+            self._properties['Firmware'] = pi[96:128].rstrip(' \x00')
             # print(product_name,"|", product_version,"|", description, "|", firmware)
+
+    def asDict(self):
+        return {'address:': self._address, 'properties': self._properties}
 
 
 class NMEA2KController(NavigationServer, threading.Thread):
@@ -116,14 +122,17 @@ class NMEA2KController(NavigationServer, threading.Thread):
     def __init__(self, opts):
         super().__init__(opts)
         threading.Thread.__init__(self, name=self._name)
+        self._devices = {}
         queue_size = opts.get('queue_size', int, 20)
+        self._save_file = opts.get('save_file', str, None)
+        if self._save_file is not None:
+            self.init_save()
         self._input_queue = queue.Queue(queue_size)
         self._stop_flag = False
-        self._devices = {}
         NavigationConfiguration.get_conf().set_global('N2KController', self)
 
     def server_type(self):
-        return 'NMEA200_CONTROLLER'
+        return 'NMEA2000_CONTROLLER'
 
     def running(self) -> bool:
         return self.is_alive()
@@ -191,4 +200,7 @@ class NMEA2KController(NavigationServer, threading.Thread):
             except KeyError:
                 continue
         raise KeyError
+
+    def init_save(self):
+        pass
 
