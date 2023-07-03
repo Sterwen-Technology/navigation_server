@@ -880,6 +880,10 @@ class ASCIIFixField(Field):
 
     def decode_value(self, payload, specs):
         res = N2KDecodeResult(self._name)
+        # if we have some invalidated characters at the end
+        null_start = payload[specs.start:specs.end].find(0xff)
+        if null_start > 0:
+            specs.end = null_start
         res.value = payload[specs.start:specs.end].decode()
         # print(self._name, specs.start, specs.end, self._byte_length,":", res.value)
         return res

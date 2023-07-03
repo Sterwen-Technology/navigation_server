@@ -90,7 +90,11 @@ class NMEA2000Device:
         if self._fields_60928 is None:
             _logger.info("Processing ISO address claim for address %d" % self._address)
             self._fields_60928 = msg_data['fields']
-            mfg_code = self._fields_60928['Manufacturer Code']
+            try:
+                mfg_code = self._fields_60928['Manufacturer Code']
+            except KeyError:
+                _logger.error("No manufacturer code in PGN 60928")
+                mfg_code = 0
             self._properties['Manufacturer Code'] = mfg_code
             try:
                 self._properties['Manufacturer Name'] = Manufacturers.get_from_code(mfg_code).name
@@ -106,11 +110,19 @@ class NMEA2000Device:
             self.set_property(self._fields_126996, 'Product Code')
             self.set_property(self._fields_126996, 'Certification Level')
             self.set_property(self._fields_126996, 'Load Equivalency')
-            pi = self._fields_126996['Product information']
+            try:
+                pi = self._fields_126996['Product information']
+            except KeyError:
+                _logger.error("No Product Information in PGN 126996")
+                return
+            lpi = len(pi)
             self._properties['Product name'] = pi[0:32].rstrip(' \x00')
-            self._properties['Product version'] = pi[32:64].rstrip(' \x00')
-            self._properties['Description'] = pi[64:96].rstrip(' \x00')
-            self._properties['Firmware'] = pi[96:128].rstrip(' \x00')
+            if lpi >= 64:
+                self._properties['Product version'] = pi[32:64].rstrip(' \x00')
+                if lpi >= 96:
+                    self._properties['Description'] = pi[64:96].rstrip(' \x00')
+                    if lpi >= 128:
+                        self._properties['Firmware'] = pi[96:128].rstrip(' \x00')
             # print(product_name,"|", product_version,"|", description, "|", firmware)
 
     def asDict(self):
@@ -138,6 +150,10 @@ class NMEA2KController(NavigationServer, threading.Thread):
         return self.is_alive()
 
     def send_message(self, msg: NMEA2000Msg):
+        if not self.is_alive():
+            # the thread is not running=> warning and discard
+            _logger.error("NMEA Controller thread not running")
+            return
         try:
             self._input_queue.put(msg, block=False)
         except queue.Full:
@@ -152,7 +168,10 @@ class NMEA2KController(NavigationServer, threading.Thread):
                 continue
             _logger.debug("NMEA Controller input %s" % msg.format1())
             # further processing here
-            self.process_msg(msg)
+            try:
+                self.process_msg(msg)
+            except Exception as e:
+                _logger.error("%s NMEA2000 Controller processing error:% on message %s" % (self._name, e, msg.format1()))
 
         _logger.info("%s NMEA2000 Controller stops" % self._name)
 

@@ -89,7 +89,10 @@ class Manufacturers(XMLDefinitionFile):
             print(mfg.name, '|', mfg.key, '|', mfg.code)
 
     def by_code(self, code: int) -> Manufacturer:
-        return self._manufacturer_by_code[code]
+        if code == 0:
+            return "Mfg Code Error"
+        else:
+            return self._manufacturer_by_code[code]
 
     def by_key(self, key: str) -> Manufacturer:
         return self._manufacturer_by_key[key]
