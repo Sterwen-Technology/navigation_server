@@ -92,8 +92,8 @@ class Coupler(threading.Thread):
         self._state = self.NOT_READY
         self._trace_msg = opts.get('trace_messages', bool, False)
         self._trace_raw = opts.get('trace_raw', bool, False)
-        self._trace_msg = self._trace_msg or self._trace_raw
-        if self._trace_msg:
+        # self._trace_msg = self._trace_msg or self._trace_raw
+        if self._trace_msg or self._trace_raw:
             self.open_trace_file()
         self._check_in_progress = False
         self._separator = None
@@ -374,10 +374,12 @@ class Coupler(threading.Thread):
 
     def trace_raw(self, direction, msg):
         if self._trace_raw:
+            ts = datetime.datetime.now()
+            ts_str = ts.strftime("%Y-%m-%d %H:%M:%S.%f")
             if direction == self.TRACE_IN:
-                fc = "R%d#>" % self._total_msg
+                fc = "R%d#%s>" % (self._total_msg, ts_str)
             else:
-                fc = "R%d#<" % self._total_msg_s
+                fc = "R%d#%s<" % (self._total_msg_s, ts_str)
             # l = len(msg) - self._separator_len
             # not all messages have the CRLF included to be further checked
             self._trace_fd.write(fc)
