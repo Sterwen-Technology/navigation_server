@@ -90,6 +90,7 @@ class Coupler(threading.Thread):
         self._stopflag = False
         self._timer = None
         self._state = self.NOT_READY
+        self._trace_fd = None
         self._trace_msg = opts.get('trace_messages', bool, False)
         self._trace_raw = opts.get('trace_raw', bool, False)
         # self._trace_msg = self._trace_msg or self._trace_raw
@@ -219,6 +220,7 @@ class Coupler(threading.Thread):
 
         self.stop()
         self.close()
+        self.stop_trace()
         _logger.info("%s coupler thread stops"%self._name)
 
     def register(self, pub):
@@ -356,10 +358,12 @@ class Coupler(threading.Thread):
         _logger.info("Opening trace file %s" % filepath)
         try:
             self._trace_fd = open(filepath, "w")
+            return True
         except IOError as e:
             _logger.error("Trace file error %s" % e)
             self._trace_msg = False
             self._trace_raw = False
+            return False
 
     def trace(self, direction, msg: NavGenericMsg):
         if self._trace_msg:
@@ -371,6 +375,20 @@ class Coupler(threading.Thread):
             out_msg = msg.printable()
             self._trace_fd.write(out_msg)
             self._trace_fd.write('\n')
+
+    def stop_trace(self):
+        if self._trace_msg or self._trace_raw:
+            _logger.info("Coupler %s closing trace file" % self._name)
+            self._trace_fd.close()
+            self._trace_fd = None
+            self._trace_msg = False
+            self._trace_raw = False
+        else:
+            _logger.error("Coupler %s closing inactive trace" % self._name)
+
+    def start_trace_raw(self):
+        if self.open_trace_file():
+            self._trace_raw = True
 
     def trace_raw(self, direction, msg):
         if self._trace_raw:
