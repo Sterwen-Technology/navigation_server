@@ -384,9 +384,13 @@ class Coupler(threading.Thread):
             self._trace_msg = False
             self._trace_raw = False
         else:
-            _logger.error("Coupler %s closing inactive trace" % self._name)
+            _logger.error("Coupler %s attempt closing inactive trace" % self._name)
 
     def start_trace_raw(self):
+        if not self.is_alive():
+            _logger.error("Coupler %s attempt to start traces while not running")
+            return
+        _logger.info("Starting traces on raw input on %s" % self.name())
         if self.open_trace_file():
             self._trace_raw = True
 
