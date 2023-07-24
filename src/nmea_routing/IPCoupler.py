@@ -317,7 +317,6 @@ class BufferedIPCoupler(IPCoupler):
 
         self._in_queue = None
         self._asynch_io = None
-        self._fast_packet_handler = None
         self._transparent = False
         self._msg_queue_size = opts.get('msg_queue_size', int, 50)
 
@@ -346,74 +345,6 @@ class BufferedIPCoupler(IPCoupler):
     def set_transparency(self, flag: bool):
         if self._asynch_io is not None:
             self._asynch_io.set_transparency(flag)
-
-    def mxpgn_decode(self, m0183: NMEA0183Msg) -> NavGenericMsg:
-        '''
-        Decode a NMEA0183 message encapsulating NMEA2000 in Shipmodul Miniplex format
-        :param m0183: The NMEA0183 message from the Miniplex
-        :return:
-        A generic message encapsulating a NMEA2000 message
-        Raise Value Error if the message is incomplete (Fast Packet)
-        '''
-        fields = m0183.fields()
-        pgn = int(fields[0], 16)
-        attribute = int(fields[1], 16)
-        prio = attribute >> 12 & 7
-        dlc = attribute >> 8 & 0xF
-        source_addr = attribute & 0xFF
-        pgn, dest_addr = PGNDef.pgn_pdu1_adjust(pgn)
-        # now decide what to do next
-        # if NMEA_MIX, return without decoding except for ISO protocol messages when N2KController is present
-        if self._mode == self.NMEA_MIX:
-            if self._n2k_controller is None or not PGNDef.pgn_for_controller(pgn):
-                # return a partially decoded NMEA2000 message
-                msg = NMEA2000Msg(pgn, prio, source_addr, dest_addr)
-                gmsg = NavGenericMsg(N2K_MSG, raw=m0183.raw, msg=msg)
-                return gmsg
-        # here we continue decoding in NMEA2000 mode and for ISO messages
-        data = bytearray(dlc)
-        pr_byte = 0
-        l_hex = len(fields[2])
-        i_hex = l_hex - 2
-        while pr_byte < dlc:
-            data[pr_byte] = int(fields[2][i_hex:i_hex + 2], 16)
-            pr_byte += 1
-            i_hex -= 2
-
-        # now the PGN sentence is decoded
-
-        def check_pgn():
-            try:
-                fp = PGNDef.fast_packet_check(pgn)
-            except N2KUnknownPGN as e:
-                _logger.info("%s MXPGN decode %s SA=%d data=%s" % (self.name(), e, source_addr, data.hex()))
-                raise ValueError
-            return fp
-
-        self.trace_n2k_raw(pgn, source_addr, prio, data)
-        _logger.debug("start processing PGN %d" % pgn)
-        if self._fast_packet_handler.is_pgn_active(pgn, source_addr, data):
-            _logger.debug("Shipmodul PGN %d on address %d fast packet active" % (pgn, source_addr))
-            try:
-                data = self._fast_packet_handler.process_frame(pgn, source_addr, data, self.add_event_trace)
-            except FastPacketException as e:
-                _logger.error("Shipmodul Fast packet error %s pgn %d data %s" % (e, pgn, data.hex()))
-                self.add_event_trace(str(e))
-                raise ValueError
-            if data is None:
-                raise ValueError  # no error but just to escape
-        elif check_pgn():
-            _logger.debug("Shipmodul PGN %d is fast packet" % pgn)
-            try:
-                data = self._fast_packet_handler.process_frame(pgn, source_addr, data, self.add_event_trace)
-            except FastPacketException as e:
-                _logger.error("Shipmodul Fast packet error %s on initial frame pgn %d data %s" % (e, pgn, data.hex()))
-                self.add_event_trace(str(e))
-            raise ValueError  # no error but just to escape
-        msg = NMEA2000Msg(pgn, prio, source_addr, dest_addr, data)
-        _logger.debug("Shipmodul PGN decode:%s" % str(msg))  # very intensive => to be removed
-        gmsg = NavGenericMsg(N2K_MSG, msg=msg)
-        return gmsg
 
 
 class TCPBufferedReader:

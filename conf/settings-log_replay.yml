@@ -1,0 +1,45 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/12/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+#
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+  nmea_routing.IPCoupler: INFO
+  nmea_routing.coupler: INFO
+  nmea_routing.ydn2k_coupler: INFO
+  nmea_routing.ikonvert: INFO
+
+servers:
+
+- NMEAServer:
+      class: NMEAServer
+      port: 4500
+      nmea2000: transparent
+
+- Console:
+      class: Console
+      port: 4502
+
+- NMEANetwork:
+      class: NMEA2KController
+
+
+couplers:
+
+- LogReader:
+    class: RawLogCoupler
+    logfile: /mnt/meaban/Bateau/tests/TRACE-MiniPlex3-230717-0648.log
+    autostart: false
+
+
+
+
+

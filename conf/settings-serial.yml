@@ -43,7 +43,7 @@ couplers:
     class: NMEATCPReader
     address: 192.168.1.21
     port: 3555
-    autostart: true
+    autostart: false
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
     # data_sink: DataAnalyser
