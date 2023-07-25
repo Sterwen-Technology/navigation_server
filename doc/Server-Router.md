@@ -68,7 +68,7 @@ This server allows sending NMEA commands towards a coupler. This is mostly used 
 | buffer_size | int                       | 256         | Size of the receive buffer. Smaller size are useful for low message rate on the interface      |
 | filters     | filter id list            | None        | List of the filters applicable for the server (see corresponding section)                      |
 
-
+ 
 
 #### gRPCNMEAServer class (future)
 
@@ -225,10 +225,13 @@ On all matching messages the defined action is applied.
 
 Abstract class holding action parameters
 
-| Name   | Type                 | Default | Signification                                                                         |
-|--------|----------------------|---------|---------------------------------------------------------------------------------------|
-| action | discard, time_filter | none    | if no action defined, the filter is disabled                                          |
-| period | float                | none    | minimum period in seconds between messages, if undefined or 0, the filter is disabled |
+| Name   | Type                         | Default | Signification                              |
+|--------|------------------------------|---------|--------------------------------------------|
+| action | select, discard, time_filter | select  |                                            |
+| period | float                        | none    | minimum period in seconds between messages |
+
+When action is *select*, all messages satisfying the criteria are selected.
+For *time_filter* the period shall be defined and non-zero, otherwise the filter is disabled
 
 #### NMEA0183filter (NMEAFilter)
 
