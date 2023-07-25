@@ -53,6 +53,9 @@ class CouplerProxy(ProtobufProxy):
     def stop_trace(self, client):
         return client.send_cmd(self._msg.name, 'stop_trace')
 
+    def send_cmd(self, client, cmd, args=None):
+        return client.send_cmd(self._msg.name, cmd, args)
+
 
 class SubServerProxy(ProtobufProxy):
 
@@ -138,7 +141,7 @@ class ConsoleClient:
                 _logger.error("Send Cmd - Error accessing server:%s" % err)
             raise ConsoleAccessException
         if resp.HasField('response_values'):
-            return protob_to_dict(resp.response_values)
+            return protob_to_dict(resp.response_values.arguments)
         else:
             return None
 
