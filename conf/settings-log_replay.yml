@@ -14,8 +14,8 @@ trace_dir: /mnt/meaban/Bateau/tests
 log_module:
   nmea_routing.IPCoupler: INFO
   nmea_routing.coupler: INFO
-  nmea_routing.ydn2k_coupler: INFO
-  nmea_routing.ikonvert: INFO
+  nmea_routing.console: DEBUG
+  utilities.protob_arguments: DEBUG
 
 servers:
 
@@ -38,6 +38,8 @@ couplers:
     class: RawLogCoupler
     logfile: /mnt/meaban/Bateau/tests/TRACE-MiniPlex3-230717-0648.log
     autostart: false
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
 
 
 

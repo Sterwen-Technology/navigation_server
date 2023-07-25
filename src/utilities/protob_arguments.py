@@ -10,7 +10,10 @@
 #-------------------------------------------------------------------------------
 
 import datetime
+import logging
 from generated.arguments_pb2 import *
+
+_logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
 def protob_to_dict(arg_list) -> dict:
@@ -31,10 +34,9 @@ def protob_to_dict(arg_list) -> dict:
     return res
 
 
-def dict_to_protob(arg_dict) -> ArgumentList:
-    res = ArgumentList()
-    for key, val in arg_dict:
-        arg = res.add()
+def dict_to_protob(arg_dict, res):
+    for key, val in arg_dict.items():
+        arg = res.arguments.add()
         arg.key = key
         if type(val) == str:
             arg.str_v = val
@@ -46,6 +48,7 @@ def dict_to_protob(arg_dict) -> ArgumentList:
             arg.date_v = val.isoformat()
         else:
             raise ValueError
+    return res
 
 
 

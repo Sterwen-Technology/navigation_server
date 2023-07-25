@@ -33,7 +33,9 @@ class RawLogCoupler(Coupler):
             self._logfile = RawLogFile(self._filename)
         except IOError:
             return False
+        self._state = self.OPEN
         self._logfile.prepare_read()
+        self._state = self.CONNECTED
         return True
 
     def close(self):
@@ -45,12 +47,30 @@ class RawLogCoupler(Coupler):
         except ValueError:
             return NavGenericMsg(NULL_MSG)
 
+    def log_file_characteristics(self) -> dict:
+        if self._state is self.NOT_READY:
+            return None
+
+        return {'start_date': self._logfile.start_date(),
+                'end_date': self._logfile.end_date(),
+                'nb_records': self._logfile.nb_records(),
+                'duration': self._logfile.duration(),
+                'filename': self._logfile.filename()
+                }
+
     def current_log_date(self):
-        return self._logfile.get_current_log_date().isoformat()
+        if self._state == self.ACTIVE:
+            return {'current_date': self._logfile.get_current_log_date()}
 
-    def move_index(self, delta_t):
-        self._logfile.move_forward(delta_t)
+    def move_index(self, args):
+        if self._state == self.ACTIVE:
+            delta_t = args.get('delta', None)
+            if delta_t is not None:
+                self._logfile.move_forward(delta_t)
 
-    def move_to_date(self, target_date):
-        td = datetime.datetime.fromisoformat(target_date)
-        self._logfile.move_to_date(td)
+    def move_to_date(self, args):
+        if self._state == self.ACTIVE:
+            target_date = args.get('target_date', None)
+            if target_date is not None:
+                td = datetime.datetime.fromisoformat(target_date)
+                self._logfile.move_to_date(td)

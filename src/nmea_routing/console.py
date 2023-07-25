@@ -78,14 +78,15 @@ class ConsoleServicer(NavigationConsoleServicer):
             resp.status = "Command %s not found" % cmd
             return resp
         if request.HasField('kwargs'):
+            _logger.debug("Command %s sent with arguments" % cmd)
             args = protob_to_dict(request.kwargs)
             result = func(args)
         else:
             result = func()
-        if type(result) == dict:
-            res_args = dict_to_protob(result)
-            if len(res_args) > 0:
-                resp.response_values = res_args
+        if type(result) == dict and len(result) > 0:
+            _logger.debug("Command %s with result dict %s" % (cmd, result))
+            dict_to_protob(result, resp.response_values)
+
         resp.status = " SUCCESS"
         return resp
 

@@ -60,10 +60,10 @@ class RawLogFile:
         self._tick_interval = tick_interval
         first_line = fd.readline()
         ts, msg = read_decode(first_line)
-        self._start_date = ts
+        self._t0 = ts
         self._records.append(RawLogRecord(ts, msg))
         self._nb_tick = 0
-        self._next_tick_date = self._start_date + datetime.timedelta(seconds=tick_interval)
+        self._next_tick_date = self._t0 + datetime.timedelta(seconds=tick_interval)
 
         for line in fd.readlines():
             try:
@@ -76,12 +76,12 @@ class RawLogFile:
                 # ok we record the index of the tick
                 self._tick_index.append(nb_record)
                 self._nb_tick += 1
-                self._next_tick_date = self._start_date + datetime.timedelta(seconds=tick_interval * (self._nb_tick+1))
+                self._next_tick_date = self._t0 + datetime.timedelta(seconds=tick_interval * (self._nb_tick+1))
             nb_record += 1
 
         fd.close()
         _logger.info("Logfile %s number of records:%d" % (logfile, nb_record))
-        self._t0 = self._records[0].timestamp
+        # self._t0 = self._records[0].timestamp
         self._tend = self._records[nb_record-1].timestamp
         self._duration = self._tend - self._t0
         self._nb_record = nb_record
@@ -94,6 +94,9 @@ class RawLogFile:
         self._index = 0
         self._running = False
         self._first_record = False
+
+    def filename(self):
+        return self._logfile
 
     def get_messages(self, first=0, last=0):
 
@@ -155,6 +158,17 @@ class RawLogFile:
             raise ValueError
         self._index = self._tick_index[tick_index]
 
+    def start_date(self):
+        return self._t0
+
+    def end_date(self):
+        return self._tend
+
+    def nb_records(self):
+        return self._nb_record
+
+    def duration(self):
+        return self._duration.seconds
 
 
 
