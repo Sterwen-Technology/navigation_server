@@ -35,6 +35,11 @@ class AgentStub(object):
                 request_serializer=agent__pb2.SystemdCmdMsg.SerializeToString,
                 response_deserializer=agent__pb2.AgentResponseML.FromString,
                 )
+        self.NetworkCmd = channel.unary_unary(
+                '/Agent/NetworkCmd',
+                request_serializer=agent__pb2.NetworkCmdMsg.SerializeToString,
+                response_deserializer=agent__pb2.AgentResponse.FromString,
+                )
 
 
 class AgentServicer(object):
@@ -64,6 +69,12 @@ class AgentServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def NetworkCmd(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AgentServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -86,6 +97,11 @@ def add_AgentServicer_to_server(servicer, server):
                     servicer.SystemdCmd,
                     request_deserializer=agent__pb2.SystemdCmdMsg.FromString,
                     response_serializer=agent__pb2.AgentResponseML.SerializeToString,
+            ),
+            'NetworkCmd': grpc.unary_unary_rpc_method_handler(
+                    servicer.NetworkCmd,
+                    request_deserializer=agent__pb2.NetworkCmdMsg.FromString,
+                    response_serializer=agent__pb2.AgentResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -162,5 +178,22 @@ class Agent(object):
         return grpc.experimental.unary_unary(request, target, '/Agent/SystemdCmd',
             agent__pb2.SystemdCmdMsg.SerializeToString,
             agent__pb2.AgentResponseML.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def NetworkCmd(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Agent/NetworkCmd',
+            agent__pb2.NetworkCmdMsg.SerializeToString,
+            agent__pb2.AgentResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

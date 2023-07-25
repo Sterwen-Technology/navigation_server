@@ -6,7 +6,7 @@
 # Author:      Laurent Carré
 #
 # Created:     09/08/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -51,3 +51,4 @@ class ProtobufProxy:
 
 class GrpcAccessException(Exception):
     pass
+

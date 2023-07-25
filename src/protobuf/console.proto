@@ -5,11 +5,13 @@
 // Author:      Laurent Carré
 //
 // Created:     03/05/2022
-// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 // Licence:     Eclipse Public License 2.0
 //-------------------------------------------------------------------------------
 
 syntax = "proto3";
+
+import "arguments.proto";
 
 enum State {
      STOPPED=0;
@@ -77,11 +79,13 @@ message Request {
   uint32 id=1;
   string cmd=2;
   string target=3;
+  ArgumentList kwargs=4;
 }
 
 message Response {
   uint32 id=1;
   string status=2;
+  ArgumentList response_values=3;
 }
 
 service NavigationConsole {

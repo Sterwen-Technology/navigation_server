@@ -1,0 +1,26 @@
+//-------------------------------------------------------------------------------
+// Name:        arguments.proto
+// Purpose:     protobuf for arguments passing by keyword
+//
+// Author:      Laurent Carré
+//
+// Created:     03/05/2022
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+message Argument {
+  string key=1;
+  oneof value {
+    string str_v=4;
+    int64 int_v=5;
+    float float_v=6;
+    string date_v=7;
+  }
+}
+
+message ArgumentList {
+  repeated Argument arguments=1;
+}

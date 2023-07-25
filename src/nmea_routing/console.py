@@ -11,12 +11,12 @@
 
 import logging
 from collections import namedtuple
-from concurrent import futures
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
 
 from nmea_routing.server_common import NavigationServer, NavigationGrpcServer
-from nmea2000.nmea2k_controller import NMEA2000Device
+# from nmea2000.nmea2k_controller import NMEA2000Device
+from utilities.protob_arguments import *
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -73,11 +73,20 @@ class ConsoleServicer(NavigationConsoleServicer):
             return resp
         cmd = request.cmd
         try:
-            ret_val = getattr(coupler, cmd)()
+            func = getattr(coupler, cmd)
         except AttributeError:
             resp.status = "Command %s not found" % cmd
             return resp
-        resp.status = " SUCCESS value=%s" % ret_val
+        if request.HasField('kwargs'):
+            args = protob_to_dict(request.kwargs)
+            result = func(args)
+        else:
+            result = func()
+        if type(result) == dict:
+            res_args = dict_to_protob(result)
+            if len(res_args) > 0:
+                resp.response_values = res_args
+        resp.status = " SUCCESS"
         return resp
 
     def ServerStatus(self, request, context):
