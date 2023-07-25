@@ -29,4 +29,5 @@ gen_protobuf nmea2000
 gen_protobuf server
 gen_protobuf agent
 gen_protobuf arguments
-adjust_protobuf server nmea0183 nmea2000 arguments
+adjust_protobuf server nmea0183 nmea2000
+adjust_protobuf console arguments

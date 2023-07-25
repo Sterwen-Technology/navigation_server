@@ -14,6 +14,7 @@ import logging
 import grpc
 
 from utilities.protobuf_utilities import *
+from utilities.protob_arguments import *
 
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
@@ -45,6 +46,12 @@ class CouplerProxy(ProtobufProxy):
 
     def start(self, client):
         return client.server_cmd('start_coupler', self._msg.name)
+
+    def start_trace(self, client):
+        return client.send_cmd(self._msg.name, 'start_trace_raw')
+
+    def stop_trace(self, client):
+        return client.send_cmd(self._msg.name, 'stop_trace')
 
 
 class SubServerProxy(ProtobufProxy):
@@ -117,18 +124,23 @@ class ConsoleClient:
                 _logger.error("Get Coupler - Error accessing server:%s" % err)
             raise ConsoleAccessException
 
-    def send_cmd(self, target, command):
+    def send_cmd(self, target, command, args=None):
         req = Request(id=self._req_id, target=target, cmd=command)
         self._req_id += 1
+        if args is not None:
+            req.kwargs = dict_to_protob(args)
         try:
             resp = self._stub.CouplerCmd(req)
-            return resp
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
                 _logger.info("Server not accessible")
             else:
                 _logger.error("Send Cmd - Error accessing server:%s" % err)
             raise ConsoleAccessException
+        if resp.HasField('response_values'):
+            return protob_to_dict(resp.response_values)
+        else:
+            return None
 
     def server_status(self):
         req = Request(id=self._req_id)
