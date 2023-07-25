@@ -46,6 +46,12 @@ class CouplerProxy(ProtobufProxy):
     def start(self, client):
         return client.server_cmd('start_coupler', self._msg.name)
 
+    def start_trace(self, client):
+        return client.send_cmd(self._msg.name, 'start_trace_raw')
+
+    def stop_trace(self, client):
+        return client.send_cmd(self._msg.name, 'stop_trace')
+
 
 class SubServerProxy(ProtobufProxy):
 
