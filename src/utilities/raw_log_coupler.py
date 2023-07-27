@@ -10,13 +10,46 @@
 #-------------------------------------------------------------------------------
 import datetime
 import logging
+import threading
+import queue
 
 from utilities.raw_log_reader import RawLogFile
 from nmea_routing.coupler import Coupler
 from nmea_routing.nmea0183 import NMEA0183Msg
+from nmea_routing.nmea2000_msg import FastPacketHandler, fromProprietaryNmea
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
+
+
+class AsynchLogReader(threading.Thread):
+
+    def __init__(self, out_queue, process_message):
+        super().__init__()
+        self._logfile = None
+        self._out_queue = out_queue
+        self._stop_flag = False
+        self._process_message = process_message
+
+    def open(self, logfile):
+        self._logfile = logfile
+
+    def stop(self):
+        self._stop_flag = True
+
+    def run(self):
+
+        while not self._stop_flag:
+            try:
+                msg0183 = NMEA0183Msg(self._logfile.read_message())
+            except ValueError:
+                self._out_queue.put(NavGenericMsg(NULL_MSG))
+                break
+            try:
+                msg = self._process_message(msg0183)
+            except ValueError:
+                continue
+            self._out_queue.put(msg)
 
 
 class RawLogCoupler(Coupler):
@@ -24,28 +57,53 @@ class RawLogCoupler(Coupler):
     def __init__(self, opts):
         super().__init__(opts)
         self._filename = opts.get('logfile', str, None)
+        self._direction = self.READ_ONLY
         if self._filename is None:
             raise ValueError
         self._logfile = None
+
+        # need to initialize NMEA2000 decoding
+        self._fast_packet_handler = FastPacketHandler(self)
+        self._in_queue = queue.SimpleQueue(10)
+        if self._mode == self.NMEA0183:
+            self._reader = AsynchLogReader(self._in_queue, self.process_nmea0183())
+        else:
+            self._reader = AsynchLogReader(self._in_queue, self.process_n2k)
 
     def open(self):
         try:
             self._logfile = RawLogFile(self._filename)
         except IOError:
             return False
+        self._reader.open(self._logfile)
         self._state = self.OPEN
         self._logfile.prepare_read()
         self._state = self.CONNECTED
         return True
 
     def close(self):
-        pass
+        self._reader.stop()
+        self._reader.join()
+
+    def stop(self):
+        super().stop()
+        self.close()
 
     def _read(self):
-        try:
-            return NMEA0183Msg(self._logfile.read_message())
-        except ValueError:
-            return NavGenericMsg(NULL_MSG)
+        return self._in_queue.get()
+
+    def process_nmea0183(self, msg):
+        return msg
+
+    def process_n2k(self, msg0183):
+        if msg0183.proprietary():
+            return fromProprietaryNmea(msg0183)
+        elif msg0183.address() == b'MXPGN':
+            msg = self.mxpgn_decode(msg0183)
+            # print(msg.dump())
+            return msg
+        else:
+            return msg0183
 
     def log_file_characteristics(self) -> dict:
         if self._state is self.NOT_READY:

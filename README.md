@@ -17,7 +17,7 @@ The project is entirely written in Python 3 and has been tested with Python 3.7 
 ## Support
 
 ## Roadmap
-The current stage is under development a version 1.0 is planned for the end of 2022.
+The current stage is under development a version 1.3 is planned for the end of 2023.
 
 ## Contributing
 .
