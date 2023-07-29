@@ -217,7 +217,6 @@ def fromPGNST(frame):
     raise NotImplementedError("PGNST decoding")
 
 
-
 class NMEA2000Object:
     '''
     This class and subclasses hold decoded NMEA2000 entity that are directly processable

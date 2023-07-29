@@ -89,6 +89,7 @@ class Coupler(threading.Thread):
             self._n2k_writer = None
         self._app_protocol = mode.lower()
         self._stopflag = False
+        self._suspend_flag = False
         self._timer = None
         self._state = self.NOT_READY
         self._trace_fd = None
@@ -187,7 +188,7 @@ class Coupler(threading.Thread):
                 else:
                     nb_attempts = 0
 
-            if self._direction == self.WRITE_ONLY:
+            if self._direction == self.WRITE_ONLY or self._suspend_flag:
                 if self._stopflag:
                     break
                 time.sleep(1.0)
@@ -301,6 +302,12 @@ class Coupler(threading.Thread):
             self._timer.cancel()
             self._timer = None
         self.stop_writer()
+
+    def suspend(self):
+        self._suspend_flag = True
+
+    def resume(self):
+        self._suspend_flag = False
 
     def read(self) -> NavGenericMsg:
         fetch_next = True

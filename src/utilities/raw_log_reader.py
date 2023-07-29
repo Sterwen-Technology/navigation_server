@@ -42,6 +42,10 @@ class RawLogFile:
             raise
 
         def read_decode(l):
+            if l[0] != 'R':
+                _logger.error('Wrong line type:%s' % l)
+                raise ValueError
+
             ih = l.find('#')
             if ih == -1:
                 raise ValueError
