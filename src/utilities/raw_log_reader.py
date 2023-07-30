@@ -150,6 +150,10 @@ class RawLogFile:
     def get_current_log_date(self):
         return self._records[self._index].timestamp
 
+    def shift_start_replay(self, delta: float):
+        # adjust the start date this is needed when the replay is suspended
+        self._start_replay_time += delta
+
     def move_forward(self, seconds: float):
         target_time = self.get_current_log_date() + datetime.timedelta(seconds=seconds)
         tick_index = round(target_time / datetime.timedelta(seconds=self._tick_interval))
@@ -173,6 +177,13 @@ class RawLogFile:
 
     def duration(self):
         return self._duration.seconds
+
+    @property
+    def index(self):
+        return self._index
+
+    def message(self, index):
+        return self._records[index]
 
 
 

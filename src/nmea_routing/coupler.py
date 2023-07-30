@@ -306,10 +306,23 @@ class Coupler(threading.Thread):
 
     def suspend(self):
         if self.is_alive():
+            self._suspend()
             self._suspend_flag = True
+            _logger.info("Coupler %s suspended" % self.name())
+
+    def _suspend(self):
+        # implement specific actions on suspend to be overloaded
+        pass
 
     def resume(self):
-        self._suspend_flag = False
+        if self._suspend_flag:
+            self._resume()
+            self._suspend_flag = False
+            _logger.info("Coupler %s resume" % self.name())
+
+    def _resume(self):
+        # implement specific actions on resume - to be overloaded
+        pass
 
     def is_suspended(self) -> bool:
         return self._suspend_flag

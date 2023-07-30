@@ -12,6 +12,7 @@ import datetime
 import logging
 import threading
 import queue
+import time
 
 from utilities.raw_log_reader import RawLogFile
 from nmea_routing.coupler import Coupler
@@ -29,6 +30,8 @@ class AsynchLogReader(threading.Thread):
         self._logfile = None
         self._out_queue = out_queue
         self._stop_flag = False
+        self._suspend_flag = False
+        self._suspend_date = 0.0
         self._process_message = process_message
 
     def open(self, logfile):
@@ -37,12 +40,28 @@ class AsynchLogReader(threading.Thread):
     def stop(self):
         self._stop_flag = True
 
+    def suspend(self):
+        self._suspend_flag = True
+        self._suspend_date = time.time()
+
+    def resume(self):
+        delta = time.time() - self._suspend_date
+        self._logfile.shift_start_replay(delta)
+        self._suspend_flag = False
+
     def run(self):
 
         while not self._stop_flag:
+            if self._suspend_flag:
+                time.sleep(0.5)
+                continue
             try:
                 msg0183 = NMEA0183Msg(self._logfile.read_message())
             except ValueError:
+                _logger.error("LogCoupler error in message or end of file index=%d date:%s msg:%s" %
+                              (self._logfile.index,
+                               self._logfile.get_current_log_date(),
+                               self._logfile.message(self._logfile.index)))
                 self._out_queue.put(NavGenericMsg(NULL_MSG))
                 break
             try:
@@ -71,6 +90,7 @@ class RawLogCoupler(Coupler):
             self._reader = AsynchLogReader(self._in_queue, self.process_n2k)
 
     def open(self):
+        _logger.info("LogCoupler %s opening log file %s" % (self.name(), self._filename))
         try:
             self._logfile = RawLogFile(self._filename)
         except IOError:
@@ -80,9 +100,11 @@ class RawLogCoupler(Coupler):
         self._logfile.prepare_read()
         self._reader.start()
         self._state = self.CONNECTED
+        _logger.info("LogCoupler %s ready" % self.name())
         return True
 
     def close(self):
+        self._state = self.NOT_READY
         self._reader.stop()
         self._reader.join()
 
@@ -92,6 +114,12 @@ class RawLogCoupler(Coupler):
 
     def _read(self):
         return self._in_queue.get()
+
+    def _suspend(self):
+        self._reader.suspend()
+
+    def _resume(self):
+        self._reader.resume()
 
     def process_nmea0183(self, msg):
         return msg
