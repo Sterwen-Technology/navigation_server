@@ -53,6 +53,12 @@ class CouplerProxy(ProtobufProxy):
     def stop_trace(self, client):
         return client.send_cmd(self._msg.name, 'stop_trace')
 
+    def suspend(self, client):
+        return client.send_cmd(self._msg.name, 'suspend')
+
+    def resume(self, client):
+        return client.send_cmd(self._msg.name, 'resume')
+
     def send_cmd(self, client, cmd, args=None):
         return client.send_cmd(self._msg.name, cmd, args)
 
