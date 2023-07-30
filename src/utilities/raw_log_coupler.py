@@ -64,7 +64,7 @@ class RawLogCoupler(Coupler):
 
         # need to initialize NMEA2000 decoding
         self._fast_packet_handler = FastPacketHandler(self)
-        self._in_queue = queue.SimpleQueue(10)
+        self._in_queue = queue.SimpleQueue()
         if self._mode == self.NMEA0183:
             self._reader = AsynchLogReader(self._in_queue, self.process_nmea0183())
         else:
@@ -78,6 +78,7 @@ class RawLogCoupler(Coupler):
         self._reader.open(self._logfile)
         self._state = self.OPEN
         self._logfile.prepare_read()
+        self._reader.start()
         self._state = self.CONNECTED
         return True
 

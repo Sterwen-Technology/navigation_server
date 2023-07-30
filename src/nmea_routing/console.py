@@ -32,7 +32,10 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.name = i.name()
         resp.coupler_class = type(i).__name__
         if i.is_alive():
-            resp.state = State.RUNNING
+            if i.is_suspended():
+                resp.state = State.SUSPENDED
+            else:
+                resp.state = State.RUNNING
         else:
             resp.state = State.STOPPED
         resp.dev_state = i.state()

@@ -66,6 +66,7 @@ class Coupler(threading.Thread):
         self._configpub = None
         self._startTS = 0
         self._total_msg = 0
+        self._total_raw_msg = 0
         self._total_msg_s = 0
         self._last_msg_count = 0
         self._last_msg_count_s = 0
@@ -304,10 +305,14 @@ class Coupler(threading.Thread):
         self.stop_writer()
 
     def suspend(self):
-        self._suspend_flag = True
+        if self.is_alive():
+            self._suspend_flag = True
 
     def resume(self):
         self._suspend_flag = False
+
+    def is_suspended(self) -> bool:
+        return self._suspend_flag
 
     def read(self) -> NavGenericMsg:
         fetch_next = True

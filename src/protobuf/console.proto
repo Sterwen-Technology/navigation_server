@@ -16,6 +16,7 @@ import "arguments.proto";
 enum State {
      STOPPED=0;
      RUNNING = 1;
+     SUSPENDED = 3;
   }
 
 message CouplerMsg {
