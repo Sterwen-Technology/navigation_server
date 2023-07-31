@@ -12,6 +12,7 @@
 import logging
 import datetime
 import time
+import threading
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -40,6 +41,7 @@ class RawLogFile:
         except IOError as e:
             _logger.error("Error opening logfile %s: %s" % (logfile, e))
             raise
+        self._lock = threading.Lock()  # to prevent race conditions while moving around in the logs
 
         def read_decode(l):
             if l[0] != 'R':
@@ -93,6 +95,7 @@ class RawLogFile:
                                                     (self._duration.seconds % 3600) // 60, self._duration.seconds % 60))
         self._start_replay_time = 0.0
         self._current_replay_time = 0.0
+        self._start_date = self._records[0].timestamp
         self._t0 = 0.0
         self._previous_record = None
         self._index = 0
@@ -123,28 +126,29 @@ class RawLogFile:
             yield record.message
 
     def prepare_read(self, first=0):
-        self._start_replay_time = time.time()
-        self._previous_record = self._records[first]
         self._index = first
-        self._t0 = self._previous_record.timestamp
-        self._first_record = True
+        self.set_references()
         self._running = True
 
     def read_message(self):
+        self._lock.acquire()
         if self._first_record:
             self._first_record = False
+            self._lock.release()
             return self._previous_record.message
         self._index += 1
         try:
             record = self._records[self._index]
         except IndexError:
             _logger.info("Raw Log Reader - Index out of range: %d" % self._index)
+            self._lock.release()
             raise ValueError
         delta = (record.timestamp - self._t0).total_seconds()
         wait_time = delta - self._current_replay_time
         if wait_time > 0.0:
             time.sleep(wait_time)
         self._current_replay_time = time.time() - self._start_replay_time
+        self._lock.release()
         return record.message
 
     def get_current_log_date(self):
@@ -152,22 +156,40 @@ class RawLogFile:
 
     def shift_start_replay(self, delta: float):
         # adjust the start date this is needed when the replay is suspended
+        self._lock.acquire()
         self._start_replay_time += delta
+        self._lock.release()
 
     def move_forward(self, seconds: float):
+        self._lock.acquire()
         target_time = self.get_current_log_date() + datetime.timedelta(seconds=seconds)
         tick_index = round(target_time / datetime.timedelta(seconds=self._tick_interval))
         self._index = self._tick_index[tick_index]
+        self.set_references()
+        self._lock.release()
 
     def move_to_date(self, target_date: datetime.datetime):
+        self._lock.acquire()
         delta = target_date - self._start_date
         tick_index = round(delta / datetime.timedelta(seconds=self._tick_interval))
         if tick_index < 0 or tick_index > self._nb_tick-1:
+            self._lock.release()
+            _logger.error("LogReader index out of range: %d" % tick_index)
             raise ValueError
         self._index = self._tick_index[tick_index]
+        self.set_references()
+        self._lock.release()
+
+    def set_references(self):
+        # key function to reset the time references after a move
+        self._previous_record = self._records[self._index]
+        self._t0 = self._records[self._index].timestamp
+        self._start_replay_time = time.time()
+        self._current_replay_time = self._start_replay_time
+        self._first_record = True
 
     def start_date(self):
-        return self._t0
+        return self._start_date
 
     def end_date(self):
         return self._tend
@@ -183,7 +205,7 @@ class RawLogFile:
         return self._index
 
     def message(self, index):
-        return self._records[index]
+        return self._records[index].message
 
 
 

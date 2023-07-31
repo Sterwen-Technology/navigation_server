@@ -16,7 +16,7 @@ import time
 
 from utilities.raw_log_reader import RawLogFile
 from nmea_routing.coupler import Coupler
-from nmea_routing.nmea0183 import NMEA0183Msg
+from nmea_routing.nmea0183 import NMEA0183Msg, NMEAInvalidFrame
 from nmea_routing.nmea2000_msg import FastPacketHandler, fromProprietaryNmea
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG
 
@@ -64,6 +64,12 @@ class AsynchLogReader(threading.Thread):
                                self._logfile.message(self._logfile.index)))
                 self._out_queue.put(NavGenericMsg(NULL_MSG))
                 break
+            except NMEAInvalidFrame:
+                _logger.error("LogCoupler InvalidFrame in message index=%d date:%s msg:%s" %
+                              (self._logfile.index,
+                               self._logfile.get_current_log_date(),
+                               self._logfile.message(self._logfile.index)))
+                continue
             try:
                 msg = self._process_message(msg0183)
             except ValueError:
@@ -83,11 +89,8 @@ class RawLogCoupler(Coupler):
 
         # need to initialize NMEA2000 decoding
         self._fast_packet_handler = FastPacketHandler(self)
-        self._in_queue = queue.SimpleQueue()
-        if self._mode == self.NMEA0183:
-            self._reader = AsynchLogReader(self._in_queue, self.process_nmea0183())
-        else:
-            self._reader = AsynchLogReader(self._in_queue, self.process_n2k)
+        self._in_queue = None
+        self._reader = None
 
     def open(self):
         _logger.info("LogCoupler %s opening log file %s" % (self.name(), self._filename))
@@ -95,6 +98,12 @@ class RawLogCoupler(Coupler):
             self._logfile = RawLogFile(self._filename)
         except IOError:
             return False
+
+        self._in_queue = queue.SimpleQueue()
+        if self._mode == self.NMEA0183:
+            self._reader = AsynchLogReader(self._in_queue, self.process_nmea0183())
+        else:
+            self._reader = AsynchLogReader(self._in_queue, self.process_n2k)
         self._reader.open(self._logfile)
         self._state = self.OPEN
         self._logfile.prepare_read()
@@ -158,6 +167,6 @@ class RawLogCoupler(Coupler):
     def move_to_date(self, args):
         if self._state == self.ACTIVE:
             target_date = args.get('target_date', None)
+            _logger.info("LogReader move to target date: %s" % target_date)
             if target_date is not None:
-                td = datetime.datetime.fromisoformat(target_date)
-                self._logfile.move_to_date(td)
+                self._logfile.move_to_date(target_date)

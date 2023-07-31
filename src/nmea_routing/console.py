@@ -82,7 +82,7 @@ class ConsoleServicer(NavigationConsoleServicer):
             return resp
         if request.HasField('kwargs'):
             _logger.debug("Command %s sent with arguments" % cmd)
-            args = protob_to_dict(request.kwargs)
+            args = protob_to_dict(request.kwargs.arguments)
             result = func(args)
         else:
             result = func()
