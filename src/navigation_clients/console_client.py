@@ -53,6 +53,12 @@ class CouplerProxy(ProtobufProxy):
     def stop_trace(self, client):
         return client.send_cmd(self._msg.name, 'stop_trace')
 
+    def suspend(self, client):
+        return client.send_cmd(self._msg.name, 'suspend')
+
+    def resume(self, client):
+        return client.send_cmd(self._msg.name, 'resume')
+
     def send_cmd(self, client, cmd, args=None):
         return client.send_cmd(self._msg.name, cmd, args)
 
@@ -131,7 +137,7 @@ class ConsoleClient:
         req = Request(id=self._req_id, target=target, cmd=command)
         self._req_id += 1
         if args is not None:
-            req.kwargs = dict_to_protob(args)
+            dict_to_protob(args, req.kwargs)
         try:
             resp = self._stub.CouplerCmd(req)
         except grpc.RpcError as err:
