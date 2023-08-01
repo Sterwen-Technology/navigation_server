@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     29/11/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 import datetime

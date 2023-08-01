@@ -642,7 +642,7 @@
           <Description>a</Description>
           <SegmentIndex>4</SegmentIndex>
         </Field>
-        <EnumField Name="Reference">
+        <EnumField Name="GPS Quality Indicator">
           <Description>x</Description>
           <SegmentIndex>5</SegmentIndex>
           <SEnumValues>
@@ -657,10 +657,6 @@
             <SEnumPair Value="8" Name="Simulation mode" />
           </SEnumValues>
         </EnumField>
-        <Field Name="GPS Quality Indicator,">
-          <Description>x</Description>
-          <SegmentIndex>5</SegmentIndex>
-        </Field>
         <NumericField Name="Number of satellites in view, 00 - 12">
           <Description>xx</Description>
           <SegmentIndex>6</SegmentIndex>
@@ -984,75 +980,99 @@
           <SegmentIndex>6</SegmentIndex>
         </Field>
         <Field Name="PRN">
+          <Description>x</Description>
           <SegmentIndex>7</SegmentIndex>
         </Field>
         <Field Name="Elevation">
+          <Description>x</Description>
           <SegmentIndex>8</SegmentIndex>
         </Field>
         <Field Name="Azimuth">
+          <Description>x</Description>
           <SegmentIndex>9</SegmentIndex>
         </Field>
         <Field Name="SNR">
+          <Description>x</Description>
           <SegmentIndex>10</SegmentIndex>
         </Field>
         <Field Name="PRN">
+          <Description>x</Description>
           <SegmentIndex>11</SegmentIndex>
         </Field>
         <Field Name="Elevation">
+          <Description>x</Description>
           <SegmentIndex>12</SegmentIndex>
         </Field>
         <Field Name="Azimuth">
+          <Description>x</Description>
           <SegmentIndex>13</SegmentIndex>
         </Field>
         <Field Name="SNR">
+          <Description>x</Description>
           <SegmentIndex>14</SegmentIndex>
         </Field>
         <Field Name="PRN">
+          <Description>x</Description>
           <SegmentIndex>15</SegmentIndex>
         </Field>
         <Field Name="Elevation">
+          <Description>x</Description>
           <SegmentIndex>16</SegmentIndex>
         </Field>
         <Field Name="Azimuth">
+          <Description>x</Description>
           <SegmentIndex>17</SegmentIndex>
         </Field>
         <Field Name="SNR">
+          <Description>x</Description>
           <SegmentIndex>18</SegmentIndex>
         </Field>
         <Field Name="PRN">
+          <Description>x</Description>
           <SegmentIndex>19</SegmentIndex>
         </Field>
         <Field Name="Elevation">
+          <Description>x</Description>
           <SegmentIndex>20</SegmentIndex>
         </Field>
         <Field Name="Azimuth">
+          <Description>x</Description>
           <SegmentIndex>21</SegmentIndex>
         </Field>
         <Field Name="SNR">
+          <Description>x</Description>
           <SegmentIndex>22</SegmentIndex>
         </Field>
         <Field Name="PRN">
+          <Description>x</Description>
           <SegmentIndex>23</SegmentIndex>
         </Field>
         <Field Name="Elevation">
+          <Description>x</Description>
           <SegmentIndex>24</SegmentIndex>
         </Field>
         <Field Name="Azimuth">
+          <Description>x</Description>
           <SegmentIndex>25</SegmentIndex>
         </Field>
         <Field Name="SNR">
+          <Description>x</Description>
           <SegmentIndex>26</SegmentIndex>
         </Field>
         <Field Name="PRN">
+          <Description>x</Description>
           <SegmentIndex>27</SegmentIndex>
         </Field>
         <Field Name="Elevation">
+          <Description>x</Description>
           <SegmentIndex>28</SegmentIndex>
         </Field>
         <Field Name="Azimuth">
+          <Description>x</Description>
           <SegmentIndex>29</SegmentIndex>
         </Field>
         <Field Name="SNR">
+          <Description>x</Description>
           <SegmentIndex>30</SegmentIndex>
         </Field>
       </Fields>
@@ -1638,7 +1658,7 @@
           <Description>x.x</Description>
           <SegmentIndex>6</SegmentIndex>
         </Field>
-        <Field Name="Track made good, degrees true">
+        <Field Name="Course over ground, degrees true">
           <Description>x.x</Description>
           <SegmentIndex>7</SegmentIndex>
         </Field>

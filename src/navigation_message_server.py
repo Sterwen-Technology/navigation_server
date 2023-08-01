@@ -36,6 +36,7 @@ from nmea_routing.serial_nmeaport import NMEASerialPort
 from nmea_data.data_client import NMEADataClient
 from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter
 from utilities.raw_log_coupler import RawLogCoupler
+from utilities.log_utilities import NavigationLogSystem
 
 
 def _parser():
@@ -213,24 +214,6 @@ def print_threads():
         _logger.info("Thread:%s" % t.name)
 
 
-def adjust_log_level(config):
-    '''
-    Adjust the log level for each individual module (file)
-    :param config:
-    :return:
-    '''
-    modules = config.get_option('log_module', None)
-    if modules is None:
-        return
-    # print(modules)
-    for module, level in modules.items():
-        mod_log = _logger.getChild(module)
-        if mod_log is not None:
-            mod_log.setLevel(level)
-        else:
-            _logger.error("Module %s non-existent" % module)
-
-
 def main():
     # global global_configuration
 
@@ -243,11 +226,8 @@ def main():
             os.chdir(default_base_dir)
     # print("Current directory", os.getcwd())
     # set log for the configuration phase
-    loghandler = logging.StreamHandler()
-    logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
-    loghandler.setFormatter(logformat)
-    _logger.addHandler(loghandler)
-    _logger.setLevel('INFO')
+    NavigationLogSystem.create_log()
+
     _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2023" % version)
 
     # build the configuration from the file
@@ -274,22 +254,7 @@ def main():
     config.add_class(RawLogCoupler)
     # logger setup => stream handler for now or file
 
-    log_file = config.get_option("log_file", None)
-    if log_file is not None:
-        log_dir = config.get_option('trace_dir', None)
-        if log_dir is not None:
-            log_fullname = os.path.join(log_dir, log_file)
-        else:
-            log_fullname = log_file
-        try:
-            fp = open(log_fullname, 'w')
-            loghandler.setStream(fp)
-        except IOError as e:
-            _logger.error("Error opening log file %s %s" % (log_fullname, e))
-            pass
-
-    _logger.setLevel(config.get_option('log_level', 'INFO'))
-    adjust_log_level(config)
+    NavigationLogSystem.finalize_log(config)
 
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'ST'))

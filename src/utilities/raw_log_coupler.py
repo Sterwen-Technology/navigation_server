@@ -114,8 +114,9 @@ class RawLogCoupler(Coupler):
 
     def close(self):
         self._state = self.NOT_READY
-        self._reader.stop()
-        self._reader.join()
+        if self._reader is not None:
+            self._reader.stop()
+            self._reader.join()
 
     def stop(self):
         super().stop()
