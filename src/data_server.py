@@ -10,6 +10,7 @@
 #-------------------------------------------------------------------------------
 
 import sys
+import os
 import logging
 from argparse import ArgumentParser
 from concurrent import futures
@@ -21,6 +22,7 @@ from generated.server_pb2 import server_resp
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
+from nmea_data.data_configuration import NavigationDataConfiguration
 from utilities.log_utilities import NavigationLogSystem
 
 _version = "V0.1"
@@ -30,14 +32,13 @@ def _parser():
     p = ArgumentParser(description=sys.argv[0])
     p.add_argument('-s', '--settings', action='store', type=str, default='./conf/data-structure.yml')
     p.add_argument('-d', '--working_dir', action='store', type=str)
-    p.add_argument('-d', '--directory', action='store', type=str, default='/data/solidsense/navigation_data')
     p.add_argument('-p', '--port', action="store", type=int, default=4504)
-    p.add_argument('-sim', '--simulator', action="store")
 
     return p
 
 
 parser = _parser()
+default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 _logger = logging.getLogger("ShipDataServer")
 
 
@@ -126,10 +127,18 @@ class DataStatistics:
 def main():
 
     opts = parser.parse_args()
+    if opts.working_dir is not None:
+        os.chdir(opts.working_dir)
+    else:
+        if os.getcwd() != default_base_dir:
+            os.chdir(default_base_dir)
     NavigationLogSystem.create_log()
-
-    Manufacturers.build_manufacturers('./def/Manufacturers.N2kDfn.xml')
-    PGNDefinitions.build_definitions('./def/PGNDefns.N2kDfn.xml')
+    config = NavigationDataConfiguration(opts.settings)
+    _logger.info("Starting Data server version %s - copyright Sterwen Technology 2021-2023" % _version)
+    NavigationLogSystem.finalize_log(config)
+    _logger.info("Navigation data server working directory:%s" % os.getcwd())
+    Manufacturers.build_manufacturers(config.get_option('manufacturer_xml', './def/Manufacturers.N2kDfn.xml'))
+    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
     stats = DataStatistics()
     grpc_server = GrpcServer(opts, stats)
     stats.set_server(grpc_server)

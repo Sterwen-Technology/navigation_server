@@ -12,13 +12,13 @@
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    nmea_routing.console: INFO
+
 
 dictionary:
 
-- scalar:
+- element:
     code: SOG
-    type: float
+    type: Float
     unit: knot
     description: Speed Over Ground in knots
     lifetime: 10
@@ -30,9 +30,9 @@ dictionary:
             pgn: 129026
             field: SOG
 
-- scalar:
+- element:
       code: COG
-      type: degree
+      type: Float
       unit: degree_dec
       description: Course over ground in decimal degrees
       lifetime: 10
@@ -44,30 +44,30 @@ dictionary:
               pgn: 129026
               fields: [COG, "COG Reference"]
 
-- scalar:
+- element:
       code: LAT
-      type: degree
+      type: Float
       unit: degree_dec
       description: Latitude in decimal degrees, South is negative
       lifetime: 10
       sources:
           - n0183:
                 code: RMC
-                indexes: [2, 3]
+                index: 2
           - n2k:
                 pgn: 129025
                 field: Latitude
 
-- scalar:
+- element:
       code: LONG
-      type: degree
+      type: Float
       unit: degree_dec
       description: Longitude in decimal degrees, East is negative
       lifetime: 10
       sources:
           - n0183:
                 code: RMC
-                indexes: [4, 5]
+                index: 4
           - n2k:
                 pgn: 129025
                 field: Longitude
