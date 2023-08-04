@@ -30,6 +30,10 @@ class N2KRawDecodeError(Exception):
     pass
 
 
+class N2KEncodeError(Exception):
+    pass
+
+
 class NMEA2000Msg:
 
     def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytes = None):
@@ -160,8 +164,12 @@ class NMEA2000Msg:
             return None
 
     def asPDGY(self):
-        msg_data = b'!PDGY,%d,%1d,%d,%d,%d,%s\r\n' % (self._pgn, self._prio, self._sa, self._da, self._ts,
+        try:
+            msg_data = b'!PDGY,%d,%1d,%d,%d,%d,%s\r\n' % (self._pgn, self._prio, self._sa, self._da, self._ts,
                                                       base64.b64encode(self._payload))
+        except TypeError:
+            _logger.error("NMEA2000 Encoding (asPDGY) error on payload on PGN %d" % self._pgn)
+            raise N2KEncodeError
         return msg_data
 
     def asPGNST(self):

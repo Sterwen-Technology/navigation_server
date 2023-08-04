@@ -101,7 +101,7 @@ class RawLogCoupler(Coupler):
 
         self._in_queue = queue.SimpleQueue()
         if self._mode == self.NMEA0183:
-            self._reader = AsynchLogReader(self._in_queue, self.process_nmea0183())
+            self._reader = AsynchLogReader(self._in_queue, self.process_nmea0183)
         else:
             self._reader = AsynchLogReader(self._in_queue, self.process_n2k)
         self._reader.open(self._logfile)

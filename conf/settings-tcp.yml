@@ -1,0 +1,102 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/12/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+# log_file: test_log
+log_module:
+    nmea_routing.message_server: INFO
+    nmea2000.nmea2k_controller: INFO
+    nmea_data.data_client: INFO
+    nmea_routing.IPCoupler: INFO
+    nmea_routing.publisher: INFO
+    nmea_routing.filters: INFO
+    nmea_routing.coupler: INFO
+
+servers:
+
+- NMEAServer:
+    class: NMEAServer
+    port: 4500
+    nmea2000: transparent
+    # filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K, Barometer]
+
+- Console:
+    class: Console
+    port: 4502
+
+- NMEANetwork:
+    class: NMEA2KController
+
+
+couplers:
+
+- LogReplay:
+    class: NMEATCPReader
+    address: 127.0.0.1
+    port: 4510
+    autostart: false
+    nmea2000_controller: NMEANetwork
+    protocol: nmea_mix
+    trace_messages: false
+    trace_raw: false
+
+
+
+publishers:
+
+#    - MainLog:
+#       class: LogPublisher
+#        file: /data/solidsense/log/navigation.log
+#        instruments: [MiniPlex3]
+- TraceN2K:
+      class: N2KTracePublisher
+      couplers: [LogReplay]
+      active: false
+      filters: [AutoPilotN2K]
+      output: PRINT
+      # file: trace129026
+
+
+data_sinks:
+
+- DataAnalyser:
+      class: NMEADataClient
+
+filters:
+
+- RemoveGPS:
+     class: NMEA0183Filter
+     talker: GP
+     formatter: GSV
+     action: discard
+
+- DiscardAISGPS:
+     class: NMEA2000Filter
+     source: 43
+     pgn: [129025, 129026]
+     action: discard
+
+- AutoPilotN2K:
+    class: NMEA2000Filter
+    source: 7
+    action: discard
+
+- Barometer:
+    class: NMEA2000Filter
+    source: 52
+    pgn: [130310, 130311, 130314]
+    action: time_filter
+    period: 60.0
+
+
+
+
