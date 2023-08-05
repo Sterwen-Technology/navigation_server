@@ -108,6 +108,7 @@ class ConsoleServicer(NavigationConsoleServicer):
             sub_serv.name = sr.name
             sub_serv.server_type = sr.server.server_type()
             sub_serv.port = sr.server.port
+            sub_serv.protocol = sr.server.protocol()
             sub_serv.running = sr.server.running()
             if sr.server.running():
                 sub_serv.nb_connections = sr.server.nb_connections()
@@ -152,6 +153,8 @@ class ConsoleServicer(NavigationConsoleServicer):
         for device in n2k_svr.get_device():
             resp = N2KDeviceMsg()
             resp.address = device.address()
+            resp.changed = device.changed()
+            device.clear_change_flag()
             for prop, attr in self.dev_attr_table:
                 try:
                     val = device.property(prop)

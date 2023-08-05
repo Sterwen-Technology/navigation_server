@@ -81,14 +81,13 @@ class Coupler(threading.Thread):
         direction = opts.get('direction', str, 'bidirectional')
         # print(self.name(), ":", direction)
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
-        mode = opts.get('protocol', str, 'nmea0183')
-        self._mode = self.protocol_dict[mode.lower()]
+        self._mode_str = opts.get('protocol', str, 'nmea0183').lower()
+        self._mode = self.protocol_dict[self._mode_str]
         _logger.info("Coupler %s mode %d direction %d" % (self._name, self._mode ,self._direction))
         if self._mode == self.NMEA2000 and self._direction != self.READ_ONLY:
             self._n2k_writer = self.define_n2k_writer()
         else:
             self._n2k_writer = None
-        self._app_protocol = mode.lower()
         self._stopflag = False
         self._suspend_flag = False
         self._timer = None
@@ -288,7 +287,7 @@ class Coupler(threading.Thread):
         return self._state
 
     def protocol(self):
-        return self._app_protocol
+        return self._mode_str
 
     def input_rate(self):
         return self._rate
