@@ -196,6 +196,8 @@ class NMEA2KController(NavigationServer, threading.Thread):
             return dev
 
     def process_msg(self, msg: NMEA2000Msg):
+        if msg.sa >= 254:
+            return
         device = self.check_device(msg.sa)
         device.receive_msg(msg)
 

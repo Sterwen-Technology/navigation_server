@@ -79,6 +79,7 @@ class ShipModulInterface(BufferedIPCoupler):
         if frame[0] == 4:
             # EOT
             return NavGenericMsg(NULL_MSG)
+        self._total_msg_raw += 1
         m0183 = self.shipmodul_process_frame(frame)
         if m0183.formatter() == b'PGN':
             return self.mxpgn_decode(m0183)
@@ -94,7 +95,7 @@ class ShipModulInterface(BufferedIPCoupler):
         if frame[0] == 4:
             # EOT
             return NavGenericMsg(NULL_MSG)
-
+        self._total_msg_raw += 1
         if self._check_in_progress:
             if frame[:self.version_fmt_l] == self.version_fmt:
                 _logger.info("Check connection answer: %s" % frame)

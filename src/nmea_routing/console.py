@@ -13,6 +13,7 @@ import logging
 from collections import namedtuple
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
+from socket import gethostname
 
 from nmea_routing.server_common import NavigationServer, NavigationGrpcServer
 # from nmea2000.nmea2k_controller import NMEA2000Device
@@ -41,8 +42,10 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.dev_state = i.state()
         resp.protocol = i.protocol()
         resp.msg_in = i.total_input_msg()
+        resp.msg_raw = i.total_msg_raw()
         resp.msg_out = i.total_output_msg()
         resp.input_rate = i.input_rate()
+        resp.input_rate_raw = i.input_rate_raw()
         resp.output_rate = i.output_rate()
         return resp
 
@@ -101,6 +104,7 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.version = server.version()
         resp.start_time = server.start_time_str()
         resp.state = State.RUNNING
+        resp.hostname = gethostname()
         for sr in self._console.get_servers():
             _logger.debug("server record %s" % sr.name)
             sub_serv = Server()

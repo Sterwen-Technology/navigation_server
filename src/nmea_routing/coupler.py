@@ -66,10 +66,11 @@ class Coupler(threading.Thread):
         self._configpub = None
         self._startTS = 0
         self._total_msg = 0
-        self._total_raw_msg = 0
+        self._total_msg_raw = 0
         self._total_msg_s = 0
         self._last_msg_count = 0
         self._last_msg_count_s = 0
+        self._last_msg_count_r = 0
         self._report_timer = opts.get('report_timer', float,  30.0)
         self._timeout = opts.get('timeout', float, 10.0)
         self._max_attempt = opts.get('max_attempt', int, 20)
@@ -107,6 +108,7 @@ class Coupler(threading.Thread):
         self._count_stamp = 0
         self._rate = 0.0
         self._rate_s = 0.0
+        self._rate_raw = 0.0
         #
         #  message automatic processing
         #
@@ -131,12 +133,15 @@ class Coupler(threading.Thread):
 
         t = time.monotonic()
         self._rate = (self._total_msg - self._last_msg_count) / (t - self._count_stamp)
+        self._rate_raw = (self._total_msg_raw - self._last_msg_count_r) / (t - self._count_stamp)
         self._rate_s = (self._total_msg_s - self._last_msg_count_s) / (t - self._count_stamp)
         self._last_msg_count = self._total_msg
+        self._last_msg_count_r = self._total_msg_raw
         self._last_msg_count_s = self._total_msg_s
         self._count_stamp = t
-        _logger.info("Coupler %s NMEA message received:%d rate:%6.2f sent:%d rate:%6.2f" %
-                     (self.name(), self._total_msg, self._rate, self._total_msg_s, self._rate_s))
+        _logger.info("Coupler %s NMEA message received(process:%d rate:%6.2f; raw:%d rate:%6.2f sent:%d rate:%6.2f" %
+                     (self.name(), self._total_msg, self._rate, self._total_msg_raw, self._rate_raw,
+                      self._total_msg_s, self._rate_s))
         if not self._stopflag:
             self.start_timer()
 
@@ -277,6 +282,9 @@ class Coupler(threading.Thread):
     def total_input_msg(self):
         return self._total_msg
 
+    def total_msg_raw(self):
+        return self._total_msg_raw
+
     def total_output_msg(self):
         return self._total_msg_s
 
@@ -291,6 +299,9 @@ class Coupler(threading.Thread):
 
     def input_rate(self):
         return self._rate
+
+    def input_rate_raw(self):
+        return self._rate_raw
 
     def output_rate(self):
         return self._rate_s
