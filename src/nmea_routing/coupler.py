@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     29/11/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 import datetime
@@ -23,6 +23,7 @@ from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
 from nmea_routing.nmea2000_msg import NMEA2000Msg, NMEA2000Writer, FastPacketException, FastPacketHandler
 from nmea2000.nmea2k_pgndefs import PGNDef, N2KUnknownPGN
 from nmea_routing.nmea0183 import process_nmea0183_frame, NMEAInvalidFrame, NMEA0183Msg
+from utilities.date_time_utilities import format_timestamp
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -404,10 +405,11 @@ class Coupler(threading.Thread):
 
     def trace(self, direction, msg: NavGenericMsg):
         if self._trace_msg:
+            ts_str = format_timestamp(msg.msg.timestamp, "%Y-%m-%d %H:%M:%S.%f")
             if direction == self.TRACE_IN:
-                fc = "%d>" % self._total_msg
+                fc = "M%d#%s>" % (self._total_msg, ts_str)
             else:
-                fc = "%d<" % self._total_msg_s
+                fc = "M%d#%s<" % (self._total_msg_s, ts_str)
             self._trace_fd.write(fc)
             out_msg = msg.printable()
             self._trace_fd.write(out_msg)
@@ -416,10 +418,10 @@ class Coupler(threading.Thread):
     def stop_trace(self):
         if self._trace_msg or self._trace_raw:
             _logger.info("Coupler %s closing trace file" % self._name)
-            self._trace_fd.close()
-            self._trace_fd = None
             self._trace_msg = False
             self._trace_raw = False
+            self._trace_fd.close()
+            self._trace_fd = None
         else:
             _logger.error("Coupler %s attempt closing inactive trace" % self._name)
 
@@ -433,17 +435,22 @@ class Coupler(threading.Thread):
 
     def trace_raw(self, direction, msg):
         if self._trace_raw:
-            ts = datetime.datetime.now()
-            ts_str = ts.strftime("%Y-%m-%d %H:%M:%S.%f")
+            # ts = datetime.datetime.now()
+            ts_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             if direction == self.TRACE_IN:
-                fc = "R%d#%s>" % (self._total_msg, ts_str)
+                fc = "R%d#%s>" % (self._total_msg_raw, ts_str)
             else:
                 fc = "R%d#%s<" % (self._total_msg_s, ts_str)
             # l = len(msg) - self._separator_len
             # not all messages have the CRLF included to be further checked
-            self._trace_fd.write(fc)
-            self._trace_fd.write(msg.decode())
-            self._trace_fd.write('\n')
+            try:
+                self._trace_fd.write(fc)
+                self._trace_fd.write(msg.decode())
+                self._trace_fd.write('\n')
+            except IOError as err:
+                if self._trace_raw:
+                    _logger.error("Error writing log file: %s" % err)
+                    self._trace_raw = False
 
     def trace_n2k_raw(self, pgn, sa, prio, data, direction=TRACE_IN):
         if self._trace_msg and self._trace_raw:
@@ -522,7 +529,7 @@ class Coupler(threading.Thread):
                 raise ValueError
             return fp
 
-        self.trace_n2k_raw(pgn, source_addr, prio, data)
+        # self.trace_n2k_raw(pgn, source_addr, prio, data)
         _logger.debug("start processing PGN %d" % pgn)
         if self._fast_packet_handler.is_pgn_active(pgn, source_addr, data):
             _logger.debug("Shipmodul PGN %d on address %d fast packet active" % (pgn, source_addr))

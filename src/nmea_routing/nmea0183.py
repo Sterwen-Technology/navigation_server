@@ -34,7 +34,8 @@ class NMEA0183Msg(NavGenericMsg):
         if self._raw[self._datalen - 3] != ord('*'):
             _logger.error("NMEA183 Frame without checksum")
             raise NMEAInvalidFrame
-        self._ts = int(time.monotonic() * 1e6)  # in microseconds
+        # change in version 1.3 => become float and referenced to the epoch
+        self._ts = time.time()
         self._checksum = int(self._raw[self._datalen-2:self._datalen], 16)
         if self._checksum != NMEA0183Sentences.b_checksum(self._raw[1:self._datalen - 3]):
             _logger.error("Checksum error %x %s" % (self._checksum, self._raw[:self._datalen].hex()))
@@ -87,6 +88,10 @@ class NMEA0183Msg(NavGenericMsg):
         for f in self.fields():
             r.values.append(f.decode())
         return r
+
+    @property
+    def timestamp(self) -> float:
+        return self._ts
 
 
 class NMEA0183SentenceMsg(NMEA0183Msg):

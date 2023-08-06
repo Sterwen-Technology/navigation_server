@@ -20,18 +20,18 @@ servers:
 
 - NMEAServer:
       class: NMEAServer
-      port: 4500
+      port: 4510
       nmea2000: transparent
 
 - Console:
       class: Console
-      port: 4502
+      port: 4512
 
 - NMEANetwork:
       class: NMEA2KController
 
 
-couplers:./gen
+couplers:
 
 - LogReader:
     class: RawLogCoupler

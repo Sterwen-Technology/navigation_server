@@ -207,7 +207,10 @@ class RawLogFile:
     def message(self, index):
         return self._records[index].message
 
-
+    def restart(self):
+        self._lock.acquire()
+        self.prepare_read()
+        self._lock.release()
 
 
 

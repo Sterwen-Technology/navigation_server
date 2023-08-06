@@ -122,6 +122,7 @@ class RawLogCoupler(Coupler):
         self.close()
 
     def _read(self):
+        self._total_msg_raw += 1
         return self._in_queue.get()
 
     def _suspend(self):
@@ -170,3 +171,8 @@ class RawLogCoupler(Coupler):
             _logger.info("LogReader move to target date: %s" % target_date)
             if target_date is not None:
                 self._logfile.move_to_date(target_date)
+
+    def restart(self):
+        if self._state == self.ACTIVE:
+            _logger.info("RawLogCoupler restart from the beginning")
+            self._logfile.restart()

@@ -22,6 +22,7 @@ from generated.nmea2000_pb2 import nmea2000pb
 from nmea_routing.generic_msg import *
 from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.nmea0183 import process_nmea0183_frame, NMEA0183Msg
+from utilities.date_time_utilities import format_timestamp
 
 _logger = logging.getLogger("ShipDataServer" + "." + __name__)
 
@@ -36,6 +37,8 @@ class N2KEncodeError(Exception):
 
 class NMEA2000Msg:
 
+    ts_format = "%H:%M:%S.%f"
+
     def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytes = None):
         self._pgn = pgn
         self._prio = prio
@@ -43,7 +46,8 @@ class NMEA2000Msg:
         self._da = da
         # define if the PGN is part of ISO and base protocol (do not carry navigation data)
         self._is_iso = PGNDef.pgn_for_controller(pgn)
-        self._ts = int(time.monotonic() * 1e6)
+        # change in version 1.3 => become float and referenced to the epoch
+        self._ts = time.time()
         if payload is not None:
             self._payload = payload
             if len(payload) <= 8:
@@ -91,9 +95,14 @@ class NMEA2000Msg:
     def msg(self):
         return self
 
+    @property
+    def timestamp(self) -> float:
+        return self._ts
+
     def display(self):
         pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
-        print("PGN %d|%04X|%s|time:%d" % (self._pgn, self._pgn, pgn_def.name, self._ts))
+        print("PGN %d|%04X|%s|time:%s" % (self._pgn, self._pgn, pgn_def.name,
+                                          format_timestamp(self._ts, self.ts_format)))
 
     def __str__(self):
         if self._pgn == 0:
@@ -114,8 +123,8 @@ class NMEA2000Msg:
             payload = " "
         else:
             payload = self._payload.hex()
-        return "PGN %d|%04X|%s sa=%d da=%d time=%d data:%s" % (self._pgn, self._pgn, name, self._sa, self._da,
-                                                               self._ts, payload)
+        return "PGN %d|%04X|%s sa=%d da=%d time=%s data:%s" % (self._pgn, self._pgn, name, self._sa, self._da,
+                                                               format_timestamp(self._ts, self.ts_format), payload)
 
     def format2(self):
         '''
@@ -125,8 +134,8 @@ class NMEA2000Msg:
             payload = " "
         else:
             payload = self._payload.hex()
-        return "2K|%d|%04X|%d|%d|%d|%d|%s" % (self._pgn, self._pgn, self._prio, self._sa, self._da,
-                                              self._ts, payload)
+        return "2K|%d|%04X|%d|%d|%d|%s|%s" % (self._pgn, self._pgn, self._prio, self._sa, self._da,
+                                              format_timestamp(self._ts, self.ts_format), payload)
 
     def as_protobuf(self, res: nmea2000pb):
 

@@ -20,6 +20,6 @@ message nmea2000pb {
   uint32 priority=2;
   uint32 sa=3; // source address
   uint32 da =4; // destination address
-  uint64 timestamp = 5; // micro-seconds
+  float timestamp = 5; // seconds from the epoch
   bytes payload = 6; // fast packets concatenated
 }

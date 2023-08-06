@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -127,6 +127,7 @@ class iKonvertRead(threading.Thread):
                 _logger.error("iKonvert read error: %s" % str(e))
                 continue
             self._instrument.trace_raw(Coupler.TRACE_IN, data)
+            self._instrument.increment_count()
             msg = iKonvertMsg.from_bytes(data)
             if msg is not None:
                 self._instr_cbd[msg.type](msg)
@@ -250,6 +251,9 @@ class iKonvert(Coupler):
     def wait_status(self):
         self._wait_event = self.WAIT_MSG
         self._wait_sem.acquire()
+
+    def increment_count(self):
+        self._total_msg_raw += 1
 
     def send_loc_cmd(self, cmd, option=None, wait=ACK):
         self._cmd_result = None
