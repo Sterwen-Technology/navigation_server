@@ -105,7 +105,7 @@ class RawLogFile:
     def filename(self):
         return self._logfile
 
-    def get_messages(self, first=0, last=0):
+    def get_messages(self, first=0, last=0, original_timing=True):
 
         start_replay_time = time.time()
         current_replay_time = 0.0
@@ -115,13 +115,14 @@ class RawLogFile:
         t0 = previous_record.timestamp
         yield previous_record.message
         for record in self._records[first+1:last]:
-            delta = (record.timestamp - t0).total_seconds()
-            wait_time = delta - current_replay_time
-            # print(t0.isoformat(), record.timestamp.isoformat(), delta, current_replay_time, wait_time)
-            if wait_time > 0.0:
-                time.sleep(wait_time)
-            current_replay_time = time.time() - start_replay_time
-            # print(delta, current_replay_time)
+            if original_timing:
+                delta = (record.timestamp - t0).total_seconds()
+                wait_time = delta - current_replay_time
+                # print(t0.isoformat(), record.timestamp.isoformat(), delta, current_replay_time, wait_time)
+                if wait_time > 0.0:
+                    time.sleep(wait_time)
+                current_replay_time = time.time() - start_replay_time
+                # print(delta, current_replay_time)
 
             yield record.message
 

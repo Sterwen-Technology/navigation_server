@@ -11,6 +11,7 @@
 
 import logging
 import datetime
+import time
 import os
 from nmea_routing.publisher import Publisher
 from nmea2000.nmea2k_pgndefs import *
@@ -26,10 +27,10 @@ _logger = logging.getLogger("ShipDataServer" + "." + __name__)
 
 class PgnRecord:
 
-    def __init__(self, pgn: int, clock: int):
+    def __init__(self, pgn: int):
         self._pgn = pgn
         self._pgn_def = PGNDefinitions.pgn_defs().pgn_def(pgn)
-        self._clock = clock
+        self._clock = time.time()
         self._count = 1
 
     @property
@@ -43,20 +44,8 @@ class PgnRecord:
     def tick(self):
         self._count += 1
 
-    def check(self, clock, interval) -> bool:
-        if clock - self._clock >= interval:
-            self._clock = clock
-            return True
-        else:
-            return False
 
-    def __str__(self):
-        if self._pgn == 0:
-            return "Dummy PGN 0"
-        else:
-            return "PGN %d|%04X|%s|count:%d" % (self._pgn, self._pgn, self._pgn_def, self._count)
-
-
+'''
 class N2KProbePublisher(Publisher):
 
     def __init__(self, opts):
@@ -91,6 +80,7 @@ class N2KProbePublisher(Publisher):
     def dump_records(self):
         for rec in self._records.values():
             print(rec)
+'''
 
 
 class N2KTracePublisher(Publisher):

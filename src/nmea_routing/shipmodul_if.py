@@ -190,8 +190,8 @@ class ShipModulConfig(NavTCPServer):
         self._address = None
 
     def run(self):
-
-        self.update_couplers()
+        _logger.debug("ShipModulConfig server starts")
+        self.check_couplers()
         _logger.info("Configuration server ready")
         if self._reader is None:
             _logger.critical("No associated Miniplex coupler => Stop server")
@@ -240,8 +240,8 @@ class ShipModulConfig(NavTCPServer):
         if self._connection is not None:
             self._connection.close()
 
-    def update_couplers(self):
-
+    def check_couplers(self):
+        _logger.debug("ShipModulConfig check couplers")
         self._reader = self.resolve_ref('coupler')
         if self._reader is None:
             _logger.error("%s no coupler associated => stop" % self.name())

@@ -146,13 +146,27 @@ class ConsoleServicer(NavigationConsoleServicer):
                       ('Product Code', 'product_code'),
                       ('Product name', 'product_name'),
                       ('Description', 'description')
-                       )
+                      )
+
+    def GetServerDetails(self, request, context):
+        '''
+        Warning not yet implemented
+        '''
+        _logger.debug("Get Server %s details" % request.target)
+        resp = Response(id=request.id)
+        try:
+            server = self._console.get_server(request.target)
+        except KeyError:
+            resp.status = "Server %s not found" % request.target
+            return resp
+        resp.status = server.get_details()
+        return resp
 
     def GetDevices(self, request, context):
         _logger.debug("Get NMEA200 devices request")
         n2k_svr = self._console.get_server_by_type('NMEA2KController')
         if n2k_svr is None:
-            _logger.error("No NMEA200 Server present")
+            _logger.debug("No NMEA200 Server present")
             return
         for device in n2k_svr.get_device():
             resp = N2KDeviceMsg()
@@ -196,6 +210,10 @@ class Console(NavigationGrpcServer):
             if sr.class_name == server_type:
                 return sr.server
         return None
+
+    def get_server(self, name):
+        return self._servers[name].server
+
 
     def add_coupler(self, coupler):
         self._couplers[coupler.name()] = coupler

@@ -100,12 +100,14 @@ class NMEAServer(NavTCPServer):
         self._socket.close()
 
     def add_coupler(self, coupler):
+        '''
+        The following test is too restrictive and does not work always - removed until better solution implemented
         if self._nmea2000 in ['dyfmt', 'stfmt']:
             if coupler.protocol() != 'nmea2000':
                 _logger.error("Coupler %s is not configured for NMEA2000 and incompatible with server %s protocol" %
                               (coupler.name(), self._name))
                 return
-
+        '''
         self._couplers.append(coupler)
         _logger.info("Server %s adding coupler %s" % (self.name(), coupler.name()))
         # now if we had some active connections we need to create the publishers
