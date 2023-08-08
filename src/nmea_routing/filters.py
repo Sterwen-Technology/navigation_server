@@ -23,7 +23,7 @@ class NMEAFilter:
 
     def __init__(self, opts):
         self._name = opts['name']
-        self._action = opts.get_choice('action', ('discard', 'time_filter'), None)
+        self._action = opts.get_choice('action', ('select', 'discard', 'time_filter'), None)
         if self._action == 'time_filter':
             self._period = opts.get('period', float, 0.0)
             self._tick_time = time.monotonic()
@@ -37,11 +37,12 @@ class NMEAFilter:
     def action(self) -> bool:
         '''
         process the possible action if the message pass the filter
-        return True if the message is to be discarded
+        return True if the message is selected
         '''
-        if self._action is None:
-            return False
+
         if self._action == 'discard':
+            return False
+        elif self._action == 'select':
             return True
         elif self._action == 'time_filter':
             t = time.monotonic()
@@ -49,12 +50,14 @@ class NMEAFilter:
             if t - self._tick_time > self._period:
                 self._tick_time += self._period
                 _logger.debug("Time filter for %s => go" % self._name)
-                return False
-            else:
                 return True
+            else:
+                return False
         # more processing options to come
 
     def valid(self):
+        if self._action is None:
+            return False
         if self._action == 'time_filter':
             if self._period <= 0.0:
                 return False
@@ -105,7 +108,7 @@ class NMEA2000Filter(NMEAFilter):
 
     def valid(self) -> bool:
         if self._pgns is not None or self._sa is not None:
-            return True
+            return super().valid()
         else:
             return False
 
