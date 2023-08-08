@@ -45,7 +45,7 @@ class NMEAFilter:
             return True
         elif self._action == 'time_filter':
             t = time.monotonic()
-            # print("Time filter", self._name,t, self._tick_time, self._period, t-self._tick_time)
+            _logger.debug("Time filter", self._name,t, self._tick_time, self._period, t-self._tick_time)
             if t - self._tick_time > self._period:
                 self._tick_time += self._period
                 _logger.debug("Time filter for %s => go" % self._name)
@@ -121,7 +121,7 @@ class NMEA2000Filter(NMEAFilter):
             pgn = False
         result = sa and pgn
         if result:
-            _logger.debug("Processing N2K filter %s with message %s ==>> OK" % (self._name, msg.format2()))
+            _logger.debug("Processing N2K filter %s with message %s ==>> OK in" % (self._name, msg.format2()))
         return result
 
 

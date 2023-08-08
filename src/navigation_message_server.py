@@ -22,7 +22,7 @@ from nmea_routing.console import Console
 from nmea_routing.publisher import *
 from nmea_routing.client_publisher import *
 from nmea_routing.internal_gps import InternalGps
-from nmea_routing.nmea2000_publisher import N2KProbePublisher, N2KTracePublisher
+from nmea_routing.nmea2000_publisher import N2KTracePublisher
 # from simulator_input import *
 from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
 from nmea_routing.IPCoupler import NMEATCPReader
