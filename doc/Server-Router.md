@@ -225,13 +225,13 @@ On all matching messages the defined action is applied.
 
 Abstract class holding action parameters
 
-| Name   | Type                         | Default | Signification                              |
-|--------|------------------------------|---------|--------------------------------------------|
-| action | select, discard, time_filter | select  |                                            |
-| period | float                        | none    | minimum period in seconds between messages |
+| Name   | Type            | Default | Signification                             |
+|--------|-----------------|---------|-------------------------------------------|
+| type   | select, discard | discard |                                         |
+
 
 When action is *select*, all messages satisfying the criteria are selected.
-For *time_filter* the period shall be defined and non-zero, otherwise the filter is disabled
+
 
 #### NMEA0183filter (NMEAFilter)
 
@@ -257,9 +257,15 @@ All NMEA2000 Messages are processed through this filter is the Coupler is in nme
 | mfg_name     | string   | None    | Manufacturer name as per NMEA2000 official table                   |
 | product_name | string   | None    | Product name as published by the PGN 126996. Not always present    |
 
+#### NMEA2000TimeFilter (NMEA2000Filter)
 
+Select one value for each period to reduce message flow for slow moving values
 
+| Name   | Type  | Default | Signification                              |
+|--------|-------|---------|--------------------------------------------|
+| period | float | 60.0    | minimum period in seconds between messages |
 
+The period shall be defined and non-zero, otherwise the filter is disabled
 
 ## Victron VE Direct gRPC server
 This service is permanently reading the VEDirect (RS485 over USB) of the MPPT device.

@@ -34,7 +34,7 @@ from victron_mppt.mppt_coupler import MPPT_Coupler
 from nmea_routing.ydn2k_coupler import YDCoupler
 from nmea_routing.serial_nmeaport import NMEASerialPort
 from nmea_data.data_client import NMEADataClient
-from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter
+from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter, NMEA2000TimeFilter
 from utilities.raw_log_coupler import RawLogCoupler
 
 
@@ -47,7 +47,7 @@ def _parser():
     return p
 
 
-version = "V1.32"
+version = "V1.33"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -272,6 +272,7 @@ def main():
     config.add_class(NMEADataClient)
     config.add_class(NMEA0183Filter)
     config.add_class(NMEA2000Filter)
+    config.add_class(NMEA2000TimeFilter)
     config.add_class(RawLogCoupler)
     # logger setup => stream handler for now or file
 

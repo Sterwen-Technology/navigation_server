@@ -81,7 +81,7 @@ class NMEA2000Device:
             pgn_def = self._pgn_received[pgn]
             pgn_def.tick()
         except KeyError:
-            pgn_def = PgnRecord(pgn, 0)
+            pgn_def = PgnRecord(pgn)
             self._pgn_received[pgn] = pgn_def
         return pgn_def
 

@@ -27,7 +27,7 @@ servers:
     class: NMEAServer
     port: 4500
     nmea2000: dyfmt
-    # filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K, Barometer]
+    filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K, Barometer, DiscardGarmin]
 
 - Console:
     class: Console
@@ -77,25 +77,31 @@ filters:
      class: NMEA0183Filter
      talker: GP
      formatter: GSV
-     action: discard
+     type: discard
 
 - DiscardAISGPS:
      class: NMEA2000Filter
      source: 43
      pgn: [129025, 129026]
-     action: discard
+     type: discard
 
 - AutoPilotN2K:
     class: NMEA2000Filter
     source: 7
-    action: discard
+    pgn: [65359, 65360, 65379, 126720, 127245, 130916]
+    type: discard
 
 - Barometer:
-    class: NMEA2000Filter
+    class: NMEA2000TimeFilter
     source: 52
     pgn: [130310, 130311, 130314]
-    action: time_filter
     period: 60.0
+    type: discard
+
+- DiscardGarmin:
+    class: NMEA2000Filter
+    source: 8
+    type: discard
 
 
 

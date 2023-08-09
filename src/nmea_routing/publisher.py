@@ -75,7 +75,8 @@ class Publisher(threading.Thread):
         # print("Publisher %s publish msg:%s %s" % (self._name, msg, self._filters))
         if self._filters is not None:
             # print("Publisher %s publish with filter msg:%s" % (self._name, msg))
-            if not self._filters.process_filter(msg):
+            if self._filters.process_filter(msg):
+                # if the filter returns True, then the message is discarded
                 return
         try:
             self._queue.put(msg, block=False)
