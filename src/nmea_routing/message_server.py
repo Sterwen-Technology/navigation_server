@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     29/02/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -74,6 +74,11 @@ class NMEAServer(NavTCPServer):
                 continue
 
             _logger.info("New connection from IP %s port %d" % address)
+            if len(self._couplers) == 0:
+                _logger.critical("No coupler associated with NMEA server %s => connection refused" % self._name)
+                connection.close()
+                continue
+
             client = ClientConnection(connection, address, self)
             # critical section for adding the new client
             if self._client_lock.acquire(timeout=5.0):
@@ -89,29 +94,20 @@ class NMEAServer(NavTCPServer):
             # now create a publisher for all instruments
             pub = self.publisher_class[self._nmea2000](client, self._couplers, self._filters)
             pub.start()
-            # attach a sender to send messages to instruments - removed as server becomes unidirectional
-            '''
-            if self._sender is None and self._sender_coupler is not None:
-                if self._master is not None:
-                    if address[0] == self._master:
-                        _logger.info("%s Master sender %s connected" % (self.name(), self._master))
-                        self._sender = NMEASender(client, self._sender_coupler, self._nmea2000)
-                        self._sender.start()
-                    else:
-                        _logger.info("Client at address %s is not master" % address[0])
-                else:
-                    _logger.info("%s client at address %s is becoming sender" % (self.name(), address[0]))
-                    self._sender = NMEASender(client, self._sender_coupler, self._nmea2000)
-                    self._sender.start()
-            if self._sender is None:
-                _logger.info("No coupler (sender) to send NMEA messages for server %s client %s" %
-                             (self.name(), client.descr()))
-            '''
+
             # end of while loop => the thread stops
         _logger.info("%s thread stops" % self.name())
         self._socket.close()
 
     def add_coupler(self, coupler):
+        '''
+        The following test is too restrictive and does not work always - removed until better solution implemented
+        if self._nmea2000 in ['dyfmt', 'stfmt']:
+            if coupler.protocol() != 'nmea2000':
+                _logger.error("Coupler %s is not configured for NMEA2000 and incompatible with server %s protocol" %
+                              (coupler.name(), self._name))
+                return
+        '''
         self._couplers.append(coupler)
         _logger.info("Server %s adding coupler %s" % (self.name(), coupler.name()))
         # now if we had some active connections we need to create the publishers
@@ -212,6 +208,9 @@ class NMEAServer(NavTCPServer):
 
     def nb_connections(self):
         return len(self._connections)
+
+    def protocol(self) -> str:
+        return self._nmea2000
 
 
 class NMEASenderServer(NavTCPServer):

@@ -18,6 +18,6 @@ syntax = "proto3";
 message nmea0183pb {
   string talker=1;
   string formatter=2;   // not existing for proprietary sentences
-  uint64 timestamp = 4; //micro-seconds
+  float timestamp = 4; // seconds from the epoch
   repeated string values=3;
 }

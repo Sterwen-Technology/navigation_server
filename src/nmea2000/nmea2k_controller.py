@@ -39,6 +39,7 @@ class NMEA2000Device:
                                 }
         self._fields_60928 = None
         self._fields_126996 = None
+        self._changed = True
         if properties is None:
             self._properties = {}
         else:
@@ -80,7 +81,7 @@ class NMEA2000Device:
             pgn_def = self._pgn_received[pgn]
             pgn_def.tick()
         except KeyError:
-            pgn_def = PgnRecord(pgn, 0)
+            pgn_def = PgnRecord(pgn)
             self._pgn_received[pgn] = pgn_def
         return pgn_def
 
@@ -88,6 +89,7 @@ class NMEA2000Device:
 
         # _logger.debug("PGN data= %s" % msg_data)
         if self._fields_60928 is None:
+            self._changed = True
             _logger.info("Processing ISO address claim for address %d" % self._address)
             self._fields_60928 = msg_data['fields']
             try:
@@ -104,6 +106,7 @@ class NMEA2000Device:
     def p126996(self, msg_data):
 
         if self._fields_126996 is None:
+            self._changed = True
             _logger.info("Processing Product information for address %d: %s" % (self._address, msg_data['fields']))
             self._fields_126996 = msg_data['fields']
             self.set_property(self._fields_126996, 'NMEA 2000 Version')
@@ -127,6 +130,12 @@ class NMEA2000Device:
 
     def asDict(self):
         return {'address:': self._address, 'properties': self._properties}
+
+    def changed(self) -> bool:
+        return self._changed
+
+    def clear_change_flag(self):
+        self._changed = False
 
 
 class NMEA2KController(NavigationServer, threading.Thread):
@@ -187,6 +196,8 @@ class NMEA2KController(NavigationServer, threading.Thread):
             return dev
 
     def process_msg(self, msg: NMEA2000Msg):
+        if msg.sa >= 254:
+            return
         device = self.check_device(msg.sa)
         device.receive_msg(msg)
 

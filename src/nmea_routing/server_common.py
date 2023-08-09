@@ -63,6 +63,9 @@ class NavigationServer:
     def nb_connections(self):
         return 0
 
+    def protocol(self):
+        return "N/A"
+
     @property
     def port(self):
         return self._port

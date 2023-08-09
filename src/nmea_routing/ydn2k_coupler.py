@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     04/04/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -37,6 +37,7 @@ class YDCoupler(BufferedIPCoupler):
         _logger.debug("%s receive frame=%s" % (self._name, frame))
         if frame[0] == 4:
             return NavGenericMsg(NULL_MSG)
+        self._total_msg_raw += 1
         fields = frame.split(b' ')
         data_len = len(fields) - 3
         if data_len <= 0:

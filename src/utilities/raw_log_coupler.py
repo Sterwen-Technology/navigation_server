@@ -101,7 +101,7 @@ class RawLogCoupler(Coupler):
 
         self._in_queue = queue.SimpleQueue()
         if self._mode == self.NMEA0183:
-            self._reader = AsynchLogReader(self._in_queue, self.process_nmea0183())
+            self._reader = AsynchLogReader(self._in_queue, self.process_nmea0183)
         else:
             self._reader = AsynchLogReader(self._in_queue, self.process_n2k)
         self._reader.open(self._logfile)
@@ -123,6 +123,7 @@ class RawLogCoupler(Coupler):
         self.close()
 
     def _read(self):
+        self._total_msg_raw += 1
         return self._in_queue.get()
 
     def _suspend(self):
@@ -171,3 +172,8 @@ class RawLogCoupler(Coupler):
             _logger.info("LogReader move to target date: %s" % target_date)
             if target_date is not None:
                 self._logfile.move_to_date(target_date)
+
+    def restart(self):
+        if self._state == self.ACTIVE:
+            _logger.info("RawLogCoupler restart from the beginning")
+            self._logfile.restart()

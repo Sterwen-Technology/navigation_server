@@ -32,10 +32,12 @@ message CouplerMsg {
   Device_state dev_state=4;
   string protocol=5;
   uint32 msg_in=6;
+  uint32 msg_raw=13;
   uint32 msg_out=7;
   string status=8;
   uint32 error=9;
   float input_rate=10;  // messages / sec
+  float input_rate_raw=12;
   float output_rate=11;
 }
 
@@ -44,6 +46,7 @@ message Connection {
   uint32 remote_port=2;
   uint32 total_msg=3;
   float msg_rate=4;
+  float max_delay=5;  // maximum delay in sec for a message through the router
 }
 
 message Server {
@@ -53,6 +56,7 @@ message Server {
   bool running=4;
   uint32 nb_connections=5;
   uint32 port=6;
+  string protocol=8;
   repeated Connection connections=7;
 }
 
@@ -64,6 +68,7 @@ message NavigationServerMsg {
   uint32 error=6;
   string version=7;
   string start_time=8;
+  string hostname = 10;
   repeated Server servers=9;
 }
 
@@ -74,6 +79,7 @@ message N2KDeviceMsg {
   uint32 product_code=4;
   string product_name=5;
   string description=6;
+  bool changed=7;
 }
 
 message Request {

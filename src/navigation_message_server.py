@@ -22,7 +22,7 @@ from nmea_routing.console import Console
 from nmea_routing.publisher import *
 from nmea_routing.client_publisher import *
 from nmea_routing.internal_gps import InternalGps
-from nmea_routing.nmea2000_publisher import N2KProbePublisher, N2KTracePublisher
+from nmea_routing.nmea2000_publisher import N2KTracePublisher
 # from simulator_input import *
 from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
 from nmea_routing.IPCoupler import NMEATCPReader
@@ -34,7 +34,7 @@ from victron_mppt.mppt_coupler import MPPT_Coupler
 from nmea_routing.ydn2k_coupler import YDCoupler
 from nmea_routing.serial_nmeaport import NMEASerialPort
 from nmea_data.data_client import NMEADataClient
-from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter
+from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter, NMEA2000TimeFilter
 from utilities.raw_log_coupler import RawLogCoupler
 from utilities.log_utilities import NavigationLogSystem
 
@@ -48,7 +48,7 @@ def _parser():
     return p
 
 
-version = "V1.30"
+version = "V1.33"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -174,7 +174,8 @@ class NavigationMainServer:
         self._couplers[coupler.name()] = coupler
         for server in self._servers:
             server.add_coupler(coupler)
-            server.update_couplers()
+            # _logger.debug("add coupler %s to %s" % (coupler.name(), server.name()))
+            # server.update_couplers()
         if self._is_running:
             coupler.request_start()
 
@@ -242,7 +243,7 @@ def main():
     config.add_class(Injector)
     config.add_class(iKonvert)
     config.add_class(N2KTracePublisher)
-    config.add_class(N2KProbePublisher)
+    # config.add_class(N2KProbePublisher) obsolete class
     config.add_class(InternalGps)
     config.add_class(MPPT_Coupler)
     config.add_class(YDCoupler)
@@ -251,6 +252,7 @@ def main():
     config.add_class(NMEADataClient)
     config.add_class(NMEA0183Filter)
     config.add_class(NMEA2000Filter)
+    config.add_class(NMEA2000TimeFilter)
     config.add_class(RawLogCoupler)
     # logger setup => stream handler for now or file
 
@@ -265,7 +267,7 @@ def main():
     # create the filters upfront
     for inst_descr in config.filters():
         inst_descr.build_object()
-
+    _logger.debug("Filter created")
     # create the servers
     for server_descr in config.servers():
         try:
@@ -274,18 +276,22 @@ def main():
             _logger.error("Error building server %s" % e)
             continue
         main_server.add_server(server)
-    # create the instruments
+    _logger.debug("Servers created")
+    # create the couplers
     for inst_descr in config.couplers():
         coupler = inst_descr.build_object()
         main_server.add_coupler(coupler)
+    _logger.debug("Couplers created")
     # create the publishers
     for pub_descr in config.publishers():
         publisher = pub_descr.build_object()
         main_server.add_publisher(publisher)
+    _logger.debug("Publishers created")
     for data_s in config.data_sinks():
         client = data_s.build_object()
         main_server.add_data_client(client)
-
+    _logger.debug("Data sinks created")
+    _logger.debug("Starting the main server")
     main_server.start()
     # print_threads()
     main_server.wait()

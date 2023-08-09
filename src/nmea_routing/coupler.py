@@ -23,6 +23,7 @@ from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
 from nmea_routing.nmea2000_msg import NMEA2000Msg, NMEA2000Writer, FastPacketException, FastPacketHandler
 from nmea2000.nmea2k_pgndefs import PGNDef, N2KUnknownPGN
 from nmea_routing.nmea0183 import process_nmea0183_frame, NMEAInvalidFrame, NMEA0183Msg
+from utilities.date_time_utilities import format_timestamp
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -66,10 +67,11 @@ class Coupler(threading.Thread):
         self._configpub = None
         self._startTS = 0
         self._total_msg = 0
-        self._total_raw_msg = 0
+        self._total_msg_raw = 0
         self._total_msg_s = 0
         self._last_msg_count = 0
         self._last_msg_count_s = 0
+        self._last_msg_count_r = 0
         self._report_timer = opts.get('report_timer', float,  30.0)
         self._timeout = opts.get('timeout', float, 10.0)
         self._max_attempt = opts.get('max_attempt', int, 20)
@@ -81,14 +83,13 @@ class Coupler(threading.Thread):
         direction = opts.get('direction', str, 'bidirectional')
         # print(self.name(), ":", direction)
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
-        mode = opts.get('protocol', str, 'nmea0183')
-        self._mode = self.protocol_dict[mode.lower()]
+        self._mode_str = opts.get('protocol', str, 'nmea0183').lower()
+        self._mode = self.protocol_dict[self._mode_str]
         _logger.info("Coupler %s mode %d direction %d" % (self._name, self._mode ,self._direction))
         if self._mode == self.NMEA2000 and self._direction != self.READ_ONLY:
             self._n2k_writer = self.define_n2k_writer()
         else:
             self._n2k_writer = None
-        self._app_protocol = mode.lower()
         self._stopflag = False
         self._suspend_flag = False
         self._timer = None
@@ -108,6 +109,7 @@ class Coupler(threading.Thread):
         self._count_stamp = 0
         self._rate = 0.0
         self._rate_s = 0.0
+        self._rate_raw = 0.0
         #
         #  message automatic processing
         #
@@ -132,12 +134,15 @@ class Coupler(threading.Thread):
 
         t = time.monotonic()
         self._rate = (self._total_msg - self._last_msg_count) / (t - self._count_stamp)
+        self._rate_raw = (self._total_msg_raw - self._last_msg_count_r) / (t - self._count_stamp)
         self._rate_s = (self._total_msg_s - self._last_msg_count_s) / (t - self._count_stamp)
         self._last_msg_count = self._total_msg
+        self._last_msg_count_r = self._total_msg_raw
         self._last_msg_count_s = self._total_msg_s
         self._count_stamp = t
-        _logger.info("Coupler %s NMEA message received:%d rate:%6.2f sent:%d rate:%6.2f" %
-                     (self.name(), self._total_msg, self._rate, self._total_msg_s, self._rate_s))
+        _logger.info("Coupler %s NMEA message received(process:%d rate:%6.2f; raw:%d rate:%6.2f sent:%d rate:%6.2f" %
+                     (self.name(), self._total_msg, self._rate, self._total_msg_raw, self._rate_raw,
+                      self._total_msg_s, self._rate_s))
         if not self._stopflag:
             self.start_timer()
 
@@ -278,6 +283,9 @@ class Coupler(threading.Thread):
     def total_input_msg(self):
         return self._total_msg
 
+    def total_msg_raw(self):
+        return self._total_msg_raw
+
     def total_output_msg(self):
         return self._total_msg_s
 
@@ -288,10 +296,13 @@ class Coupler(threading.Thread):
         return self._state
 
     def protocol(self):
-        return self._app_protocol
+        return self._mode_str
 
     def input_rate(self):
         return self._rate
+
+    def input_rate_raw(self):
+        return self._rate_raw
 
     def output_rate(self):
         return self._rate_s
@@ -394,10 +405,11 @@ class Coupler(threading.Thread):
 
     def trace(self, direction, msg: NavGenericMsg):
         if self._trace_msg:
+            ts_str = format_timestamp(msg.msg.timestamp, "%Y-%m-%d %H:%M:%S.%f")
             if direction == self.TRACE_IN:
-                fc = "%d>" % self._total_msg
+                fc = "M%d#%s>" % (self._total_msg, ts_str)
             else:
-                fc = "%d<" % self._total_msg_s
+                fc = "M%d#%s<" % (self._total_msg_s, ts_str)
             self._trace_fd.write(fc)
             out_msg = msg.printable()
             self._trace_fd.write(out_msg)
@@ -406,10 +418,10 @@ class Coupler(threading.Thread):
     def stop_trace(self):
         if self._trace_msg or self._trace_raw:
             _logger.info("Coupler %s closing trace file" % self._name)
-            self._trace_fd.close()
-            self._trace_fd = None
             self._trace_msg = False
             self._trace_raw = False
+            self._trace_fd.close()
+            self._trace_fd = None
         else:
             _logger.error("Coupler %s attempt closing inactive trace" % self._name)
 
@@ -423,17 +435,22 @@ class Coupler(threading.Thread):
 
     def trace_raw(self, direction, msg):
         if self._trace_raw:
-            ts = datetime.datetime.now()
-            ts_str = ts.strftime("%Y-%m-%d %H:%M:%S.%f")
+            # ts = datetime.datetime.now()
+            ts_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             if direction == self.TRACE_IN:
-                fc = "R%d#%s>" % (self._total_msg, ts_str)
+                fc = "R%d#%s>" % (self._total_msg_raw, ts_str)
             else:
                 fc = "R%d#%s<" % (self._total_msg_s, ts_str)
             # l = len(msg) - self._separator_len
             # not all messages have the CRLF included to be further checked
-            self._trace_fd.write(fc)
-            self._trace_fd.write(msg.decode())
-            self._trace_fd.write('\n')
+            try:
+                self._trace_fd.write(fc)
+                self._trace_fd.write(msg.decode())
+                self._trace_fd.write('\n')
+            except IOError as err:
+                if self._trace_raw:
+                    _logger.error("Error writing log file: %s" % err)
+                    self._trace_raw = False
 
     def trace_n2k_raw(self, pgn, sa, prio, data, direction=TRACE_IN):
         if self._trace_msg and self._trace_raw:
@@ -512,7 +529,7 @@ class Coupler(threading.Thread):
                 raise ValueError
             return fp
 
-        self.trace_n2k_raw(pgn, source_addr, prio, data)
+        # self.trace_n2k_raw(pgn, source_addr, prio, data)
         _logger.debug("start processing PGN %d" % pgn)
         if self._fast_packet_handler.is_pgn_active(pgn, source_addr, data):
             _logger.debug("Shipmodul PGN %d on address %d fast packet active" % (pgn, source_addr))

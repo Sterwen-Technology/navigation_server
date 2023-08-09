@@ -20,12 +20,12 @@ servers:
 
 - NMEAServer:
       class: NMEAServer
-      port: 4500
+      port: 4510
       nmea2000: transparent
 
 - Console:
       class: Console
-      port: 4502
+      port: 4512
 
 - NMEANetwork:
       class: NMEA2KController
@@ -35,10 +35,10 @@ couplers:
 
 - LogReader:
     class: RawLogCoupler
-    logfile: /mnt/meaban/Bateau/tests/TRACE-MiniPlex3-230717-0648.log
-    autostart: false
-    nmea2000_controller: NMEANetwork
-    protocol: nmea_mix
+    logfile: /mnt/meaban/Bateau/tests/TRACE-MiniPlex3-230718-0610.log
+    autostart: true
+    # nmea2000_controller: NMEANetwork
+    protocol: nmea0183
 
 
 

@@ -320,9 +320,11 @@ class BufferedIPCoupler(IPCoupler):
         self._transparent = False
         self._msg_queue_size = opts.get('msg_queue_size', int, 50)
 
-    def set_message_processing(self, separator=b'\r\n', msg_processing=process_nmea0183_frame):
+    def set_message_processing(self, separator=b'\r\n', msg_processing=None):
         if self._direction != self.WRITE_ONLY:
             self._in_queue = queue.Queue(self._msg_queue_size)
+            if msg_processing is None:
+                msg_processing = self.default_msg_process
             self._asynch_io = IPAsynchReader(self, self._in_queue, separator, msg_processing)
 
     def open(self) -> bool:
@@ -345,6 +347,10 @@ class BufferedIPCoupler(IPCoupler):
     def set_transparency(self, flag: bool):
         if self._asynch_io is not None:
             self._asynch_io.set_transparency(flag)
+
+    def default_msg_process(self, frame):
+        self._total_msg_raw += 1
+        return process_nmea0183_frame(frame)
 
 
 class TCPBufferedReader:
@@ -418,6 +424,7 @@ class NMEATCPReader(BufferedIPCoupler):
         if frame[0] == 4:
             return NavGenericMsg(NULL_MSG)
         msg0183 = NMEA0183Msg(frame)
+        self._total_msg_raw += 1
         if msg0183.proprietary():
             return fromProprietaryNmea(msg0183)
         elif msg0183.address() == b'MXPGN':

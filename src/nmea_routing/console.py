@@ -13,6 +13,7 @@ import logging
 from collections import namedtuple
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
+from socket import gethostname
 
 from nmea_routing.server_common import NavigationServer, NavigationGrpcServer
 # from nmea2000.nmea2k_controller import NMEA2000Device
@@ -41,8 +42,10 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.dev_state = i.state()
         resp.protocol = i.protocol()
         resp.msg_in = i.total_input_msg()
+        resp.msg_raw = i.total_msg_raw()
         resp.msg_out = i.total_output_msg()
         resp.input_rate = i.input_rate()
+        resp.input_rate_raw = i.input_rate_raw()
         resp.output_rate = i.output_rate()
         return resp
 
@@ -101,6 +104,7 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.version = server.version()
         resp.start_time = server.start_time_str()
         resp.state = State.RUNNING
+        resp.hostname = gethostname()
         for sr in self._console.get_servers():
             _logger.debug("server record %s" % sr.name)
             sub_serv = Server()
@@ -108,6 +112,7 @@ class ConsoleServicer(NavigationConsoleServicer):
             sub_serv.name = sr.name
             sub_serv.server_type = sr.server.server_type()
             sub_serv.port = sr.server.port
+            sub_serv.protocol = sr.server.protocol()
             sub_serv.running = sr.server.running()
             if sr.server.running():
                 sub_serv.nb_connections = sr.server.nb_connections()
@@ -141,17 +146,33 @@ class ConsoleServicer(NavigationConsoleServicer):
                       ('Product Code', 'product_code'),
                       ('Product name', 'product_name'),
                       ('Description', 'description')
-                       )
+                      )
+
+    def GetServerDetails(self, request, context):
+        '''
+        Warning not yet implemented
+        '''
+        _logger.debug("Get Server %s details" % request.target)
+        resp = Response(id=request.id)
+        try:
+            server = self._console.get_server(request.target)
+        except KeyError:
+            resp.status = "Server %s not found" % request.target
+            return resp
+        resp.status = server.get_details()
+        return resp
 
     def GetDevices(self, request, context):
         _logger.debug("Get NMEA200 devices request")
         n2k_svr = self._console.get_server_by_type('NMEA2KController')
         if n2k_svr is None:
-            _logger.error("No NMEA200 Server present")
+            _logger.debug("No NMEA200 Server present")
             return
         for device in n2k_svr.get_device():
             resp = N2KDeviceMsg()
             resp.address = device.address()
+            resp.changed = device.changed()
+            device.clear_change_flag()
             for prop, attr in self.dev_attr_table:
                 try:
                     val = device.property(prop)
@@ -189,6 +210,10 @@ class Console(NavigationGrpcServer):
             if sr.class_name == server_type:
                 return sr.server
         return None
+
+    def get_server(self, name):
+        return self._servers[name].server
+
 
     def add_coupler(self, coupler):
         self._couplers[coupler.name()] = coupler
