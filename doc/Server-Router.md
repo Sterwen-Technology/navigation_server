@@ -225,9 +225,9 @@ On all matching messages the defined action is applied.
 
 Abstract class holding action parameters
 
-| Name   | Type            | Default | Signification                             |
-|--------|-----------------|---------|-------------------------------------------|
-| type   | select, discard | discard |                                         |
+| Name | Type            | Default | Signification |
+|------|-----------------|---------|---------------|
+| type | select, discard | discard |               |
 
 
 When action is *select*, all messages satisfying the criteria are selected.
