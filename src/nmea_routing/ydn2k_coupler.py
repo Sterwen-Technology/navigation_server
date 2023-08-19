@@ -13,7 +13,7 @@ import logging
 import queue
 
 from nmea_routing.IPCoupler import BufferedIPCoupler
-from nmea_routing.nmea2000_msg import NMEA2000Msg, FastPacketHandler
+from nmea_routing.nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
 from nmea2000.nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG
 
@@ -41,22 +41,36 @@ class YDCoupler(BufferedIPCoupler):
         fields = frame.split(b' ')
         data_len = len(fields) - 3
         if data_len <= 0:
-            _logger.error("Invalid frame %s" % frame)
+            _logger.error("YDCoupler - Invalid frame %s" % frame)
             raise ValueError
+
+        def decode_msgid(msgid):
+            pgn = int(msgid[1:6], 16) & 0x3FFFF
+            prio = (int(msgid[0:2], 16) >> 2) & 7
+            sa = int(msgid[6:8], 16)
+            return pgn, prio, sa
+
+        pgn, prio, sa = decode_msgid(fields[2])
         if fields[1] == b'T':
             # reply on send
-            _logger.debug("%s reply on send: %s" % (self._name, frame))
-            try:
-                self._reply_queue.put(frame, block=False)
-            except queue.Full:
-                _logger.critical("YD write feedback queue full")
-            raise ValueError
+            if self._n2k_writer is None:
+                # there should be no send
+                if pgn not in [61183, 126996]:
+                    _logger.error("YD Coupler unexpected reply from %d pgn:%d %s" % (sa, pgn, frame))
+                    raise ValueError
+            else:
+                _logger.debug("%s reply on send: %s" % (self._name, frame))
+                try:
+                    self._reply_queue.put(frame, block=False)
+                except queue.Full:
+                    _logger.critical("YD write feedback queue full")
+                raise ValueError
         elif fields[1] != b'R':
-            _logger.error("Invalid frame %s" % frame)
+            _logger.error("YDCoupler - Invalid frame %s" % frame)
             raise ValueError
-        pgn = int(fields[2][1:6], 16) & 0x3FFFF
-        prio = (int(fields[2][0:2], 16) >> 2) & 7
-        sa = int(fields[2][6:8], 16)
+
+        # pgn, prio, sa = decode_msgid(fields[2])
+
         data = bytearray(data_len)
         i = 0
         for db in fields[3:]:
@@ -71,7 +85,12 @@ class YDCoupler(BufferedIPCoupler):
             return fp
 
         if self._fast_packet_handler.is_pgn_active(pgn, sa, data):
-            data = self._fast_packet_handler.process_frame(pgn, sa,  data)
+            try:
+                data = self._fast_packet_handler.process_frame(pgn, sa,  data)
+            except FastPacketException as e:
+                _logger.error("YDCoupler Fast packet error %s pgn %d data %s" % (e, pgn, data.hex()))
+                self.add_event_trace(str(e))
+                raise ValueError
             if data is None:
                 raise ValueError # no error but just to escape
         elif check_pgn():
