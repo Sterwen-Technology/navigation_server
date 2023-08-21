@@ -295,6 +295,7 @@ class FastPacket:
     def __init__(self, pgn, addr, seq):
         self._key = self.compute_key(pgn, addr, seq)
         self._source = addr
+        self._seq = seq
         self._byte_length = 0
         self._length = 0
         self._pgn = pgn
@@ -319,7 +320,8 @@ class FastPacket:
 
         try:
             fr = self._frames[counter]
-            _logger.error("FastPacket duplicate frame index %d %s" % (counter, fr.hex()))
+            _logger.error("FastPacket duplicate frame for key %8X index %d new:%s exist: %s" %
+                          (self._key, counter, frame.hex(), fr.hex()))
             raise FastPacketException("Frame Index duplicate %d" % counter)
         except KeyError:
             self._frames[counter] = frame[1:]

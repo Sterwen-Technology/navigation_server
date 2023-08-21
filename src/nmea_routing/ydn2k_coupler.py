@@ -88,7 +88,7 @@ class YDCoupler(BufferedIPCoupler):
             try:
                 data = self._fast_packet_handler.process_frame(pgn, sa,  data)
             except FastPacketException as e:
-                _logger.error("YDCoupler Fast packet error %s pgn %d data %s" % (e, pgn, data.hex()))
+                _logger.error("YDCoupler Fast packet error %s from %d pgn %d data %s" % (e, sa, pgn, data.hex()))
                 self.add_event_trace(str(e))
                 raise ValueError
             if data is None:

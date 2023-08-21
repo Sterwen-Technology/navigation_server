@@ -249,7 +249,8 @@ def main():
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
     _logger.setLevel('INFO')
-    _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2023" % version)
+    start_string = "Starting Navigation server version %s - copyright Sterwen Technology 2021-2023" % version
+    _logger.info(start_string)
 
     # build the configuration from the file
     config = NavigationConfiguration(opts.settings)
@@ -279,17 +280,20 @@ def main():
     log_file = config.get_option("log_file", None)
     if log_file is not None:
         log_dir = config.get_option('trace_dir', None)
+        date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
+        log_file_name = log_file + '_' + date_stamp + '.log'
         if log_dir is not None:
-            log_fullname = os.path.join(log_dir, log_file)
+            log_fullname = os.path.join(log_dir, log_file_name)
         else:
-            log_fullname = log_file
+            log_fullname = log_file_name
+        _logger.info("Logging redirected into:%s" % log_fullname)
         try:
             fp = open(log_fullname, 'w')
             loghandler.setStream(fp)
         except IOError as e:
             _logger.error("Error opening log file %s %s" % (log_fullname, e))
             pass
-
+    _logger.info(start_string)
     _logger.setLevel(config.get_option('log_level', 'INFO'))
     adjust_log_level(config)
 
