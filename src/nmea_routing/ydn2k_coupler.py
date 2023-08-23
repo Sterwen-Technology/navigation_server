@@ -55,7 +55,7 @@ class YDCoupler(BufferedIPCoupler):
             # reply on send
             if self._n2k_writer is None:
                 # there should be no send
-                if pgn not in [61183, 126996]:
+                if pgn not in [60159, 61183, 61236, 126996]:
                     _logger.error("YD Coupler unexpected reply from %d pgn:%d %s" % (sa, pgn, frame))
                     raise ValueError
             else:
@@ -88,7 +88,7 @@ class YDCoupler(BufferedIPCoupler):
             try:
                 data = self._fast_packet_handler.process_frame(pgn, sa,  data)
             except FastPacketException as e:
-                _logger.error("YDCoupler Fast packet error %s from %d pgn %d data %s" % (e, sa, pgn, data.hex()))
+                _logger.error("YDCoupler Fast packet error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
                 self.add_event_trace(str(e))
                 raise ValueError
             if data is None:
