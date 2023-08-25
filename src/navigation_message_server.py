@@ -36,6 +36,7 @@ from nmea_routing.serial_nmeaport import NMEASerialPort
 from nmea_data.data_client import NMEADataClient
 from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter, NMEA2000TimeFilter
 from utilities.raw_log_coupler import RawLogCoupler
+from utilities.log_utilities import NavigationLogSystem
 
 
 def _parser():
@@ -47,7 +48,7 @@ def _parser():
     return p
 
 
-version = "V1.34"
+version = "V1.40"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -214,24 +215,6 @@ def print_threads():
         _logger.info("Thread:%s" % t.name)
 
 
-def adjust_log_level(config):
-    '''
-    Adjust the log level for each individual module (file)
-    :param config:
-    :return:
-    '''
-    modules = config.get_option('log_module', None)
-    if modules is None:
-        return
-    # print(modules)
-    for module, level in modules.items():
-        mod_log = _logger.getChild(module)
-        if mod_log is not None:
-            mod_log.setLevel(level)
-        else:
-            _logger.error("Module %s non-existent" % module)
-
-
 def main():
     # global global_configuration
 
@@ -244,13 +227,9 @@ def main():
             os.chdir(default_base_dir)
     # print("Current directory", os.getcwd())
     # set log for the configuration phase
-    loghandler = logging.StreamHandler()
-    logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
-    loghandler.setFormatter(logformat)
-    _logger.addHandler(loghandler)
-    _logger.setLevel('INFO')
-    start_string = "Starting Navigation server version %s - copyright Sterwen Technology 2021-2023" % version
-    _logger.info(start_string)
+    NavigationLogSystem.create_log()
+
+    _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2023" % version)
 
     # build the configuration from the file
     config = NavigationConfiguration(opts.settings)
