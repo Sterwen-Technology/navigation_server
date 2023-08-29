@@ -227,9 +227,7 @@ def main():
             os.chdir(default_base_dir)
     # print("Current directory", os.getcwd())
     # set log for the configuration phase
-    NavigationLogSystem.create_log()
-
-    _logger.info("Starting Navigation server version %s - copyright Sterwen Technology 2021-2023" % version)
+    NavigationLogSystem.create_log("Starting Navigation server version %s - copyright Sterwen Technology 2021-2023" % version)
 
     # build the configuration from the file
     config = NavigationConfiguration(opts.settings)
@@ -254,27 +252,8 @@ def main():
     config.add_class(NMEA2000Filter)
     config.add_class(NMEA2000TimeFilter)
     config.add_class(RawLogCoupler)
-    # logger setup => stream handler for now or file
 
-    log_file = config.get_option("log_file", None)
-    if log_file is not None:
-        log_dir = config.get_option('trace_dir', None)
-        date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
-        log_file_name = log_file + '_' + date_stamp + '.log'
-        if log_dir is not None:
-            log_fullname = os.path.join(log_dir, log_file_name)
-        else:
-            log_fullname = log_file_name
-        _logger.info("Logging redirected into:%s" % log_fullname)
-        try:
-            fp = open(log_fullname, 'w')
-            loghandler.setStream(fp)
-        except IOError as e:
-            _logger.error("Error opening log file %s %s" % (log_fullname, e))
-            pass
-    _logger.info(start_string)
-    _logger.setLevel(config.get_option('log_level', 'INFO'))
-    adjust_log_level(config)
+    NavigationLogSystem.finalize_log(config)
 
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'ST'))

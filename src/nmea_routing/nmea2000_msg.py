@@ -278,6 +278,7 @@ class NMEA2000Factory:
 #
 #-----------------------------------------------------------------------------------
 
+
 class FastPacketException(Exception):
     pass
 
@@ -320,8 +321,8 @@ class FastPacket:
 
         try:
             fr = self._frames[counter]
-            _logger.error("FastPacket duplicate frame for key %8X index %d new:%s exist: %s" %
-                          (self._key, counter, frame.hex(), fr.hex()))
+            _logger.error("FastPacket duplicate frame for pgn %d addr %d seq %d index %d new:%s exist: %s" %
+                          (self._pgn, self._source, self._seq, counter, frame.hex(), fr.hex()))
             raise FastPacketException("Frame Index duplicate %d" % counter)
         except KeyError:
             self._frames[counter] = frame[1:]
@@ -409,7 +410,7 @@ class FastPacketHandler:
         if handle.check_complete():
             result = handle.total_frame()
             self._sequences[key] = None
-            _logger.debug("Fast packet ==> end sequence on PGN %d" % pgn)
+            _logger.debug("Fast packet ==> end sequence on PGN %d from address %d sequence %d" % (pgn, addr, seq))
             return result
         else:
             return None

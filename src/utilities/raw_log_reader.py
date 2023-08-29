@@ -45,7 +45,8 @@ class RawLogFile:
 
         def read_decode(l):
             if l[0] != 'R':
-                _logger.error('Wrong line type:%s' % l)
+                if l[0] != 'H':
+                    _logger.error('Wrong line type:%s' % l)
                 raise ValueError
 
             ih = l.find('#')
@@ -60,12 +61,24 @@ class RawLogFile:
             return timestamp, message
 
         _logger.info("Start reading log file %s" % logfile)
+        # read the first line
+        line = fd.readline()
+        if line[0] != 'H':
+            _logger.error("Log file missing header line")
+            self._type = "ShipModulInterface"  # default
+        else:
+            fields = line.split('|')
+            self._type = fields[1]
+        _logger.info("Log file type:%s" % self._type)
         nb_record = 1
         self._records = []
         self._tick_index = []
         self._tick_interval = tick_interval
         first_line = fd.readline()
-        ts, msg = read_decode(first_line)
+        try:
+            ts, msg = read_decode(first_line)
+        except ValueError:
+            pass
         self._t0 = ts
         self._records.append(RawLogRecord(ts, msg))
         self._nb_tick = 0
@@ -104,6 +117,10 @@ class RawLogFile:
 
     def filename(self):
         return self._logfile
+
+    @property
+    def file_type(self):
+        return self._type
 
     def get_messages(self, first=0, last=0, original_timing=True):
 

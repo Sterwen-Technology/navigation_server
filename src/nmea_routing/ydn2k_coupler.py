@@ -33,11 +33,15 @@ class YDCoupler(BufferedIPCoupler):
             self.set_message_processing(msg_processing=self.input_frame_processing)
             self._reply_queue = queue.Queue(5)
 
-    def input_frame_processing(self, frame):
-        _logger.debug("%s receive frame=%s" % (self._name, frame))
+
+
+    @staticmethod
+    def decode_frame(coupler, frame, pgn_white_list=None):
+        _logger.debug("%s receive frame=%s" % (coupler.name(), frame))
         if frame[0] == 4:
             return NavGenericMsg(NULL_MSG)
-        self._total_msg_raw += 1
+        # coupler._total_msg_raw += 1
+        coupler.increment_msg_raw()
         fields = frame.split(b' ')
         data_len = len(fields) - 3
         if data_len <= 0:
@@ -51,17 +55,22 @@ class YDCoupler(BufferedIPCoupler):
             return pgn, prio, sa
 
         pgn, prio, sa = decode_msgid(fields[2])
+
+        if pgn_white_list is not None:
+            if pgn not in pgn_white_list:
+                raise ValueError
+
         if fields[1] == b'T':
             # reply on send
-            if self._n2k_writer is None:
+            if coupler.n2k_writer is None:
                 # there should be no send
                 if pgn not in [60159, 61183, 61236, 126996]:
                     _logger.error("YD Coupler unexpected reply from %d pgn:%d %s" % (sa, pgn, frame))
                     raise ValueError
             else:
-                _logger.debug("%s reply on send: %s" % (self._name, frame))
+                _logger.debug("%s reply on send: %s" % (coupler.name(), frame))
                 try:
-                    self._reply_queue.put(frame, block=False)
+                    coupler._reply_queue.put(frame, block=False)
                 except queue.Full:
                     _logger.critical("YD write feedback queue full")
                 raise ValueError
@@ -84,23 +93,26 @@ class YDCoupler(BufferedIPCoupler):
                 raise ValueError
             return fp
 
-        if self._fast_packet_handler.is_pgn_active(pgn, sa, data):
+        if coupler.fast_packet_handler.is_pgn_active(pgn, sa, data):
             try:
-                data = self._fast_packet_handler.process_frame(pgn, sa,  data)
+                data = coupler.fast_packet_handler.process_frame(pgn, sa, data)
             except FastPacketException as e:
                 _logger.error("YDCoupler Fast packet error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
-                self.add_event_trace(str(e))
+                coupler.add_event_trace(str(e))
                 raise ValueError
             if data is None:
-                raise ValueError # no error but just to escape
+                raise ValueError  # no error but just to escape
         elif check_pgn():
-            self._fast_packet_handler.process_frame(pgn, sa, data)
+            coupler.fast_packet_handler.process_frame(pgn, sa, data)
             raise ValueError  # no error but just to escape
 
         msg = NMEA2000Msg(pgn, prio, sa, 0, data)
         gmsg = NavGenericMsg(N2K_MSG, raw=frame, msg=msg)
         _logger.debug("YD PGN decode:%s" % str(msg))
         return gmsg
+
+    def input_frame_processing(self, frame):
+        return YDCoupler.decode_frame(self, frame)
 
     def encode_nmea2000(self, msg: NMEA2000Msg) -> NavGenericMsg:
         canid = b'%08X' % (msg.pgn << 8 | msg.prio << 26 | msg.da)
