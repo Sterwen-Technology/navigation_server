@@ -132,9 +132,8 @@ def main():
     else:
         if os.getcwd() != default_base_dir:
             os.chdir(default_base_dir)
-    NavigationLogSystem.create_log()
+    NavigationLogSystem.create_log("Starting Data server version %s - copyright Sterwen Technology 2021-2023" % _version)
     config = NavigationDataConfiguration(opts.settings)
-    _logger.info("Starting Data server version %s - copyright Sterwen Technology 2021-2023" % _version)
     NavigationLogSystem.finalize_log(config)
     _logger.info("Navigation data server working directory:%s" % os.getcwd())
     Manufacturers.build_manufacturers(config.get_option('manufacturer_xml', './def/Manufacturers.N2kDfn.xml'))

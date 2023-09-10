@@ -17,11 +17,11 @@ import time
 from nmea_routing.server_common import NavigationServer
 from nmea_routing.nmea2000_msg import NMEA2000Msg
 from nmea_routing.nmea2000_publisher import PgnRecord
-from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeResult
+from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeException
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea_routing.configuration import NavigationConfiguration
 
-_logger = logging.getLogger("ShipDataServer" + "." + __name__)
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class NMEA2000Device:
@@ -37,8 +37,9 @@ class NMEA2000Device:
         self._process_vector = {60928: self.p60928,
                                 126996: self.p126996
                                 }
-        self._fields_60928 = None
+        # self._fields_60928 = None
         self._fields_126996 = None
+        self._iso_name = None
         self._changed = True
         if properties is None:
             self._properties = {}
@@ -58,7 +59,8 @@ class NMEA2000Device:
             return
         try:
             pgn_data = pgn_def.pgn_def.decode_pgn_data(msg.payload)
-        except N2KDecodeResult:
+        except N2KDecodeException as e:
+            _logger.error("NMEA2000 Device - PGN %d decode error %s" % (msg.pgn, e))
             return
         process_function(pgn_data)
 
@@ -87,16 +89,15 @@ class NMEA2000Device:
 
     def p60928(self, msg_data):
 
-        # _logger.debug("PGN data= %s" % msg_data)
-        if self._fields_60928 is None:
+        #   _logger.debug("PGN 60928 data= %s" % msg_data)
+        if self._iso_name is None:
             self._changed = True
-            _logger.info("Processing ISO address claim for address %d" % self._address)
-            self._fields_60928 = msg_data['fields']
-            try:
-                mfg_code = self._fields_60928['Manufacturer Code']
-            except KeyError:
-                _logger.error("No manufacturer code in PGN 60928")
-                mfg_code = 0
+            self._iso_name = msg_data['fields']["System ISO Name"]
+            _logger.info("Processing ISO address claim for address %d name=%16X" %
+                         (self._address, self._iso_name.name_value))
+            mfg_code = self._iso_name.manufacturer_code
+            _logger.debug("Device address %d claim ISO name details" % self._address)
+            _logger.debug(str(self._iso_name))
             self._properties['Manufacturer Code'] = mfg_code
             try:
                 self._properties['Manufacturer Name'] = Manufacturers.get_from_code(mfg_code).name
@@ -180,7 +181,7 @@ class NMEA2KController(NavigationServer, threading.Thread):
             try:
                 self.process_msg(msg)
             except Exception as e:
-                _logger.error("%s NMEA2000 Controller processing error:% on message %s" % (self._name, e, msg.format1()))
+                _logger.error("%s NMEA2000 Controller processing error:%s on message %s" % (self._name, e, msg.format1()))
 
         _logger.info("%s NMEA2000 Controller stops" % self._name)
 

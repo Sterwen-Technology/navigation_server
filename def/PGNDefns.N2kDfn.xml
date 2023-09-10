@@ -48,73 +48,11 @@
       <Name>ISO Address Claim</Name>
       <ByteLength>8</ByteLength>
       <Fields>
-        <Field Name="Unique Number">
+        <NameField Name="System ISO Name">
           <Description>ISO Identity Number</Description>
           <BitOffset>0</BitOffset>
-          <BitLength>21</BitLength>
-        </Field>
-        <Field Name="Manufacturer Code">
-          <BitOffset>21</BitOffset>
-          <BitLength>11</BitLength>
-        </Field>
-        <InstanceField Name="Device Instance Lower">
-          <Description>ISO ECU Instance</Description>
-          <BitOffset>32</BitOffset>
-          <BitLength>3</BitLength>
-        </InstanceField>
-        <InstanceField Name="Device Instance Upper">
-          <Description>ISO Function Instance</Description>
-          <BitOffset>35</BitOffset>
-          <BitLength>5</BitLength>
-        </InstanceField>
-        <UIntField Name="Device Function">
-          <Description>ISO Function</Description>
-          <BitOffset>40</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <Field Name="Reserved">
-          <BitOffset>48</BitOffset>
-          <BitLength>1</BitLength>
-        </Field>
-        <EnumField Name="Device Class">
-          <BitOffset>49</BitOffset>
-          <BitLength>7</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Reserved for 2000 Use" />
-            <EnumPair Value="10" Name="System tools" />
-            <EnumPair Value="20" Name="Safety systems" />
-            <EnumPair Value="25" Name="Inter/Intranetwork Device" />
-            <EnumPair Value="30" Name="Electrical Distribution" />
-            <EnumPair Value="35" Name="Electrical Generation" />
-            <EnumPair Value="40" Name="Steering and Control Surfaces" />
-            <EnumPair Value="50" Name="Propulsion systems" />
-            <EnumPair Value="60" Name="Navigation systems" />
-            <EnumPair Value="70" Name="Communication systems" />
-            <EnumPair Value="75" Name="Sensor Communication Interface" />
-            <EnumPair Value="80" Name="Instrumentation/general systems" />
-            <EnumPair Value="85" Name="External Environment" />
-            <EnumPair Value="90" Name="Internal Environmental (HVAC) systems" />
-            <EnumPair Value="100" Name="Deck, Cargo and Fishing Equipment" />
-            <EnumPair Value="120" Name="Display" />
-            <EnumPair Value="125" Name="Entertainment" />
-          </EnumValues>
-        </EnumField>
-        <InstanceField Name="System Instance">
-          <Description>ISO Device Class Instance</Description>
-          <BitOffset>56</BitOffset>
-          <BitLength>4</BitLength>
-        </InstanceField>
-        <EnumField Name="Industry Group">
-          <BitOffset>60</BitOffset>
-          <BitLength>3</BitLength>
-          <EnumValues>
-            <EnumPair Value="4" Name="Marine" />
-          </EnumValues>
-        </EnumField>
-        <UIntField Name="ISO Self Configurable">
-          <BitOffset>63</BitOffset>
-          <BitLength>1</BitLength>
-        </UIntField>
+          <BitLength>64</BitLength>
+        </NameField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="61184">
@@ -124,74 +62,11 @@
       <Name>ISO Commanded Address</Name>
       <ByteLength>10</ByteLength>
       <Fields>
-        <Field Name="Unique Number">
+        <NameField Name="System ISO Name">
           <Description>ISO Identity Number</Description>
           <BitOffset>0</BitOffset>
-          <BitLength>21</BitLength>
-        </Field>
-        <UIntField Name="Manufacturer Code">
-          <BitOffset>21</BitOffset>
-          <BitLength>11</BitLength>
-        </UIntField>
-        <InstanceField Name="Device Instance Lower">
-          <Description>ISO ECU Instance</Description>
-          <BitOffset>32</BitOffset>
-          <BitLength>3</BitLength>
-        </InstanceField>
-        <InstanceField Name="Device Instance Upper">
-          <Description>ISO Function Instance</Description>
-          <BitOffset>35</BitOffset>
-          <BitLength>5</BitLength>
-        </InstanceField>
-        <UIntField Name="Device Function">
-          <Description>ISO Function</Description>
-          <BitOffset>40</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <UIntField Name="Reserved">
-          <BitOffset>48</BitOffset>
-          <BitLength>1</BitLength>
-        </UIntField>
-        <EnumField Name="Device Class">
-          <BitOffset>49</BitOffset>
-          <BitLength>7</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Reserved for 2000 Use" />
-            <EnumPair Value="10" Name="System tools" />
-            <EnumPair Value="20" Name="Safety systems" />
-            <EnumPair Value="25" Name="Inter/Intranetwork Device" />
-            <EnumPair Value="30" Name="Electrical Distribution" />
-            <EnumPair Value="35" Name="Electrical Generation" />
-            <EnumPair Value="40" Name="Steering and Control Surfaces" />
-            <EnumPair Value="50" Name="Propulsion systems" />
-            <EnumPair Value="60" Name="Navigation systems" />
-            <EnumPair Value="70" Name="Communication systems" />
-            <EnumPair Value="75" Name="Sensor Communication Interface" />
-            <EnumPair Value="80" Name="Instrumentation/general systems" />
-            <EnumPair Value="85" Name="External Environment" />
-            <EnumPair Value="90" Name="Internal Environmental (HVAC) systems" />
-            <EnumPair Value="100" Name="Deck, Cargo and Fishing Equipment" />
-            <EnumPair Value="120" Name="Display" />
-            <EnumPair Value="125" Name="Entertainment" />
-          </EnumValues>
-        </EnumField>
-        <InstanceField Name="System Instance">
-          <Description>ISO Device Class Instance</Description>
-          <BitOffset>56</BitOffset>
-          <BitLength>4</BitLength>
-        </InstanceField>
-        <EnumField Name="Industry Code">
-          <BitOffset>60</BitOffset>
-          <BitLength>3</BitLength>
-          <EnumValues>
-            <EnumPair Value="4" Name="Marine" />
-          </EnumValues>
-        </EnumField>
-        <UIntField Name="ISO Self Configurable">
-          <Description>ISO Self Configurable</Description>
-          <BitOffset>63</BitOffset>
-          <BitLength>1</BitLength>
-        </UIntField>
+          <BitLength>64</BitLength>
+        </NameField>
         <UIntField Name="New Source Address">
           <BitOffset>64</BitOffset>
           <BitLength>8</BitLength>

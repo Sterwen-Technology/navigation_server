@@ -15,6 +15,7 @@ from collections import namedtuple
 
 from utilities.xml_utilities import XMLDefinitionFile, XMLDecodeError
 from nmea2000.nmea2k_manufacturers import Manufacturers
+from nmea2000.n2k_name import NMEA2000Name
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -524,7 +525,7 @@ class Field:
             validity = "valid"
         else:
             validity = "invalid"
-        _logger.debug("Result %s=%s %s" % (res.name, str(res.value),validity))
+        _logger.debug("Result %s=%s %s" % (res.name, str(res.value), validity))
         return res
         #except Exception as e:
             # _logger.error("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
@@ -792,6 +793,28 @@ class StringField(Field):
 
     def decode_value(self, payload, specs):
         return self.extract_var_str(payload, specs)
+
+
+class NameField(Field):
+    '''
+    This class is here to decode 64bits long ISO Name
+    See class NMEA2000Name for details
+    '''
+
+    def __init__(self, xml):
+        super().__init__(xml)
+
+    def decode_value(self, payload, specs):
+        b_dec = payload[specs.start: specs.end]
+
+        res = N2KDecodeResult(self._name)
+        if len(b_dec) != 8:
+            _logger.error("ISO Name field must be 8 bytes")
+            res.invalid()
+            return
+        res.value = NMEA2000Name(b_dec)
+        res.actual_length = 8
+        return res
 
 
 class RepeatedFieldSet:

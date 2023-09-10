@@ -34,8 +34,10 @@ class NavigationLogSystem:
         # print(modules)
         for module, level in modules.items():
             mod_log = _logger.getChild(module)
+            # print(module, level, mod_log.level)
             if mod_log is not None:
                 mod_log.setLevel(level)
+                # print(module, level, mod_log.level)
             else:
                 _logger.error("Module %s non-existent" % module)
 
