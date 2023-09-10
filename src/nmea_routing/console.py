@@ -145,7 +145,8 @@ class ConsoleServicer(NavigationConsoleServicer):
                       ('Manufacturer Name', 'manufacturer_name'),
                       ('Product Code', 'product_code'),
                       ('Product name', 'product_name'),
-                      ('Description', 'description')
+                      ('Description', 'description'),
+                      ('System ISO Name', 'iso_name')
                       )
 
     def GetServerDetails(self, request, context):

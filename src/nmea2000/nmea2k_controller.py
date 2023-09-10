@@ -98,6 +98,7 @@ class NMEA2000Device:
             mfg_code = self._iso_name.manufacturer_code
             _logger.debug("Device address %d claim ISO name details" % self._address)
             _logger.debug(str(self._iso_name))
+            self._properties['System ISO Name'] = self._iso_name.name_value
             self._properties['Manufacturer Code'] = mfg_code
             try:
                 self._properties['Manufacturer Name'] = Manufacturers.get_from_code(mfg_code).name

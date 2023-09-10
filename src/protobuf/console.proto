@@ -80,6 +80,7 @@ message N2KDeviceMsg {
   string product_name=5;
   string description=6;
   bool changed=7;
+  uint64 iso_name=8;
 }
 
 message Request {
