@@ -13,7 +13,7 @@ import logging
 import queue
 
 from nmea_routing.IPCoupler import BufferedIPCoupler
-from nmea_routing.nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
+from nmea2000.nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
 from nmea2000.nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG
 

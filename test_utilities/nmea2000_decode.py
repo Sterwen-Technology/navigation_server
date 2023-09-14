@@ -12,7 +12,7 @@ import csv
 import sys
 from argparse import ArgumentParser
 
-from nmea_routing.nmea2000_msg import *
+from nmea2000.nmea2000_msg import *
 from nmea2000.nmea2k_pgndefs import *
 
 _logger = logging.getLogger("ShipDataServer")

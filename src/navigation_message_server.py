@@ -29,13 +29,14 @@ from nmea_routing.IPCoupler import NMEATCPReader
 from nmea_routing.ikonvert import iKonvert
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea2000.nmea2k_manufacturers import Manufacturers
-from nmea2000.nmea2k_controller import NMEA2KController
+from nmea2000.nmea2k_controller import NMEA2KController, NMEA2KActiveController
 from victron_mppt.mppt_coupler import MPPT_Coupler
 from nmea_routing.ydn2k_coupler import YDCoupler
 from nmea_routing.serial_nmeaport import NMEASerialPort
 from nmea_data.data_client import NMEADataClient
 from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter, NMEA2000TimeFilter
 from utilities.raw_log_coupler import RawLogCoupler
+from nmea2000.nmea2k_can_coupler import DirectCANCoupler
 from utilities.log_utilities import NavigationLogSystem
 
 
@@ -247,11 +248,13 @@ def main():
     config.add_class(YDCoupler)
     config.add_class(NMEASerialPort)
     config.add_class(NMEA2KController)
+    config.add_class(NMEA2KActiveController)
     config.add_class(NMEADataClient)
     config.add_class(NMEA0183Filter)
     config.add_class(NMEA2000Filter)
     config.add_class(NMEA2000TimeFilter)
     config.add_class(RawLogCoupler)
+    config.add_class(DirectCANCoupler)
 
     NavigationLogSystem.finalize_log(config)
 

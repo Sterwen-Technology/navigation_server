@@ -18,11 +18,10 @@ import queue
 import threading
 import time
 
-from nmea2000.nmea2k_pgndefs import PGNDef, N2KUnknownPGN
 from nmea_routing.generic_msg import *
 from nmea_routing.coupler import Coupler, CouplerReadError, CouplerTimeOut
 from nmea_routing.nmea0183 import process_nmea0183_frame, NMEAInvalidFrame, NMEA0183Msg
-from nmea_routing.nmea2000_msg import fromProprietaryNmea, FastPacketException, NMEA2000Msg, FastPacketHandler
+from nmea2000.nmea2000_msg import fromProprietaryNmea, FastPacketHandler
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 

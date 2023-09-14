@@ -13,11 +13,9 @@ log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 # log_file: test_fast_packet
 log_module:
-  nmea_routing.IPCoupler: INFO
   nmea_routing.coupler: INFO
   nmea_routing.nmea2000_msg: INFO
-  nmea_routing.ydn2k_coupler: INFO
-  nmea2000.nmea2k_controller: INFO
+  nmea2000.nmea2k_controller: DEBUG
   nmea2000.n2k_name: INFO
 
 servers:
@@ -32,20 +30,16 @@ servers:
       port: 4502
 
 - NMEANetwork:
-      class: NMEA2KController
+      class: NMEA2KActiveController
+      trace: false
 
 
 couplers:
 
-- LogReader:
-    class: RawLogCoupler
-    logfile: /mnt/meaban/Bateau/tests/TRACE-MiniPlex3-230720-0644.log
+- CAN:
+    class: DirectCANCoupler
     autostart: true
     nmea2000_controller: NMEANetwork
-    protocol: nmea2000
-    direction: read_only
-    # data_sink: DataAnalyzer
-    # pgn_white_list: [129029, 126996, 129540]
 
 filters:
 

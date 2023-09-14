@@ -1,18 +1,18 @@
 # -------------------------------------------------------------------------------
-# Name:        NMEA2K-controller
-# Purpose:     Analyse and process NMEA2000 network control messages
+# Name:        NMEA2K-Name
+# Purpose:     Implements the 64bits ISO Name object
 #
 # Author:      Laurent Carré
 #
-# Created:     /10/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Created:     04/09/2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
 import logging
 
 
-_logger = logging.getLogger("ShipDataServer" + "." + __name__)
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class NMEA2000Name:
@@ -257,3 +257,7 @@ class NMEA2000Name:
         for f in self.fields.values():
             res += "%s = %d\n" % (f.description, f.extract_field(self._value))
         return res
+
+    @staticmethod
+    def create_name(**kwargs):
+        pass

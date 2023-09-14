@@ -11,9 +11,9 @@
 
 import logging
 import time
-from nmea_routing.generic_msg import N0183_MSG, N2K_MSG, NavGenericMsg
+from nmea_routing.generic_msg import N0183_MSG, N2K_MSG
 from nmea_routing.nmea0183 import NMEA0183Msg
-from nmea_routing.nmea2000_msg import NMEA2000Msg
+from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.configuration import NavigationConfiguration
 
 _logger = logging.getLogger('ShipDataServer.' + __name__)

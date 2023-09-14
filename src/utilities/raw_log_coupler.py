@@ -8,7 +8,6 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
-import datetime
 import logging
 import threading
 import queue
@@ -17,11 +16,10 @@ import time
 from utilities.raw_log_reader import RawLogFile
 from nmea_routing.coupler import Coupler
 from nmea_routing.nmea0183 import NMEA0183Msg, NMEAInvalidFrame
-from nmea_routing.nmea2000_msg import FastPacketHandler, fromProprietaryNmea
+from nmea2000.nmea2000_msg import FastPacketHandler, fromProprietaryNmea
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG
 from nmea_routing.shipmodul_if import ShipModulInterface
 from nmea_routing.ydn2k_coupler import YDCoupler
-from nmea_routing.filters import FilterSet
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 

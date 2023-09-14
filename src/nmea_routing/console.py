@@ -15,6 +15,7 @@ from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
 from socket import gethostname
 
+from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.server_common import NavigationServer, NavigationGrpcServer
 # from nmea2000.nmea2k_controller import NMEA2000Device
 from utilities.protob_arguments import *
@@ -207,8 +208,9 @@ class Console(NavigationGrpcServer):
                 yield sr
 
     def get_server_by_type(self, server_type: str) -> NavigationServer:
+        server_class = NavigationConfiguration.get_conf().get_class(server_type)
         for sr in self._servers.values():
-            if sr.class_name == server_type:
+            if issubclass(sr.server.__class__, server_class):
                 return sr.server
         return None
 

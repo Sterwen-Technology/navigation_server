@@ -14,8 +14,7 @@ import struct
 from collections import namedtuple
 
 from utilities.xml_utilities import XMLDefinitionFile, XMLDecodeError
-from nmea2000.nmea2k_manufacturers import Manufacturers
-from nmea2000.n2k_name import NMEA2000Name
+from nmea2000.nmea2k_name import NMEA2000Name
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)

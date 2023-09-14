@@ -20,9 +20,8 @@ import time
 from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.publisher import PublisherOverflow
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
-from nmea_routing.nmea2000_msg import NMEA2000Msg, NMEA2000Writer, FastPacketException, FastPacketHandler
-from nmea2000.nmea2k_pgndefs import PGNDef, N2KUnknownPGN
-from nmea_routing.nmea0183 import process_nmea0183_frame, NMEAInvalidFrame, NMEA0183Msg
+from nmea2000.nmea2000_msg import NMEA2000Msg, NMEA2000Writer
+from nmea2000.nmea2k_pgndefs import PGNDef
 from utilities.date_time_utilities import format_timestamp
 
 

@@ -135,17 +135,3 @@ class N2KTracePublisher(Publisher):
             self._trace_fd.close()
         super().stop()
 
-
-def pgn_list(str_filter):
-    res = []
-    str_pgn_list = str_filter.split(',')
-    pgn_defs = PGNDefinitions.pgn_defs()
-    for str_pgn in str_pgn_list:
-        pgn = int(str_pgn)
-        try:
-            pgn_d = pgn_defs.pgn_def(pgn)
-        except N2KUnknownPGN:
-            print("Invalid PGN:", pgn, "Ignored")
-            continue
-        res.append(pgn)
-    return res

@@ -16,7 +16,7 @@ import queue
 import base64
 
 from nmea_routing.coupler import Coupler
-from nmea_routing.nmea2000_msg import NMEA2000Msg
+from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.generic_msg import *
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)

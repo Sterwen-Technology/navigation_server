@@ -18,8 +18,8 @@ from nmea_routing.coupler import Coupler
 from nmea_routing.IPCoupler import BufferedIPCoupler
 from nmea_routing.generic_msg import *
 from nmea_routing.nmea0183 import NMEA0183Msg, NMEA0183Sentences
-from nmea_routing.nmea2000_msg import FastPacketHandler, NMEA2000Msg, FastPacketException
-from nmea2000.nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN, PGNDef
+from nmea2000.nmea2000_msg import FastPacketHandler, NMEA2000Msg, FastPacketException
+from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, PGNDef
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 

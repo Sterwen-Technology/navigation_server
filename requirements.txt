@@ -5,3 +5,6 @@ protobuf~=3.19.1
 pyserial~=3.5
 PyYAML~=5.4.1
 six==1.16.0
+
+python-can~=4.2.2
+setuptools~=40.8.0
