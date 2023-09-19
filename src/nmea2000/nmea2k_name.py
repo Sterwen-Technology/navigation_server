@@ -10,6 +10,7 @@
 # -------------------------------------------------------------------------------
 
 import logging
+import struct
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -86,6 +87,10 @@ class NMEA2000Name:
 
         def extract_field(self, value):
             return (value >> self._bit_offset) & self._mask
+
+        def set_field(self, name_value, value):
+            return name_value | ((value & self._mask) << self._bit_offset)
+
 
         @property
         def name(self):
@@ -233,13 +238,17 @@ class NMEA2000Name:
       </Fields>
     </PGNDefn>
         """
-        if len(self.fields) == 0:
-            for f in self.__fields:
-                self.fields[f.name] = f
+        self.init_fields()
         self._bytes = data
         # _logger.debug("NMEA2000 Name bytes:%s" % data.hex())
         self._value = int.from_bytes(data, byteorder='little', signed=False)
         # _logger.debug("NMEA2000 Name value:%16X" % self._value)
+
+    @staticmethod
+    def init_fields():
+        if len(NMEA2000Name.fields) == 0:
+            for f in NMEA2000Name.__fields:
+                NMEA2000Name.fields[f.name] = f
 
     def __getattr__(self, item):
         try:
@@ -260,4 +269,12 @@ class NMEA2000Name:
 
     @staticmethod
     def create_name(**kwargs):
-        pass
+        name = 0
+        NMEA2000Name.init_fields()
+        for key, value in kwargs.items():
+            field = NMEA2000Name.fields[key]
+            name = field.set_field(name, value)
+        name_bytes = struct.pack("<Q", name)
+        return NMEA2000Name(name_bytes)
+
+

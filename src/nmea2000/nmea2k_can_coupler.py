@@ -14,6 +14,7 @@ import queue
 
 from nmea_routing.coupler import Coupler, CouplerTimeOut
 from nmea2000.nmea2k_controller import NMEA2KActiveController
+from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -62,3 +63,19 @@ class DirectCANCoupler(Coupler):
         if self._data_sink is not None:
             self._data_sink.send_msg(msg)
         return msg
+
+    def define_n2k_writer(self):
+        return None
+
+    def send_msg_gen(self, msg: NavGenericMsg):
+        if msg.type != N2K_MSG:
+            raise CouplerWriteError("CAN coupler only accepts NMEA2000 messages")
+
+        if self._direction == self.READ_ONLY:
+            _logger.error("Coupler %s attempt to write on a READ ONLY coupler" % self.name())
+            return False
+        self._total_msg_s += 1
+        return self.send(msg.msg)
+
+    def send(self, msg: NMEA2000Msg):
+        return self._n2k_controller.CAN_interface.send(msg)

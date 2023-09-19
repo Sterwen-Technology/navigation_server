@@ -241,36 +241,39 @@ class NMEA2000Object:
     Specific subclasses can be created to handle special processing
     '''
 
-    def __init__(self, pgn: int, message: NMEA2000Msg = None, **kwargs):
+    def __init__(self, pgn):
         self._pgn = pgn
-        self._msg = message
-        self.__dict__.update(kwargs)
+        self._sa = 0
+        self._da = 0
+        self._fields = None
+        self._message = None
+        self._prio = 7
 
+    def from_message(self, msg: NMEA2000Msg):
+        if self._pgn != msg.pgn:
+            raise ValueError
+        self._sa = msg.sa
+        self._da = msg.da
+        self._message = msg
+        self._fields = msg.decode()['fields']
+        self.update()
+        return self
 
-class SystemTime(NMEA2000Object):
-    secondsperday = 3600. * 24.
+    def message(self):
+        if self._message is None:
+            self._message = NMEA2000Msg(self._pgn, self._prio, self._sa, self._da, self.encode_payload())
+        return self._message
 
-    def __init__(self, message, **kwargs):
-        super().__init__(126992, message, **kwargs)
-        if message is not None:
-            self._days = message['Date']
-            self._seconds = message['Time']
-            ts = (self._days * self.secondsperday) + self._seconds
-            self._dt = datetime.datetime.fromtimestamp(ts)
-        # print(self._dt)
+    def update(self):
+        raise NotImplementedError("Method update To be implemented in subclass")
 
+    def encode_payload(self) -> bytes:
+        raise NotImplementedError("Method encode_payload To be implemented in subclass")
 
-class NMEA2000Factory:
-    class_build = {
-        126992: SystemTime
-    }
+    @property
+    def pgn(self):
+        return self._pgn
 
-    @staticmethod
-    def build(message: NMEA2000Msg, fields: dict) -> NMEA2000Object:
-        try:
-            return NMEA2000Factory.class_build[message.pgn](message, kwargs=fields)
-        except KeyError:
-            return NMEA2000Object(message.pgn, message, kwargs=fields)
 
 #-----------------------------------------------------------------------------------
 #
@@ -446,18 +449,17 @@ class FastPacketHandler:
         total_len = len(data)
         data_ptr = 0
         while counter < nb_frames:
-            frame = bytearray(8)
+            remaining_bytes = total_len - data_ptr
+            frame_len = min(8, remaining_bytes)
+            frame = bytearray(frame_len)
             frame[0] = seq_en | counter
             ptr = 1
             if counter == 0:
                 frame[1] = total_len
                 ptr += 1
-            while ptr < 8:
-                if data_ptr < total_len:
-                    frame[ptr] = data[data_ptr]
-                    data_ptr += 1
-                else:
-                    frame[ptr] = 0xFF
+            while ptr < frame_len:
+                frame[ptr] = data[data_ptr]
+                data_ptr += 1
                 ptr += 1
             yield frame
             counter += 1

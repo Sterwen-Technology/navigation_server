@@ -346,8 +346,16 @@
       <Code>504</Code>
     </Manufacturer>
     <Manufacturer>
+      <Name>Shipmodul</Name>
+      <Code>595</Code>
+    </Manufacturer>
+    <Manufacturer>
       <Name>Yacht Devices</Name>
       <Code>717</Code>
+    </Manufacturer>
+    <Manufacturer>
+      <Name>Sterwen Technology</Name>
+      <Code>999</Code>
     </Manufacturer>
     <Manufacturer>
       <Name>Teleflex</Name>

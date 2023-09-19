@@ -16,7 +16,7 @@ Client can also send messages to the server that are sent to the instrument inpu
 
 There are 2 server classes with external access: NMEA0183 based protocol over TCP and binary messages over gRPC. And some other internal servers.
 
-The NMEA0183 based protocol can be understood and messages starting with '$' or '!' including only printable ASCII characters and separated by the <CR> and <LF> characters
+The NMEA0183 based protocol can be understood and messages starting with '$' or '!' including only printable ASCII characters and separated by the 'CR' and 'LF' characters
 That is not exactly a real protocol over TCP/IP but this is working and the messages (data frames) and directly inherited from the standards NMEA0183 messages.
 Even NMEA2000 data frames are carrier over such messages like it is done for Digital Yacht or Shipmodul miniplex.
 Using efficient binary encoding with Protobuf and a real protocol like gRPC allows an increase in efficiency. THis is particularly true for NMEA2000 that is binary protocol by nature.
@@ -94,23 +94,42 @@ Warning: when the application is connected to the server all traffic is re-route
 | port    | int    | 4501    | listening port of the server                           |
 | coupler | string | None    | Name of the Miniplex coupler in the configuration file |
 
-### NMEAKController server
+#### NMEA2KController server
 
 This is an internal server that has no direct TCP access. All accesses to this server are via the Console. This server maintain the list of devices connected on the NMEA2000 network along with the information they are sending.
+It shall be associated to a coupler by defining the **nmea2000_controller** parameter to capture all relevant messages. This coupler must be configured with **nmea2000** or **nmea_mix** protocol.
+
+| Name       | Type   | Default | Signification                                    |
+|------------|--------|---------|--------------------------------------------------|
+| queue_size | int    | 20      | input message queue size                         |
+| save_file  | string | None    | Name of the file for saving the NMEA2000 devices |
+
+#### NMEA2KActiveController(NMEA2KController) server
+
+This class extends the NMEA2KController feature by adding the capability to claim an address on the CAN bus and therefore send messages. By adding this class, the server becomes a full NMEA2000 device.
+In future versions, the controller shall be able to support several devices for simulation purpose.
+
+| Name             | Type  | Default | Signification                                                            |
+|------------------|-------|---------|--------------------------------------------------------------------------|
+| address          | int   | 112     | address on the CAN bus between 1 and 253. Better to select an unused one |
+| unique_id        | int   | 0       | Identifier of the device on 21bits (see standard)                        |
+| manufacturer_id  | int   | 999     | This is the registration number of the manufacturer by the NMEA2000 body |
+| message_interval | float | 0.1     | minimum interval between message sending on the bus in seconds           |
+
 
 
 ### Couplers
 Couplers classes are connecting to instrumentation bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
 Currently, tested couplers:
-- Shipmodul Miniplex3 Ethernet (or WiFi)
-- Digital Yacht iKonvert
-- Yachting Digital Ethernet
-- Direct serial link on NMEA0183
-- NMEA0183 over TCP/IP
+- Shipmodul Miniplex3 Ethernet (or WiFi): NMEA0183 or NMEA2000 via $MXPGN pseudo NMEA0183 messages
+- Digital Yacht iKonvert: NMEA2000 only (mode Raw)
+- Yachting Digital Ethernet (or WiFi): NMEA2000 only (the device can be used in NMEA0183 using NMEA0183 over TCP/IP)
+- Direct serial link on NMEA0183: NMEA0183 and NMEA2000 using pseudo NMEA0183 messages (check speed)
+- NMEA0183 over TCP/IP: NMEA0183 and NMEA2000 using pseudo NMEA0183 messages
 - Victron energy device with VEDirect serial line
+- Direct CAN Access: NMEA2000 only
 
 Under preparation
-- Direct CAN Access
 - Actisense adapter (NGT-1-USB)
 
 #### Coupler generic parameters
@@ -125,7 +144,7 @@ Under preparation
 | protocol            | nmea0183, nmea2000, nmea_mix         | nmea0183      | Message processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 when possible |
 | direction           | read_only, write_only, bidirectional | bidirectional | Direction of exchange with device                                                                                            |
 | trace_messages      | boolean                              | False         | Trace all messages after internal pre-processing                                                                             |
-| trace_raw           | boolean                              | False         | Trace all messages in device format                                                                                          | 
+| trace_raw           | boolean                              | False         | Trace all messages in device format (see tracing and replay paragraph)                                                       | 
 | autostart           | boolean                              | True          | The coupler is started automatically when the service starts, if False it needs to be started via the Console                |
 | nmea2000_controller | string                               | None          | Name of the server of class NMEA2KController                                                                                 |
 
@@ -202,12 +221,16 @@ The device connection and initialisation logic is directly managed by the couple
 
 #### VEDirect
 
-This class manages the interface with the VEDirect interface service (see)
+This class manages the interface with the VEDirect interface service (see) and convert the data into NMEA0183 XDR messages.
 
 | Name    | Type   | Default   | Signification            |
 |---------|--------|-----------|--------------------------|
 | address | string | 127.0.0.1 | IP address of the server |
 | port    | int    | 4505      | listening port           |
+
+#### DirectCANCoupler
+This coupler class works when a CAN bus interface with socketcan driver is installed on the system. Obviously, only NMEA2000 messages can be processed.
+The CAN bus the coupler must be associated with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters.
 
 ### Publishers
 Publishers concentrate messages from several instruments towards consumers. Publishers are implicitly created by Servers when a new client connection is created.
@@ -253,7 +276,7 @@ All NMEA2000 Messages are processed through this filter is the Coupler is in nme
 |--------------|----------|---------|--------------------------------------------------------------------|
 | source       | int      | none    | source address of the message. If none, all messages are processed |
 | pgn          | int list | none    | list of the PGN to be filtered. If none, all PGN are processed     |
-| mfg_id       | int      | none    | Manufacturer NMEA2000 ID (see NMEA200 site)                        |
+| mfg_id       | int      | none    | Manufacturer NMEA2000 ID (see NMEA2000 site)                       |
 | mfg_name     | string   | None    | Manufacturer name as per NMEA2000 official table                   |
 | product_name | string   | None    | Product name as published by the PGN 126996. Not always present    |
 
@@ -266,6 +289,10 @@ Select one value for each period to reduce message flow for slow moving values
 | period | float | 60.0    | minimum period in seconds between messages |
 
 The period shall be defined and non-zero, otherwise the filter is disabled
+
+## Tracing and replay
+
+
 
 ## Victron VE Direct gRPC server
 This service is permanently reading the VEDirect (RS485 over USB) of the MPPT device.

@@ -16,7 +16,10 @@ log_module:
   nmea_routing.coupler: INFO
   nmea_routing.nmea2000_msg: INFO
   nmea2000.nmea2k_controller: DEBUG
+  nmea2000.nmea2k_device: DEBUG
+  nmea2000.nmea2k_application: DEBUG
   nmea2000.n2k_name: INFO
+  nmea2000.nmea2k_can_interface: DEBUG
 
 servers:
 

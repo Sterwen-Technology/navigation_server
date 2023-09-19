@@ -32,6 +32,10 @@ class CouplerReadError(Exception):
     pass
 
 
+class CouplerWriteError(Exception):
+    pass
+
+
 class CouplerTimeOut(CouplerReadError):
     pass
 

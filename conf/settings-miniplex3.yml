@@ -1,0 +1,72 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     19/09/2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+    nmea_routing.console: INFO
+    nmea2000.nmea2k_controller: DEBUG
+    nmea2000.nmea2k_device: DEBUG
+
+servers:
+
+- NMEAServer:
+    class: NMEAServer
+    port: 4500
+    nmea2000: transparent
+
+- NMEASender:
+    class: NMEASenderServer
+    port: 4503
+    coupler: MiniPlex3
+    max_silent: 10
+
+- Console:
+    class: Console
+    port: 4502
+
+- ShipModulConfig:
+    class: ShipModulConfig
+    port: 4501
+    coupler: MiniPlex3
+
+- NMEANetwork:
+    class: NMEA2KController
+
+couplers:
+
+- MiniPlex3:
+    class: ShipModulInterface
+    address: 192.168.1.31
+    port: 10110
+    transport: TCP
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
+
+publishers:
+
+#- Trace:
+#    class: N2KTracePublisher
+#    instruments: [MiniPlex3]
+#   queue_size: 40
+#   filter: [129540]
+
+
+#    - MainLog:
+#       class: LogPublisher
+#        file: /data/solidsense/log/navigation.log
+#        instruments: [MiniPlex3]
+
+
+
+
+
+

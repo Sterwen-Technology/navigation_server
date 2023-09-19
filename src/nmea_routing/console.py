@@ -217,7 +217,6 @@ class Console(NavigationGrpcServer):
     def get_server(self, name):
         return self._servers[name].server
 
-
     def add_coupler(self, coupler):
         self._couplers[coupler.name()] = coupler
 
