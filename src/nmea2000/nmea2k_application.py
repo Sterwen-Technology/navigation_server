@@ -14,7 +14,7 @@ import threading
 
 from nmea2000.nmea2k_device import NMEA2000Device
 from nmea2000.nmea2k_name import NMEA2000Name
-from nmea2000.nmea2k_iso_messages import AddressClaim, ISORequest
+from nmea2000.nmea2k_iso_messages import AddressClaim, ISORequest, ProductInformation
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -41,13 +41,20 @@ class NMEA2000Application(NMEA2000Device):
         self._state = self.WAIT_FOR_BUS
         self._process_vector[60928] = self.address_claim_receipt
         self._controller.add_subscriber(59904, self.iso_request)
+        self._product_information = ProductInformation()
+        self._product_information.set_field('NMEA 2000 Version', 2100)
+        self._product_information.set_field('Product Code', 150)
+        self._product_information.set_product_information('NMEA MESSAGE ROUTER', 'Version 1.4',
+                                                          'ROUTER Sterwen Technology', '00001')
+        self._product_information.set_field('Certification Level', 0)
+        self._product_information.set_field('Load Equivalency', 1)
 
     def send_address_claim(self):
         claim_msg = AddressClaim(self._address, self._iso_name)
         _logger.debug("Application address %d sending address claim" % self._address)
         self._controller.CAN_interface.send(claim_msg.message())
         self._state = self.ADDRESS_CLAIM
-        t = threading.Timer(1.0, self.address_claim_delay)
+        t = threading.Timer(5.0, self.address_claim_delay)
         t.start()
 
     def address_claim_delay(self):
@@ -57,6 +64,8 @@ class NMEA2000Application(NMEA2000Device):
         self._controller.CAN_interface.allow_send()
         request = ISORequest(self._address)
         self._controller.CAN_interface.send(request.message())
+        t = threading.Timer(1.0, self.send_product_information)
+        t.start()
 
     def wait_for_bus_ready(self):
         _logger.debug("Waiting for CAN Bus to be ready")
@@ -92,6 +101,11 @@ class NMEA2000Application(NMEA2000Device):
                 self.send_address_claim()
             else:
                 _logger.error("ISO Request on PGN %d not supported" % request.request_pgn)
+
+    def send_product_information(self):
+        self._product_information.sa = self._address
+        _logger.debug("Send product information %s" % self._product_information.message().format1())
+        self._controller.CAN_interface.send(self._product_information.message())
 
 
 

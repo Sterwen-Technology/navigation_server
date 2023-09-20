@@ -274,6 +274,14 @@ class NMEA2000Object:
     def pgn(self):
         return self._pgn
 
+    @property
+    def sa(self):
+        return self._sa
+
+    @sa.setter
+    def sa(self, value):
+        self._sa = value
+
 
 #-----------------------------------------------------------------------------------
 #
@@ -447,10 +455,11 @@ class FastPacketHandler:
         seq_en = seq << 5
         counter = 0
         total_len = len(data)
+        # print("Fast packet split data  for PGN", pgn, "data len", total_len)
         data_ptr = 0
         while counter < nb_frames:
             remaining_bytes = total_len - data_ptr
-            frame_len = min(8, remaining_bytes)
+            frame_len = min(8, remaining_bytes + 1)
             frame = bytearray(frame_len)
             frame[0] = seq_en | counter
             ptr = 1
@@ -461,6 +470,7 @@ class FastPacketHandler:
                 frame[ptr] = data[data_ptr]
                 data_ptr += 1
                 ptr += 1
+            # print("frame #", counter, "remaining bytes", remaining_bytes, "DLC", len(frame))
             yield frame
             counter += 1
         self.free_seq(pgn, seq)

@@ -172,12 +172,13 @@ class ConsoleServicer(NavigationConsoleServicer):
             return
         for device in n2k_svr.get_device():
             resp = N2KDeviceMsg()
-            resp.address = device.address()
+            resp.address = device.address
             resp.changed = device.changed()
             device.clear_change_flag()
+            _logger.debug("Console sending NMEA2000 Device address %d info" % device.address)
             for prop, attr in self.dev_attr_table:
                 try:
-                    val = device.property(prop)
+                    val = device.property_value(prop)
                 except KeyError:
                     continue
                 object.__setattr__(resp, attr, val)

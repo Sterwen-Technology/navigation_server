@@ -40,6 +40,10 @@ class N2KDefinitionError(Exception):
     pass
 
 
+class N2KEncodeException(Exception):
+    pass
+
+
 class PGNDefinitions(XMLDefinitionFile):
 
     pgn_definitions = None
@@ -338,6 +342,31 @@ class PGNDef:
         for f in self._fields.values():
             f.print_description(output)
 
+    def encode_payload(self, fields: dict) -> bytes:
+        '''
+        This method takes the dictionary (field name, value) and encode the payload
+        '''
+
+        if self._variable_length:
+            buffer_length = 272
+        else:
+            buffer_length = self.length
+        # print("Start encoding PGN %s" % self._id, "buffer length", buffer_length)
+        buffer = bytearray(buffer_length)
+
+        index = 0
+        for f in self._fields.values():
+            try:
+                value = fields[f.name]
+            except KeyError:
+                value = f.no_value()
+
+            index += f.encode_value(value, buffer, index)
+            if index > buffer_length:
+                raise N2KDecodeException
+            # print("Encoded field", f.name, len(buffer[:index]), "Index:", index)
+        return buffer[:index]
+
 
 class DecodeSpecs:
 
@@ -516,6 +545,7 @@ class Field:
         try:
             res = self.decode_value(payload, specs)
         except Exception as e:
+            print("Field", self._name, "l", self._byte_length, "Specs:", specs.start, specs.end, len(payload))
             raise N2KDecodeException("Error in field %s type %s: %s" % (self._name, self.type(), e))
         if res is None:
             raise N2KDecodeException("Error in field %s type %s" % (self._name, self.type()))
@@ -609,6 +639,12 @@ class Field:
             pass
         return value
 
+    def no_value(self):
+        if self._byte_length <= 4:
+            return self.uint_invalid[self._byte_length]
+        else:
+            raise N2KDecodeException("No default value")
+
     def decode_value(self, payload, specs):
         # print(self._name,"[%d:%d]" % (specs.start, specs.end), self._byte_length, self._bit_offset, self.BitLength)
         b_dec = payload[specs.start:specs.end]
@@ -679,6 +715,46 @@ class Field:
         res.value = payload[specs.start+2:specs.end].decode()
         return res
 
+    def encode_value(self, value, buffer, index) -> int:
+        raise NotImplementedError
+
+    def encode_uint(self, value: int, buffer: bytearray, index) -> int:
+        if self._byte_length == 1:
+            buffer[index] = value & 0xFF
+            return 1
+        elif self._byte_length == 2:
+            struct.pack_into('<H', buffer, index, value & 0xFFFF)
+            return 2
+        elif self._byte_length == 3:
+            b = struct.pack('<I', value & 0xFFFFFF)
+            buffer[index:] = b[:3]
+            return 3
+        elif self._byte_length == 4:
+            struct.pack_into('<I', buffer, index, value)
+            return 4
+        elif self._byte_length == 8:
+            struct.pack_into('<Q', buffer, index, value)
+            return 8
+        else:
+            raise N2KEncodeException("Cannot encode uint l=%d" % self._byte_length)
+
+    def encode_int(self, value: int, buffer: bytearray, index):
+        if self._byte_length == 2:
+            struct.pack_into('<i', buffer, index, value & 0xFFFF)
+            return 2
+        if self._byte_length == 4:
+            struct.pack_into('<l', buffer, index, value)
+        else:
+            raise N2KEncodeException("Cannot encode uint l=%d" % self._byte_length)
+
+    def encode_str(self, str_value: str, buffer: bytearray, index):
+        if self._variable_length:
+            buffer[index: index + len(str_value)] = str_value.encode()
+            return len(str_value)
+        else:
+            buffer[index: index + self._byte_length] = str_value.encode()[:self._byte_length]
+            return self._byte_length
+
 
 class UIntField(Field):
 
@@ -687,6 +763,9 @@ class UIntField(Field):
 
     def decode_value(self, payload, specs):
         return self.extract_uint(payload, specs)
+
+    def encode_value(self, value, buffer, index):
+        return self.encode_uint(value, buffer, index)
 
 
 class InstanceField(Field):
@@ -749,6 +828,9 @@ class IntField(Field):
     def decode_value(self, payload, specs):
         return self.extract_int(payload, specs)
 
+    def encode_value(self,value, buffer, index) -> int:
+        return self.encode_int(value, buffer, index)
+
 
 class DblField(Field):
 
@@ -781,7 +863,6 @@ class ASCIIField(Field):
         super().__init__(xml)
 
     def decode_value(self, payload, specs):
-
         return self.extract_var_str(payload, specs)
 
 
@@ -814,6 +895,10 @@ class NameField(Field):
         res.value = NMEA2000Name(b_dec)
         res.actual_length = 8
         return res
+
+    def encode_value(self, value: NMEA2000Name, buffer, index) -> int:
+        buffer[index:] = value.bytes()
+        return 8
 
 
 class RepeatedFieldSet:
@@ -909,6 +994,9 @@ class ASCIIFixField(Field):
         res.value = payload[specs.start:specs.end].decode()
         # print(self._name, specs.start, specs.end, self._byte_length,":", res.value)
         return res
+
+    def encode_value(self, value, buffer, index) -> int:
+        return self.encode_str(value, buffer, index)
 
 
 
