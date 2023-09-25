@@ -42,6 +42,12 @@ servers:
     nmea2000: dyfmt
     coupler: CAN
 
+- NMEAOutput:
+    class: NMEASenderServer
+    port: 4503
+    nmea2000: dyfmt
+    coupler: CAN
+
 
 couplers:
 
