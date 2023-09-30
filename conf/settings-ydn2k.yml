@@ -9,8 +9,10 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 #
-trace: DEBUG
+trace: INFO
 trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+    nmea_routing.publisher: INFO
 
 servers:
 
@@ -22,16 +24,12 @@ servers:
     class: Console
     port: 4502
 
-- ShipModulConfig:
-    class: ShipModulConfig
-    port: 4501
-    coupler: MiniPlex3
 
 couplers:
 
 - YDENN2K:
     class: YDCoupler
-    address: 192.168.1.60
+    address: 192.168.1.47
     port: 1457
     protocol: nmea2000
     transport: TCP
@@ -39,13 +37,23 @@ couplers:
     trace_messages: false
     trace_raw: false
 
+filters:
+
+- NMEASent:
+    class: NMEA2000Filter
+    pgn: [129283, 129284]
+    action: select
+
+
 publishers:
 
-# - MainLog:
-    #class: N2KTracePublisher
-    # filter: [130578,129029]
-    # file: /mnt/meaban/Bateau/tests/YDEN.log
-    #instruments: [YDEN]
+- TraceOutput:
+    class: N2KTracePublisher
+    filters: [NMEASent]
+    couplers: [YDENN2K]
+
+
+
 
 
 

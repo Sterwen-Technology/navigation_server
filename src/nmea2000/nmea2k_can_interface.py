@@ -8,7 +8,7 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
-
+import datetime
 import logging
 from can import Bus, Message, CanOperationError, CanTimeoutError, Notifier, Listener
 from nmea2000.nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
@@ -44,17 +44,21 @@ class SocketCANInterface(threading.Thread):
         self._in_queue = queue.Queue(30)
         self._bus_queue = queue.Queue(50)
         self._fp_handler = FastPacketHandler(self)
-        self._notifier = None
-        self._listener = NMEA2000MsgListener(self, self._bus_queue)
+        self._total_msg_in = 0
+
+        # self._notifier = None
+        # self._listener = NMEA2000MsgListener(self, self._bus_queue)
         self._state = self.BUS_NOT_CONNECTED
 
         if trace:
             try:
-                self._trace = NMEAMsgTrace(self.name)
+                self._trace = NMEAMsgTrace(self.name, self.__class__.__name__)
             except MessageTraceError:
                 self._trace = None
         else:
             self._trace = None
+
+        self._writer = SocketCANWriter(self._in_queue, self, self._trace)
 
     def start(self):
         # connect to the CAN bus
@@ -63,17 +67,28 @@ class SocketCANInterface(threading.Thread):
         except CanOperationError as e:
             _logger.error("Error initializing CAN Channel %s: %s" % (self._channel, e))
             raise SocketCanError
-        self._notifier = Notifier(self._bus, [self._listener])
+        # self._notifier = Notifier(self._bus, [self._listener])
+        self._writer.set_bus(self._bus)
         self._state = self.BUS_CONNECTED
         super().start()
+        self._writer.start()
 
     def stop(self):
         self._stop_flag = True
-        if self._notifier is not None:
-            self._notifier.stop()
+        self._writer.stop()
 
     def set_data_queue(self, data_queue: queue.Queue):
         self._data_queue = data_queue
+
+    @property
+    def channel(self):
+        return self._channel
+
+    def total_msg_raw(self):
+        return self._total_msg_in
+
+    def total_msg_raw_out(self):
+        self._writer.total_msg()
 
     def wait_for_bus_ready(self):
         self._bus_ready.wait()
@@ -82,17 +97,25 @@ class SocketCANInterface(threading.Thread):
     def allow_send(self):
         self._allowed_send.set()
 
-    def read_bus(self, msg_recv: Message):
+    def send_trace(self, direction, can_id, timestamp, data):
+        if timestamp == 0.0:
+            timestamp = time.time()
+        date_ts = datetime.datetime.fromtimestamp(timestamp)
+        trace_str = "%08X,%s" % (can_id, data.hex())
+        self._trace.trace_n2k_raw_can(date_ts, self._total_msg_in, direction, trace_str)
+
+    def process_receive_msg(self, msg_recv: Message):
         # sub-function to read the bus and perform Fast packet reassembly
         # return a NMEA200Msg when a valid message as been received or reassembled
 
-        if self._trace is not None:
-            self._trace.trace_raw(NMEAMsgTrace.TRACE_IN, str(msg_recv))
         can_id = msg_recv.arbitration_id
         sa = can_id & 0xFF
         pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
         prio = (can_id >> 26) & 0x7
         data = msg_recv.data
+        if self._trace is not None:
+            self.send_trace(NMEAMsgTrace.TRACE_IN, can_id, msg_recv.timestamp, data)
+        self._total_msg_in += 1
         # Fast packet handling
         if self._fp_handler.is_pgn_active(pgn, sa, data):
             try:
@@ -132,30 +155,19 @@ class SocketCANInterface(threading.Thread):
     def run(self):
 
         #  Run loop
-        last_write_time = time.monotonic()
+
         while not self._stop_flag:
 
-
-            # messaging pacing to be implemented
-            if time.monotonic() - last_write_time < 0.05:
-                continue
-
+            # read the CAN bus
             try:
-                msg = self._in_queue.get_nowait()
-            except queue.Empty:
-                continue
-            if self._trace is not None:
-                self._trace.trace_raw(NMEAMsgTrace.TRACE_OUT, str(msg))
-            try:
-                _logger.debug("CAN sending: %s" % str(msg))
-                self._bus.send(msg, 5.0)
-                last_write_time = time.monotonic()
+                msg = self._bus.recv(0.5)
             except CanOperationError as e:
-                _logger.error("Error receiving message from channel %s: %s" % (self._channel, e))
+                _logger.error("Error on CAN reading on channel %s: %s"% (self._channel, e))
                 continue
-            except CanTimeoutError:
-                _logger.error("CAN send timeout error - message lost")
+            if msg is None:
                 continue
+
+            self.process_receive_msg(msg)
             # end of the run loop
 
         # thread exit section
@@ -197,7 +209,7 @@ class SocketCANInterface(threading.Thread):
                 return False
         return True
 
-
+'''
 class NMEA2000MsgListener(Listener):
 
     def __init__(self, interface: SocketCANInterface, bus_queue: queue.Queue):
@@ -214,11 +226,63 @@ class NMEA2000MsgListener(Listener):
     def on_error(self, exc: Exception) -> None:
         _logger.error("BUS CAN error: %s" % exc)
 
+'''
 
 
+class SocketCANWriter(threading.Thread):
 
+    def __init__(self, in_queue, can_interface, trace):
 
+        super().__init__(daemon=True)
+        self._can_interface = can_interface
+        self._in_queue = in_queue
+        self._bus = None
+        self._trace = trace
+        self._stop_flag = False
+        self._total_msg = 0
 
+    def set_bus(self, bus):
+        self._bus = bus
+
+    def stop(self):
+        self._stop_flag = True
+
+    def total_msg(self):
+        return self._total_msg
+
+    def run(self):
+        '''
+        Wait for messages to be sent on the queue and then send them to the CAN BUS
+        Message pacing is implemented with a fixed timing of 50ms (to be improved)
+        '''
+
+        #  Run loop
+        last_write_time = time.monotonic()
+        while not self._stop_flag:
+
+            if time.monotonic() - last_write_time < 0.05:
+                continue
+
+            try:
+                msg = self._in_queue.get(timeout=1.0)
+            except queue.Empty:
+                continue
+            if self._trace is not None:
+                dts = datetime.datetime.fromtimestamp(msg.timestamp)
+                self._trace.trace_n2k_raw_can(dts, self._total_msg, NMEAMsgTrace.TRACE_OUT,
+                                              "%08X,%s" % (msg.arbitration_id, msg.data.hex()))
+            try:
+                _logger.debug("CAN sending: %s" % str(msg))
+                self._total_msg += 1
+                self._bus.send(msg, 5.0)
+                last_write_time = time.monotonic()
+            except CanOperationError as e:
+                _logger.error("Error receiving message from channel %s: %s" % (self._can_interface.channel, e))
+                continue
+            except CanTimeoutError:
+                _logger.error("CAN send timeout error - message lost")
+                continue
+            # end of the run loop
 
 
 

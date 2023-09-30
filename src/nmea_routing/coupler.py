@@ -153,10 +153,10 @@ class Coupler(threading.Thread):
 
         t = time.monotonic()
         self._rate = (self._total_msg - self._last_msg_count) / (t - self._count_stamp)
-        self._rate_raw = (self._total_msg_raw - self._last_msg_count_r) / (t - self._count_stamp)
+        self._rate_raw = (self.total_msg_raw() - self._last_msg_count_r) / (t - self._count_stamp)
         self._rate_s = (self._total_msg_s - self._last_msg_count_s) / (t - self._count_stamp)
         self._last_msg_count = self._total_msg
-        self._last_msg_count_r = self._total_msg_raw
+        self._last_msg_count_r = self.total_msg_raw()
         self._last_msg_count_s = self._total_msg_s
         self._count_stamp = t
         _logger.info("Coupler %s NMEA message received(process:%d rate:%6.2f; raw:%d rate:%6.2f sent:%d rate:%6.2f" %

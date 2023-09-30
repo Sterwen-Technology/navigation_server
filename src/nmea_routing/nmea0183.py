@@ -28,18 +28,25 @@ class NMEAInvalidFrame(Exception):
 
 class NMEA0183Msg(NavGenericMsg):
 
-    def __init__(self, data):
+    def __init__(self, data, checksum=True):
         super().__init__(N0183_MSG, raw=data, msg=self)
         # verify that we have a checksum
-        if self._raw[self._datalen - 3] != ord('*'):
-            _logger.error("NMEA183 Frame without checksum")
-            raise NMEAInvalidFrame
-        # change in version 1.3 => become float and referenced to the epoch
-        self._ts = time.time()
-        self._checksum = int(self._raw[self._datalen-2:self._datalen], 16)
-        if self._checksum != NMEA0183Sentences.b_checksum(self._raw[1:self._datalen - 3]):
-            _logger.error("Checksum error %x %s" % (self._checksum, self._raw[:self._datalen].hex()))
-            raise NMEAInvalidFrame
+        if checksum:
+            if self._raw[self._datalen - 3] != ord('*'):
+                _logger.error("NMEA183 Frame without checksum")
+                raise NMEAInvalidFrame
+            # change in version 1.3 => become float and referenced to the epoch
+            self._ts = time.time()
+            self._checksum = int(self._raw[self._datalen-2:self._datalen], 16)
+            if self._checksum != NMEA0183Sentences.b_checksum(self._raw[1:self._datalen - 3]):
+                _logger.error("Checksum error %x %s" % (self._checksum, self._raw[:self._datalen].hex()))
+                raise NMEAInvalidFrame
+            self._datalen_s = self._datalen - 3
+        else:
+            self._checksum = 0
+            self._datalen_s = self._datalen
+
+        self._delimiter = self._raw[0]
         ind_comma = self._raw.index(b',')
         self._datafields_s = ind_comma + 1
         self._address = self._raw[1: ind_comma]
@@ -60,6 +67,9 @@ class NMEA0183Msg(NavGenericMsg):
         else:
             raise ValueError
 
+    def delimiter(self):
+        return self._delimiter
+
     def address(self):
         return self._address
 
@@ -74,7 +84,7 @@ class NMEA0183Msg(NavGenericMsg):
         self._address[0:2] = talker[:2]
 
     def fields(self):
-        return self._raw[self._datafields_s:self._datalen-3].split(b',')
+        return self._raw[self._datafields_s:self._datalen_s].split(b',')
 
     def as_protobuf(self, r: nmea0183pb) -> nmea0183pb:
 
@@ -101,12 +111,12 @@ class NMEA0183SentenceMsg(NMEA0183Msg):
         self._msg = sentence
 
 
-def process_nmea0183_frame(frame):
+def process_nmea0183_frame(frame, checksum=True):
     if frame[0] == 4:
         return NavGenericMsg(NULL_MSG)
     if frame[0] not in b'$!':
         raise NMEAInvalidFrame
-    return NMEA0183Msg(frame)
+    return NMEA0183Msg(frame, checksum)
 
 
 class NMEA0183Sentences:

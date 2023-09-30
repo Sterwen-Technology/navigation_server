@@ -59,6 +59,7 @@ class Publisher(threading.Thread):
         self._stopflag = False
         self._nb_msg_lost = 0
         self._filters = filters
+        self._filter_select = False   # meaning that all messages passing the filter are discarded
 
     def start(self):
         _logger.debug("Publisher %s start flag %s" % (self._name, self._active))
@@ -74,10 +75,20 @@ class Publisher(threading.Thread):
         # that is also implying that the filtering is processed in the Coupler thread
         # print("Publisher %s publish msg:%s %s" % (self._name, msg, self._filters))
         if self._filters is not None:
-            # print("Publisher %s publish with filter msg:%s" % (self._name, msg))
+            _logger.debug("Publisher %s publish with filter msg:%s" % (self._name, msg))
             if self._filters.process_filter(msg):
-                # if the filter returns True, then the message is discarded
-                return
+                # the message satisfy the filter
+                if not self._filter_select:
+                    # this is a reject filter
+                    _logger.debug("Message discarded")
+                    return
+            else:
+                # the message does not satisfy the filter
+                if self._filter_select:
+                    # that is a select filter
+                    _logger.debug("Message discarded")
+                    return
+
         try:
             self._queue.put(msg, block=False)
             self._nb_msg_lost = 0

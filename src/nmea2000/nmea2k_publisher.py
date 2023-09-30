@@ -91,6 +91,7 @@ class N2KTracePublisher(Publisher):
         if filter_names is not None and len(filter_names) > 0:
             _logger.info("Publisher:%s filter set:%s" % (self.name(), filter_names))
             self._filters = FilterSet(filter_names)
+            self._filter_select = True
         self._print_option = opts.get('output', str, 'ALL')
         _logger.info("%s output option %s" % (self.name(), self._print_option))
         self._trace_fd = None
@@ -111,21 +112,29 @@ class N2KTracePublisher(Publisher):
         if gen_msg.type != N2K_MSG:
             return True
         msg = gen_msg.msg
+        _logger.debug("Trace publisher input msg %s" % msg.format2())
         if self._print_option == 'NONE':
             return True
+        '''
         if self._filters is not None:
             if not self._filters.process_filter(msg, execute_action=False):
                 return True
-        # print("decoding %s", msg)
+        '''
+        # print("decoding %s", msg.format1())
         try:
             res = msg.decode()
         except N2KDecodeException:
             return True
-        # _logger.debug("Trace publisher msg:%s" % res)
+        except Exception as e:
+            _logger.error("Error decoding PGN: %s message:%s" % (e, msg.format1()))
+            return True
+
+        _logger.debug("Trace publisher msg:%s" % res)
         if res is not None:
             if self._print_option in ('ALL', 'PRINT'):
-                print(res)
+                print("Message from SA:", msg.sa, ":", res)
             if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
+                self._trace_fd.write("Message from SA:%d " % msg.sa)
                 self._trace_fd.write(str(res))
                 self._trace_fd.write('\n')
         return True

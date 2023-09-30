@@ -28,7 +28,7 @@ class NMEAMsgTrace:
 
     (TRACE_IN, TRACE_OUT) = range(1, 3)
 
-    def __init__(self, name, default_on=True, raw=True):
+    def __init__(self, name, trace_type, default_on=True, raw=True):
         self._name = name
         trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')
         date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
@@ -40,7 +40,7 @@ class NMEAMsgTrace:
         except IOError as e:
             _logger.error("Trace file error %s" % e)
             raise MessageTraceError
-        self._trace_fd.write("H0|%s|V1.4\n" % type(self))
+        self._trace_fd.write("H0|%s|V1.4\n" % trace_type)
         self._trace_msg = default_on
         self._trace_raw = raw
         self._msg_count = 0
@@ -108,6 +108,24 @@ class NMEAMsgTrace:
                 fc = "N#%d<" % self._msg_count
             self._msg_count += 1
             self._trace_fd.write("%s%06d|%05X|%3d|%d|%s\n" % (fc, pgn, pgn, sa, prio, data.hex()))
+
+    def trace_n2k_raw_can(self, time_stamp:datetime.datetime, msg_count, direction, trace_str: str):
+        ts_str = time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f")
+        if direction == self.TRACE_IN:
+            fc = "R%d#%s>" % (msg_count, ts_str)
+        else:
+            fc = "R%d#%s<" % (msg_count, ts_str)
+        self._msg_count += 1
+        # l = len(msg) - self._separator_len
+        # not all messages have the CRLF included to be further checked
+        try:
+            self._trace_fd.write(fc)
+            self._trace_fd.write(trace_str)
+            self._trace_fd.write('\n')
+        except IOError as err:
+            if self._trace_raw:
+                _logger.error("Error writing log file: %s" % err)
+                self._trace_raw = False
 
     def add_event_trace(self, message: str):
         if self._trace_msg:

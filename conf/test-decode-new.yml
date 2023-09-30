@@ -6,26 +6,22 @@
 #
 # Created:     26/12/2021
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
-# Licence:     <your licence>
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
-# log_file: test_fast_packet
 log_module:
-  nmea_routing.IPCoupler: INFO
-  nmea_routing.coupler: INFO
-  nmea_routing.nmea2000_msg: INFO
-  nmea_routing.ydn2k_coupler: INFO
-  nmea2000.nmea2k_controller: INFO
-  nmea2000.n2k_name: INFO
+    nmea2000.nmea2k_pgndefs: INFO
+
+decode_definition_only: false
 
 servers:
 
 - NMEAServer:
-      class: NMEAServer
-      port: 4500
-      nmea2000: dyfmt
+    class: NMEAServer
+    port: 4500
+    nmea2000: dyfmt
 
 - Console:
       class: Console
@@ -44,32 +40,23 @@ couplers:
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
     direction: read_only
-    # data_sink: DataAnalyzer
-    # pgn_white_list: [130842]
-
-filters:
-
-- FastPacket:
-    class: NMEA2000Filter
-    pgn: [129029, 126996, 129540]
-    action: select
-
-- RaymarineProprietary:
-    class: NMEA2000Filter
-    pgn: [126720]
-    action: select
-
-
-data_sinks:
-
-- DataAnalyzer:
-      class: NMEADataClient
 
 publishers:
 
-- TraceRaymarine:
+- TraceOutput:
     class: N2KTracePublisher
-    filters: [RaymarineProprietary]
-    output: PRINT
+    # filters: [PGNTraced]
+    couplers: [LogReader]
+
+filters:
+
+- PGNTraced:
+    class: NMEA2000Filter
+    pgn: [130842, 129038, 129039, 129040, 129041, 129794, 129809, 129810]
+    action: select
+
+
+
+
 
 

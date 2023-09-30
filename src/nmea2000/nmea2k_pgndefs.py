@@ -141,6 +141,94 @@ class N2KDecodeResult:
         self._increment = False
 
 
+class BitFieldDef:
+
+    def __init__(self, field, rel_offset):
+        self._field = field
+        self._rel_offset = rel_offset
+        self._value_mask = (2 ** field.bit_length) - 1
+
+    def get_value(self, input_word):
+        value = (input_word >> self._rel_offset) & self._value_mask
+        if isinstance(self._field, EnumField):
+            try:
+                value = self._field.get_name(value)
+            except N2KMissingEnumKeyException:
+                pass
+        return value
+
+    def field_name(self):
+        return self._field.name
+
+    def bit_length(self):
+        return self._field.bit_length
+
+    def __str__(self):
+        return "Field %s offset %d length %d" % (self._field.name, self._rel_offset, self._field.bit_length)
+
+
+class BitFieldSplitException(Exception):
+    pass
+
+
+class BitField:
+
+    struct_format = {1: "<B", 2: "<H", 4: "<L", 8: "<Q"}
+
+    def __init__(self, field, no):
+        self._bit_length = 0
+        self._byte_length = 0
+        self._struct = None
+        self._current_offset = 0
+        self._fields = []
+        self._start_byte = field.start_byte
+        self._name = "bitfield#%d" % no
+        _logger.debug("New bitfield %s first field %s start byte %d" % (self._name, field.name, self._start_byte))
+        self.add_field(field)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def start_byte(self):
+        return self._start_byte
+
+    def add_field(self, field):
+        if self._bit_length > 0 and self._bit_length % 8 == 0:
+            raise BitFieldSplitException
+        rel_offset = field.abs_bit_offset - self._start_byte * 8
+        if self._current_offset != rel_offset:
+            _logger.error("NMEA BitField offset error on field: %s expected: %d given:%d abs offset %d" %
+                          (field.name, self._current_offset, rel_offset, field.abs_bit_offset))
+            return
+        bfdef = BitFieldDef(field, rel_offset)
+        self._fields.append(bfdef)
+        self._bit_length += field.bit_length
+        self._current_offset += field.bit_length
+
+    def finalize(self):
+        self._byte_length = self._bit_length // 8
+        if self._bit_length % 8 != 0:
+            self._byte_length += 1
+            _logger.debug("BitField length is not a multiple of 8: %d byte length:%d" %
+                          (self._bit_length, self._byte_length))
+
+        if self._byte_length not in [1, 2, 4, 8]:
+            _logger.error("BitField length %d is not supported" % self._byte_length)
+            for bf in self._fields:
+                _logger.error("Error in bitfield => %s" % bf)
+            raise N2KDefinitionError
+        self._struct = struct.Struct(self.struct_format[self._byte_length])
+
+    def decode(self, data, index, result_fields):
+        val = self._struct.unpack(data[index: index+self._byte_length])
+        for bfdef in self._fields:
+            res = bfdef.get_value(val[0])
+            _logger.debug("Decoding field %s (%dbits) result=%s" % (bfdef.field_name(), bfdef.bit_length(), str(res)))
+            result_fields[bfdef.field_name()] = res
+
+
 PGNRange = namedtuple('PGNRange', ['start', 'to', 'pdu', 'value', 'description'])
 
 
@@ -165,6 +253,8 @@ class PGNDef:
     ]
 
     pgn_service = [59392, 59904, 60928, 65240, 126208, 126464, 126993, 126996]
+
+    (NO_BITFIELD, NEW_BITFIELD, BITFIELD_IN_PROGRESS) = range(0, 3)
 
     @staticmethod
     def set_trace(enum_error: bool, warning: bool):
@@ -214,6 +304,12 @@ class PGNDef:
         self._id_str = pgnxml.attrib['PGN']
         self._xml = pgnxml
         self._id = int(self._id_str)
+        # check of we decode it
+        in_scope = pgnxml.find('Scope')
+        if in_scope is not None:
+            if in_scope.text == 'Ignored':
+                _logger.info("PGN %d ignored from the XML file" % self._id)
+                raise N2KDefinitionError("Marked as Ignored")
         # now determine the type of PGN we have
         self._pdu_format = (self._id >> 8) & 0xFF
         if self._pdu_format < 240:
@@ -227,6 +323,8 @@ class PGNDef:
         self._name = pgnxml.find('Name').text
         self._fields = {}
         self._fast_packet = False
+        self._bitfield_in_create = None
+        self._bitfield_no = 1
         bl = pgnxml.find('ByteLength')
         if bl is not None:
             self._byte_length = int(bl.text)
@@ -245,7 +343,8 @@ class PGNDef:
         if fields is None:
             _logger.info("PGN %s has no Fields" % self._id_str)
             return
-
+        _logger.debug("Starting fields analysis for PGN %d %s" % (self._id, self._name))
+        self._field_list = []
         for field in fields.iter():
             if field.tag.endswith('Field'):
                 try:
@@ -254,11 +353,21 @@ class PGNDef:
                     _logger.error("Field class %s not defined" % field.tag)
                     continue
                 fo = field_class(field)
-                self._fields[fo.name] = fo
+                bf_state = self.check_bitfield(fo)
+                if bf_state == self.NO_BITFIELD:
+                    self._fields[fo.name] = fo
+                    self._field_list.append(fo)
+                elif bf_state == self.NEW_BITFIELD:
+                    self._fields[self._bitfield_in_create.name] = self._bitfield_in_create
+                    self._field_list.append(self._bitfield_in_create)
+
             elif field.tag == "RepeatedFieldSet":
                 fo = RepeatedFieldSet(field, self)
                 self._fields[fo.name] = fo
+                self._field_list.append(fo)
                 break
+        if self._bitfield_in_create is not None:
+            self._bitfield_in_create.finalize()
 
     def __str__(self):
         return "%s %s" % (self._id_str, self._name)
@@ -307,7 +416,7 @@ class PGNDef:
         _logger.debug("start decoding PGN %d %s payload(%d bytes %s" % (self._id, self._name, len(data), data.hex()))
         index = 0
 
-        for field in self._fields.values():
+        for field in self._field_list:
             # print(field.name, field.type())
             try:
                 inner_result = field.decode(data, index, fields)
@@ -316,19 +425,21 @@ class PGNDef:
                 if self.trace_enum_error:
                     _logger.info(str(e))
                 continue
-            except N2KDecodeEOLException:
-                _logger.error("EOL error in PGN %s" % self._id_str)
+            except N2KDecodeEOLException as e_eol:
+                _logger.error("EOL error in PGN %s : %s" % (self._id_str, e_eol))
                 break
             except N2KDecodeException as e:
                 _logger.error("Decoding error in PGN %s: %s" % (self._id_str, str(e)))
                 _logger.error("PGN %d %s payload(%d bytes %s" % (self._id, self._name, len(data), data.hex()))
                 continue
-            if inner_result.increment:
-                index += inner_result.actual_length
-            if inner_result.name == "Reserved":
-                continue
-            if inner_result.valid:
-                fields[inner_result.name] = inner_result.value
+            if type(field) != BitField:
+                # in that case fields have been updated during decode
+                if inner_result.increment:
+                    index += inner_result.actual_length
+                if inner_result.name == "Reserved":
+                    continue
+                if inner_result.valid:
+                    fields[inner_result.name] = inner_result.value
 
         result['pgn'] = self._id
         result['name'] = self._name
@@ -366,6 +477,28 @@ class PGNDef:
                 raise N2KDecodeException
             # print("Encoded field", f.name, len(buffer[:index]), "Index:", index)
         return buffer[:index]
+
+    def check_bitfield(self, field) -> int:
+        if field.is_bit_value():
+            if self._bitfield_in_create is not None:
+                try:
+                    self._bitfield_in_create.add_field(field)
+                    return self.BITFIELD_IN_PROGRESS
+                except BitFieldSplitException:
+                    self._bitfield_in_create.finalize()
+                    self._bitfield_in_create = BitField(field, self._bitfield_no)
+                    self._bitfield_no += 1
+                    return self.NEW_BITFIELD
+            else:
+                self._bitfield_in_create = BitField(field, self._bitfield_no)
+                self._bitfield_no += 1
+                return self.NEW_BITFIELD
+        else:
+            if self._bitfield_in_create is not None:
+                self._bitfield_in_create.finalize()
+                self._bitfield_in_create = None
+            return self.NO_BITFIELD
+
 
 
 class DecodeSpecs:
@@ -523,6 +656,25 @@ class Field:
         else:
             self._variable_length = True
 
+    def is_bit_value(self) -> bool:
+        return self._bit_offset != 0 or self.BitLength % 8 != 0
+
+    @property
+    def bit_length(self):
+        return self.BitLength
+
+    @property
+    def rel_bit_offset(self):
+        return self._bit_offset
+
+    @property
+    def abs_bit_offset(self):
+        return self.BitOffset
+
+    @property
+    def start_byte(self):
+        return self._start_byte
+
     def print_description(self, output):
         output.write("\t Field %s (%s)\n" % (self.name, self.type()))
 
@@ -542,10 +694,19 @@ class Field:
         if self._byte_length != 0:
             specs.end = specs.start + self._byte_length
 
+        if specs.end > len(payload):
+            if self._name != 'Spare':
+                raise N2KDecodeEOLException("Field %s end %d past payload length %d " % (self._name, specs.end, len(payload)))
+            else:
+                res = N2KDecodeResult(self._name)
+                res.invalid()
+                return res
+
         try:
             res = self.decode_value(payload, specs)
         except Exception as e:
-            print("Field", self._name, "l", self._byte_length, "Specs:", specs.start, specs.end, len(payload))
+            _logger.error("Decode error %s in Field %s length %d start %d end %d total len %d" %
+                          (e, self._name, self._byte_length, specs.start, specs.end, len(payload)))
             raise N2KDecodeException("Error in field %s type %s: %s" % (self._name, self.type(), e))
         if res is None:
             raise N2KDecodeException("Error in field %s type %s" % (self._name, self.type()))
@@ -831,6 +992,9 @@ class IntField(Field):
     def encode_value(self,value, buffer, index) -> int:
         return self.encode_int(value, buffer, index)
 
+    def is_bit_value(self) -> bool:
+        return False
+
 
 class DblField(Field):
 
@@ -844,6 +1008,9 @@ class DblField(Field):
             res.value = self.apply_scale_offset(float(res.value))
         return res
 
+    def is_bit_value(self) -> bool:
+        return False
+
 
 class UDblField(Field):
 
@@ -856,6 +1023,9 @@ class UDblField(Field):
             res.value = self.apply_scale_offset(float(res.value))
         return res
 
+    def is_bit_value(self) -> bool:
+        return False
+
 
 class ASCIIField(Field):
 
@@ -865,6 +1035,9 @@ class ASCIIField(Field):
     def decode_value(self, payload, specs):
         return self.extract_var_str(payload, specs)
 
+    def is_bit_value(self) -> bool:
+        return False
+
 
 class StringField(Field):
 
@@ -873,6 +1046,27 @@ class StringField(Field):
 
     def decode_value(self, payload, specs):
         return self.extract_var_str(payload, specs)
+
+    def is_bit_value(self) -> bool:
+        return False
+
+
+class FixLengthStringField(Field):
+
+    def __init__(self, xml):
+        super().__init__(xml)
+
+    def decode_value(self, payload, specs):
+        res = N2KDecodeResult(self._name)
+        try:
+            str_val = payload[specs.start: specs.end].decode()
+        except UnicodeError:
+            res.invalid()
+            return res
+        str_val = str_val.strip('@\x20\x00')
+        res.value = str_val
+        # print("FixLengthString", payload[specs.start: specs.end],"=>", str_val)
+        return res
 
 
 class NameField(Field):
@@ -900,6 +1094,18 @@ class NameField(Field):
         buffer[index:] = value.bytes()
         return 8
 
+
+class CommunicationStatusField(Field):
+
+    def __init__(self, xml):
+        super().__init__(xml)
+
+    def decode_value(self, payload, specs):
+        # Dummy function for new
+        res = N2KDecodeResult(self._name)
+        res.actual_length = 3
+        res.invalid()
+        return res
 
 class RepeatedFieldSet:
 
