@@ -13,6 +13,7 @@ log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
     nmea_routing.console: DEBUG
+    nmea_routing.nmea2000_publisher: DEBUG
     nmea2000.nmea2k_controller: INFO
     nmea2000.nmea2k_device: INFO
 
@@ -52,20 +53,30 @@ couplers:
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
 
+filters:
+
+- FastPacket:
+    class: NMEA2000Filter
+    pgn: [129029, 126996, 129540]
+    action: select
+
+- RaymarineProprietary:
+    class: NMEA2000Filter
+    pgn: [126720]
+    action: select
+
+- NMEASent:
+    class: NMEA2000Filter
+    pgn: [129025, 129026, 129283, 129284]
+    action: select
+
+
 publishers:
 
-#- Trace:
-#    class: N2KTracePublisher
-#    instruments: [MiniPlex3]
-#   queue_size: 40
-#   filter: [129540]
-
-
-#    - MainLog:
-#       class: LogPublisher
-#        file: /data/solidsense/log/navigation.log
-#        instruments: [MiniPlex3]
-
+- TraceOutput:
+    class: N2KTracePublisher
+    filters: [NMEASent]
+    couplers: [MiniPlex3]
 
 
 

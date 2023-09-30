@@ -13,7 +13,6 @@ import sys
 import os
 from argparse import ArgumentParser
 import signal
-import datetime
 
 from nmea_routing import nmea0183
 from nmea_routing.message_server import NMEAServer, NMEASenderServer
@@ -22,7 +21,7 @@ from nmea_routing.console import Console
 from nmea_routing.publisher import *
 from nmea_routing.client_publisher import *
 from nmea_routing.internal_gps import InternalGps
-from nmea_routing.nmea2000_publisher import N2KTracePublisher
+from nmea2000.nmea2k_publisher import N2KTracePublisher
 # from simulator_input import *
 from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
 from nmea_routing.IPCoupler import NMEATCPReader
@@ -49,7 +48,7 @@ def _parser():
     return p
 
 
-version = "V1.40"
+version = "V1.50"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -262,6 +261,10 @@ def main():
     nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'ST'))
     Manufacturers.build_manufacturers(config.get_option('manufacturer_xml', './def/Manufacturers.N2kDfn.xml'))
     PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
+
+    if config.get_option('decode_definition_only', False):
+        _logger.info("Decode only mode -> no active server")
+        return
 
     main_server = NavigationMainServer()
     # create the filters upfront

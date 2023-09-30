@@ -186,48 +186,64 @@ class NMEA2000Msg:
         return msg_data
 
 
-def fromProprietaryNmea(msg: NMEA0183Msg):
+def fromProprietaryNmea(msg: NMEA0183Msg) -> NMEA2000Msg:
     if msg.address() == b'PDGY':
-        fields = msg.fields()
-        if len(fields) == 7:
-            da = int(fields[4])
-            if da == 0:
-                da = 255
-            rmsg = NMEA2000Msg(
-                pgn=int(fields[1]),
-                prio=int(fields[2]),
-                sa=int(fields[3]),
-                da=da,
-                payload=base64.b64decode(fields[6])
-            )
-        elif len(fields) == 4:
-            da = int(fields[2])
-            if da == 0:
-                da = 255
-
-            rmsg = NMEA2000Msg(
-                pgn=int(fields[1]),
-                da=da,
-                payload=base64.b64decode(fields[3])
-            )
-        else:
-            raise N2KRawDecodeError("PDGY message format error")
-        return rmsg
+        return decodePGDY(msg)
     else:
-        return msg
+        raise ValueError
 
 
-def fromPGDY(frame):
+def decodePGDY(msg: NMEA0183Msg) -> NMEA2000Msg:
+    fields = msg.fields()
+    if len(fields) == 6:
+        ''' Receive message'''
+        da = int(fields[3])
+        if da == 0:
+            da = 255
+        rmsg = NMEA2000Msg(
+            pgn=int(fields[0]),
+            prio=int(fields[1]),
+            sa=int(fields[2]),
+            da=da,
+            payload=base64.b64decode(fields[5])
+        )
+    elif len(fields) == 3:
+        ''' Transmit message'''
+        da = int(fields[1])
+        if da == 0:
+            da = 255
+
+        rmsg = NMEA2000Msg(
+            pgn=int(fields[0]),
+            da=da,
+            payload=base64.b64decode(fields[2])
+        )
+    else:
+        raise N2KRawDecodeError("PDGY message format error => number of fields:%d" % len(fields))
+    return rmsg
+
+
+def fromPGDY(frame) -> NMEA2000Msg:
     '''
     Directly transform a PDGY NMEA0183 proprietary frame into a N2K internal message
     If this is not a PDGY message, then return that message without processing
     :param frame: bytearray with the NMEA0183 frame
     :return a NavGenericMsg:
     '''
-    msg = process_nmea0183_frame(frame)
+    msg = process_nmea0183_frame(frame, checksum=False)
     if msg.type == NULL_MSG:
         return msg
-    return fromProprietaryNmea(msg)
+    if msg.address() != b'PDGY' or msg.delimiter() != ord('!'):
+        # print("Delimiter:", msg.delimiter(), "address:", msg.address())
+        _logger.warning("PDGY sentence invalid: %s" % str(msg))
+        raise ValueError
+    try:
+        rmsg = decodePGDY(msg)
+    except N2KRawDecodeError as e:
+        _logger.error("PDGY sentence error: %s %s" % (e, str(msg)))
+        raise
+    _logger.debug("NMEA2000 message from PGDY:%s" % rmsg.format1())
+    return rmsg
 
 
 def fromPGNST(frame):

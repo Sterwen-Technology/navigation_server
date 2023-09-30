@@ -12,7 +12,7 @@
 import logging
 import queue
 
-from nmea_routing.coupler import Coupler, CouplerTimeOut
+from nmea_routing.coupler import Coupler, CouplerTimeOut, CouplerWriteError
 from nmea2000.nmea2k_controller import NMEA2KActiveController
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG
@@ -30,6 +30,7 @@ class DirectCANCoupler(Coupler):
             _logger.critical("DirectCANCoupler mus have an associated NMEA2000 Controller")
             raise ValueError
         self._in_queue = queue.Queue(20)
+        self.address = 0
 
     def open(self):
 
@@ -46,6 +47,9 @@ class DirectCANCoupler(Coupler):
 
     def close(self):
         pass
+
+    def total_msg_raw(self):
+        return self._n2k_controller.CAN_interface.total_msg_raw()
 
     def read(self) -> NavGenericMsg:
         '''

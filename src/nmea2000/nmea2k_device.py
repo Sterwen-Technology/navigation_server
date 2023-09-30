@@ -14,7 +14,7 @@ import time
 
 
 from nmea2000.nmea2000_msg import NMEA2000Msg
-from nmea_routing.nmea2000_publisher import PgnRecord
+from nmea2000.nmea2k_publisher import PgnRecord
 from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeException
 from nmea2000.nmea2k_manufacturers import Manufacturers
 

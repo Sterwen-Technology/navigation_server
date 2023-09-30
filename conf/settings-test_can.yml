@@ -14,7 +14,7 @@ trace_dir: /mnt/meaban/Bateau/tests
 # log_file: test_fast_packet
 log_module:
   nmea_routing.coupler: INFO
-  nmea_routing.nmea2000_msg: INFO
+  nmea2000.nmea2000_msg: INFO
   nmea2000.nmea2k_controller: INFO
   nmea2000.nmea2k_device: INFO
   nmea2000.nmea2k_application: DEBUG
@@ -34,7 +34,13 @@ servers:
 
 - NMEANetwork:
       class: NMEA2KActiveController
-      trace: false
+      trace: true
+
+- NMEAOutput:
+    class: NMEASenderServer
+    port: 4503
+    nmea2000: dyfmt
+    coupler: CAN
 
 
 couplers:
@@ -56,6 +62,10 @@ filters:
     pgn: [126720]
     action: select
 
+- NMEASent:
+    class: NMEA2000Filter
+    pgn: [129025, 129026, 129283, 129284]
+    action: select
 
 data_sinks:
 
@@ -68,5 +78,9 @@ publishers:
     class: N2KTracePublisher
     filters: [RaymarineProprietary]
     output: PRINT
+
+- TraceOutput:
+    class: N2KTracePublisher
+    filters: [NMEASent]
 
 

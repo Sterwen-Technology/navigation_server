@@ -867,6 +867,7 @@
     <PGNDefn PGN="126720">
       <Name>Airmar: True Wind Options</Name>
       <ByteLength>24</ByteLength>
+      <Comment>Changed bit offest to have all values aligned on bytes boundaries - not tested</Comment>
       <Fields>
         <Field Name="Manufacturer Code">
           <Description>Airmar</Description>
@@ -899,7 +900,7 @@
         </EnumField>
         <EnumField Name="Calibration Status">
           <BitOffset>26</BitOffset>
-          <BitLength>8</BitLength>
+          <BitLength>6</BitLength>
           <EnumValues>
             <EnumPair Value="0" Name="Queried" />
             <EnumPair Value="1" Name="Passed" />
@@ -911,60 +912,60 @@
         </EnumField>
         <IntField Name="Verify Score">
           <Description>TBD</Description>
-          <BitOffset>34</BitOffset>
+          <BitOffset>32</BitOffset>
           <BitLength>8</BitLength>
         </IntField>
         <DblField Name="X-axis gain value">
           <Description>default 100, range 50 to 500</Description>
-          <BitOffset>42</BitOffset>
+          <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="Y-axis gain value">
           <Description>default 100, range 50 to 500</Description>
-          <BitOffset>58</BitOffset>
+          <BitOffset>56</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="Z-axis gain value">
           <Description>default 100, range 50 to 500</Description>
-          <BitOffset>74</BitOffset>
+          <BitOffset>72</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="X-axis linear offset">
           <Description>default 0, range -320.00 to 320.00</Description>
-          <BitOffset>90</BitOffset>
+          <BitOffset>88</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="Y-axis linear offset">
           <Description>default 0, range -320.00 to 320.00</Description>
-          <BitOffset>106</BitOffset>
+          <BitOffset>104</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="Z-axis linear offset">
           <Description>default 0, range -320.00 to 320.00</Description>
-          <BitOffset>122</BitOffset>
+          <BitOffset>120</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="X-axis angular offset">
           <Description>default 0, range 0 to 3600</Description>
-          <BitOffset>138</BitOffset>
+          <BitOffset>136</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
         </DblField>
         <DblField Name="Pitch and Roll damping">
           <Description>default 30, range 0 to 200</Description>
-          <BitOffset>154</BitOffset>
+          <BitOffset>152</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.05</Scale>
         </DblField>
         <DblField Name="Compass/Rate gyro damping">
           <Description>default -30, range -2400 to 2400, negative indicates rate gyro is to be used in compass calculations</Description>
-          <BitOffset>170</BitOffset>
+          <BitOffset>168</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.05</Scale>
         </DblField>
@@ -1247,7 +1248,7 @@
           <BitLength>5</BitLength>
         </Field>
         <EnumField Name="Direction Order">
-          <BitOffset>8</BitOffset>
+          <BitOffset>13</BitOffset>
           <BitLength>3</BitLength>
           <EnumValues>
             <EnumPair Value="0" Name="No direction order" />
@@ -2040,6 +2041,7 @@
     </PGNDefn>
     <PGNDefn PGN="127511">
       <Name>Inverter Configuration Status</Name>
+      <Comment>Bit offset adjusted to align value on byte boundaries - not tested</Comment>
       <ByteLength>8</ByteLength>
       <Fields>
         <InstanceField Name="Inverter Instance">
@@ -2058,20 +2060,24 @@
           <BitOffset>24</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <UIntField Name="Inverter Mode">
+        <Field Name="Reserved">
           <BitOffset>26</BitOffset>
+          <BitLength>6</BitLength>
+        </Field>
+        <UIntField Name="Inverter Mode">
+          <BitOffset>32</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
         <UIntField Name="Load Sense Enable/Disable">
-          <BitOffset>34</BitOffset>
+          <BitOffset>40</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
         <UIntField Name="Load Sense Power Threshold">
-          <BitOffset>42</BitOffset>
+          <BitOffset>48</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
         <UIntField Name="Load Sense Interval">
-          <BitOffset>50</BitOffset>
+          <BitOffset>56</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
       </Fields>
@@ -2749,23 +2755,10 @@
           <FormatAs>Speed</FormatAs>
           <Scale>0.01</Scale>
         </UDblField>
-        <Field Name="Communication State">
-          <Description>Information used by the TDMA slot allocation algorithm and synchronization information</Description>
+        <CommunicationStatusField Name="AIS Communication State">
           <BitOffset>144</BitOffset>
-          <BitLength>19</BitLength>
-        </Field>
-        <EnumField Name="AIS Transceiver information">
-          <BitOffset>163</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
-        </EnumField>
+          <BitLength>24</BitLength>
+        </CommunicationStatusField>
         <UDblField Name="Heading">
           <Description>True heading</Description>
           <BitOffset>168</BitOffset>
@@ -2877,24 +2870,10 @@
           <FormatAs>Speed</FormatAs>
           <Scale>0.01</Scale>
         </UDblField>
-        <Field Name="Communication State">
-          <Description>Information used by the TDMA slot allocation algorithm and synchronization information</Description>
-          <BitOffset>144</BitOffset>
-          <BitLength>19</BitLength>
-        </Field>
-        <EnumField Name="AIS Transceiver information">
-          <BitOffset>163</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-            <EnumPair Value="6" Name="Reserved" />
-          </EnumValues>
-        </EnumField>
+        <CommunicationStatusField Name="AIS Communication State">
+            <BitOffset>144</BitOffset>
+            <BitLength>24</BitLength>
+        </CommunicationStatusField>
         <UDblField Name="Heading">
           <Description>True heading</Description>
           <BitOffset>168</BitOffset>
@@ -3298,6 +3277,10 @@
             <EnumPair Value="1" Name="Yes" />
           </EnumValues>
         </EnumField>
+        <Field Name="Reserved">
+          <BitOffset>10</BitOffset>
+          <BitLength>2</BitLength>
+        </Field>
         <EnumField Name="XTE mode">
           <BitOffset>12</BitOffset>
           <BitLength>4</BitLength>
@@ -3434,6 +3417,10 @@
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
+        <Field Name="Reserved">
+          <BitOffset>64</BitOffset>
+          <BitLength>2</BitLength>
+        </Field>
         <UIntField Name="Supplementary Route/WP data available">
           <BitOffset>66</BitOffset>
           <BitLength>2</BitLength>
@@ -4335,23 +4322,10 @@
           <FormatAs>Time</FormatAs>
           <Scale>0.0001</Scale>
         </UDblField>
-        <Field Name="Communication State">
-          <Description>Information used by the TDMA slot allocation algorithm and synchronization information</Description>
+        <CommunicationStatusField Name="AIS Transceiver information">
           <BitOffset>144</BitOffset>
-          <BitLength>19</BitLength>
-        </Field>
-        <EnumField Name="AIS Transceiver information">
-          <BitOffset>163</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
-        </EnumField>
+          <BitLength>24</BitLength>
+        </CommunicationStatusField>
         <UIntField Name="Position Date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>168</BitOffset>
@@ -4416,11 +4390,11 @@
           <BitOffset>72</BitOffset>
           <BitLength>56</BitLength>
         </ASCIIField>
-        <ASCIIField Name="Name">
+        <FixLengthStringField Name="Name">
           <Description>0=unavailable</Description>
           <BitOffset>128</BitOffset>
           <BitLength>160</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
         <EnumField Name="Type of ship">
           <BitOffset>288</BitOffset>
           <BitLength>8</BitLength>
@@ -4825,23 +4799,10 @@
           <FormatAs>Speed</FormatAs>
           <Scale>0.1</Scale>
         </UDblField>
-        <Field Name="Communication State">
-          <Description>Information used by the TDMA slot allocation algorithm and synchronization information</Description>
+        <CommunicationStatusField Name="AIS Transceiver information">
           <BitOffset>144</BitOffset>
-          <BitLength>19</BitLength>
-        </Field>
-        <EnumField Name="AIS Transceiver information">
-          <BitOffset>163</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
-        </EnumField>
+          <BitLength>24</BitLength>
+        </CommunicationStatusField>
         <DblField Name="Altitude">
           <BitOffset>168</BitOffset>
           <BitLength>64</BitLength>
@@ -5037,10 +4998,10 @@
             <EnumPair Value="3" Name="Final retransmission" />
           </EnumValues>
         </EnumField>
-        <IntField Name="Source ID">
+        <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
           <BitLength>30</BitLength>
-        </IntField>
+        </UIntField>
         <Field Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>38</BitOffset>
@@ -5087,10 +5048,10 @@
             <EnumPair Value="3" Name="Final retransmission" />
           </EnumValues>
         </EnumField>
-        <IntField Name="Source ID">
+        <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
           <BitLength>30</BitLength>
-        </IntField>
+        </UIntField>
         <Field Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>38</BitOffset>
@@ -5113,23 +5074,23 @@
           <BitOffset>45</BitOffset>
           <BitLength>3</BitLength>
         </Field>
-        <IntField Name="Destination ID">
+        <UIntField Name="Destination ID">
           <BitOffset>48</BitOffset>
           <BitLength>30</BitLength>
-        </IntField>
+        </UIntField>
         <Field Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>78</BitOffset>
           <BitLength>2</BitLength>
         </Field>
-        <IntField Name="Message ID A">
+        <UIntField Name="Message ID A">
           <BitOffset>80</BitOffset>
           <BitLength>8</BitLength>
-        </IntField>
-        <IntField Name="Slot Offset A">
+        </UIntField>
+        <UIntField Name="Slot Offset A">
           <BitOffset>88</BitOffset>
           <BitLength>14</BitLength>
-        </IntField>
+        </UIntField>
         <Field Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>102</BitOffset>
@@ -5139,10 +5100,10 @@
           <BitOffset>104</BitOffset>
           <BitLength>8</BitLength>
         </IntField>
-        <IntField Name="Slot Offset B">
+        <UIntField Name="Slot Offset B">
           <BitOffset>112</BitOffset>
           <BitLength>14</BitLength>
-        </IntField>
+        </UIntField>
         <Field Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>126</BitOffset>
@@ -5226,10 +5187,10 @@
             <EnumPair Value="3" Name="Final retransmission" />
           </EnumValues>
         </EnumField>
-        <IntField Name="Source ID">
+        <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
           <BitLength>30</BitLength>
-        </IntField>
+        </UIntField>
         <Field Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>38</BitOffset>
@@ -5288,10 +5249,10 @@
             <EnumPair Value="3" Name="Final retransmission" />
           </EnumValues>
         </EnumField>
-        <IntField Name="Source ID">
+        <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
           <BitLength>30</BitLength>
-        </IntField>
+        </UIntField>
         <Field Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>38</BitOffset>
@@ -5369,14 +5330,14 @@
           <BitOffset>214</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <IntField Name="Channel A Bandwidth">
+        <UIntField Name="Channel A Bandwidth">
           <BitOffset>216</BitOffset>
           <BitLength>7</BitLength>
-        </IntField>
-        <IntField Name="Channel B Bandwidth">
+        </UIntField>
+        <UIntField Name="Channel B Bandwidth">
           <BitOffset>223</BitOffset>
           <BitLength>7</BitLength>
-        </IntField>
+        </UIntField>
         <Field Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>230</BitOffset>
@@ -5406,10 +5367,10 @@
             <EnumPair Value="3" Name="Final retransmission" />
           </EnumValues>
         </EnumField>
-        <IntField Name="Source ID">
+        <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
           <BitLength>30</BitLength>
-        </IntField>
+        </UIntField>
         <Field Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>38</BitOffset>
@@ -5600,10 +5561,10 @@
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
         </IntField>
-        <ASCIIField Name="Name">
+        <FixLengthStringField Name="Name">
           <BitOffset>40</BitOffset>
           <BitLength>160</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129810">
@@ -5676,15 +5637,15 @@
             <EnumPair Value="99" Name="Other (no additional information)" />
           </EnumValues>
         </EnumField>
-        <ASCIIField Name="Vendor ID">
+        <FixLengthStringField Name="Vendor ID">
           <BitOffset>48</BitOffset>
           <BitLength>56</BitLength>
-        </ASCIIField>
-        <ASCIIField Name="Callsign">
+        </FixLengthStringField>
+        <FixLengthStringField Name="Callsign">
           <Description>0=unavailable</Description>
           <BitOffset>104</BitOffset>
           <BitLength>56</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
         <DblField Name="Length">
           <BitOffset>160</BitOffset>
           <BitLength>16</BitLength>
@@ -5715,11 +5676,11 @@
           <BitOffset>256</BitOffset>
           <BitLength>2</BitLength>
         </Field>
-        <IntField Name="Spare">
+        <UIntField Name="Spare">
           <Description>0=unavailable</Description>
           <BitOffset>258</BitOffset>
           <BitLength>6</BitLength>
-        </IntField>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130064">
@@ -5878,8 +5839,12 @@
           <BitOffset>164</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <UIntField Name="XTE Limit for the Route">
+        <Field Name="Reserved">
           <BitOffset>166</BitOffset>
+          <BitLength>2</BitLength>
+        </Field>
+        <UIntField Name="XTE Limit for the Route">
+          <BitOffset>168</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
       </Fields>
@@ -7724,10 +7689,10 @@
           <BitOffset>40</BitOffset>
           <BitLength>32</BitLength>
         </IntField>
-        <ASCIIField Name="Name">
+        <FixLengthStringField Name="Name">
           <BitOffset>72</BitOffset>
           <BitLength>160</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130843">
@@ -8203,6 +8168,7 @@
     </PGNDefn>
     <PGNDefn PGN="130944">
       <Name>Airmar: POST</Name>
+      <Scope>Ignored</Scope>
       <ByteLength>7</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
@@ -8232,10 +8198,10 @@
           <BitOffset>20</BitOffset>
           <BitLength>7</BitLength>
         </UIntField>
-        <IntField Name="Number of ID/test result pairs to follow">
+        <UIntField Name="Number of ID/test result pairs to follow">
           <BitOffset>27</BitOffset>
           <BitLength>8</BitLength>
-        </IntField>
+        </UIntField>
         <EnumField Name="Test ID">
           <Description>See Airmar docs for table of IDs and failure codes; these lookup values are for DST200</Description>
           <BitOffset>35</BitOffset>
