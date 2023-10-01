@@ -19,6 +19,8 @@ log_module:
   nmea_routing.ydn2k_coupler: INFO
   nmea2000.nmea2k_controller: INFO
   nmea2000.n2k_name: INFO
+  nmea2000.nmea2k_pgndefs: INFO
+  nmea2000.nmea2k_encode_decode: INFO
 
 servers:
 
@@ -71,5 +73,10 @@ publishers:
     class: N2KTracePublisher
     filters: [RaymarineProprietary]
     output: PRINT
+
+- TraceAll:
+    class: N2KTracePublisher
+    output: PRINT
+    couplers: [LogReader]
 
 

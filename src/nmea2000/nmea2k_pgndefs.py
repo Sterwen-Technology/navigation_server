@@ -15,6 +15,8 @@ from collections import namedtuple
 
 from utilities.xml_utilities import XMLDefinitionFile, XMLDecodeError
 from nmea2000.nmea2k_name import NMEA2000Name
+from nmea2000.nmea2k_encode_decode import (BitField, BitFieldSplitException, DecodeSpecs, ValueDecode, N2KDecodeResult,
+                                           DecodeDefinitions)
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -95,138 +97,6 @@ class PGNDefinitions(XMLDefinitionFile):
         except KeyError:
             # _logger.error("Unknown PGN %d" % number)
             raise N2KUnknownPGN("Unknown PGN %d" % number)
-
-
-class N2KDecodeResult:
-
-    def __init__(self, name):
-        self._length = 0
-        self._name = name
-        self._valid = True
-        self._value = None
-        self._increment = True
-
-    @property
-    def actual_length(self):
-        return self._length
-
-    @actual_length.setter
-    def actual_length(self, value):
-        self._length = value
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def valid(self):
-        return self._valid
-
-    @property
-    def value(self):
-        return self._value
-
-    @property
-    def increment(self):
-        return self._increment
-
-    @value.setter
-    def value(self, val):
-        self._value = val
-
-    def invalid(self):
-        self._valid = False
-
-    def no_increment(self):
-        self._increment = False
-
-
-class BitFieldDef:
-
-    def __init__(self, field, rel_offset):
-        self._field = field
-        self._rel_offset = rel_offset
-        self._value_mask = (2 ** field.bit_length) - 1
-
-    def get_value(self, input_word):
-        value = (input_word >> self._rel_offset) & self._value_mask
-        if isinstance(self._field, EnumField):
-            try:
-                value = self._field.get_name(value)
-            except N2KMissingEnumKeyException:
-                pass
-        return value
-
-    def field_name(self):
-        return self._field.name
-
-    def bit_length(self):
-        return self._field.bit_length
-
-    def __str__(self):
-        return "Field %s offset %d length %d" % (self._field.name, self._rel_offset, self._field.bit_length)
-
-
-class BitFieldSplitException(Exception):
-    pass
-
-
-class BitField:
-
-    struct_format = {1: "<B", 2: "<H", 4: "<L", 8: "<Q"}
-
-    def __init__(self, field, no):
-        self._bit_length = 0
-        self._byte_length = 0
-        self._struct = None
-        self._current_offset = 0
-        self._fields = []
-        self._start_byte = field.start_byte
-        self._name = "bitfield#%d" % no
-        _logger.debug("New bitfield %s first field %s start byte %d" % (self._name, field.name, self._start_byte))
-        self.add_field(field)
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def start_byte(self):
-        return self._start_byte
-
-    def add_field(self, field):
-        if self._bit_length > 0 and self._bit_length % 8 == 0:
-            raise BitFieldSplitException
-        rel_offset = field.abs_bit_offset - self._start_byte * 8
-        if self._current_offset != rel_offset:
-            _logger.error("NMEA BitField offset error on field: %s expected: %d given:%d abs offset %d" %
-                          (field.name, self._current_offset, rel_offset, field.abs_bit_offset))
-            return
-        bfdef = BitFieldDef(field, rel_offset)
-        self._fields.append(bfdef)
-        self._bit_length += field.bit_length
-        self._current_offset += field.bit_length
-
-    def finalize(self):
-        self._byte_length = self._bit_length // 8
-        if self._bit_length % 8 != 0:
-            self._byte_length += 1
-            _logger.debug("BitField length is not a multiple of 8: %d byte length:%d" %
-                          (self._bit_length, self._byte_length))
-
-        if self._byte_length not in [1, 2, 4, 8]:
-            _logger.error("BitField length %d is not supported" % self._byte_length)
-            for bf in self._fields:
-                _logger.error("Error in bitfield => %s" % bf)
-            raise N2KDefinitionError
-        self._struct = struct.Struct(self.struct_format[self._byte_length])
-
-    def decode(self, data, index, result_fields):
-        val = self._struct.unpack(data[index: index+self._byte_length])
-        for bfdef in self._fields:
-            res = bfdef.get_value(val[0])
-            _logger.debug("Decoding field %s (%dbits) result=%s" % (bfdef.field_name(), bfdef.bit_length(), str(res)))
-            result_fields[bfdef.field_name()] = res
 
 
 PGNRange = namedtuple('PGNRange', ['start', 'to', 'pdu', 'value', 'description'])
@@ -466,7 +336,7 @@ class PGNDef:
         buffer = bytearray(buffer_length)
 
         index = 0
-        for f in self._fields.values():
+        for f in self._field_list:
             try:
                 value = fields[f.name]
             except KeyError:
@@ -500,84 +370,7 @@ class PGNDef:
             return self.NO_BITFIELD
 
 
-
-class DecodeSpecs:
-
-    def __init__(self, start, end):
-        self._start = start
-        self._end = end
-
-    @property
-    def start(self):
-        return self._start
-
-    @property
-    def end(self):
-        return self._end
-
-    @start.setter
-    def start(self, value):
-        self._start = value
-
-    @end.setter
-    def end(self, value):
-        self._end = value
-
-
 class Field:
-
-    bit_mask = [
-        0xFF,
-        0x7F,
-        0x3F,
-        0x1F,
-        0x0F,
-        0x07,
-        0x03,
-        0x01
-    ]
-
-    bit_mask16 = [
-        0xFFFF,
-        0x7FFF,
-        0x3FFF,
-        0x1FFF,
-        0x0FFF,
-        0x07FF,
-        0x03FF,
-        0x01FF
-    ]
-
-    bit_mask16_u = [
-        0x1FF,
-        0x3FF,
-        0x7FF,
-        0xFFF,
-        0x1FFF,
-        0x3FFF,
-        0x7FFF,
-        0xFFFF
-    ]
-
-    bit_mask_l = [
-        0x00,
-        0x01,
-        0x03,
-        0x07,
-        0x0F,
-        0x1F,
-        0x3F,
-        0x7F,
-        0xFF
-    ]
-
-    uint_invalid = [
-        0x00,  # this shall never happen
-        0xFF,  # 1 byte
-        0xFFFF,  # 2 bytes
-        0xFFFFFF,  # 3 bytes
-        0xFFFFFFFF  # 4 bytes
-    ]
 
     def __init__(self, xml, do_not_process=None):
         self._start_byte = 0
@@ -600,6 +393,10 @@ class Field:
             if process_it:
                 self._attributes[attrib.tag] = self.extract_attr(attrib)
         self.compute_decode_param()
+        if 0 < self._byte_length <= 4:
+            self._value_coder = DecodeDefinitions.uint_table[self._byte_length]
+        else:
+            self._value_coder = None
 
     def extract_attr(self, xml):
         attr_def = {
@@ -675,6 +472,9 @@ class Field:
     def start_byte(self):
         return self._start_byte
 
+    def is_enum(self) -> bool:
+        return issubclass(type(self), EnumField)
+
     def print_description(self, output):
         output.write("\t Field %s (%s)\n" % (self.name, self.type()))
 
@@ -721,71 +521,13 @@ class Field:
             # _logger.error("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
             # raise N2KDecodeException("For field %s(%s)) %s" % (self._name, self.type(), str(e)))
 
-    def extract_uint_byte(self, b_dec):
-        # print(self._name, "[%s]" % b_dec.hex(), self._byte_length, self._bit_offset, self.BitLength)
-        res = N2KDecodeResult(self._name)
-        res.actual_length = 1
-        val2 = struct.unpack('<B', b_dec)
-        # remove the leading bits
-        val = val2[0]
-        # print("Byte decode",self._name,"byte:",b_dec,"Offset",self._bit_offset,"length",self.BitLength,":%X"%val)
-        if self._bit_offset != 0:
-            val >>= self._bit_offset
-        res.value = val & self.bit_mask_l[self.BitLength]
-        if self._bit_offset + self.BitLength < 8:
-            res.no_increment()
-        # print(self._name, "=%d (%X)" % (res.value, res.value))
-        return res
-
-    def extract_uint(self, payload, specs):
+    def extract_value(self, payload, specs):
         b_dec = payload[specs.start:specs.end]
         res = N2KDecodeResult(self._name)
         res.actual_length = self._byte_length
-        if self._byte_length == 1:
-            res = self.extract_uint_byte(b_dec)
-        elif self._byte_length == 2:
-            value = struct.unpack("<H", b_dec)
-            res.value = value[0]
-        elif self._byte_length == 3:
-            value = struct.unpack('<BH', b_dec)
-            tmpv = value[0] + (value[1] << 8)
-            _logger.debug("Decoding 3 bytes as Uint %s %X %X %X" % (str(b_dec), value[0], value[1], tmpv))
-            res.value = tmpv
-        elif self._byte_length == 4:
-            value = struct.unpack('<L', b_dec)
-            res.value = value[0]
-        else:
-            raise N2KDecodeException("Incorrect Field length for UInt field %s type %s length %d" % (
-                self._name, self.type(), self._byte_length))
-        # print("%X %X"%(res.value, self.uint_invalid[self._byte_length]))
-        if res.value == self.uint_invalid[self._byte_length]:
-            res.invalid()
-        return res
-
-    def extract_int(self, payload, specs):
-        b_dec = payload[specs.start: specs.end]
-        res = N2KDecodeResult(self._name)
-        res.actual_length = self._byte_length
-        if self._bit_offset != 0 or self.BitLength % 8 != 0:
-            raise N2KDecodeException("Cannot decode Int with bit offset or not byte")
-
-        if self._byte_length == 1:
-            value = struct.unpack('<b', b_dec)
-            invalid = 0x7F
-        elif self._byte_length == 2:
-            value = struct.unpack("<h", b_dec)
-            invalid = 0x7FFF
-            #  print(specs.start, specs.end, b_dec, value[0])
-        elif self._byte_length == 4:
-            value = struct.unpack('<l', b_dec)
-            invalid = 0x7FFFFFFF
-        elif self._byte_length == 8:
-            value = struct.unpack('<q', b_dec)
-            invalid = 0x7FFFFFFFFFFFFFFF
-        else:
-            raise N2KDecodeException("Incorrect Field length %s" % self._name)
-        res.value = value[0]
-        if res.value == invalid:
+        try:
+            res.value = self._value_coder.decode(b_dec)
+        except ValueError:
             res.invalid()
         return res
 
@@ -800,63 +542,26 @@ class Field:
             pass
         return value
 
+    def convert_to_int(self, value: float) -> int:
+        try:
+            value -= self.Offset
+        except AttributeError:
+            pass
+        try:
+            value = value / self.Scale
+        except AttributeError:
+            pass
+        return round(value)
+
     def no_value(self):
         if self._byte_length <= 4:
-            return self.uint_invalid[self._byte_length]
+            return DecodeDefinitions.uint_invalid[self._byte_length]
         else:
             raise N2KDecodeException("No default value")
 
     def decode_value(self, payload, specs):
         # print(self._name,"[%d:%d]" % (specs.start, specs.end), self._byte_length, self._bit_offset, self.BitLength)
-        b_dec = payload[specs.start:specs.end]
-        if self._byte_length == 1:
-            return self.extract_uint_byte(b_dec)
-        elif self._byte_length == 2:
-            # convert the 2 bytes into an integer big endian
-            res = N2KDecodeResult(self._name)
-            if (self.BitLength + self._bit_offset) % 8 == 0:
-                res.actual_length = 2
-            else:
-                res.actual_length = 1
-            val = struct.unpack('<H', b_dec)
-            val = val[0]
-            # mask upper bits
-            if self._bit_offset > 0:
-                val >>= self._bit_offset
-                remaining_bits = 16 - (self._bit_offset + self.BitLength)
-                if remaining_bits > 0:
-                    val = val & self.bit_mask16[16 - remaining_bits]
-            else:
-                val = val & self.bit_mask16_u[self.BitLength - 9]
-            res.value = val
-            # print(self._name, "=%d (%X)" % (val, val))
-            # validity check to be finalized
-            # correction on 02/05/2023 bitmask index (-9) instead of -8
-            if val == self.bit_mask16_u[self.BitLength - 9]:
-                res.invalid()
-            return res
-        elif self._byte_length == 3:
-            res = N2KDecodeResult(self._name)
-
-            if (self.BitLength + self._bit_offset) % 8 == 0:
-                res.actual_length = 3
-            else:
-                res.actual_length = 2
-            # first decode the first word
-            val = struct.unpack('<H', payload[specs.start:specs.start+2])
-            val = val[0]
-            ad_byte = struct.unpack('<B', payload[specs.start+2:specs.start+3])
-            ad_byte = ad_byte[0]
-            remaining_bits = 24 - self.BitLength
-            val <<= remaining_bits
-            ad_byte &= self.bit_mask_l[remaining_bits]
-            val += ad_byte
-            # print(self._name, "=%d (%X)" % (val, val))
-            res.value = val
-            return res
-        else:
-            # _logger.error("Cannot decode bit fields over 3 bytes %s %s" % (self._name, self.type()))
-            raise N2KDecodeException("Cannot decode bit fields over 3 bytes %s %s" % (self._name, self.type()))
+        return self.extract_value(payload, specs)
 
     def extract_var_str(self, payload, specs):
         lg = payload[specs.start]
@@ -877,8 +582,9 @@ class Field:
         return res
 
     def encode_value(self, value, buffer, index) -> int:
-        raise NotImplementedError
+        return self._value_coder.encode(value, buffer, index)
 
+    '''
     def encode_uint(self, value: int, buffer: bytearray, index) -> int:
         if self._byte_length == 1:
             buffer[index] = value & 0xFF
@@ -907,6 +613,8 @@ class Field:
             struct.pack_into('<l', buffer, index, value)
         else:
             raise N2KEncodeException("Cannot encode uint l=%d" % self._byte_length)
+    
+    '''
 
     def encode_str(self, str_value: str, buffer: bytearray, index):
         if self._variable_length:
@@ -923,10 +631,7 @@ class UIntField(Field):
         super().__init__(xml)
 
     def decode_value(self, payload, specs):
-        return self.extract_uint(payload, specs)
-
-    def encode_value(self, value, buffer, index):
-        return self.encode_uint(value, buffer, index)
+        return self.extract_value(payload, specs)
 
 
 class InstanceField(Field):
@@ -953,15 +658,10 @@ class EnumField(Field):
         # print(self._value_pair)
 
     def get_name(self, value):
-        try:
-            return self._value_pair[value]
-        except KeyError:
-            #_logger.error("Enum %s key %d non existent" % (self._name, value))
-            # return None
-            raise N2KMissingEnumKeyException("Enum %s key %d non existent" % (self._name, value))
+        return self._value_pair[value]
 
     def decode_value(self, payload, specs):
-        res = self.extract_uint(payload, specs)
+        res = self.extract_value(payload, specs)
         if not res.valid:
             return res
         enum_index = res.value
@@ -973,7 +673,7 @@ class EnumField(Field):
 class EnumIntField (EnumField):
 
     def decode_value(self, payload, specs):
-        res = self.extract_uint(payload, specs)
+        res = self.extract_value(payload, specs)
         if not res.valid:
             return res
         enum_index = res.value
@@ -985,12 +685,10 @@ class IntField(Field):
 
     def __init__(self, xml):
         super().__init__(xml)
+        self._value_coder = DecodeDefinitions.int_table[self.length()]
 
     def decode_value(self, payload, specs):
-        return self.extract_int(payload, specs)
-
-    def encode_value(self,value, buffer, index) -> int:
-        return self.encode_int(value, buffer, index)
+        return self.extract_value(payload, specs)
 
     def is_bit_value(self) -> bool:
         return False
@@ -1000,9 +698,10 @@ class DblField(Field):
 
     def __init__(self, xml):
         super().__init__(xml)
+        self._value_coder = DecodeDefinitions.int_table[self.length()]
 
     def decode_value(self, payload, specs):
-        res = self.extract_int(payload, specs)
+        res = self.extract_value(payload, specs)
         # print("Dbl result %X" % res.value, "Valid", res.valid)
         if res.valid:
             res.value = self.apply_scale_offset(float(res.value))
@@ -1011,6 +710,10 @@ class DblField(Field):
     def is_bit_value(self) -> bool:
         return False
 
+    def encode_value(self, value, buffer, index) -> int:
+        val_int = self.convert_to_int(value)
+        return super().encode_value(val_int, buffer, index)
+
 
 class UDblField(Field):
 
@@ -1018,13 +721,17 @@ class UDblField(Field):
         super().__init__(xml)
 
     def decode_value(self, payload, specs):
-        res = self.extract_uint(payload, specs)
+        res = self.extract_value(payload, specs)
         if res.valid:
             res.value = self.apply_scale_offset(float(res.value))
         return res
 
     def is_bit_value(self) -> bool:
         return False
+
+    def encode_value(self, value, buffer, index) -> int:
+        val_int = self.convert_to_int(value)
+        return super().encode_value(val_int, buffer, index)
 
 
 class ASCIIField(Field):
@@ -1038,6 +745,9 @@ class ASCIIField(Field):
     def is_bit_value(self) -> bool:
         return False
 
+    def encode_value(self, value, buffer, index) -> int:
+        return self.encode_str(value, buffer, index)
+
 
 class StringField(Field):
 
@@ -1049,6 +759,9 @@ class StringField(Field):
 
     def is_bit_value(self) -> bool:
         return False
+
+    def encode_value(self, value, buffer, index) -> int:
+        return self.encode_str(value, buffer, index)
 
 
 class FixLengthStringField(Field):
@@ -1067,6 +780,15 @@ class FixLengthStringField(Field):
         res.value = str_val
         # print("FixLengthString", payload[specs.start: specs.end],"=>", str_val)
         return res
+
+    def encode_value(self, value, buffer, index) -> int:
+        if len(value) > self._byte_length:
+            value = value[:self._byte_length]
+        elif len(value) <  self._byte_length:
+            # ok we fill with blank
+            value = value.rjust(self._byte_length, ' ')
+        buffer[index: index+self._byte_length] = value
+        return self._byte_length
 
 
 class NameField(Field):
@@ -1106,6 +828,7 @@ class CommunicationStatusField(Field):
         res.actual_length = 3
         res.invalid()
         return res
+
 
 class RepeatedFieldSet:
 

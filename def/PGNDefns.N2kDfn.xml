@@ -5351,6 +5351,8 @@
     </PGNDefn>
     <PGNDefn PGN="129807">
       <Name>AIS Class B Group Assignment</Name>
+      <Scope>Ignored</Scope>
+      <Comment>Issue on length</Comment>
       <ByteLength>29</ByteLength>
       <Fields>
         <UIntField Name="Message ID">
@@ -5376,10 +5378,10 @@
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
         </Field>
-        <IntField Name="Tx/Rx Mode">
+        <UIntField Name="Tx/Rx Mode">
           <BitOffset>40</BitOffset>
           <BitLength>2</BitLength>
-        </IntField>
+        </UIntField>
         <Field Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>42</BitOffset>
