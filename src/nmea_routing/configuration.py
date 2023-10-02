@@ -13,6 +13,8 @@ import yaml
 import logging
 import sys
 
+from utilities.global_exceptions import ObjectCreationError
+
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
@@ -139,8 +141,9 @@ class NavigationServerObject:
             else:
                 self._object = getattr(self._class, factory)(Parameters(self._param))
             return self._object
-        except TypeError as e:
+        except (TypeError, ObjectCreationError) as e:
             _logger.error("Error building object %s class %s: %s" % (self._name, self._class_name, e))
+            raise ObjectCreationError("Error building object %s class %s: %s" % (self._name, self._class_name, e))
 
     def __str__(self):
         return "Object %s class %s object %s" % (self._name, self._class, self._object)

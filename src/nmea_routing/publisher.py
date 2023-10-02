@@ -40,6 +40,7 @@ class Publisher(threading.Thread):
             self._queue_size = 40
             self._max_lost = 10
             self._active = True
+            daemon = True
         else:
             name = opts['name']
             self._opts = opts
@@ -50,9 +51,10 @@ class Publisher(threading.Thread):
             self._couplers = []
             for inst_name in inst_list:
                 self._couplers.append(self.resolve_ref(inst_name))
+            daemon = False
 
         self._queue_tpass = False
-        super().__init__(name=name)
+        super().__init__(name=name, daemon=daemon)
         self._name = name
         # moving registration to start
         self._queue = queue.Queue(self._queue_size)

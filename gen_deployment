@@ -4,4 +4,4 @@
 # Copyright Sterwen Technology 2021-2022
 #
 tar cvf navigation.tar src/*.py src/*/*.py conf/*.yml def/* *.service *.py LICENSE run_server install_server \
-  requirement.txt can_setup
+  requirements.txt can_setup

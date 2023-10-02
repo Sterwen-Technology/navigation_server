@@ -17,6 +17,7 @@ from utilities.message_trace import NMEAMsgTrace, MessageTraceError
 import threading
 import queue
 import time
+import subprocess
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -25,12 +26,31 @@ class SocketCanError(Exception):
     pass
 
 
+def check_can_device(link):
+
+    proc = subprocess.run('/sbin/ip link | grep %s' % link, shell=True, capture_output=True, text=True)
+    lines = proc.stdout.split('\n')
+    #  print(len(lines), lines)
+    if len(lines) <= 1:
+        raise SocketCanError("SocketCAN channel %s non existent" % link)
+    try:
+        i = lines[0].index(link)
+    except ValueError:
+        raise SocketCanError("SocketCAN channel %s non existent" % link)
+    try:
+        i = lines[0].index('UP')
+    except ValueError:
+        raise SocketCanError("SocketCAN channel %s not ready" % link)
+    return
+
+
 class SocketCANInterface(threading.Thread):
 
     (BUS_NOT_CONNECTED, BUS_CONNECTED, BUS_READY, BUS_SENS_ALLOWED) = range(0, 4)
 
     def __init__(self, channel, out_queue, trace=False):
 
+        check_can_device(channel)
         super().__init__(name="CAN-if-%s" % channel)
         self._channel = channel
         self._bus = None

@@ -17,8 +17,6 @@ from nmea2000.nmea2k_device import NMEA2000Device
 from nmea_routing.server_common import NavigationServer
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.configuration import NavigationConfiguration
-from nmea2000.nmea2k_can_interface import SocketCANInterface
-from nmea2000.nmea2k_application import NMEA2000Application
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -133,36 +131,5 @@ class NMEA2KController(NavigationServer, threading.Thread):
 
 
 
-class NMEA2KActiveController(NMEA2KController):
-
-    def __init__(self, opts):
-
-        super().__init__(opts)
-        self._channel = opts.get('channel', str, 'can0')
-        self._trace = opts.get('trace', bool, False)
-        self._can = SocketCANInterface(self._channel, self._input_queue, self._trace)
-        self._applications = {}
-        self.add_application(NMEA2000Application(self, opts))
-
-    def start(self):
-        self._can.start()
-        super().start()
-        self.start_applications()
-
-    def stop(self):
-        self._can.stop()
-        super().stop()
-
-    @property
-    def CAN_interface(self):
-        return self._can
-
-    def add_application(self, application):
-        self._applications[application.address] = application
-
-    def start_applications(self):
-        _logger.debug("NMEA2000 Applications starts")
-        for app in self._applications.values():
-            app.start()
 
 

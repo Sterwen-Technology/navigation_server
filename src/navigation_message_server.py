@@ -14,6 +14,12 @@ import os
 from argparse import ArgumentParser
 import signal
 
+try:
+    from nmea2000.nmea2k_can_coupler import DirectCANCoupler
+except ModuleNotFoundError:
+    include_can = False
+else:
+    include_can = True
 from nmea_routing import nmea0183
 from nmea_routing.message_server import NMEAServer, NMEASenderServer
 from nmea_routing.shipmodul_if import *
@@ -28,15 +34,18 @@ from nmea_routing.IPCoupler import NMEATCPReader
 from nmea_routing.ikonvert import iKonvert
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea2000.nmea2k_manufacturers import Manufacturers
-from nmea2000.nmea2k_controller import NMEA2KController, NMEA2KActiveController
+from nmea2000.nmea2k_controller import NMEA2KController
+if include_can:
+    from nmea2000.nmea2k_active_controller import NMEA2KActiveController
 from victron_mppt.mppt_coupler import MPPT_Coupler
 from nmea_routing.ydn2k_coupler import YDCoupler
 from nmea_routing.serial_nmeaport import NMEASerialPort
 from nmea_data.data_client import NMEAGrpcDataClient
 from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter, NMEA2000TimeFilter
 from utilities.raw_log_coupler import RawLogCoupler
-from nmea2000.nmea2k_can_coupler import DirectCANCoupler
+
 from utilities.log_utilities import NavigationLogSystem
+from utilities.global_exceptions import ObjectCreationError
 
 
 def _parser():
@@ -254,13 +263,16 @@ def main():
     config.add_class(YDCoupler)
     config.add_class(NMEASerialPort)
     config.add_class(NMEA2KController)
-    config.add_class(NMEA2KActiveController)
+    if include_can:
+        config.add_class(NMEA2KActiveController)
     config.add_class(NMEAGrpcDataClient)
     config.add_class(NMEA0183Filter)
     config.add_class(NMEA2000Filter)
     config.add_class(NMEA2000TimeFilter)
+
     config.add_class(RawLogCoupler)
-    config.add_class(DirectCANCoupler)
+    if include_can:
+        config.add_class(DirectCANCoupler)
 
     NavigationLogSystem.finalize_log(config)
 
@@ -282,14 +294,18 @@ def main():
     for server_descr in config.servers():
         try:
             server = server_descr.build_object()
-        except ConfigurationException as e:
+        except (ConfigurationException, ObjectCreationError) as e:
             _logger.error("Error building server %s" % e)
             continue
         main_server.add_server(server)
     _logger.debug("Servers created")
     # create the couplers
     for inst_descr in config.couplers():
-        coupler = inst_descr.build_object()
+        try:
+            coupler = inst_descr.build_object()
+        except ObjectCreationError as e:
+            _logger.error("Error building Coupler:%s" % str(e))
+            continue
         main_server.add_coupler(coupler)
     _logger.debug("Couplers created")
     # create the publishers
