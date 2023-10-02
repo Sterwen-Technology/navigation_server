@@ -118,8 +118,8 @@ class Coupler(threading.Thread):
         #
         self._n2k_controller = None
         self._n2k_ctlr_name = opts.get('nmea2000_controller', str, None)
-        self._data_sink = None
-        self._data_sink_name = opts.get('data_sink', str, None)
+        # self._data_sink = None
+        # self._data_sink_name = opts.get('data_sink', str, None)
 
     @property
     def fast_packet_handler(self):
@@ -160,7 +160,7 @@ class Coupler(threading.Thread):
         self._last_msg_count_s = self._total_msg_s
         self._count_stamp = t
         _logger.info("Coupler %s NMEA message received(process:%d rate:%6.2f; raw:%d rate:%6.2f sent:%d rate:%6.2f" %
-                     (self.name(), self._total_msg, self._rate, self._total_msg_raw, self._rate_raw,
+                     (self.name(), self._total_msg, self._rate, self.total_msg_raw(), self._rate_raw,
                       self._total_msg_s, self._rate_s))
         if not self._stopflag:
             self.start_timer()
@@ -193,7 +193,7 @@ class Coupler(threading.Thread):
         self._has_run = True
         # now resolve internal references
         self._n2k_controller = self.resolve_ref(self._n2k_ctlr_name, 'NMEA2000 controller')
-        self._data_sink = self.resolve_ref(self._data_sink_name, "Data sink")
+        # self._data_sink = self.resolve_ref(self._data_sink_name, "Data sink")
 
         self._startTS = time.time()
         self.start_timer()
@@ -366,8 +366,8 @@ class Coupler(threading.Thread):
             msg = self._read()
             self.trace(self.TRACE_IN, msg)
             # _logger.debug("Read:%s", msg)
-            if self._data_sink is not None:
-                self._data_sink.send_msg(msg)
+            # if self._data_sink is not None:
+                # self._data_sink.send_msg(msg)
             # print(msg.printable())
             if msg.type == N2K_MSG:
                 if self._n2k_controller is not None and msg.is_iso_protocol():

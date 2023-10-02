@@ -178,23 +178,58 @@ class DecodeSpecs:
         self._end = value
 
 
-class ValueDecode:
+class ValueCoder:
 
-    def __init__(self, length, struct_format, invalid_value, process_lambda=lambda x: x[0]):
+    def __init__(self, length, struct_format):
         self._length = length
         self._struct_format = struct.Struct(struct_format)
-        self._invalid_value = invalid_value
-        self._process = process_lambda
 
     def decode(self, bytes_in):
+        raise NotImplementedError
+
+    def encode(self, value: int, target_buffer, index) -> int:
+        raise NotImplementedError
+
+
+class ValueCoderUnsigned(ValueCoder):
+
+    def __init__(self, length, struct_format, process_lambda=lambda x: x[0]):
+        super().__init__(length, struct_format)
+        self._invalid_value = 2**(length * 8) - 1
+        self._process = process_lambda
+
+    def decode(self, bytes_in) -> int:
         vd = self._struct_format.unpack(bytes_in)
         val = self._process(vd)
+        # print("decode value =", val, "%08X" % val)
         if val == self._invalid_value:
             raise ValueError
         return val
 
-    def encode(self, value: int, buffer, index) -> int:
-        self._struct_format.pack_into(buffer, index, value)
+    def encode(self, value: int, target_buffer, index) -> int:
+        value = value & self._invalid_value
+        if self._length == 3:
+            self._struct_format.pack_into(target_buffer, index, value & 0xFFFF, (value >> 16) & 0xFF)
+        else:
+            self._struct_format.pack_into(target_buffer, index, value)
+        return self._struct_format.size
+
+
+class ValueCoderSigned(ValueCoder):
+
+    def __init__(self, length, struct_format):
+        super().__init__(length, struct_format)
+        self._max_value = 2**((length*8) - 1) - 1
+        self._min_value = -self._max_value
+
+    def decode(self, bytes_in):
+        vd = self._struct_format.unpack(bytes_in)
+        return vd[0]
+
+    def encode(self, value: int, target_buffer, index):
+        if value > self._max_value or value < self._min_value:
+            raise ValueError
+        self._struct_format.pack_into(target_buffer, index, value)
         return self._struct_format.size
 
 
@@ -209,18 +244,18 @@ class DecodeDefinitions:
     ]
 
     int_table = {
-        1: ValueDecode(1, '<b', 0x7F),
-        2: ValueDecode(2, '<h', 0x7FFF),
-        4: ValueDecode(4, '<l', 0x7FFFFFFF),
-        8: ValueDecode(8, '<q', 0x7FFFFFFFFFFFFFFF)
+        1: ValueCoderSigned(1, '<b'),
+        2: ValueCoderSigned(2, '<h'),
+        4: ValueCoderSigned(4, '<l'),
+        8: ValueCoderSigned(8, '<q')
     }
 
     uint_table = {
-        1: ValueDecode(1, '<B', 0xFF),
-        2: ValueDecode(2, '<H', 0xFFFF),
-        3: ValueDecode(3, '<HB', 0xFFFFFF, process_lambda=lambda v: v[0] + (v[1] << 16)),
-        4: ValueDecode(4, '<L', 0xFFFFFFFF),
-        8: ValueDecode(8, '<Q', (2**64) - 1)
+        1: ValueCoderUnsigned(1, '<B'),
+        2: ValueCoderUnsigned(2, '<H'),
+        3: ValueCoderUnsigned(3, '<HB', process_lambda=lambda v: v[0] + (v[1] << 16)),
+        4: ValueCoderUnsigned(4, '<L'),
+        8: ValueCoderUnsigned(8, '<Q')
     }
 
 
@@ -232,3 +267,24 @@ if __name__ == "__main__":
     t2 = bytearray.fromhex("010203")
     r2 = DecodeDefinitions.uint_table[3].decode(t2)
     print(t2, "%08X" % r2)
+    buffer = bytearray(16)
+    l = DecodeDefinitions.uint_table[3].encode(r2, buffer, 0)
+    print(l, buffer)
+    index = l
+    l = DecodeDefinitions.int_table[4].encode(r1, buffer, l)
+    index += l
+    print(l, buffer)
+    r3 = -1
+    l = DecodeDefinitions.int_table[4].encode(r3, buffer, index)
+    print(index, r3, buffer)
+    val = DecodeDefinitions.int_table[4].decode(buffer[index: index +l])
+    print(val)
+    index += l
+
+    r3 = -(2**31 -1)
+    l = DecodeDefinitions.int_table[4].encode(r3, buffer, index)
+    index += l
+    print(index, buffer)
+    t2 = bytearray.fromhex('01000000')
+    r3 = DecodeDefinitions.int_table[4].decode(t2)
+    print(r3)

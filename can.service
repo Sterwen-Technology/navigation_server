@@ -1,0 +1,13 @@
+[Unit]
+Description=CAN bus intialisation
+Requires=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/data/solidsense/navigation/src/can_setup
+Restart=no
+
+
+[Install]
+WantedBy=multi-user.target

@@ -64,8 +64,8 @@ class DirectCANCoupler(Coupler):
         msg = NavGenericMsg(N2K_MSG, msg=msg)
         self.trace(self.TRACE_IN, msg)
         # _logger.debug("Read:%s", msg)
-        if self._data_sink is not None:
-            self._data_sink.send_msg(msg)
+        # if self._data_sink is not None:
+            # self._data_sink.send_msg(msg)
         return msg
 
     def define_n2k_writer(self):

@@ -10,12 +10,11 @@
 #-------------------------------------------------------------------------------
 
 import logging
-import struct
 from collections import namedtuple
 
 from utilities.xml_utilities import XMLDefinitionFile, XMLDecodeError
 from nmea2000.nmea2k_name import NMEA2000Name
-from nmea2000.nmea2k_encode_decode import (BitField, BitFieldSplitException, DecodeSpecs, ValueDecode, N2KDecodeResult,
+from nmea2000.nmea2k_encode_decode import (BitField, BitFieldSplitException, DecodeSpecs, N2KDecodeResult,
                                            DecodeDefinitions)
 
 

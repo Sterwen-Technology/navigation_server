@@ -1,0 +1,3 @@
+#!/bin/bash
+# perform can initialisation commands - assumed to be run a root
+/sbin/ip link set can0 up type can bitrate 250000
