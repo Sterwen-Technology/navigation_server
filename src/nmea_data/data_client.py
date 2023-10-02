@@ -14,6 +14,8 @@ import logging
 import grpc
 
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, N0183_MSG
+from nmea_routing.filters import FilterSet
+from nmea_routing.publisher import Publisher
 
 from generated.server_pb2 import nmea_msg
 from generated.server_pb2_grpc import NavigationServerStub
@@ -21,7 +23,7 @@ from generated.server_pb2_grpc import NavigationServerStub
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
 
-class NMEADataClient:
+class NMEAGrpcDataClient:
 
     def __init__(self, opts):
 
@@ -30,6 +32,15 @@ class NMEADataClient:
         _logger.info("Creating client for data server at %s" % self._address)
         self._channel = grpc.insecure_channel(self._address)
         self._stub = NavigationServerStub(self._channel)
+        self._couplers = []
+        self._filters = None
+        filter_names = opts.getlist('filters', str)
+        if filter_names is not None and len(filter_names) > 0:
+            self._filters = FilterSet(filter_names)
+        self._publisher = None
+
+    def name(self):
+        return self._name
 
     def send_msg(self, msg_to_send: NavGenericMsg):
         _logger.debug("DataClient send_msg %s" % msg_to_send.printable())
@@ -46,4 +57,30 @@ class NMEADataClient:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
                 _logger.error("Server Status - Error accessing server:%s" % err)
             else:
-                _logger.info("Server not accessible")
+                _logger.error("Data client %s GRPC Server %s not accessible" % (self._name, self._address))
+                self._publisher.stop()
+
+    def add_coupler(self, coupler):
+        self._couplers.append(coupler)
+
+    def start(self):
+        _logger.info("Starting GRPC data client:%s for sever:%s" % (self._name, self._address))
+        self._publisher = GRPCDirectPublisher(self, self._couplers, self._filters)
+        self._publisher.start()
+
+    def stop(self):
+        self._publisher.stop()
+
+
+class GRPCDirectPublisher(Publisher):
+
+    def __init__(self, client, couplers, filters):
+        super().__init__(None, internal=True, couplers=couplers, name=client.name(), filters=filters)
+        self._client = client
+
+    def process_msg(self, msg):
+        self._client.send_msg(msg)
+        return True
+
+
+

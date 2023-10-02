@@ -192,12 +192,12 @@ class NavigationConfiguration:
         except KeyError:
             _logger.info("No publishers")
         try:
-            for obj in self.object_descr_iter('data_sinks'):
+            for obj in self.object_descr_iter('data_clients'):
                 nav_obj = NavigationServerObject(obj)
                 self._obj_dict[nav_obj.name] = nav_obj
                 self._data_sink[nav_obj.name] = nav_obj
         except KeyError:
-            _logger.info("No data sink")
+            _logger.info("No data clients")
         try:
             for obj in self.object_descr_iter('filters'):
                 nav_obj = NavigationServerObject(obj)

@@ -1,2 +1,2 @@
 #!/bin/bash
-python src/navigation_message_server.py --settings conf/"$1" -d "$PWD"
+python3 src/navigation_message_server.py --settings conf/"$1" -d "$PWD"

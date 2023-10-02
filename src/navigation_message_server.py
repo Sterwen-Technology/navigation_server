@@ -32,7 +32,7 @@ from nmea2000.nmea2k_controller import NMEA2KController, NMEA2KActiveController
 from victron_mppt.mppt_coupler import MPPT_Coupler
 from nmea_routing.ydn2k_coupler import YDCoupler
 from nmea_routing.serial_nmeaport import NMEASerialPort
-from nmea_data.data_client import NMEADataClient
+from nmea_data.data_client import NMEAGrpcDataClient
 from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter, NMEA2000TimeFilter
 from utilities.raw_log_coupler import RawLogCoupler
 from nmea2000.nmea2k_can_coupler import DirectCANCoupler
@@ -126,6 +126,8 @@ class NavigationMainServer:
             publisher.start()
         for server in self._servers:
             server.start()
+        for client in self._data_client:
+            client.start()
         for inst in self._couplers.values():
             inst.request_start()
         self._is_running = True
@@ -151,6 +153,8 @@ class NavigationMainServer:
             server.stop()
         for inst in self._couplers.values():
             inst.stop()
+        for client in self._data_client:
+            client.stop()
         for pub in self._publishers:
             pub.stop()
         # self._console.close()
@@ -185,6 +189,9 @@ class NavigationMainServer:
 
     def add_data_client(self, client):
         self._data_client.append(client)
+        # add all previous added couplers
+        for coupler in self._couplers.values():
+            client.add_coupler(coupler)
 
     def start_coupler(self, name: str):
         try:
@@ -248,7 +255,7 @@ def main():
     config.add_class(NMEASerialPort)
     config.add_class(NMEA2KController)
     config.add_class(NMEA2KActiveController)
-    config.add_class(NMEADataClient)
+    config.add_class(NMEAGrpcDataClient)
     config.add_class(NMEA0183Filter)
     config.add_class(NMEA2000Filter)
     config.add_class(NMEA2000TimeFilter)

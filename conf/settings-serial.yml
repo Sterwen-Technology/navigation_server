@@ -46,7 +46,6 @@ couplers:
     autostart: false
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
-    # data_sink: DataAnalyser
     trace_messages: false
     trace_raw: false
 
@@ -65,7 +64,7 @@ publishers:
       # file: trace129026
 
 
-data_sinks:
+data_clients:
 
 - DataAnalyser:
       class: NMEADataClient

@@ -85,7 +85,7 @@ This a gRPC server used for external monitoring and control of the navigation se
 
 #### ShipModulConfig server
 
-TCP server allowing to bypass the routing function to connect the Miniplex control application to a Miniplex3 device. To use this feature just configure the MPXConfig utility and assign the server IP and the port configured for it.
+TCP server allowing to bypass the routing function to connect the Shipmodul Miniplex control application to a Miniplex3 device. To use this feature just configure the MPXConfig utility and assign the server IP and the port configured for it.
 
 Warning: when the application is connected to the server all traffic is re-routed to it. So no NMEA messages are transmitted to the navigation system.
 
@@ -146,7 +146,7 @@ Under preparation
 | trace_messages      | boolean                              | False         | Trace all messages after internal pre-processing                                                                             |
 | trace_raw           | boolean                              | False         | Trace all messages in device format (see tracing and replay paragraph)                                                       | 
 | autostart           | boolean                              | True          | The coupler is started automatically when the service starts, if False it needs to be started via the Console                |
-| nmea2000_controller | string                               | None          | Name of the server of class NMEA2KController                                                                                 |
+| nmea2000_controller | string                               | None          | Name of the server of class NMEA2KController associated with the coupler                                                     |
 
 Remarks on protocol behavior:
 
@@ -199,6 +199,7 @@ Instantiable class to manage Ethernet or WiFi interface for Shipmodul Miniplex3
 The class instance has 2 possible behavior depending on the protocol selected.
 - nmea0183: all frames are transparently transmitted as NMEA0183
 - nmea2000: All $MXPGN frames are interpreted as NMEA2000 and interpreted as such, including Fast Packet reassembly. Further processing on NMEA2000 frames is explained in the dedicated paragraph.
+- nmea_mixed: Only the NMEA2000 bus PGN are reassembled and decoded to be sent to a NMEA2000 Controller, other messages are transmitted transparently
 
 The class is allowing the pass through of configuration messages sent by the MPXconfig utility. This is requiring that a ShipModulConfig server class is setup in the configuration. During the connection of the MPXConfig utility, all messages are directed to it, so no messages sent to clients.
 
@@ -231,6 +232,7 @@ This class manages the interface with the VEDirect interface service (see) and c
 #### DirectCANCoupler
 This coupler class works when a CAN bus interface with socketcan driver is installed on the system. Obviously, only NMEA2000 messages can be processed.
 The CAN bus the coupler must be associated with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters.
+
 
 ### Publishers
 Publishers concentrate messages from several instruments towards consumers. Publishers are implicitly created by Servers when a new client connection is created.
@@ -290,7 +292,26 @@ Select one value for each period to reduce message flow for slow moving values
 
 The period shall be defined and non-zero, otherwise the filter is disabled
 
+## Data client
+
+Data clients are used to forward the NMEA messages (both formats) to an external application. These applications are generally data servers or transcoders to interface other applications.
+Currently only one version is developed based on gRPC.
+
+### NMEAGrpcDataClient
+
+Parameters:
+
+| Name    | Type        | Default   | Signification                                |
+|---------|-------------|-----------|----------------------------------------------|
+| address | string      | 127.0.0.1 | address of the server receiving the messages |
+| port    | int         | 4504      | server listening port                        |
+| filters | string list | none      | Set of filters applied for the forwarding    |
+
+
+
 ## Tracing and replay
+
+
 
 
 
@@ -397,10 +418,10 @@ publishers:
       file: trace129026
 
 
-data_sinks:
+data_clients:
 
 - DataAnalyser:
-      class: NMEADataClient
+      class: NMEAGrpcDataClient
 
 
 ```
