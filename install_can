@@ -1,0 +1,8 @@
+#!/bin/bash
+# shell script to perform the installation on systemd for can set service
+#
+cp can.service /lib/systemd/system
+systemctl daemon-reload
+systemctl enable can
+systemctl start can
+systemctl status can

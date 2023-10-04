@@ -96,6 +96,8 @@ class SocketCANInterface(threading.Thread):
     def stop(self):
         self._stop_flag = True
         self._writer.stop()
+        if self._trace is not None:
+            self._trace.stop_trace()
 
     def set_data_queue(self, data_queue: queue.Queue):
         self._data_queue = data_queue
@@ -230,6 +232,10 @@ class SocketCANInterface(threading.Thread):
                 _logger.error("Socket CAN Write buffer full")
                 return False
         return True
+
+    def stop_trace(self):
+        if self._trace is not None:
+            self._trace.stop_trace()
 
 '''
 class NMEA2000MsgListener(Listener):

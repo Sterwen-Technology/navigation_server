@@ -86,3 +86,7 @@ class DirectCANCoupler(Coupler):
 
     def send(self, msg: NMEA2000Msg):
         return self._n2k_controller.CAN_interface.send(msg)
+
+    def stop_trace(self):
+        self._n2k_controller.CAN_interface.stop_trace()
+        super().stop_trace()
