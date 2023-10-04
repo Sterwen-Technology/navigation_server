@@ -16,7 +16,8 @@ import signal
 
 try:
     from nmea2000.nmea2k_can_coupler import DirectCANCoupler
-except ModuleNotFoundError:
+except ModuleNotFoundError as e:
+    print("Error in python-can import", e)
     include_can = False
 else:
     include_can = True
@@ -57,7 +58,7 @@ def _parser():
     return p
 
 
-version = "V1.50"
+version = "V1.50a"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -124,13 +125,16 @@ class NavigationMainServer:
             self._console.add_server(server)
         self._servers.append(server)
 
-    def start(self):
+    def start(self) -> bool:
         '''
         def start_publisher(pub):
             for coupler in self._couplers:
                 coupler.register(pub)
             pub.start()
             '''
+        if len(self._couplers) == 0:
+            _logger.critical("No couplers defined -server will stop")
+            return False
         for publisher in self._publishers:
             publisher.start()
         for server in self._servers:
@@ -142,6 +146,7 @@ class NavigationMainServer:
         self._is_running = True
         self._start_time = datetime.datetime.now()
         self._start_time_s = self._start_time.strftime("%Y/%m/%d-%H:%M:%S")
+        return True
 
     def start_time_str(self):
         return self._start_time_s
@@ -303,7 +308,7 @@ def main():
     for inst_descr in config.couplers():
         try:
             coupler = inst_descr.build_object()
-        except ObjectCreationError as e:
+        except (ConfigurationException, ObjectCreationError) as e:
             _logger.error("Error building Coupler:%s" % str(e))
             continue
         main_server.add_coupler(coupler)
@@ -318,9 +323,9 @@ def main():
         main_server.add_data_client(client)
     _logger.debug("Data sinks created")
     _logger.debug("Starting the main server")
-    main_server.start()
+    if main_server.start():
     # print_threads()
-    main_server.wait()
+        main_server.wait()
 
 
 if __name__ == '__main__':

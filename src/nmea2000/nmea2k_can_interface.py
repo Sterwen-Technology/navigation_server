@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------------------
 import datetime
 import logging
-from can import Bus, Message, CanOperationError, CanTimeoutError, Notifier, Listener
+from can import Bus, Message, CanError
 from nmea2000.nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
 from nmea2000.nmea2k_pgndefs import PGNDef, PGNDefinitions, N2KUnknownPGN
 from utilities.message_trace import NMEAMsgTrace, MessageTraceError
@@ -84,7 +84,7 @@ class SocketCANInterface(threading.Thread):
         # connect to the CAN bus
         try:
             self._bus = Bus(channel=self._channel, interface="socketcan", bitrate=250000)
-        except CanOperationError as e:
+        except CanError as e:
             _logger.error("Error initializing CAN Channel %s: %s" % (self._channel, e))
             raise SocketCanError
         # self._notifier = Notifier(self._bus, [self._listener])
@@ -181,13 +181,15 @@ class SocketCANInterface(threading.Thread):
             # read the CAN bus
             try:
                 msg = self._bus.recv(0.5)
-            except CanOperationError as e:
+            except CanError as e:
                 _logger.error("Error on CAN reading on channel %s: %s"% (self._channel, e))
                 continue
             if msg is None:
                 continue
-
+            _logger.debug("CAN RECV:%s" % str(msg))
             self.process_receive_msg(msg)
+            if not msg.is_extended_id or msg.is_remote_frame:
+                continue
             # end of the run loop
 
         # thread exit section
@@ -214,14 +216,14 @@ class SocketCANInterface(threading.Thread):
         # Fast packet processing
         if PGNDefinitions.pgn_definition(n2k_msg.pgn).fast_packet():
             for data in self._fp_handler.split_message(n2k_msg.pgn, n2k_msg.payload):
-                msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.monotonic(), data=data)
+                msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.time(), data=data)
                 try:
                     self._in_queue.put(msg, timeout=5.0)
                 except queue.Full:
                     _logger.error("Socket CAN Write buffer full")
                     return False
         else:
-            msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.monotonic(), data=n2k_msg.payload)
+            msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.time(), data=n2k_msg.payload)
             try:
                 self._in_queue.put(msg, timeout=5.0)
             except queue.Full:
@@ -296,12 +298,15 @@ class SocketCANWriter(threading.Thread):
                 self._total_msg += 1
                 self._bus.send(msg, 5.0)
                 last_write_time = time.monotonic()
-            except CanOperationError as e:
+            except CanError as e:
                 _logger.error("Error receiving message from channel %s: %s" % (self._can_interface.channel, e))
                 continue
+            '''
             except CanTimeoutError:
                 _logger.error("CAN send timeout error - message lost")
                 continue
+            '''
+
             # end of the run loop
 
 
