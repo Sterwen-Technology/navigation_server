@@ -467,7 +467,7 @@ class Coupler(threading.Thread):
             # not all messages have the CRLF included to be further checked
             try:
                 self._trace_fd.write(fc)
-                self._trace_fd.write(msg.decode())
+                self._trace_fd.write(str(msg))
                 self._trace_fd.write('\n')
             except IOError as err:
                 if self._trace_raw:

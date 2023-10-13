@@ -20,10 +20,11 @@ from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.generic_msg import *
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
+
 (UNKNOWN, STATUS, NOT_CONN, ACK, NAK, N2K, N183) = range(7)
 
 
-class iKonvertMsg():
+class iKonvertMsg:
 
     def __init__(self):
         self._type = UNKNOWN
@@ -33,64 +34,66 @@ class iKonvertMsg():
 
     @staticmethod
     def from_bytes(data):
-        msg = iKonvertMsg().decode(data)
+        try:
+            msg = iKonvertMsg().decode(data)
+        except (ValueError, IndexError, KeyError):
+            _logger.error("iKonvert decoding error on message:%s" % data)
+            return None
         return msg
 
     def decode(self, data):
+
         self._raw = data
-
         if len(data) < 8:
-            print("iKonvert incorrect data frame len=%d" % len(data))
-            return None
-
-        _logger.debug("iKonvert received:%s" % data )
+            _logger.error("iKonvert incorrect data frame len=%d" % len(data))
+            raise ValueError
+        _logger.debug("iKonvert received:%s" % data)
         fields = data.split(b',')
         if len(fields) < 2:
-            _logger.error("iKonvert improper message")
-            return
-        try:
-            if fields[0][0:6] == b'!PDGY':
-                self._type = N2K
-                self._msg = NMEA2000Msg(
-                    pgn=int(fields[1]),
-                    prio=int(fields[2]),
-                    sa=int(fields[3]),
-                    da=int(fields[4]),
-                    payload=base64.b64decode(fields[6])
-                )
-            elif fields[0][0:6] == b'$PDGY':
-                if fields[1][0] == ord('0'):
-                    if len(fields[3]) == 0:
-                        self._type = NOT_CONN
-                    else:
-                        self._type = STATUS
-                        self._param['bus_load'] = fields[2]
-                        self._param['frame_errors'] = fields[3]
-                        self._param['nb_devices'] = fields[4]
-                        self._param['uptime'] = fields[5]
-                        self._param['CAN_address'] = fields[6]
-                        self._param['nb_rejected_PGN'] = fields[7]
-                elif fields[1] == b'TEXT':
-                    self._type = NOT_CONN
-                    self._param['boot'] = fields[2]
-                elif fields[1] == b'ACK':
-                    self._type = ACK
-                    self._param['message'] = fields[2]
-                elif fields[1] == b'NAK':
-                    self._type = NAK
-                    self._param['error'] = fields[2]
-                else:
-                    _logger.error("iKonvert Unknown message type %s %s" % (fields[0], fields[1]))
-            else:
-                if fields[0][0] == ord('$'):
-                    # this shall be NMEA0183
-                    self._type = N183
-                    self._msg = data
-                else:
-                    _logger.error("iKonvert Unknown message type %s %s" % (fields[0], fields[1]))
+            raise ValueError
 
-        except KeyError:
-            _logger.error("iKonvert decoding error for message %s" % fields[0])
+        if fields[0][0:6] == b'!PDGY':
+            self._type = N2K
+            self._msg = NMEA2000Msg(
+                pgn=int(fields[1]),
+                prio=int(fields[2]),
+                sa=int(fields[3]),
+                da=int(fields[4]),
+                payload=base64.b64decode(fields[6])
+            )
+        elif fields[0][0:6] == b'$PDGY':
+            if fields[1][0] == ord('0'):
+                if len(fields[3]) == 0:
+                    self._type = NOT_CONN
+                else:
+                    self._type = STATUS
+                    self._param['bus_load'] = fields[2]
+                    self._param['frame_errors'] = fields[3]
+                    self._param['nb_devices'] = fields[4]
+                    self._param['uptime'] = fields[5]
+                    self._param['CAN_address'] = fields[6]
+                    self._param['nb_rejected_PGN'] = fields[7]
+            elif fields[1] == b'TEXT':
+                self._type = NOT_CONN
+                self._param['boot'] = fields[2]
+            elif fields[1] == b'ACK':
+                self._type = ACK
+                self._param['message'] = fields[2]
+            elif fields[1] == b'NAK':
+                self._type = NAK
+                self._param['error'] = fields[2]
+            else:
+                _logger.error("iKonvert Unknown message type %s %s" % (fields[0], fields[1]))
+                raise ValueError
+        else:
+            if fields[0][0] == ord('$'):
+                # this shall be NMEA0183
+                self._type = N183
+                self._msg = data
+            else:
+                _logger.error("iKonvert Unknown message type %s %s" % (fields[0], fields[1]))
+                raise ValueError
+
         return self
 
     def get(self, param):
@@ -114,7 +117,7 @@ class iKonvertRead(threading.Thread):
     def __init__(self, instrument, tty, instr_cbd):
         self._tty = tty
         self._instrument = instrument
-        super().__init__(name="IKonvertRead")
+        super().__init__(name="IKonvertRead", daemon=True)
 
         self._stop_flag = False
         self._instr_cbd = instr_cbd
@@ -131,8 +134,7 @@ class iKonvertRead(threading.Thread):
             msg = iKonvertMsg.from_bytes(data)
             if msg is not None:
                 self._instr_cbd[msg.type](msg)
-            else:
-                _logger.error("iKonvert read error - suspected timeout")
+
         _logger.info("stopping iKonvert read")
 
     def stop(self):
@@ -165,7 +167,7 @@ class iKonvert(Coupler):
         self._tx_pgn = []
         self._ikstate = self.IKIDLE
         self._wait_event = 0
-        self._queue = queue.Queue(20)
+        self._queue = queue.Queue(40)
         self._cmd_result = None
 
     def open(self):
