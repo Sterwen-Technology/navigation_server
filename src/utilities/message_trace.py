@@ -14,7 +14,7 @@ import logging
 import os
 
 from nmea_routing.configuration import NavigationConfiguration
-from nmea_routing.generic_msg import NavGenericMsg
+from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG
 from utilities.date_time_utilities import format_timestamp
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -28,7 +28,7 @@ class NMEAMsgTrace:
 
     (TRACE_IN, TRACE_OUT) = range(1, 3)
 
-    def __init__(self, name, trace_type, default_on=True, raw=True):
+    def __init__(self, name, trace_type):
         self._name = name
         trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')
         date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
@@ -41,12 +41,12 @@ class NMEAMsgTrace:
             _logger.error("Trace file error %s" % e)
             raise MessageTraceError
         self._trace_fd.write("H0|%s|V1.4\n" % trace_type)
-        self._trace_msg = default_on
-        self._trace_raw = raw
         self._msg_count = 0
 
     def trace(self, direction, msg: NavGenericMsg):
-        if self._trace_msg:
+        if self._trace_fd is not None:
+            if msg.type == NULL_MSG:
+                return
             ts_str = format_timestamp(msg.msg.timestamp, "%Y-%m-%d %H:%M:%S.%f")
             if direction == self.TRACE_IN:
                 fc = "M%d#%s>" % (self._msg_count, ts_str)
@@ -59,10 +59,8 @@ class NMEAMsgTrace:
             self._trace_fd.write('\n')
 
     def stop_trace(self):
-        if self._trace_msg or self._trace_raw:
+        if self._trace_fd is not None:
             _logger.info("Coupler %s closing trace file" % self._name)
-            self._trace_msg = False
-            self._trace_raw = False
             self._trace_fd.close()
             self._trace_fd = None
         else:
@@ -78,9 +76,18 @@ class NMEAMsgTrace:
             self._trace_raw = True
     '''
 
-    def trace_raw(self, direction, msg):
-        if self._trace_raw:
-            # ts = datetime.datetime.now()
+    def trace_raw(self, direction, msg, strip_suffix=None) -> int:
+
+        """
+        Trace a raw (as read unprocessed message or ready to be sent)
+        msg is assumed to be bytes or bytearray
+        If strip_suffix is not none the corresponding suffix is removed from the message. This is to improve readability
+        by removing redundant lf
+
+        Return 0 if no error during decoding or the index after the faulty character if Unicode errors are detected
+        """
+
+        if self._trace_fd is not None:
             ts_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             if direction == self.TRACE_IN:
                 fc = "R%d#%s>" % (self._msg_count, ts_str)
@@ -89,47 +96,65 @@ class NMEAMsgTrace:
             self._msg_count += 1
             # l = len(msg) - self._separator_len
             # not all messages have the CRLF included to be further checked
+
+            if type(msg) is not str:
+                try:
+                    msg = msg.decode()
+                except UnicodeDecodeError as err:
+                    _logger.error("Trace raw on %s error %s on %s" % (self._name, err, msg))
+                    return err.end
+
+            if strip_suffix is not None:
+                msg = msg.removesuffix(strip_suffix)
+
             try:
                 self._trace_fd.write(fc)
-                if not type(msg) == str:
-                    msg = msg.decode()
                 self._trace_fd.write(msg)
                 self._trace_fd.write('\n')
             except IOError as err:
-                if self._trace_raw:
-                    _logger.error("Error writing log file: %s" % err)
-                    self._trace_raw = False
+                _logger.error("Error writing log file: %s" % err)
+                raise MessageTraceError
+        return 0
 
     def trace_n2k_raw(self, pgn, sa, prio, data, direction=TRACE_IN):
-        if self._trace_msg and self._trace_raw:
+        if self._trace_fd is not None:
+            ts_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             if direction == self.TRACE_IN:
-                fc = "N%d#>" % self._msg_count
+                fc = "N%d#%s>" % (self._msg_count, ts_str)
             else:
-                fc = "N#%d<" % self._msg_count
+                fc = "N#%d%s<" % (self._msg_count, ts_str)
             self._msg_count += 1
-            self._trace_fd.write("%s%06d|%05X|%3d|%d|%s\n" % (fc, pgn, pgn, sa, prio, data.hex()))
+            try:
+                self._trace_fd.write("%s%06d|%05X|%3d|%d|%s\n" % (fc, pgn, pgn, sa, prio, data.hex()))
+            except IOError as err:
+                _logger.error("Error writing log file:%s" % err)
+                raise MessageTraceError
 
     def trace_n2k_raw_can(self, time_stamp:datetime.datetime, msg_count, direction, trace_str: str):
-        ts_str = time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f")
-        if direction == self.TRACE_IN:
-            fc = "R%d#%s>" % (msg_count, ts_str)
-        else:
-            fc = "R%d#%s<" % (msg_count, ts_str)
-        self._msg_count += 1
-        # l = len(msg) - self._separator_len
-        # not all messages have the CRLF included to be further checked
-        try:
-            self._trace_fd.write(fc)
-            self._trace_fd.write(trace_str)
-            self._trace_fd.write('\n')
-        except IOError as err:
-            if self._trace_raw:
+        if self._trace_fd is not None:
+            ts_str = time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f")
+            if direction == self.TRACE_IN:
+                fc = "R%d#%s>" % (msg_count, ts_str)
+            else:
+                fc = "R%d#%s<" % (msg_count, ts_str)
+            self._msg_count += 1
+            # l = len(msg) - self._separator_len
+            # not all messages have the CRLF included to be further checked
+            try:
+                self._trace_fd.write(fc)
+                self._trace_fd.write(trace_str)
+                self._trace_fd.write('\n')
+            except IOError as err:
                 _logger.error("Error writing log file: %s" % err)
-                self._trace_raw = False
+                raise MessageTraceError
 
     def add_event_trace(self, message: str):
-        if self._trace_msg:
-            self._trace_fd.write("Event#>")
-            self._trace_fd.write(message)
-            self._trace_fd.write('\n')
+        if self._trace_fd is not None:
+            try:
+                self._trace_fd.write("Event#>")
+                self._trace_fd.write(message)
+                self._trace_fd.write('\n')
+            except IOError as err:
+                _logger.error("Error writing log file: %s" % err)
+                raise MessageTraceError
 

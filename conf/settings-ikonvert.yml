@@ -24,17 +24,12 @@ servers:
 - NMEASender:
     class: NMEASenderServer
     port: 4503
-    coupler: MiniPlex3
+    coupler: iKonvertCoupler
     max_silent: 10
 
 - Console:
     class: Console
     port: 4502
-
-- ShipModulConfig:
-    class: ShipModulConfig
-    port: 4501
-    coupler: MiniPlex3
 
 - NMEANetwork:
     class: NMEA2KController
@@ -46,6 +41,9 @@ couplers:
     device: /dev/ttyUSB1
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
+    msg_queue_size: 20
+    trace_messages: true
+    trace_raw: true
 
 filters:
 

@@ -58,7 +58,7 @@ def _parser():
     return p
 
 
-version = "V1.50a"
+version = "V1.51"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -159,6 +159,7 @@ class NavigationMainServer:
             if inst.is_alive():
                 inst.join()
             _logger.info("Coupler %s thread joined" % inst.name())
+        _logger.info("Message server all servers and instruments threads stopped")
         print_threads()
         self._is_running = False
 
@@ -173,6 +174,7 @@ class NavigationMainServer:
             pub.stop()
         # self._console.close()
         _logger.info("All servers stopped")
+        # print_threads()
 
     def stop_handler(self, signum, frame):
         self._sigint_count += 1

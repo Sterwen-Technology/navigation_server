@@ -514,7 +514,7 @@ class NMEA2000Writer(threading.Thread):
     def __init__(self, instrument, max_throughput):
         self._name = instrument.name() + '-Writer'
         _logger.info('Creating writer:%s' % self._name)
-        super().__init__(name=self._name)
+        super().__init__(name=self._name, daemon=True)
         self._instrument = instrument
         self._max_throughput = max_throughput
         self._queue = queue.Queue(80)

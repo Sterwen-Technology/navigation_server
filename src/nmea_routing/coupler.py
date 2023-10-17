@@ -22,7 +22,7 @@ from nmea_routing.publisher import PublisherOverflow
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
 from nmea2000.nmea2000_msg import NMEA2000Msg, NMEA2000Writer
 from nmea2000.nmea2k_pgndefs import PGNDef
-from utilities.date_time_utilities import format_timestamp
+from utilities.message_trace import NMEAMsgTrace, MessageTraceError
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -97,12 +97,17 @@ class Coupler(threading.Thread):
         self._suspend_flag = False
         self._timer = None
         self._state = self.NOT_READY
-        self._trace_fd = None
         self._trace_msg = opts.get('trace_messages', bool, False)
         self._trace_raw = opts.get('trace_raw', bool, False)
         # self._trace_msg = self._trace_msg or self._trace_raw
         if self._trace_msg or self._trace_raw:
-            self.open_trace_file()
+            try:
+                self._tracer = NMEAMsgTrace(name, self.__class__.__name__)
+            except MessageTraceError:
+                self._trace_msg = False
+                self._trace_raw = False
+        else:
+            self._tracer = None
         self._check_in_progress = False
         self._fast_packet_handler = None
         self._separator = None
@@ -187,6 +192,7 @@ class Coupler(threading.Thread):
 
     def stop_writer(self):
         if self._n2k_writer is not None:
+            _logger.info("Stopping NMEA2000 Writer")
             self._n2k_writer.stop()
 
     def run(self):
@@ -246,10 +252,11 @@ class Coupler(threading.Thread):
             self.publish(msg)
             # end of run loop
 
+        _logger.debug("%s coupler -> end of reading loop" % self._name)
         self.stop()
         self.close()
         self.stop_trace()
-        _logger.info("%s coupler thread stops"%self._name)
+        _logger.info("%s coupler thread stops" % self._name)
 
     def register(self, pub):
         self._publishers.append(pub)
@@ -330,12 +337,20 @@ class Coupler(threading.Thread):
         return self._rate_s
 
     def stop(self):
-        _logger.info("Stopping %s coupler" % self._name)
-        self._stopflag = True
-        if self._timer is not None:
-            self._timer.cancel()
-            self._timer = None
-        self.stop_writer()
+        if self._stopflag is True:
+            _logger.debug("redundant call of stop for %s => no action" % self._name)
+        else:
+            _logger.info("Stopping %s coupler" % self._name)
+            self.stop_communication()
+            if self._timer is not None:
+                self._timer.cancel()
+                self._timer = None
+            self.stop_writer()
+            self._stopflag = True
+
+    def stop_communication(self):
+        # to be implemented in subclasses when specific action is to be taken
+        pass
 
     def suspend(self):
         if self.is_alive():
@@ -364,7 +379,7 @@ class Coupler(threading.Thread):
         fetch_next = True
         while fetch_next:
             msg = self._read()
-            self.trace(self.TRACE_IN, msg)
+            self.trace(NMEAMsgTrace.TRACE_IN, msg)
             # _logger.debug("Read:%s", msg)
             # if self._data_sink is not None:
                 # self._data_sink.send_msg(msg)
@@ -410,40 +425,17 @@ class Coupler(threading.Thread):
             _logger.error("%s Wrong reference for %s: %s" % (self.name(), name, descr))
             return None
 
-    def open_trace_file(self):
-        trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')
-        date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
-        filename = "TRACE-%s-%s.log" % (self.name(), date_stamp)
-        filepath = os.path.join(trace_dir, filename)
-        _logger.info("Opening trace file %s" % filepath)
-        try:
-            self._trace_fd = open(filepath, "w")
-        except IOError as e:
-            _logger.error("Trace file error %s" % e)
-            self._trace_msg = False
-            self._trace_raw = False
-            return False
-        self._trace_fd.write("H0|%s|V1.4\n" % type(self))
-
     def trace(self, direction, msg: NavGenericMsg):
-        if self._trace_msg:
-            ts_str = format_timestamp(msg.msg.timestamp, "%Y-%m-%d %H:%M:%S.%f")
-            if direction == self.TRACE_IN:
-                fc = "M%d#%s>" % (self._total_msg, ts_str)
-            else:
-                fc = "M%d#%s<" % (self._total_msg_s, ts_str)
-            self._trace_fd.write(fc)
-            out_msg = msg.printable()
-            self._trace_fd.write(out_msg)
-            self._trace_fd.write('\n')
+        if self._trace_msg and self._tracer is not None:
+            self._tracer.trace(direction, msg)
 
     def stop_trace(self):
-        if self._trace_msg or self._trace_raw:
-            _logger.info("Coupler %s closing trace file" % self._name)
-            self._trace_msg = False
+        if self._tracer is not None:
+            # _logger.info("Coupler %s closing trace file" % self._name)
+            self._tracer.stop_trace()
+            self._tracer = None
             self._trace_raw = False
-            self._trace_fd.close()
-            self._trace_fd = None
+            self._trace_msg = False
         else:
             _logger.error("Coupler %s attempt closing inactive trace" % self._name)
 
@@ -451,42 +443,27 @@ class Coupler(threading.Thread):
         if not self.is_alive():
             _logger.error("Coupler %s attempt to start traces while not running")
             return
+        if self._tracer is not None:
+            _logger.error("Coupler %s attempt to start traces while already active")
+            return
         _logger.info("Starting traces on raw input on %s" % self.name())
-        if self.open_trace_file():
+        try:
+            self._tracer = NMEAMsgTrace(self.name(), self.__class__.__name__)
             self._trace_raw = True
+        except MessageTraceError:
+            pass
 
-    def trace_raw(self, direction, msg):
-        if self._trace_raw:
-            # ts = datetime.datetime.now()
-            ts_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-            if direction == self.TRACE_IN:
-                fc = "R%d#%s>" % (self._total_msg_raw, ts_str)
-            else:
-                fc = "R%d#%s<" % (self._total_msg_s, ts_str)
-            # l = len(msg) - self._separator_len
-            # not all messages have the CRLF included to be further checked
-            try:
-                self._trace_fd.write(fc)
-                self._trace_fd.write(str(msg))
-                self._trace_fd.write('\n')
-            except IOError as err:
-                if self._trace_raw:
-                    _logger.error("Error writing log file: %s" % err)
-                    self._trace_raw = False
+    def trace_raw(self, direction, msg, strip_suffix: str = None):
+        if self._trace_raw and self._tracer is not None:
+            self._tracer.trace_raw(direction, msg, strip_suffix)
 
     def trace_n2k_raw(self, pgn, sa, prio, data, direction=TRACE_IN):
-        if self._trace_msg and self._trace_raw:
-            if direction == self.TRACE_IN:
-                fc = "N%d#>" % self._total_msg
-            else:
-                fc = "N#%d<" % self._total_msg_s
-            self._trace_fd.write("%s%06d|%05X|%3d|%d|%s\n" % (fc, pgn, pgn, sa, prio, data.hex()))
+        if self._tracer is not None and self._trace_raw:
+            self._tracer.trace_n2k_raw(pgn, sa, prio, data, direction)
 
     def add_event_trace(self, message: str):
-        if self._trace_msg:
-            self._trace_fd.write("Event#>")
-            self._trace_fd.write(message)
-            self._trace_fd.write('\n')
+        if self._tracer is not None:
+            self._tracer.add_event_trace(message)
 
     def encode_nmea2000(self, msg: NMEA2000Msg) -> NavGenericMsg:
         raise NotImplementedError("To be implemented in subclass")

@@ -14,10 +14,13 @@ import logging
 import threading
 import queue
 import base64
+import time
+import traceback
 
 from nmea_routing.coupler import Coupler
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.generic_msg import *
+from utilities.message_trace import NMEAMsgTrace
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -97,7 +100,7 @@ class iKonvertMsg:
         return self
 
     def get(self, param):
-        return self._param[param]
+        return self._param.get(param, None)
 
     @property
     def type(self):
@@ -129,13 +132,17 @@ class iKonvertRead(threading.Thread):
             except serial.SerialException as e:
                 _logger.error("iKonvert read error: %s" % str(e))
                 continue
-            self._instrument.trace_raw(Coupler.TRACE_IN, data)
+            if len(data) == 0:
+                # that is a suspected timeout
+                _logger.info("iKonvert read on %s timeout" % self._instrument.tty_name)
+                continue
+            self._instrument.trace_raw(NMEAMsgTrace.TRACE_IN, data, strip_suffix='\r\n')
             self._instrument.increment_count()
             msg = iKonvertMsg.from_bytes(data)
             if msg is not None:
                 self._instr_cbd[msg.type](msg)
 
-        _logger.info("stopping iKonvert read")
+        _logger.info("stopped iKonvert read")
 
     def stop(self):
         self._stop_flag = True
@@ -167,8 +174,15 @@ class iKonvert(Coupler):
         self._tx_pgn = []
         self._ikstate = self.IKIDLE
         self._wait_event = 0
-        self._queue = queue.Queue(40)
+        self._queue_size = opts.get('msg_queue_size', int, 10)
+        self._queue = queue.Queue(self._queue_size)
+        self._queue_tpass = False
         self._cmd_result = None
+        self._status_count = 0
+
+    @property
+    def tty_name(self):
+        return self._tty_name
 
     def open(self):
         # this section is critical
@@ -199,20 +213,27 @@ class iKonvert(Coupler):
         if self._ikstate != self.IKCONNECTED:
             return False
         else:
+            _logger.info("%s coupler ready" % self.name())
             return True
 
     def process_nmea(self, msg):
         # print("N2K message received pgn %s" % msg.get('pgn'))
+        if self._ikstate != self.IKCONNECTED:
+            #  a normal message is received before the status
+            #  lets put it for status process
+            self.process_status(msg)
+            if self._ikstate != self.IKCONNECTED:
+                return
         if msg.type == N183:
             nav_msg = NavGenericMsg(N0183_MSG, msg.raw)
         else:
             nav_msg = NavGenericMsg(N2K_MSG, msg.raw, msg.msg)
-        self.trace(self.TRACE_IN, nav_msg)
+        # self.trace(self.TRACE_IN, nav_msg)
         try:
             self._queue.put(nav_msg, block=False)
         except queue.Full:
             # just discard
-            _logger.error("iKonvert write queue full")
+            _logger.error("iKonvert write queue full discard message:%s" % msg.raw)
 
     def process_status(self, msg):
 
@@ -225,11 +246,13 @@ class iKonvert(Coupler):
                 self._wait_sem.release()
         else:
             if self._ikstate != self.IKCONNECTED:
-                _logger.info("iKonvert connected to NMEA2000 network addr:%s" % msg.get('CAN_address'))
                 self._ikstate = self.IKCONNECTED
             if self._wait_event == self.WAIT_CONN or self._wait_event == self.WAIT_MSG:
                 self._wait_event = 0
                 self._wait_sem.release()
+            if msg.type == STATUS:
+                _logger.debug("iKonvert connected to NMEA2000 network addr:%s" % msg.get('CAN_address'))
+                self._status_count += 1
 
     def process_acknak(self, msg):
         _logger.info("iKonvert ACK/NAK message")
@@ -263,7 +286,9 @@ class iKonvert(Coupler):
         if option is not None:
             cmd_buf = "%s,%s" % (cmd_buf, option)
         _logger.info("iKonvert sending command %s" % cmd_buf)
-        self._tty.write(cmd_buf.encode())
+        send_buf = cmd_buf.encode()
+        self.trace_raw(NMEAMsgTrace.TRACE_OUT, send_buf)
+        self._tty.write(send_buf)
         self._tty.write(self.end_line)
         self._tty.flush()
         if wait == ACK:
@@ -280,9 +305,8 @@ class iKonvert(Coupler):
     def _read(self):
         return self._queue.get()
 
-    def stop(self):
+    def stop_communication(self):
         _logger.debug("iKonvert entering stop state=%d" % self._ikstate)
-        super().stop()
         if self._ikstate > self.IKREADY:
             self.send_loc_cmd('N2NET_OFFLINE', wait=0)
             self.wait_status()
@@ -293,7 +317,7 @@ class iKonvert(Coupler):
         _logger.debug("iKonvert exiting stop state=%d" % self._ikstate)
 
     def close(self):
-        _logger.debug("iKonvert closing")
+        _logger.info("iKonvert closing")
         if self._tty is not None:
             self._reader.join()
             self._tty.close()
@@ -303,7 +327,7 @@ class iKonvert(Coupler):
         if self._ikstate != self.IKCONNECTED:
             return False
         if self._trace_msg:
-            self.trace(self.TRACE_OUT, msg)
+            self.trace(NMEAMsgTrace.TRACE_OUT, msg)
         _logger.debug("iKonvert write %s" % msg.printable())
         try:
             self._tty.write(msg.raw)
