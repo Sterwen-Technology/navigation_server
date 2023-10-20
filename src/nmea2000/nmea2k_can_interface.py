@@ -26,6 +26,10 @@ class SocketCanError(Exception):
     pass
 
 
+class SocketCanReadInvalid(Exception):
+    pass
+
+
 def check_can_device(link):
 
     proc = subprocess.run('/sbin/ip link | grep %s' % link, shell=True, capture_output=True, text=True)
@@ -65,6 +69,7 @@ class SocketCANInterface(threading.Thread):
         self._bus_queue = queue.Queue(50)
         self._fp_handler = FastPacketHandler(self)
         self._total_msg_in = 0
+        self._access_lock = threading.Lock()
 
         # self._notifier = None
         # self._listener = NMEA2000MsgListener(self, self._bus_queue)
@@ -105,6 +110,10 @@ class SocketCANInterface(threading.Thread):
     @property
     def channel(self):
         return self._channel
+
+    @property
+    def access_lock(self):
+        return self._access_lock
 
     def total_msg_raw(self):
         return self._total_msg_in
@@ -174,6 +183,24 @@ class SocketCANInterface(threading.Thread):
             self._state = self.BUS_READY
         # _logger.debug("NMEA2000 message received %s" % n2k_msg.format1())
 
+    def read_can(self) -> Message:
+        if self._access_lock.acquire(timeout=0.5):
+            try:
+                msg = self._bus.recv(0.5)
+            except CanError as e:
+                _logger.error("Error on CAN reading on channel %s: %s" % (self._channel, e))
+                self._access_lock.release()
+                raise SocketCanReadInvalid
+            self._access_lock.release()
+            if msg is None:
+                raise SocketCanReadInvalid
+            if not msg.is_extended_id or msg.is_remote_frame:
+                raise SocketCanReadInvalid
+            return msg
+        else:
+            _logger.error("%s unable to lock CAN interface" % self.name)
+            raise SocketCanReadInvalid
+
     def run(self):
 
         #  Run loop
@@ -182,16 +209,12 @@ class SocketCANInterface(threading.Thread):
 
             # read the CAN bus
             try:
-                msg = self._bus.recv(0.5)
-            except CanError as e:
-                _logger.error("Error on CAN reading on channel %s: %s"% (self._channel, e))
-                continue
-            if msg is None:
+                msg = self.read_can()
+            except SocketCanReadInvalid:
                 continue
             _logger.debug("CAN RECV:%s" % str(msg))
             self.process_receive_msg(msg)
-            if not msg.is_extended_id or msg.is_remote_frame:
-                continue
+
             # end of the run loop
 
         # thread exit section
@@ -268,6 +291,7 @@ class SocketCANWriter(threading.Thread):
         self._trace = trace
         self._stop_flag = False
         self._total_msg = 0
+        self._access_lock = can_interface.access_lock
 
     def set_bus(self, bus):
         self._bus = bus
@@ -299,14 +323,17 @@ class SocketCANWriter(threading.Thread):
                 dts = datetime.datetime.fromtimestamp(msg.timestamp)
                 self._trace.trace_n2k_raw_can(dts, self._total_msg, NMEAMsgTrace.TRACE_OUT,
                                               "%08X,%s" % (msg.arbitration_id, msg.data.hex()))
-            try:
-                _logger.debug("CAN sending: %s" % str(msg))
-                self._total_msg += 1
-                self._bus.send(msg, 5.0)
-                last_write_time = time.monotonic()
-            except CanError as e:
-                _logger.error("Error receiving message from channel %s: %s" % (self._can_interface.channel, e))
-                continue
+            if self._access_lock.acquire(1.0):
+                try:
+                    _logger.debug("CAN sending: %s" % str(msg))
+                    self._total_msg += 1
+                    self._bus.send(msg, 5.0)
+                    last_write_time = time.monotonic()
+                except CanError as e:
+                    _logger.error("Error receiving message from channel %s: %s" % (self._can_interface.channel, e))
+                self._access_lock.release()
+            else:
+                _logger.error("%s CAN write lock failed" % self._can_interface.name)
             '''
             except CanTimeoutError:
                 _logger.error("CAN send timeout error - message lost")
