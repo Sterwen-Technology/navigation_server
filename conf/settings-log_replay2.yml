@@ -24,14 +24,9 @@ log_module:
 
 servers:
 
-- NMEAServer:
-      class: NMEAServer
-      port: 4500
-      nmea2000: dyfmt
-
 - Console:
       class: Console
-      port: 4502
+      port: 4602
 
 - NMEANetwork:
       class: NMEA2KController
@@ -46,20 +41,8 @@ couplers:
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
     direction: read_only
-    # data_sink: DataAnalyzer
-    # pgn_white_list: [130842]
 
 filters:
-
-- FastPacket:
-    class: NMEA2000Filter
-    pgn: [129029, 126996, 129540]
-    action: select
-
-- RaymarineProprietary:
-    class: NMEA2000Filter
-    pgn: [126720]
-    action: select
 
 
 data_clients:
@@ -70,16 +53,5 @@ data_clients:
       port: 4601
 
 publishers:
-
-- TraceRaymarine:
-    class: N2KTracePublisher
-    filters: [RaymarineProprietary]
-    output: PRINT
-
-- TraceAll:
-    class: N2KTracePublisher
-    output: PRINT
-    active: false
-    couplers: [LogReader]
 
 

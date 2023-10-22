@@ -15,7 +15,7 @@ from nmea_routing.publisher import Publisher
 from nmea_routing.generic_msg import *
 from nmea_routing.IPCoupler import TCPBufferedReader
 from nmea_routing.coupler import Coupler
-from nmea_routing.nmea0183 import process_nmea0183_frame
+from nmea0183.nmea0183_msg import process_nmea0183_frame
 from nmea2000.nmea2000_msg import fromPGDY, fromPGNST, N2KEncodeError
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)

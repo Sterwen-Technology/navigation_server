@@ -11,7 +11,7 @@
 
 from nmea_routing.server_common import NavTCPServer, ConnectionRecord
 from nmea_routing.client_publisher import *
-from nmea_routing.nmea0183 import *
+from nmea0183.nmea0183_msg import *
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)

@@ -12,16 +12,13 @@ import queue
 import threading
 import time
 from google.protobuf.json_format import MessageToJson
-import datetime
-import logging
 import base64
 
 from nmea2000.nmea2k_pgndefs import *
 
 from generated.nmea2000_pb2 import nmea2000pb
 from nmea_routing.generic_msg import *
-from nmea_routing.configuration import NavigationConfiguration
-from nmea_routing.nmea0183 import process_nmea0183_frame, NMEA0183Msg
+from nmea0183.nmea0183_msg import process_nmea0183_frame, NMEA0183Msg
 from utilities.date_time_utilities import format_timestamp
 
 _logger = logging.getLogger("ShipDataServer" + "." + __name__)
@@ -39,7 +36,7 @@ class NMEA2000Msg:
 
     ts_format = "%H:%M:%S.%f"
 
-    def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytes = None):
+    def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytes = None, timestamp=0.0):
         self._pgn = pgn
         self._prio = prio
         self._sa = sa
@@ -47,7 +44,11 @@ class NMEA2000Msg:
         # define if the PGN is part of ISO and base protocol (do not carry navigation data)
         self._is_iso = PGNDef.pgn_for_controller(pgn)
         # change in version 1.3 => become float and referenced to the epoch
-        self._ts = time.time()
+        # change in version 1.5 => timestamp is kept from original one
+        if timestamp == 0.0:
+            self._ts = time.time()
+        else:
+            self._ts = timestamp
         if payload is not None:
             self._payload = payload
             if len(payload) <= 8:

@@ -1,8 +1,5 @@
-
-from generated.nmea0183_pb2 import nmea0183pb
-from generated.nmea2000_pb2 import nmea2000pb
 from generated.server_pb2 import nmea_msg
-from nmea_routing.nmea0183 import NMEA0183Msg
+from nmea0183.nmea0183_msg import NMEA0183Msg
 
 
 def main():

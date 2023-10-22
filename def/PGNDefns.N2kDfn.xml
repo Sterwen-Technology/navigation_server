@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
-<PGNDefnCollection xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="0.1">
-  <Date>$Date: 2022-10-06$</Date>
-  <Comment>Test Version</Comment>
+<PGNDefnCollection xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="0.9">
+  <Date>$Date: 2023-10-06$</Date>
+  <Comment>Version for limited release - works with navigation data server version 1.5</Comment>
   <CreatorCode>Sterwen Technology from Keversoft NMEA2000 Analyzer</CreatorCode>
   <PGNDefns>
     <PGNDefn PGN="59392">

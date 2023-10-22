@@ -1,3 +1,4 @@
+
 #-------------------------------------------------------------------------------
 # Name:        NMEA
 # Purpose:      Utilities to analyse and generate NMEA sentences
@@ -17,6 +18,7 @@ import logging
 
 from nmea_routing.generic_msg import *
 from generated.nmea0183_pb2 import nmea0183pb
+from utilities.object_utilities import copy_attribute
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -28,15 +30,14 @@ class NMEAInvalidFrame(Exception):
 
 class NMEA0183Msg(NavGenericMsg):
 
-    def __init__(self, data, checksum=True):
-        super().__init__(N0183_MSG, raw=data, msg=self)
+    def __init__(self, data, checksum=True, timestamp=None):
+        super().__init__(N0183_MSG, raw=data)
         # verify that we have a checksum
         if checksum:
             if self._raw[self._datalen - 3] != ord('*'):
                 _logger.error("NMEA183 Frame without checksum")
                 raise NMEAInvalidFrame
-            # change in version 1.3 => become float and referenced to the epoch
-            self._ts = time.time()
+
             self._checksum = int(self._raw[self._datalen-2:self._datalen], 16)
             if self._checksum != NMEA0183Sentences.b_checksum(self._raw[1:self._datalen - 3]):
                 _logger.error("Checksum error %x %s" % (self._checksum, self._raw[:self._datalen].hex()))
@@ -46,6 +47,12 @@ class NMEA0183Msg(NavGenericMsg):
             self._checksum = 0
             self._datalen_s = self._datalen
 
+        if timestamp is None:
+            # change in version 1.3 => become float and referenced to the epoch
+            self._ts = time.time()
+        else:
+            self._ts = timestamp
+
         self._delimiter = self._raw[0]
         ind_comma = self._raw.index(b',')
         self._datafields_s = ind_comma + 1
@@ -54,6 +61,12 @@ class NMEA0183Msg(NavGenericMsg):
             self._proprietary = True
         else:
             self._proprietary = False
+
+    attributes_to_copy = ('_raw', '_checksum', '_datalen_s', '_datelen', '_ts', '_delimiter', '_datafields_s',
+                          '_address')
+
+    def copy_from(self, source):
+        copy_attribute(source, self, self.attributes_to_copy)
 
     def talker(self):
         if not self._proprietary:
@@ -86,22 +99,73 @@ class NMEA0183Msg(NavGenericMsg):
     def fields(self):
         return self._raw[self._datafields_s:self._datalen_s].split(b',')
 
-    def as_protobuf(self, r: nmea0183pb) -> nmea0183pb:
-
-        try:
-            r.talker = self.talker().decode()
-            r.formatter = self.formatter().decode()
-        except ValueError:
-            r.talker = self.address().decode()
+    def as_protobuf(self, r: nmea0183pb, set_raw=False) -> nmea0183pb:
+        '''
+        Initialize the protobuf with the content of the NMEA0183
+        Two possibilities
+        a: fully decoded message with all fields as string
+        b: only the raw message + timestamp (set_raw=True)
+        '''
         r.timestamp = self._ts
-        # r.values.extend(self.fields())
-        for f in self.fields():
-            r.values.append(f.decode())
+        if set_raw:
+            r.raw_message = bytes(self._raw)
+        else:
+            try:
+                r.talker = self.talker().decode()
+                r.formatter = self.formatter().decode()
+            except ValueError:
+                r.talker = self.address().decode()
+
+            # r.values.extend(self.fields())
+            for f in self.fields():
+                r.values.append(f.decode())
         return r
 
     @property
     def timestamp(self) -> float:
         return self._ts
+
+    @property
+    def raw(self):
+        return self._raw
+
+
+class NMEA0183DecodedMsg(NavGenericMsg):
+
+    def __init__(self, talker: str, formatter: str, values: list, timestamp):
+        self._talker = talker
+        self._formatter = formatter
+        self._values = values
+        self._ts = timestamp
+
+    @property
+    def talker(self) -> str:
+        return self._talker
+
+    @property
+    def formatter(self) -> str:
+        return self._formatter
+
+    @property
+    def values(self):
+        return self._values
+
+    def value(self, index: int):
+        try:
+            return self._values[index]
+        except IndexError:
+            _logger.error("NMEA0183 message with formatter %s index %d out of range" % (self._formatter, index))
+            raise
+
+
+def nmea0183msg_from_protobuf(pb_msg: nmea0183pb):
+    '''
+    Convert the protobuf in NMEA0183 internal representation
+    '''
+    if len(pb_msg.raw_message) > 0:
+        return NMEA0183Msg(pb_msg.raw_message, pb_msg.timestamp)
+    else:
+        return NMEA0183DecodedMsg(pb_msg.talker, pb_msg.formatter, [x for x in pb_msg.values], pb_msg.timestamp)
 
 
 class NMEA0183SentenceMsg(NMEA0183Msg):

@@ -23,9 +23,15 @@ message nmea_msg {
 
 message server_resp {
   uint32 reportCode = 1;
+  string status = 2;
+}
+
+message server_cmd {
+  string cmd=1;
 }
 
 service NavigationServer {
+  rpc status (server_cmd) returns (server_resp) {}
   rpc pushNMEA( nmea_msg ) returns (server_resp) {}
 }
 

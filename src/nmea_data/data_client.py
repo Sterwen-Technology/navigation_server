@@ -17,10 +17,11 @@ from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, N0183_MSG
 from nmea_routing.filters import FilterSet
 from nmea_routing.publisher import Publisher
 
-from generated.server_pb2 import nmea_msg
+from generated.server_pb2 import nmea_msg, server_cmd
 from generated.server_pb2_grpc import NavigationServerStub
 
-_logger = logging.getLogger("ShipDataServer"+"."+__name__)
+
+_logger = logging.getLogger("ShipDataServer."+__name__)
 
 
 class NMEAGrpcDataClient:
@@ -38,6 +39,8 @@ class NMEAGrpcDataClient:
         if filter_names is not None and len(filter_names) > 0:
             self._filters = FilterSet(filter_names)
         self._publisher = None
+        self._nmea0183_raw = opts.get('nmea0138_raw', bool, True)
+
 
     def name(self):
         return self._name
@@ -47,7 +50,7 @@ class NMEAGrpcDataClient:
         msg = nmea_msg()
 
         if msg_to_send.type == N0183_MSG:
-            msg_to_send.as_protobuf(msg.N0183_msg)
+            msg_to_send.as_protobuf(msg.N0183_msg, set_raw=self._nmea0183_raw)
         else:
             msg_to_send.as_protobuf(msg.N2K_msg)
 
@@ -64,12 +67,30 @@ class NMEAGrpcDataClient:
         self._couplers.append(coupler)
 
     def start(self):
-        _logger.info("Starting GRPC data client:%s for sever:%s" % (self._name, self._address))
+        _logger.info("Starting GRPC data client:%s for server:%s" % (self._name, self._address))
+        if self.check_status():
+            _logger.info("Data GRPC server %s ready" % self._name)
         self._publisher = GRPCDirectPublisher(self, self._couplers, self._filters)
         self._publisher.start()
 
     def stop(self):
         self._publisher.stop()
+
+    def check_status(self):
+        msg = server_cmd()
+        msg.cmd = "TEST_STATUS"
+        try:
+            resp = self._stub.status(msg)
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.error("Server Status - Error accessing server:%s" % err)
+            else:
+                _logger.error("Data client %s GRPC Server %s not accessible" % (self._name, self._address))
+            return False
+        if resp.status == "SERVER_OK":
+            return True
+        else:
+            return False
 
 
 class GRPCDirectPublisher(Publisher):

@@ -21,7 +21,7 @@ except ModuleNotFoundError as e:
     include_can = False
 else:
     include_can = True
-from nmea_routing import nmea0183
+from nmea0183 import nmea0183_msg
 from nmea_routing.message_server import NMEAServer, NMEASenderServer
 from nmea_routing.shipmodul_if import *
 from nmea_routing.console import Console
@@ -44,6 +44,7 @@ from nmea_routing.serial_nmeaport import NMEASerialPort
 from nmea_data.data_client import NMEAGrpcDataClient
 from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter, NMEA2000TimeFilter
 from utilities.raw_log_coupler import RawLogCoupler
+from nmea_routing.grpc_nmea_coupler import GrpcNmeaCoupler
 
 from utilities.log_utilities import NavigationLogSystem
 from utilities.global_exceptions import ObjectCreationError
@@ -58,7 +59,7 @@ def _parser():
     return p
 
 
-version = "V1.51"
+version = "V1.52"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -278,13 +279,14 @@ def main():
     config.add_class(NMEA2000TimeFilter)
 
     config.add_class(RawLogCoupler)
+    config.add_class(GrpcNmeaCoupler)
     if include_can:
         config.add_class(DirectCANCoupler)
 
     NavigationLogSystem.finalize_log(config)
 
     _logger.info("Navigation server working directory:%s" % os.getcwd())
-    nmea0183.NMEA0183Sentences.init(config.get_option('talker', 'ST'))
+    nmea0183_msg.NMEA0183Sentences.init(config.get_option('talker', 'ST'))
     Manufacturers.build_manufacturers(config.get_option('manufacturer_xml', './def/Manufacturers.N2kDfn.xml'))
     PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
 

@@ -18,12 +18,13 @@ import generated.nmea0183_pb2 as nmea0183__pb2
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cserver.proto\x1a\x0enmea2000.proto\x1a\x0enmea0183.proto\"W\n\x08nmea_msg\x12\x1e\n\x07N2K_msg\x18\x01 \x01(\x0b\x32\x0b.nmea2000pbH\x00\x12 \n\tN0183_msg\x18\x02 \x01(\x0b\x32\x0b.nmea0183pbH\x00\x42\t\n\x07Message\"!\n\x0bserver_resp\x12\x12\n\nreportCode\x18\x01 \x01(\r29\n\x10NavigationServer\x12%\n\x08pushNMEA\x12\t.nmea_msg\x1a\x0c.server_resp\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cserver.proto\x1a\x0enmea2000.proto\x1a\x0enmea0183.proto\"W\n\x08nmea_msg\x12\x1e\n\x07N2K_msg\x18\x01 \x01(\x0b\x32\x0b.nmea2000pbH\x00\x12 \n\tN0183_msg\x18\x02 \x01(\x0b\x32\x0b.nmea0183pbH\x00\x42\t\n\x07Message\"1\n\x0bserver_resp\x12\x12\n\nreportCode\x18\x01 \x01(\r\x12\x0e\n\x06status\x18\x02 \x01(\t\"\x19\n\nserver_cmd\x12\x0b\n\x03\x63md\x18\x01 \x01(\t2`\n\x10NavigationServer\x12%\n\x06status\x12\x0b.server_cmd\x1a\x0c.server_resp\"\x00\x12%\n\x08pushNMEA\x12\t.nmea_msg\x1a\x0c.server_resp\"\x00\x62\x06proto3')
 
 
 
 _NMEA_MSG = DESCRIPTOR.message_types_by_name['nmea_msg']
 _SERVER_RESP = DESCRIPTOR.message_types_by_name['server_resp']
+_SERVER_CMD = DESCRIPTOR.message_types_by_name['server_cmd']
 nmea_msg = _reflection.GeneratedProtocolMessageType('nmea_msg', (_message.Message,), {
   'DESCRIPTOR' : _NMEA_MSG,
   '__module__' : 'server_pb2'
@@ -38,6 +39,13 @@ server_resp = _reflection.GeneratedProtocolMessageType('server_resp', (_message.
   })
 _sym_db.RegisterMessage(server_resp)
 
+server_cmd = _reflection.GeneratedProtocolMessageType('server_cmd', (_message.Message,), {
+  'DESCRIPTOR' : _SERVER_CMD,
+  '__module__' : 'server_pb2'
+  # @@protoc_insertion_point(class_scope:server_cmd)
+  })
+_sym_db.RegisterMessage(server_cmd)
+
 _NAVIGATIONSERVER = DESCRIPTOR.services_by_name['NavigationServer']
 if _descriptor._USE_C_DESCRIPTORS == False:
 
@@ -45,7 +53,9 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _NMEA_MSG._serialized_start=48
   _NMEA_MSG._serialized_end=135
   _SERVER_RESP._serialized_start=137
-  _SERVER_RESP._serialized_end=170
-  _NAVIGATIONSERVER._serialized_start=172
-  _NAVIGATIONSERVER._serialized_end=229
+  _SERVER_RESP._serialized_end=186
+  _SERVER_CMD._serialized_start=188
+  _SERVER_CMD._serialized_end=213
+  _NAVIGATIONSERVER._serialized_start=215
+  _NAVIGATIONSERVER._serialized_end=311
 # @@protoc_insertion_point(module_scope)

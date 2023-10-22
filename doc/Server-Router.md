@@ -128,6 +128,7 @@ Currently, tested couplers:
 - NMEA0183 over TCP/IP: NMEA0183 and NMEA2000 using pseudo NMEA0183 messages
 - Victron energy device with VEDirect serial line
 - Direct CAN Access: NMEA2000 only
+- gRPC data injector: allows data flow from a server to another
 
 Under preparation
 - Actisense adapter (NGT-1-USB)
@@ -232,6 +233,16 @@ This class manages the interface with the VEDirect interface service (see) and c
 #### DirectCANCoupler
 This coupler class works when a CAN bus interface with socketcan driver is installed on the system. Obviously, only NMEA2000 messages can be processed.
 The CAN bus the coupler must be associated with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters.
+
+#### GrpcNmeaCoupler
+
+The coupler creates a gRPC server on which NMEA0183 or NMEA2000 can be pushed (see server.proto). The server that wants to send data has only to declare a **NMEAGrpcDataClient** to forward all NMEA messages to the coupler.
+
+| Name    | Type   | Default | Signification     |
+|---------|--------|---------|-------------------|
+| address | string | 0.0.0.0 | listening address |
+| port    | int    | None    | listening port    |
+
 
 
 ### Publishers
@@ -346,7 +357,7 @@ The global section includes the definition of the following global parameters:
 | trace_dir        | string                   | /var/log                       | Directory where all the traces and logs will be stored          |
 | log_file         | string                   | None                           | Filename for all program traces, if None stderr is used instead |
 
-There is is also a subsection (log_module) allowing to adjust the log level per module for fine grain debugging
+There is  also a subsection (log_module) allowing to adjust the log level per module for fine grain debugging
 
 The per object section includes a list oh object and each object as the following syntax:
 
@@ -359,7 +370,7 @@ The following sections are recognized:
 - servers
 - couplers
 - publishers
-- data_sinks
+- data_clients
 - filters
 
 Sections are not mandatory

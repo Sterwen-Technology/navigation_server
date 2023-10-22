@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enmea0183.proto\"R\n\nnmea0183pb\x12\x0e\n\x06talker\x18\x01 \x01(\t\x12\x11\n\tformatter\x18\x02 \x01(\t\x12\x11\n\ttimestamp\x18\x04 \x01(\x02\x12\x0e\n\x06values\x18\x03 \x03(\tb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enmea0183.proto\"g\n\nnmea0183pb\x12\x0e\n\x06talker\x18\x01 \x01(\t\x12\x11\n\tformatter\x18\x02 \x01(\t\x12\x11\n\ttimestamp\x18\x04 \x01(\x02\x12\x0e\n\x06values\x18\x03 \x03(\t\x12\x13\n\x0braw_message\x18\x05 \x01(\x0c\x62\x06proto3')
 
 
 
@@ -30,5 +30,5 @@ if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
   _NMEA0183PB._serialized_start=18
-  _NMEA0183PB._serialized_end=100
+  _NMEA0183PB._serialized_end=121
 # @@protoc_insertion_point(module_scope)
