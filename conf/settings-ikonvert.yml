@@ -38,12 +38,12 @@ couplers:
 
 - iKonvertCoupler:
     class: iKonvert
-    device: /dev/ttyUSB1
+    device: /dev/ttyUSB0
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
     msg_queue_size: 20
-    trace_messages: true
-    trace_raw: true
+    trace_messages: false
+    trace_raw: false
 
 filters:
 

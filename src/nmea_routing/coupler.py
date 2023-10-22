@@ -228,7 +228,7 @@ class Coupler(threading.Thread):
             try:
                 msg = self.read()
                 if msg.type == NULL_MSG:
-                    _logger.warning("No data from %s => close connection" % self._name)
+                    _logger.warning("End of data from %s => close connection" % self._name)
                     self.close()
                     continue
                 else:

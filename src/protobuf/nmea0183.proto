@@ -13,11 +13,14 @@
 syntax = "proto3";
 
 // generic NMEA0183 message
-//
+// Two format are possible
+// timestamp + raw_message (possibly including checksum and CRLF)
+// timestamp + decoded message (talker, formatter, values)
 
 message nmea0183pb {
   string talker=1;
   string formatter=2;   // not existing for proprietary sentences
   float timestamp = 4; // seconds from the epoch
   repeated string values=3;
+  bytes raw_message=5; //optional
 }

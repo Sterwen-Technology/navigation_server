@@ -346,7 +346,7 @@ The global section includes the definition of the following global parameters:
 | trace_dir        | string                   | /var/log                       | Directory where all the traces and logs will be stored          |
 | log_file         | string                   | None                           | Filename for all program traces, if None stderr is used instead |
 
-There is is also a subsection (log_module) allowing to adjust the log level per module for fine grain debugging
+There is  also a subsection (log_module) allowing to adjust the log level per module for fine grain debugging
 
 The per object section includes a list oh object and each object as the following syntax:
 

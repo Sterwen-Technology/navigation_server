@@ -12,7 +12,7 @@
 import logging
 import time
 from nmea_routing.generic_msg import N0183_MSG, N2K_MSG
-from nmea_routing.nmea0183 import NMEA0183Msg
+from nmea0183.nmea0183_msg import NMEA0183Msg
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.configuration import NavigationConfiguration
 

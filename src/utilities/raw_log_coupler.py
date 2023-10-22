@@ -15,7 +15,7 @@ import time
 
 from utilities.raw_log_reader import RawLogFile
 from nmea_routing.coupler import Coupler
-from nmea_routing.nmea0183 import NMEA0183Msg, NMEAInvalidFrame
+from nmea0183.nmea0183_msg import NMEA0183Msg, NMEAInvalidFrame
 from nmea2000.nmea2000_msg import FastPacketHandler, fromProprietaryNmea
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG
 from nmea_routing.shipmodul_if import ShipModulInterface

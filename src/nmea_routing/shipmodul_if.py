@@ -17,7 +17,7 @@ from nmea_routing.publisher import Publisher
 from nmea_routing.coupler import Coupler
 from nmea_routing.IPCoupler import BufferedIPCoupler
 from nmea_routing.generic_msg import *
-from nmea_routing.nmea0183 import NMEA0183Msg, NMEA0183Sentences
+from nmea0183.nmea0183_msg import NMEA0183Msg, NMEA0183Sentences
 from nmea2000.nmea2000_msg import FastPacketHandler, NMEA2000Msg, FastPacketException
 from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, PGNDef
 

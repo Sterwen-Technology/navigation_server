@@ -14,7 +14,7 @@ import sys
 
 from argparse import ArgumentParser
 
-from nmea_routing.nmea0183 import NMEA0183Filter
+from nmea0183.nmea0183_msg import NMEA0183Filter
 
 
 def _parser():

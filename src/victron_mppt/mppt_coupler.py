@@ -14,7 +14,7 @@ from generated.vedirect_pb2_grpc import *
 from grpc import StatusCode, insecure_channel, RpcError
 
 from nmea_routing.coupler import *
-from nmea_routing.nmea0183 import XDR, NMEA0183SentenceMsg
+from nmea0183.nmea0183_msg import XDR, NMEA0183SentenceMsg
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 

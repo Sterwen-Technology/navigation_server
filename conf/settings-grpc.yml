@@ -36,37 +36,18 @@ servers:
 
 couplers:
 
-- LogReplay:
-    class: NMEATCPReader
+- GrpcReader:
+    class: GrpcNmeaCoupler
     address: 127.0.0.1
-    port: 4510
-    autostart: false
-    nmea2000_controller: NMEANetwork
+    port: 4601
+    autostart: true
     protocol: nmea2000
     trace_messages: false
     trace_raw: false
 
-
-
 publishers:
 
-#    - MainLog:
-#       class: LogPublisher
-#        file: /data/solidsense/log/navigation.log
-#        instruments: [MiniPlex3]
-- TraceN2K:
-      class: N2KTracePublisher
-      couplers: [LogReplay]
-      active: false
-      filters: [AutoPilotN2K]
-      output: PRINT
-      # file: trace129026
-
-
 data_sinks:
-
-- DataAnalyser:
-      class: NMEADataClient
 
 filters:
 

@@ -77,7 +77,7 @@ class ProductInformation(NMEA2000Object):
             self._fields = {}
         self._fields[field] = value
 
-    def set_product_information(self, model_id: str, software_version: str, model_version:str , serial_code: str):
+    def set_product_information(self, model_id: str, software_version: str, model_version: str, serial_code: str):
         def build_fix_str(val):
             nb_space = 32 - len(val)
             if nb_space < 0:
