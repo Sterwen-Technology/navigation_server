@@ -1,5 +1,5 @@
 //-------------------------------------------------------------------------------
-// Name:        server.proto
+// Name:        nmea_server.proto
 // Purpose:     protobuf and grpc for navigation server data streams
 //
 // Author:      Laurent Carré
