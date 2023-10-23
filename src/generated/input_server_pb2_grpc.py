@@ -2,11 +2,11 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import generated.server_pb2 as server__pb2
+import generated.nmea_messages_pb2 as nmea__messages__pb2
 
 
 
-class NavigationServerStub(object):
+class NMEAInputServerStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -16,18 +16,18 @@ class NavigationServerStub(object):
             channel: A grpc.Channel.
         """
         self.status = channel.unary_unary(
-                '/NavigationServer/status',
-                request_serializer=server__pb2.server_cmd.SerializeToString,
-                response_deserializer=server__pb2.server_resp.FromString,
+                '/NMEAInputServer/status',
+                request_serializer=nmea__messages__pb2.server_cmd.SerializeToString,
+                response_deserializer=nmea__messages__pb2.server_resp.FromString,
                 )
         self.pushNMEA = channel.unary_unary(
-                '/NavigationServer/pushNMEA',
-                request_serializer=server__pb2.nmea_msg.SerializeToString,
-                response_deserializer=server__pb2.server_resp.FromString,
+                '/NMEAInputServer/pushNMEA',
+                request_serializer=nmea__messages__pb2.nmea_msg.SerializeToString,
+                response_deserializer=nmea__messages__pb2.server_resp.FromString,
                 )
 
 
-class NavigationServerServicer(object):
+class NMEAInputServerServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def status(self, request, context):
@@ -43,26 +43,26 @@ class NavigationServerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_NavigationServerServicer_to_server(servicer, server):
+def add_NMEAInputServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'status': grpc.unary_unary_rpc_method_handler(
                     servicer.status,
-                    request_deserializer=server__pb2.server_cmd.FromString,
-                    response_serializer=server__pb2.server_resp.SerializeToString,
+                    request_deserializer=nmea__messages__pb2.server_cmd.FromString,
+                    response_serializer=nmea__messages__pb2.server_resp.SerializeToString,
             ),
             'pushNMEA': grpc.unary_unary_rpc_method_handler(
                     servicer.pushNMEA,
-                    request_deserializer=server__pb2.nmea_msg.FromString,
-                    response_serializer=server__pb2.server_resp.SerializeToString,
+                    request_deserializer=nmea__messages__pb2.nmea_msg.FromString,
+                    response_serializer=nmea__messages__pb2.server_resp.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'NavigationServer', rpc_method_handlers)
+            'NMEAInputServer', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
  # This class is part of an EXPERIMENTAL API.
-class NavigationServer(object):
+class NMEAInputServer(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
@@ -76,9 +76,9 @@ class NavigationServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/NavigationServer/status',
-            server__pb2.server_cmd.SerializeToString,
-            server__pb2.server_resp.FromString,
+        return grpc.experimental.unary_unary(request, target, '/NMEAInputServer/status',
+            nmea__messages__pb2.server_cmd.SerializeToString,
+            nmea__messages__pb2.server_resp.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -93,8 +93,8 @@ class NavigationServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/NavigationServer/pushNMEA',
-            server__pb2.nmea_msg.SerializeToString,
-            server__pb2.server_resp.FromString,
+        return grpc.experimental.unary_unary(request, target, '/NMEAInputServer/pushNMEA',
+            nmea__messages__pb2.nmea_msg.SerializeToString,
+            nmea__messages__pb2.server_resp.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

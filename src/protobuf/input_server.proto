@@ -5,32 +5,15 @@
 // Author:      Laurent Carré
 //
 // Created:     12/06/2022
-// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 // Licence:     Eclipse Public License 2.0
 //-------------------------------------------------------------------------------
 
 syntax = "proto3";
 
-import "nmea2000.proto";
-import "nmea0183.proto";
+import "nmea_messages.proto";
 
-message nmea_msg {
-  oneof Message {
-    nmea2000pb N2K_msg = 1;
-    nmea0183pb N0183_msg = 2;
-  }
-}
-
-message server_resp {
-  uint32 reportCode = 1;
-  string status = 2;
-}
-
-message server_cmd {
-  string cmd=1;
-}
-
-service NavigationServer {
+service NMEAInputServer {
   rpc status (server_cmd) returns (server_resp) {}
   rpc pushNMEA( nmea_msg ) returns (server_resp) {}
 }

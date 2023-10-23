@@ -12,8 +12,8 @@
 
 import logging
 
-from generated.server_pb2_grpc import NavigationServerServicer, add_NavigationServerServicer_to_server
-from generated.server_pb2 import server_resp
+from generated.input_server_pb2_grpc import NMEAInputServerServicer, add_NMEAInputServerServicer_to_server
+from generated.nmea_messages_pb2 import server_resp
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea0183.nmea0183_msg import nmea0183msg_from_protobuf
 from nmea_routing.server_common import NavigationGrpcServer
@@ -21,7 +21,7 @@ from nmea_routing.server_common import NavigationGrpcServer
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
 
-class GrpcNmeaServicer(NavigationServerServicer):
+class GrpcNmeaServicer(NMEAInputServerServicer):
 
     def __init__(self, callback_n2k, callback_0183):
         self._callback_n2k = callback_n2k
@@ -52,4 +52,4 @@ class GrpcDataServer(NavigationGrpcServer):
 
     def __init__(self, opts, callback_n2k, callback_0183):
         super().__init__(opts)
-        add_NavigationServerServicer_to_server(GrpcNmeaServicer(callback_n2k, callback_0183), self._grpc_server)
+        add_NMEAInputServerServicer_to_server(GrpcNmeaServicer(callback_n2k, callback_0183), self._grpc_server)

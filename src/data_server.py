@@ -17,8 +17,8 @@ from concurrent import futures
 import grpc
 import signal
 import time
-from generated.server_pb2_grpc import NavigationServerServicer, add_NavigationServerServicer_to_server
-from generated.server_pb2 import server_resp
+from generated.input_server_pb2_grpc import NMEAInputServerServicer, add_NMEAInputServerServicer_to_server
+from generated.input_server_pb2 import server_resp
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
@@ -56,7 +56,7 @@ class Options(object):
             raise AttributeError(name)
 
 
-class DataServicer(NavigationServerServicer):
+class DataServicer(NMEAInputServerServicer):
 
     def __init__(self, dataset):
         self._dataset = dataset
@@ -81,7 +81,7 @@ class GrpcServer:
         port = opts.port
         address = "0.0.0.0:%d" % port
         self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
-        add_NavigationServerServicer_to_server(DataServicer(data_set), self._server)
+        add_NMEAInputServerServicer_to_server(DataServicer(data_set), self._server)
         self._server.add_insecure_port(address)
         _logger.info("Data server ready on address:%s" % address)
 

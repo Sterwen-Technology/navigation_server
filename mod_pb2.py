@@ -23,7 +23,7 @@ def main():
     else:
         i_grpc = filename.find('_grpc')
         keywords.append(filename[:i_grpc])
-    # print(keywords)
+    # print(full_filename, keywords)
     output_filename = os.path.join(rel_dir, "tmpFile")
     of = open(output_filename, "w")
     with open(full_filename, "r") as input_f:

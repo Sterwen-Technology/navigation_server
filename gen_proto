@@ -11,7 +11,8 @@ gen_protobuf() {
   output_file=${output_dir}/"$1_pb2_grpc.py"
   if [ -e ${output_file} ]
   then
-    python mod_pb2.py ${output_file} generated
+    shift
+    python mod_pb2.py ${output_file} generated $*
   fi
 }
 
@@ -26,8 +27,13 @@ gen_protobuf vedirect
 gen_protobuf console
 gen_protobuf nmea0183
 gen_protobuf nmea2000
-gen_protobuf server
+gen_protobuf nmea_messages
+gen_protobuf input_server nmea_messages
+gen_protobuf nmea_server
 gen_protobuf agent
+
 gen_protobuf arguments
-adjust_protobuf server nmea0183 nmea2000
+adjust_protobuf input_server nmea_messages
+adjust_protobuf nmea_messages nmea0183 nmea2000
+adjust_protobuf nmea_server nmea_messages
 adjust_protobuf console arguments

@@ -17,8 +17,8 @@ from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, N0183_MSG
 from nmea_routing.filters import FilterSet
 from nmea_routing.publisher import Publisher
 
-from generated.server_pb2 import nmea_msg, server_cmd
-from generated.server_pb2_grpc import NavigationServerStub
+from generated.nmea_messages_pb2 import nmea_msg, server_cmd
+from generated.input_server_pb2_grpc import NMEAInputServerStub
 
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
@@ -32,7 +32,7 @@ class NMEAGrpcDataClient:
         self._address = "%s:%d" % (opts.get('address', str, '127.0.0.1'), opts.get('port', int, 4504))
         _logger.info("Creating client for data server at %s" % self._address)
         self._channel = grpc.insecure_channel(self._address)
-        self._stub = NavigationServerStub(self._channel)
+        self._stub = NMEAInputServerStub(self._channel)
         self._couplers = []
         self._filters = None
         filter_names = opts.getlist('filters', str)
