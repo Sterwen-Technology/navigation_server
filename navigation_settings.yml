@@ -1,0 +1,122 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/12/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+log_level: ERROR
+trace_dir: /data/solidsense
+log_module:
+    nmea_routing.filters: DEBUG
+
+servers:
+
+- NMEAServer:
+    class: NMEAServer
+    port: 4500
+    nmea2000: dyfmt
+    filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K, Barometer]
+
+- Console:
+    class: Console
+    port: 4502
+
+- ShipModulConfig:
+    class: ShipModulConfig
+    port: 4501
+    coupler: MiniPlex3
+
+- NMEASender:
+    class: NMEASenderServer
+    port: 4503
+    coupler: MiniPlex3
+    max_silent: 10
+    timeout: 8.0
+    buffer_size: 128
+    master: 192.168.1.24
+    
+- NMEANetwork:
+    class: NMEA2KController
+    
+
+couplers:
+
+- iKonvert1:
+    class: iKonvert
+    device: /dev/ttyUSB1
+    protocol: nmea2000
+    autostart: false
+
+- MiniPlex3:
+    class: ShipModulInterface
+    address: 192.168.1.25
+    autostart: false
+    port: 10110
+    transport: TCP
+    server: NMEAServer
+    
+- LogReplay:
+    class: NMEATCPReader
+    address: 192.168.1.12
+    port: 4510
+    autostart: true
+    protocol: nmea2000
+    nmea2000_controller: NMEANetwork
+    data_sink: Analyzer
+
+publishers:
+
+#- Trace:
+#    class: N2KTracePublisher
+#    instruments: [MiniPlex3]
+#   queue_size: 40
+#   filter: [129540]
+
+
+#    - MainLog:
+#       class: LogPublisher
+#        file: /data/solidsense/log/navigation.log
+#        instruments: [MiniPlex3]
+
+filters:
+
+- RemoveGPS:
+     class: NMEA0183Filter
+     talker: GP
+     formatter: GSV
+     action: discard
+
+- DiscardAISGPS:
+     class: NMEA2000Filter
+     source: 43
+     pgn: [129025, 129026]
+     action: discard
+
+- AutoPilotN2K:
+    class: NMEA2000Filter
+    source: 7
+    pgn: [126720, 127245, 130916]
+    action: discard
+
+- Barometer:
+    class: NMEA2000Filter
+    source: 52
+    pgn: [130310, 130311, 130314]
+    action: time_filter
+    period: 60.0
+
+data_sinks:
+
+- Analyzer:
+    class: NMEADataClient
+    address: 192.168.1.12
+
+
+
+
+
