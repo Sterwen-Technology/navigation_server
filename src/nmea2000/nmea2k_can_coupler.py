@@ -40,12 +40,12 @@ class DirectCANCoupler(Coupler):
             super().stop()
             return False
 
-        self._n2k_controller.CAN_interface.set_data_queue(self._in_queue)
+        self._n2k_controller.set_coupler_queue(self._in_queue)
         return True
 
     def stop(self):
         if self._n2k_controller is not None:
-            self._n2k_controller.CAN_interface.set_data_queue(None)
+            self._n2k_controller.set_coupler_queue(None)
         super().stop()
 
     def close(self):

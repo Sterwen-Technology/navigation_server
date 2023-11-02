@@ -1,6 +1,8 @@
 # -------------------------------------------------------------------------------
 # Name:        NMEA2K-CAN Application class
 # Purpose:     Implements the application level of the CAN layer (equivalent to J1939 CA)
+#               That is a local "device". This is the default implementation with just the network management
+#               No data messages processing
 #
 # Author:      Laurent Carré
 #
@@ -99,6 +101,9 @@ class NMEA2000Application(NMEA2000Device):
             request = ISORequest().from_message(msg)
             if request.request_pgn == 60928:
                 self.send_address_claim()
+            elif request.request_pgn == 126996:
+                # ok we send back the ProductInformation
+                self.send_product_information()
             else:
                 _logger.error("ISO Request on PGN %d not supported" % request.request_pgn)
 

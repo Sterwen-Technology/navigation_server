@@ -58,9 +58,9 @@ class SocketCANInterface(threading.Thread):
         super().__init__(name="CAN-if-%s" % channel)
         self._channel = channel
         self._bus = None
-        self._iso_queue = out_queue
+        self._queue = out_queue
         self._stop_flag = False
-        self._data_queue = None
+        # self._data_queue = None
         self._allowed_send = threading.Event()
         self._allowed_send.clear()
         self._bus_ready = threading.Event()
@@ -69,7 +69,8 @@ class SocketCANInterface(threading.Thread):
         self._bus_queue = queue.Queue(50)
         self._fp_handler = FastPacketHandler(self)
         self._total_msg_in = 0
-        self._access_lock = threading.Lock()
+        # self._access_lock = threading.Lock()
+        self._addresses = [255]
 
         # self._notifier = None
         # self._listener = NMEA2000MsgListener(self, self._bus_queue)
@@ -104,16 +105,16 @@ class SocketCANInterface(threading.Thread):
         if self._trace is not None:
             self._trace.stop_trace()
 
-    def set_data_queue(self, data_queue: queue.Queue):
-        self._data_queue = data_queue
+    def add_address(self, address: int):
+        self._addresses.append(address & 0xFF)
 
     @property
     def channel(self):
         return self._channel
 
-    @property
-    def access_lock(self):
-        return self._access_lock
+#   @property
+#  def access_lock(self):
+#     return self._access_lock
 
     def total_msg_raw(self):
         return self._total_msg_in
@@ -140,8 +141,11 @@ class SocketCANInterface(threading.Thread):
         # return a NMEA200Msg when a valid message as been received or reassembled
 
         can_id = msg_recv.arbitration_id
-        sa = can_id & 0xFF
         pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
+        if da not in self._addresses:
+            _logger.debug("CAN interface discarding message:%s" % msg_recv)
+            return
+        sa = can_id & 0xFF
         prio = (can_id >> 26) & 0x7
         data = msg_recv.data
         if self._trace is not None:
@@ -167,16 +171,12 @@ class SocketCANInterface(threading.Thread):
         # end fast packet handling
         n2k_msg = NMEA2000Msg(pgn, prio, sa, da, data)
         if n2k_msg is not None:
-            if n2k_msg.is_iso_protocol:
-                try:
-                    self._iso_queue.put(n2k_msg, block=False)
-                except queue.Full:
-                    _logger.warning("ISO layer queue full, message ignored")
-            elif self._data_queue is not None:
-                try:
-                    self._data_queue.put(n2k_msg, block=False)
-                except queue.Full:
-                    _logger.warning("CAN Data queue full, message lost")
+
+            try:
+                self._queue.put(n2k_msg, block=False)
+            except queue.Full:
+                _logger.warning("CAN read queue full, message ignored")
+
         # once the first message is received, the bus is considered as ready
         if self._state != self.BUS_READY:
             self._bus_ready.set()
@@ -184,22 +184,24 @@ class SocketCANInterface(threading.Thread):
         # _logger.debug("NMEA2000 message received %s" % n2k_msg.format1())
 
     def read_can(self) -> Message:
-        if self._access_lock.acquire(timeout=0.5):
-            try:
-                msg = self._bus.recv(0.5)
-            except CanError as e:
-                _logger.error("Error on CAN reading on channel %s: %s" % (self._channel, e))
-                self._access_lock.release()
-                raise SocketCanReadInvalid
-            self._access_lock.release()
-            if msg is None:
-                raise SocketCanReadInvalid
-            if not msg.is_extended_id or msg.is_remote_frame:
-                raise SocketCanReadInvalid
-            return msg
-        else:
-            _logger.error("%s unable to lock CAN interface" % self.name)
+        # if self._access_lock.acquire(timeout=0.5):
+            # _logger.debug("Acquire read lock")
+        try:
+            msg = self._bus.recv(0.5)
+        except CanError as e:
+            _logger.error("Error on CAN reading on channel %s: %s" % (self._channel, e))
+            # self._access_lock.release()
             raise SocketCanReadInvalid
+        # _logger.debug("release read lock")
+        # self._access_lock.release()
+        if msg is None:
+            raise SocketCanReadInvalid
+        if not msg.is_extended_id or msg.is_remote_frame:
+            raise SocketCanReadInvalid
+        return msg
+        # else:
+            # _logger.error("%s unable to lock CAN interface" % self.name)
+            # raise SocketCanReadInvalid
 
     def run(self):
 
@@ -234,7 +236,7 @@ class SocketCANInterface(threading.Thread):
             can_id |= (n2k_msg.pgn + n2k_msg.da) << 8
         else:
             can_id |= n2k_msg.pgn << 8
-        can_id |= n2k_msg.prio << 26
+        can_id |= (n2k_msg.prio & 7) << 26
 
         _logger.debug("CAN interface send in queue message: %s" % n2k_msg.format1())
 
@@ -291,7 +293,7 @@ class SocketCANWriter(threading.Thread):
         self._trace = trace
         self._stop_flag = False
         self._total_msg = 0
-        self._access_lock = can_interface.access_lock
+        # self._access_lock = can_interface.access_lock
 
     def set_bus(self, bus):
         self._bus = bus
@@ -323,17 +325,22 @@ class SocketCANWriter(threading.Thread):
                 dts = datetime.datetime.fromtimestamp(msg.timestamp)
                 self._trace.trace_n2k_raw_can(dts, self._total_msg, NMEAMsgTrace.TRACE_OUT,
                                               "%08X,%s" % (msg.arbitration_id, msg.data.hex()))
-            if self._access_lock.acquire(1.0):
-                try:
-                    _logger.debug("CAN sending: %s" % str(msg))
-                    self._total_msg += 1
-                    self._bus.send(msg, 5.0)
-                    last_write_time = time.monotonic()
-                except CanError as e:
-                    _logger.error("Error receiving message from channel %s: %s" % (self._can_interface.channel, e))
-                self._access_lock.release()
-            else:
-                _logger.error("%s CAN write lock failed" % self._can_interface.name)
+            # if self._access_lock.acquire(timeout=2.0):
+                #_logger.debug("Acquire write lock")
+            try:
+                _logger.debug("CAN sending: %s" % str(msg))
+                self._total_msg += 1
+                self._bus.send(msg, 5.0)
+                last_write_time = time.monotonic()
+            except ValueError:
+                # can happen if the thread was blocked while the CAN interface is closed
+                break
+            except CanError as e:
+                _logger.error("Error receiving message from channel %s: %s" % (self._can_interface.channel, e))
+                #_logger.debug("release write lock")
+                # self._access_lock.release()
+            # else:
+                # _logger.error("%s CAN write lock failed" % self._can_interface.name)
             '''
             except CanTimeoutError:
                 _logger.error("CAN send timeout error - message lost")

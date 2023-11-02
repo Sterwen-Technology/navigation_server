@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 import queue
@@ -258,8 +258,13 @@ class NMEA2000Object:
     Specific subclasses can be created to handle special processing
     '''
 
-    def __init__(self, pgn):
+    def __init__(self, pgn: int):
         self._pgn = pgn
+        try:
+            self._pgn_def = PGNDefinitions.pgn_definition(pgn)
+        except N2KUnknownPGN:
+            _logger.error("NMEA2000Object creation with unknown PGN %d" % pgn)
+            raise
         self._sa = 0
         self._da = 0
         self._fields = None
@@ -279,6 +284,8 @@ class NMEA2000Object:
     def message(self):
         if self._message is None:
             self._message = NMEA2000Msg(self._pgn, self._prio, self._sa, self._da, self.encode_payload())
+        if self._pgn_def.pdu_format == PGNDef.PDU1 and self._da == 0:
+            _logger.warning("NMEA2000 Message with PDU1 format and no destination address")
         return self._message
 
     def update(self):

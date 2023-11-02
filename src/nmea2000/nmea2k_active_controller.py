@@ -10,8 +10,9 @@
 # -------------------------------------------------------------------------------
 
 import logging
+import queue
 
-
+from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_controller import NMEA2KController
 from nmea2000.nmea2k_application import NMEA2000Application
 from nmea2000.nmea2k_can_interface import SocketCANInterface, SocketCanError
@@ -32,6 +33,7 @@ class NMEA2KActiveController(NMEA2KController):
         except SocketCanError as e:
             _logger.error(e)
             raise ObjectCreationError(str(e))
+        self._coupler_queue = None
         self._applications = {}
         self.add_application(NMEA2000Application(self, opts))
 
@@ -44,14 +46,36 @@ class NMEA2KActiveController(NMEA2KController):
         self._can.stop()
         super().stop()
 
+    def set_coupler_queue(self, coupler_queue):
+        self._coupler_queue = coupler_queue
+
     @property
     def CAN_interface(self):
         return self._can
 
     def add_application(self, application):
         self._applications[application.address] = application
+        self._can.add_address(application.address)
 
     def start_applications(self):
         _logger.debug("NMEA2000 Applications starts")
         for app in self._applications.values():
             app.start()
+
+    def process_msg(self, msg: NMEA2000Msg):
+        if msg.da != 255:
+            # we have a da, so call the application
+            try:
+                self._applications[msg.da].receive_msg(msg)
+            except KeyError:
+                _logger.error("Wrongly routed message for destination %d pgn %d" % (msg.da, msg.pgn))
+                return
+        elif msg.is_iso_protocol:
+            super().process_msg(msg)
+        else:
+            if self._coupler_queue is not None:
+                try:
+                    self._coupler_queue.put(msg, block=False)
+                except queue.Full:
+                    _logger.error("CAN controller %s Coupler queue full - message lost")
+

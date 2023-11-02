@@ -89,7 +89,7 @@ class PGNDefinitions(XMLDefinitionFile):
         return self._pgn_defs.values()
 
     def pgn_def(self, number):
-        if type(number) == str:
+        if type(number) is str:
             number = int(number)
         try:
             return self._pgn_defs[number]
@@ -149,7 +149,7 @@ class PGNDef:
             # PDU1
             return pgn & 0x1FF00, pgn & 0xFF
         else:
-            return pgn, 0
+            return pgn, 0xFF
 
     @staticmethod
     def fast_packet_check(pgn) -> bool:
@@ -261,6 +261,10 @@ class PGNDef:
 
     def field(self, name):
         return self._fields[name]
+
+    @property
+    def pdu_format(self):
+        return self._pdu_format
 
     def pgn_data(self):
         data = [

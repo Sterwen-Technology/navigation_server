@@ -19,9 +19,10 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 class AddressClaim(NMEA2000Object):
 
-    def __init__(self, sa=0, name=None):
+    def __init__(self, sa=0, name=None, da=255):
         super().__init__(60928)
         self._sa = sa
+        self._da = da
         self._name = name
         self._prio = 6
 
