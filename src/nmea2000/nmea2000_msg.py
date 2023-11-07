@@ -21,7 +21,7 @@ from nmea_routing.generic_msg import *
 from nmea0183.nmea0183_msg import process_nmea0183_frame, NMEA0183Msg
 from utilities.date_time_utilities import format_timestamp
 
-_logger = logging.getLogger("ShipDataServer" + "." + __name__)
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class N2KRawDecodeError(Exception):
@@ -301,6 +301,10 @@ class NMEA2000Object:
     @property
     def sa(self):
         return self._sa
+
+    @property
+    def fields(self) -> dict:
+        return self._fields
 
     @sa.setter
     def sa(self, value):

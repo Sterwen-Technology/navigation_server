@@ -108,6 +108,12 @@ class SocketCANInterface(threading.Thread):
     def add_address(self, address: int):
         self._addresses.append(address & 0xFF)
 
+    def remove_address(self, address: int):
+        try:
+            self._addresses.remove(address)
+        except ValueError:
+            _logger.error("CAN interface removing non existent destination address %d" % address)
+
     @property
     def channel(self):
         return self._channel

@@ -42,6 +42,12 @@ class NMEA2KController(NavigationServer, threading.Thread):
     def running(self) -> bool:
         return self.is_alive()
 
+    def network_addresses(self):
+        return self._devices.keys()
+
+    def delete_device(self, address):
+        del self._devices[address]
+
     def send_message(self, msg: NMEA2000Msg):
         if not self.is_alive():
             # the thread is not running=> warning and discard

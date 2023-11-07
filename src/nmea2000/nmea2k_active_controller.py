@@ -54,8 +54,19 @@ class NMEA2KActiveController(NMEA2KController):
         return self._can
 
     def add_application(self, application):
+        self._devices[application.address] = application
         self._applications[application.address] = application
         self._can.add_address(application.address)
+
+    def change_application_address(self, application, old_address):
+        # application must already be initialized with the target address
+        self.remove_application(old_address)
+        self.add_application(application)
+
+    def remove_application(self, old_address: int):
+        self.delete_device(old_address)
+        self._can.remove_address(old_address)
+        del self._applications[old_address]
 
     def start_applications(self):
         _logger.debug("NMEA2000 Applications starts")

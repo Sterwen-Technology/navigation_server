@@ -17,6 +17,7 @@ from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_publisher import PgnRecord
 from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeException
 from nmea2000.nmea2k_manufacturers import Manufacturers
+from nmea2000.nmea2k_factory import NMEA2000Factory
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -36,7 +37,7 @@ class NMEA2000Device:
                                 126996: self.p126996
                                 }
         # self._fields_60928 = None
-        self._fields_126996 = None
+        self._obj_126996 = None
         self._iso_name = None
         self._changed = True
         if properties is None:
@@ -56,11 +57,11 @@ class NMEA2000Device:
         except KeyError:
             return
         try:
-            pgn_data = pgn_def.pgn_def.decode_pgn_data(msg.payload)
+            n2k_obj = NMEA2000Factory.build_n2k_object(msg)
         except N2KDecodeException as e:
             _logger.error("NMEA2000 Device - PGN %d decode error %s" % (msg.pgn, e))
             return
-        process_function(pgn_data)
+        process_function(n2k_obj)
 
     def set_property(self, source, property_name):
         try:
@@ -86,12 +87,12 @@ class NMEA2000Device:
             self._pgn_received[pgn] = pgn_def
         return pgn_def
 
-    def p60928(self, msg_data):
+    def p60928(self, n2k_obj):
 
         #   _logger.debug("PGN 60928 data= %s" % msg_data)
         if self._iso_name is None:
             self._changed = True
-            self._iso_name = msg_data['fields']["System ISO Name"]
+            self._iso_name = n2k_obj.name
             _logger.info("Processing ISO address claim for address %d name=%16X" %
                          (self._address, self._iso_name.name_value))
             mfg_code = self._iso_name.manufacturer_code
@@ -104,18 +105,18 @@ class NMEA2000Device:
             except KeyError:
                 self._properties['Manufacturer Name'] = "Manufacturer#%d" % mfg_code
 
-    def p126996(self, msg_data):
+    def p126996(self, n2k_obj):
 
-        if self._fields_126996 is None:
+        if self._obj_126996 is None:
             self._changed = True
-            _logger.info("Processing Product information for address %d: %s" % (self._address, msg_data['fields']))
-            self._fields_126996 = msg_data['fields']
-            self.set_property(self._fields_126996, 'NMEA 2000 Version')
-            self.set_property(self._fields_126996, 'Product Code')
-            self.set_property(self._fields_126996, 'Certification Level')
-            self.set_property(self._fields_126996, 'Load Equivalency')
+            _logger.info("Processing Product information for address %d: %s" % (self._address, n2k_obj.fields))
+            self._obj_126996 = n2k_obj
+            self.set_property(self._obj_126996.fields, 'NMEA 2000 Version')
+            self.set_property(self._obj_126996.fields, 'Product Code')
+            self.set_property(self._obj_126996.fields, 'Certification Level')
+            self.set_property(self._obj_126996.fields, 'Load Equivalency')
             try:
-                pi = self._fields_126996['Product information']
+                pi = self._obj_126996.fields['Product information']
             except KeyError:
                 _logger.error("No Product Information in PGN 126996")
                 return

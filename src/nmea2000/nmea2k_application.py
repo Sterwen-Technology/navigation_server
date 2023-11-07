@@ -24,13 +24,16 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 class NMEA2000Application(NMEA2000Device):
 
     (WAIT_FOR_BUS, ADDRESS_CLAIM, ACTIVE) = range(10, 13)
+    address_pool = [a for a in range(128, 141)]
+    ap_index = 0
 
     def __init__(self, controller, opts):
 
         self._controller = controller
         self._unique_id = opts.get('unique_id', int, 0)
-        self._address = opts.get('address', int, 112)
+        self._address = opts.get('address', int, 128)
         self._mfg_code = opts.get('manufacturer_id', int, 999)
+        self._claim_timer = None
         super().__init__(self._address)
         # create ISO Name
         self._iso_name = NMEA2000Name.create_name(
@@ -52,12 +55,15 @@ class NMEA2000Application(NMEA2000Device):
         self._product_information.set_field('Load Equivalency', 1)
 
     def send_address_claim(self):
+        self.respond_address_claim()
+        self._state = self.ADDRESS_CLAIM
+        self._claim_timer = threading.Timer(5.0, self.address_claim_delay)
+        self._claim_timer.start()
+
+    def respond_address_claim(self):
         claim_msg = AddressClaim(self._address, self._iso_name)
         _logger.debug("Application address %d sending address claim" % self._address)
         self._controller.CAN_interface.send(claim_msg.message())
-        self._state = self.ADDRESS_CLAIM
-        t = threading.Timer(5.0, self.address_claim_delay)
-        t.start()
 
     def address_claim_delay(self):
         # we consider that we are good to go
@@ -72,6 +78,7 @@ class NMEA2000Application(NMEA2000Device):
     def wait_for_bus_ready(self):
         _logger.debug("Waiting for CAN Bus to be ready")
         self._controller.CAN_interface.wait_for_bus_ready()
+        _logger.debug("CAN bus ready")
         self.send_address_claim()
 
     def start(self):
@@ -79,28 +86,47 @@ class NMEA2000Application(NMEA2000Device):
         t = threading.Thread(target=self.wait_for_bus_ready, daemon=True)
         t.start()
 
-    def address_claim_receipt(self, data):
+    def address_claim_receipt(self, address_claim_obj):
         '''
         If we are here we have a address conflict
         By the book, we need to look at the name value
         '''
-
-        iso_name = data['fields']["System ISO Name"]
+        if self._claim_timer is not None:
+            self._claim_timer.cancel()
+        iso_name = address_claim_obj.name
         _logger.warning("Address claim on address %d received with name %8X. Our name: %8X" % (
                         self._address, iso_name.name_value, self._iso_name.name_value))
         if iso_name > self._iso_name:
             # here we need to change the address => not implemented
-            _logger.critical("CAN address %d not available please change it" % self._address)
-        else:
-            # we go ahead
+            _logger.warning("CAN address %d not available please change it" % self._address)
+            # let's find a new address
+            address = 254
+            while self.ap_index < len(self.address_pool):
+                self.ap_index += 1
+                address_c = self.address_pool[self.ap_index]
+                if address_c not in self._controller.network_addresses():
+                    address = address_c
+                    break
+            if address == 254:
+                _logger.critical("Cannot obtain a CAN address => Going off line")
+                msg = AddressClaim(address, name=self._iso_name)
+                _logger.warning("Application address %d sending cannot claim address" % self._address)
+                self._controller.CAN_interface.send(msg.message())
+                self._controller.stop()
+                return
+            # now we need to swap addresses
+            old_address = self._address
+            self._address = address
+            self._controller.change_application_address(self, old_address)
+            # we go ahead for a new address claim
             self.send_address_claim()
 
     def iso_request(self, msg):
         if msg.da == self._address or msg.da == 255:
-            _logger.debug("Application ISO request received")
+            _logger.debug("Application ISO request received from %d" % msg.sa)
             request = ISORequest().from_message(msg)
             if request.request_pgn == 60928:
-                self.send_address_claim()
+                self.respond_address_claim()
             elif request.request_pgn == 126996:
                 # ok we send back the ProductInformation
                 self.send_product_information()

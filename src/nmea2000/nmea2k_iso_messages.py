@@ -12,6 +12,7 @@
 import logging
 
 from nmea2000.nmea2000_msg import NMEA2000Msg, NMEA2000Object
+from nmea2000.nmea2k_name import NMEA2000Name
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -29,14 +30,12 @@ class AddressClaim(NMEA2000Object):
     def encode_payload(self) -> bytes:
         return self._name.bytes()
 
+    def update(self):
+        self._name = self._fields["System ISO Name"]
 
-class ProductInfo(NMEA2000Object):
-
-    def __init__(self, sa=0):
-        super.__init__(126996)
-        self._sa = sa
-        self._da = 255
-        self._prio = 7
+    @property
+    def name(self) -> NMEA2000Name:
+        return self._name
 
 
 class ISORequest(NMEA2000Object):
@@ -67,7 +66,8 @@ class ProductInformation(NMEA2000Object):
 
     def __init__(self):
         super().__init__(126996)
-        self._pgn_def = PGNDefinitions.pgn_definition(126996)
+        self._da = 255
+        self._prio = 7
 
     def update(self):
         # no internal representation - only fields
@@ -93,6 +93,4 @@ class ProductInformation(NMEA2000Object):
 
     def encode_payload(self) -> bytes:
         return self._pgn_def.encode_payload(self._fields)
-
-
 
