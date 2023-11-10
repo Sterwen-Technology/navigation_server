@@ -16,6 +16,7 @@ log_module:
   nmea_routing.coupler: INFO
   nmea2000.nmea2000_msg: INFO
   nmea2000.nmea2k_controller: INFO
+  nmea2000.nmea2k_active_controller: DEBUG
   nmea2000.nmea2k_device: INFO
   nmea2000.nmea2k_application: DEBUG
   nmea2000.n2k_name: INFO
@@ -34,7 +35,7 @@ servers:
 
 - NMEANetwork:
       class: NMEA2KActiveController
-      trace: true
+      trace: false
       channel: can0
 
 - NMEAOutput:

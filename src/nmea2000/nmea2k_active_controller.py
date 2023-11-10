@@ -14,7 +14,7 @@ import queue
 
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_controller import NMEA2KController
-from nmea2000.nmea2k_application import NMEA2000Application
+from nmea2000.nmea2k_application import NMEA2000Application, NMEA2000ApplicationPool
 from nmea2000.nmea2k_can_interface import SocketCANInterface, SocketCanError
 from utilities.global_exceptions import ObjectCreationError
 
@@ -35,9 +35,13 @@ class NMEA2KActiveController(NMEA2KController):
             raise ObjectCreationError(str(e))
         self._coupler_queue = None
         self._applications = {}
-        self.add_application(NMEA2000Application(self, opts))
+        self._apool = NMEA2000ApplicationPool(self, opts)
 
     def start(self):
+        if len(self._applications) == 0:
+            _logger.info("Creating default application")
+            self.add_application(NMEA2000Application(self))
+        _logger.debug("Starting CAN bus")
         self._can.start()
         super().start()
         self.start_applications()
@@ -52,6 +56,10 @@ class NMEA2KActiveController(NMEA2KController):
     @property
     def CAN_interface(self):
         return self._can
+
+    @property
+    def app_pool(self) -> NMEA2000ApplicationPool:
+        return self._apool
 
     def add_application(self, application):
         self._devices[application.address] = application

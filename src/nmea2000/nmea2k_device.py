@@ -28,7 +28,7 @@ class NMEA2000Device:
     This class holds the view of the devices on the NMEA2000 Network
     '''
 
-    def __init__(self, address, properties=None):
+    def __init__(self, address, properties=None, name=None):
         self._address = address
         _logger.info("NMEA Controller new device detected at address %d" % address)
         self._lastmsg_ts = 0
@@ -38,7 +38,7 @@ class NMEA2000Device:
                                 }
         # self._fields_60928 = None
         self._obj_126996 = None
-        self._iso_name = None
+        self._iso_name = name
         self._changed = True
         if properties is None:
             self._properties = {}

@@ -1,6 +1,15 @@
 #!/bin/bash
 # shell script to perform the installation on systemd for can set service
 #
+# on SolidSense Yocto need to modify the python can library
+# shellcheck disable=SC1073
+# shellcheck disable=SC1072
+if [ -e /etc/solidsense ]
+then
+  echo "SolidSense system"
+  cp python_lib/can/bus.py /usr/lib/python3.7/site-packages/can
+fi
+
 cp can.service /lib/systemd/system
 systemctl daemon-reload
 systemctl enable can

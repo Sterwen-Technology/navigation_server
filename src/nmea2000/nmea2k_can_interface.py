@@ -98,6 +98,9 @@ class SocketCANInterface(threading.Thread):
         self._state = self.BUS_CONNECTED
         super().start()
         self._writer.start()
+        # once the first message is received, the bus is considered as ready
+        self._bus_ready.set()
+        self._state = self.BUS_READY
 
     def stop(self):
         self._stop_flag = True
@@ -183,10 +186,7 @@ class SocketCANInterface(threading.Thread):
             except queue.Full:
                 _logger.warning("CAN read queue full, message ignored")
 
-        # once the first message is received, the bus is considered as ready
-        if self._state != self.BUS_READY:
-            self._bus_ready.set()
-            self._state = self.BUS_READY
+
         # _logger.debug("NMEA2000 message received %s" % n2k_msg.format1())
 
     def read_can(self) -> Message:
