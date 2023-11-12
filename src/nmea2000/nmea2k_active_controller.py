@@ -36,8 +36,19 @@ class NMEA2KActiveController(NMEA2KController):
         self._coupler_queue = None
         self._applications = {}
         self._apool = NMEA2000ApplicationPool(self, opts)
+        self._application_names = opts.getlist('applications', str, None)
 
     def start(self):
+        if self._application_names is not None:
+            for ap_name in self._application_names:
+                ap = self.resolve_direct_ref(ap_name)
+                if ap is not None:
+                    if issubclass(ap.__class__, NMEA2000Application):
+                        ap.set_controller(self)
+                        self.add_application(ap)
+                    else:
+                        _logger.error("Invalid application for CAN Controller (ECU) => ignored")
+
         if len(self._applications) == 0:
             _logger.info("Creating default application")
             self.add_application(NMEA2000Application(self))
@@ -49,9 +60,6 @@ class NMEA2KActiveController(NMEA2KController):
     def stop(self):
         self._can.stop()
         super().stop()
-
-    def set_coupler_queue(self, coupler_queue):
-        self._coupler_queue = coupler_queue
 
     @property
     def CAN_interface(self):
@@ -77,24 +85,27 @@ class NMEA2KActiveController(NMEA2KController):
         del self._applications[old_address]
 
     def start_applications(self):
-        _logger.debug("NMEA2000 Applications starts")
+        _logger.debug("NMEA2000 Controller => Applications starts")
         for app in self._applications.values():
-            app.start()
+            app.start_application()
 
     def process_msg(self, msg: NMEA2000Msg):
         if msg.da != 255:
             # we have a da, so call the application
             try:
-                self._applications[msg.da].receive_msg(msg)
+                if msg.is_iso_protocol:
+                    self._applications[msg.da].receive_msg(msg)
+                else:
+                    self._applications[msg.da].receive_data_msg(msg)
             except KeyError:
                 _logger.error("Wrongly routed message for destination %d pgn %d" % (msg.da, msg.pgn))
                 return
-        elif msg.is_iso_protocol:
-            super().process_msg(msg)
         else:
-            if self._coupler_queue is not None:
-                try:
-                    self._coupler_queue.put(msg, block=False)
-                except queue.Full:
-                    _logger.error("CAN controller %s Coupler queue full - message lost")
+            if msg.is_iso_protocol:
+                super().process_msg(msg)    # proxy treatment
+            else:
+                for application in self._applications.values():
+                    application.receive_data_msg(msg)
+
+
 

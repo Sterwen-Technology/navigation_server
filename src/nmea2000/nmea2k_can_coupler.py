@@ -14,6 +14,7 @@ import queue
 
 from nmea_routing.coupler import Coupler, CouplerTimeOut, CouplerWriteError
 from nmea2000.nmea2k_active_controller import NMEA2KActiveController
+from nmea2000.nmea2k_application import NMEA2000Application
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG
 from utilities.global_exceptions import ObjectCreationError
@@ -21,38 +22,35 @@ from utilities.global_exceptions import ObjectCreationError
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-class DirectCANCoupler(Coupler):
+class DirectCANCoupler(Coupler, NMEA2000Application):
 
     def __init__(self, opts):
 
         super().__init__(opts)
-
-        if self._n2k_ctlr_name is None:
-            _logger.critical("DirectCANCoupler mus have an associated NMEA2000 Controller")
-            raise ObjectCreationError("No CAN interface")
         self._in_queue = queue.Queue(20)
-        self.address = 0
+
+    def set_controller(self, controller: NMEA2KActiveController):
+        _logger.debug("DirectCANCoupler initializing controller")
+        NMEA2000Application.__init__(self, controller)
 
     def open(self):
-
-        if not isinstance(self._n2k_controller, NMEA2KActiveController):
-            _logger.critical("Incorrect NMEAController for DirectCAN")
-            super().stop()
-            return False
-
-        self._n2k_controller.set_coupler_queue(self._in_queue)
+        self._controller.CAN_iterface.wait_for_bus_ready()
         return True
 
     def stop(self):
-        if self._n2k_controller is not None:
-            self._n2k_controller.set_coupler_queue(None)
         super().stop()
 
     def close(self):
         pass
 
     def total_msg_raw(self):
-        return self._n2k_controller.CAN_interface.total_msg_raw()
+        return self._controller.CAN_interface.total_msg_raw()
+
+    def receive_data_msg(self, msg: NMEA2000Msg):
+        try:
+            self._in_queue.put(msg, block=False)
+        except queue.Full:
+            _logger.error("CAN %s queue full - discarding message" % self.name())
 
     def read(self) -> NavGenericMsg:
         '''
@@ -85,8 +83,8 @@ class DirectCANCoupler(Coupler):
         return self.send(msg.msg)
 
     def send(self, msg: NMEA2000Msg):
-        return self._n2k_controller.CAN_interface.send(msg)
+        return self._controller.CAN_interface.send(msg)
 
     def stop_trace(self):
-        self._n2k_controller.CAN_interface.stop_trace()
+        self._controller.CAN_interface.stop_trace()
         super().stop_trace()

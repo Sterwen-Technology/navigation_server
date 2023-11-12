@@ -98,6 +98,7 @@ Warning: when the application is connected to the server all traffic is re-route
 
 This is an internal server that has no direct TCP access. All accesses to this server are via the Console. This server maintain the list of devices connected on the NMEA2000 network along with the information they are sending.
 It shall be associated to a coupler by defining the **nmea2000_controller** parameter to capture all relevant messages. This coupler must be configured with **nmea2000** or **nmea_mix** protocol.
+This server is to be used if the access to the NMEA2000 bus is done via a adapter device (see corresponding couplers here below), meaning that the controller has no control on the bus and can only monitor activity.
 
 | Name       | Type   | Default | Signification                                    |
 |------------|--------|---------|--------------------------------------------------|
@@ -106,15 +107,20 @@ It shall be associated to a coupler by defining the **nmea2000_controller** para
 
 #### NMEA2KActiveController(NMEA2KController) server
 
-This class extends the NMEA2KController feature by adding the capability to claim an address on the CAN bus and therefore send messages. By adding this class, the server becomes a full NMEA2000 device.
-In future versions, the controller shall be able to support several devices for simulation purpose.
+This class extends the NMEA2KController feature by adding the capability to claim an address on the CAN bus and therefore send messages. Therefore, it only works when the server has a direct connection to the NMEA2000 (CAN) bus.
+By adding this class, the server becomes a full NMEA2000 device and no adapter is needed.
+This controller performs the role of an ECU referring to J1939 standard. It can manage several applications (CA) that have each their own address on the CAN bus.
 
-| Name             | Type  | Default | Signification                                                            |
-|------------------|-------|---------|--------------------------------------------------------------------------|
-| address          | int   | 112     | address on the CAN bus between 1 and 253. Better to select an unused one |
-| unique_id        | int   | 0       | Identifier of the device on 21bits (see standard)                        |
-| manufacturer_id  | int   | 999     | This is the registration number of the manufacturer by the NMEA2000 body |
-| message_interval | float | 0.1     | minimum interval between message sending on the bus in seconds           |
+| Name             | Type   | Default | Signification                                                            |
+|------------------|--------|---------|--------------------------------------------------------------------------|
+| channel          | string | can0    | interface device supporting the socket CAN                               |
+| mac_source       | string | eth0    | Interface with MAC address to generate the device Unique ID from         |
+| manufacturer_id  | int    | 999     | This is the registration number of the manufacturer by the NMEA2000 body |
+| message_interval | float  | 0.1     | minimum interval between message sending on the bus in seconds           |
+| max_applications | int    | 8       | maximum number of applications supported by the controller               |
+| start_address    | int    | 128     | start address for allocation. 2x max_applications addresses are reserved |
+| applications | string list | None | List of the applications running on the controller |
+| trace | boolean | false | If true traces all CAN messages in a file (see tracing section) |
 
 
 
@@ -232,7 +238,7 @@ This class manages the interface with the VEDirect interface service (see) and c
 
 #### DirectCANCoupler
 This coupler class works when a CAN bus interface with socketcan driver is installed on the system. Obviously, only NMEA2000 messages can be processed.
-The CAN bus the coupler must be associated with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters.
+The CAN bus the coupler must be declared as **application** with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters and the coupler is considered as a specific device (CA) on the CAN bus. 
 
 #### GrpcNmeaCoupler
 
@@ -375,7 +381,10 @@ The following sections are recognized:
 
 Sections are not mandatory
 
-#### Exemple configuration file
+#### Exemple configuration files
+
+First example with only the the connectio to a replay server
+
 ```
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
@@ -411,16 +420,11 @@ couplers:
     autostart: true
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
-    # data_sink: DataAnalyser
     trace_messages: false
     trace_raw: false
 
 publishers:
 
-#    - MainLog:
-#       class: LogPublisher
-#        file: /data/solidsense/log/navigation.log
-#        instruments: [MiniPlex3]
 - TraceN2K:
       class: N2KTracePublisher
       couplers: [SNReplay]
@@ -434,6 +438,66 @@ data_clients:
 - DataAnalyser:
       class: NMEAGrpcDataClient
 
+
+```
+
+Second example with direct CAN access
+
+```
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+# log_file: test_fast_packet
+log_module:
+  nmea_routing.coupler: INFO
+  nmea2000.nmea2000_msg: INFO
+  nmea2000.nmea2k_controller: INFO
+  nmea2000.nmea2k_active_controller: DEBUG
+  nmea2000.nmea2k_device: INFO
+  nmea2000.nmea2k_application: DEBUG
+  nmea2000.n2k_name: INFO
+  nmea2000.nmea2k_can_interface: INFO
+  nmea2000.nmea2k_can_coupler: DEBUG
+
+servers:
+
+- NMEAServer:
+      class: NMEAServer
+      port: 4500
+      nmea2000: dyfmt
+
+- Console:
+      class: Console
+      port: 4502
+
+- NMEANetwork:
+      class: NMEA2KActiveController
+      trace: false
+      channel: can0
+      applications: [CANCoupler]
+
+- NMEAOutput:
+    class: NMEASenderServer
+    port: 4503
+    nmea2000: dyfmt
+    coupler: CANCoupler
+
+couplers:
+
+- CANCoupler:
+    class: DirectCANCoupler
+    autostart: true
+
+filters:
+
+- FastPacket:
+    class: NMEA2000Filter
+    pgn: [129029, 126996, 129540]
+    action: select
+
+- RaymarineProprietary:
+    class: NMEA2000Filter
+    pgn: [126720]
+    action: select
 
 ```
 

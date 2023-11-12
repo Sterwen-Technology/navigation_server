@@ -186,9 +186,6 @@ class SocketCANInterface(threading.Thread):
             except queue.Full:
                 _logger.warning("CAN read queue full, message ignored")
 
-
-        # _logger.debug("NMEA2000 message received %s" % n2k_msg.format1())
-
     def read_can(self) -> Message:
         # if self._access_lock.acquire(timeout=0.5):
             # _logger.debug("Acquire read lock")

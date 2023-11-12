@@ -21,6 +21,7 @@ log_module:
   nmea2000.nmea2k_application: DEBUG
   nmea2000.n2k_name: INFO
   nmea2000.nmea2k_can_interface: INFO
+  nmea2000.nmea2k_can_coupler: DEBUG
 
 servers:
 
@@ -37,26 +38,19 @@ servers:
       class: NMEA2KActiveController
       trace: false
       channel: can0
+      applications: [CANCoupler]
 
 - NMEAOutput:
     class: NMEASenderServer
     port: 4503
     nmea2000: dyfmt
-    coupler: CAN
-
-- NMEAOutput:
-    class: NMEASenderServer
-    port: 4503
-    nmea2000: dyfmt
-    coupler: CAN
-
+    coupler: CANCoupler
 
 couplers:
 
-- CAN:
+- CANCoupler:
     class: DirectCANCoupler
     autostart: true
-    nmea2000_controller: NMEANetwork
 
 filters:
 

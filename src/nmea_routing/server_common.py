@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ from concurrent import futures
 from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.filters import FilterSet
 
-_logger = logging.getLogger("ShipDataServer"+"."+__name__)
+_logger = logging.getLogger("ShipDataServer."+__name__)
 
 
 class NavigationServer:
@@ -41,11 +41,15 @@ class NavigationServer:
         except KeyError:
             _logger.error("Unknown reference %s" % name)
             return None
+        return self.resolve_direct_ref(reference)
+
+    @staticmethod
+    def resolve_direct_ref(reference):
         try:
             value = NavigationConfiguration.get_conf().get_object(reference)
         except KeyError:
             return None
-        _logger.debug("Server resolve name %s ref %s result:%s" % (name, reference, value))
+        _logger.debug("Server resolve %s result:%s" % (reference, value))
         return value
 
     def add_coupler(self, instrument):

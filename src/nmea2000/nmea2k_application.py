@@ -14,6 +14,7 @@
 import logging
 import threading
 
+from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_device import NMEA2000Device
 from nmea2000.nmea2k_name import NMEA2000Name
 from nmea2000.nmea2k_iso_messages import AddressClaim, ISORequest, ProductInformation
@@ -32,7 +33,7 @@ class NMEA2000ApplicationPool:
         self._max_application = opts.get('max_applications', int, 8)
         self._unique_id_root = unique_id_root << (self._max_application - 1).bit_length()
         address_pool_start = opts.get('first_address', int, 128)
-        self._address_pool = [a for a in range(address_pool_start, address_pool_start + (2 * self._max_application))]
+        self._address_pool = [a for a in range(address_pool_start, address_pool_start + (2 * self._max_application) + 1)]
         self._ap_index = 0
         self._application_count = 0
 
@@ -116,7 +117,7 @@ class NMEA2000Application(NMEA2000Device):
         _logger.debug("CAN bus ready")
         self.send_address_claim()
 
-    def start(self):
+    def start_application(self):
         _logger.debug("NMEA2000 Application device address %d starts" % self._address)
         t = threading.Thread(target=self.wait_for_bus_ready, daemon=True)
         t.start()
@@ -126,6 +127,7 @@ class NMEA2000Application(NMEA2000Device):
         If we are here we have a address conflict
         By the book, we need to look at the name value
         '''
+        _logger.debug("Application [%d] receive address claim from address %d" % (self._address, address_claim_obj.sa))
         if self._claim_timer is not None:
             self._claim_timer.cancel()
         iso_name = address_claim_obj.name
@@ -168,6 +170,9 @@ class NMEA2000Application(NMEA2000Device):
         self._product_information.sa = self._address
         _logger.debug("Send product information %s" % self._product_information.message().format1())
         self._controller.CAN_interface.send(self._product_information.message())
+
+    def receive_data_msg(self, msg: NMEA2000Msg):
+        pass
 
 
 
