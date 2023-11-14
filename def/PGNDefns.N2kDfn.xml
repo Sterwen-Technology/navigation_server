@@ -652,6 +652,9 @@
     </PGNDefn>
     <PGNDefn PGN="126720">
       <Name>Maretron: Slave Response</Name>
+      <Proprietary>
+        <Manufacturer>Maretron</Manufacturer>
+      </Proprietary>
       <ByteLength>8</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
@@ -711,6 +714,10 @@
     <PGNDefn PGN="126720">
       <Name>Airmar: Calibrate Compass</Name>
       <ByteLength>24</ByteLength>
+      <Proprietary>
+        <Manufacturer>Airmar</Manufacturer>
+        <MessageId>0</MessageId>
+      </Proprietary>
       <Fields>
         <Field Name="Manufacturer Code">
           <Description>Airmar</Description>
@@ -2403,13 +2410,13 @@
       <Name>Position, Rapid Update</Name>
       <ByteLength>8</ByteLength>
       <Fields>
-        <DblField Name="Latitude">
+        <DblField Name="Latitude" key="latitude">
           <BitOffset>0</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Latitude</FormatAs>
           <Scale>1E-07</Scale>
         </DblField>
-        <DblField Name="Longitude">
+        <DblField Name="Longitude" key="longitude">
           <BitOffset>32</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Longitude</FormatAs>
