@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     21/10/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 

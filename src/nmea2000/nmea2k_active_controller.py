@@ -5,12 +5,11 @@
 # Author:      Laurent Carré
 #
 # Created:     02/10/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
 import logging
-import queue
 
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_controller import NMEA2KController

@@ -5,6 +5,8 @@ The system is based on the building blocks described here below.
 The configuration and parameters of the system are described in a Yaml file.
 All building blocks are optional, but if there is no Coupler or Publisher nothing will happen.
 
+**IMPORTANT NOTE: The NMEA message server does not perform any conversion between NMEA0183 messages and NMEA2000 messages in any direction**
+
 The system works with a single Python process and messages are exchanged internally. This can lead to a scalability problem but this was not observed so far.
 
 
