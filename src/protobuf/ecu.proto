@@ -1,0 +1,47 @@
+//-------------------------------------------------------------------------------
+// Name:        ecu.proto
+// Purpose:     protobuf and grpc for remote controller applications
+//
+// Author:      Laurent Carré
+//
+// Created:     14/11/2023
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax="proto3";
+
+import "nmea2000.proto";
+
+message OpenControllerApplicationRequest {
+  uint32 preferred_address=1;
+  string title=2;
+  repeated uint32 subscribed_pgn=3;
+}
+
+message ControllerApplication {
+  uint32 ca_id=1;
+  uint32 actual_address=2;
+  string status=3;
+}
+
+message ControllerApplicationRequest {
+  uint32 ca_id=1;
+  string request=2;
+}
+
+message ControllerApplicationStatus {
+  uint32 ca_id=1;
+  string status=2;
+}
+
+message ControllerApplicationSendMsg {
+  uint32 ca_id=1;
+  nmea2000pb msg=2;
+}
+
+service ECU_NMEA2000 {
+  rpc open_ca(OpenControllerApplicationRequest) returns (ControllerApplication) {}
+  rpc getMessages(ControllerApplicationRequest) returns (stream nmea2000pb) {}
+  rpc sendMessage(ControllerApplicationSendMsg) returns (ControllerApplicationStatus) {}
+}
