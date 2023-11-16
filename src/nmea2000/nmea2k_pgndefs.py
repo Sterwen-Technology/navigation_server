@@ -14,6 +14,7 @@ from collections import namedtuple
 
 from utilities.xml_utilities import XMLDefinitionFile, XMLDecodeError
 from nmea2000.nmea2k_name import NMEA2000Name
+from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_encode_decode import (BitField, BitFieldSplitException, DecodeSpecs, N2KDecodeResult,
                                            DecodeDefinitions)
 
@@ -59,43 +60,72 @@ class PGNDefinitions(XMLDefinitionFile):
         return PGNDefinitions.pgn_definitions
 
     @staticmethod
-    def pgn_definition(pgn):
-        return PGNDefinitions.pgn_definitions.pgn_def(pgn)
+    def pgn_definition(pgn, manufacturer_id=0):
+        return PGNDefinitions.pgn_definitions.pgn_def(pgn, manufacturer_id)
 
     @staticmethod
-    def print_pgndef(pgn: int, output):
-        PGNDefinitions.pgn_definitions.pgn_def(pgn).print_description(output)
+    def print_pgndef(pgn: int, output, manufacturer_id=0):
+        PGNDefinitions.pgn_definitions.pgn_def(pgn, manufacturer_id).print_description(output)
 
     def __init__(self, xml_file):
 
         super().__init__(xml_file, 'PGNDefns')
         self._pgn_defs = {}
+        self._pgn_count = 0
         #  pgndefs = defs.findall('PGNDefn')
         for pgnxml in self._definitions.iterfind('PGNDefn'):
             try:
                 pgn = PGNDef(pgnxml)
-                self._pgn_defs[pgn.id] = pgn
+                _logger.debug("Processing XML for PGN %d:%s" % (pgn.id, pgn.name))
+                existing_entry = self._pgn_defs.get(pgn.id, None)
             except N2KDefinitionError as e:
                 _logger.error("%s PGN ignored" % e)
+                continue
+            if pgn.nb_fields() == 0:
+                _logger.info("PGN %d:%s with no fields => ignored" % (pgn.id, pgn.name))
+                continue
+            if pgn.is_proprietary:
+                _logger.debug("PGN %d is proprietary" % pgn.id)
+                if existing_entry is None:
+                    existing_entry = ProprietaryPGNSet()
+                    self._pgn_defs[pgn.id] = existing_entry
+                existing_entry.add_variant(pgn.manufacturer_id, pgn)
+                self._pgn_count += 1
+            else:
+                if existing_entry is None:
+                    self._pgn_defs[pgn.id] = pgn
+                    self._pgn_count += 1
+                else:
+                    _logger.error("Duplicate PGN %d entry => New entry is ignored" % pgn.id)
 
     def print_summary(self):
-        print("NMEA2000 PGN definitions => number of PGN:%d" % len(self._pgn_defs))
-        for pgn in self._pgn_defs.values():
+        print("NMEA2000 PGN definitions => number of PGN:%d" % self._pgn_count)
+        for pgn in self.pgns():
             print(pgn, pgn.length,"Bytes")
             for f in pgn.fields():
                 print("\t", f.descr())
 
     def pgns(self):
-        return self._pgn_defs.values()
+        # become an iterator
+        for pgn_def in self._pgn_defs.values():
+            if pgn_def.is_proprietary:
+                for pgn_prop in pgn_def.pgns():
+                    yield pgn_prop
+            else:
+                yield pgn_def
 
-    def pgn_def(self, number):
+    def pgn_def(self, number, manufacturer_id=0):
         if type(number) is str:
             number = int(number)
         try:
-            return self._pgn_defs[number]
+            entry = self._pgn_defs[number]
         except KeyError:
             # _logger.error("Unknown PGN %d" % number)
             raise N2KUnknownPGN("Unknown PGN %d" % number)
+        if entry.is_proprietary:
+            return entry.get_variant(manufacturer_id)
+        else:
+            return entry
 
 
 PGNRange = namedtuple('PGNRange', ['start', 'to', 'pdu', 'value', 'description'])
@@ -141,6 +171,15 @@ class PGNDef:
                 if pgn <= r.to:
                     return r
         raise N2KDefinitionError("Invalid PGN %d" % pgn)
+
+    @staticmethod
+    def is_pgn_proprietary(pgn):
+        range = PGNDef.find_range(pgn)
+        if range.value in (PGNDef.PROP_SINGLE_FRAME_ADDRESSED, PGNDef.PROP_SINGLE_FRAME,
+                           PGNDef.PROP_FAST_PACKET_ADDRESSED, PGNDef.PROP_FAST_PACKET):
+            return True
+        else:
+            return False
 
     @staticmethod
     def pgn_pdu1_adjust(pgn):
@@ -190,6 +229,8 @@ class PGNDef:
             self.pdu_type = self.PDU2
         self._range = self.find_range(self._id)
         self._name = pgnxml.find('Name').text
+        self._proprietary = self.is_pgn_proprietary(self._id)
+        self._manufacturer_id = None
         self._fields = {}
         self._fast_packet = False
         self._bitfield_in_create = None
@@ -209,11 +250,13 @@ class PGNDef:
             self._fast_packet = True
 
         fields = pgnxml.find('Fields')
+        self._field_list = []
+
         if fields is None:
             _logger.info("PGN %s has no Fields" % self._id_str)
             return
+
         _logger.debug("Starting fields analysis for PGN %d %s" % (self._id, self._name))
-        self._field_list = []
         for field in fields.iter():
             if field.tag.endswith('Field'):
                 try:
@@ -237,6 +280,21 @@ class PGNDef:
                 break
         if self._bitfield_in_create is not None:
             self._bitfield_in_create.finalize()
+        if self._proprietary:
+            # look for the manufacturer
+            try:
+                mfg_field = self.search_field('Manufacturer Code')
+            except KeyError:
+                raise N2KDefinitionError("PDN%d:%s - Missing 'Manufacturer Code' field" % (self._id, self._name))
+            try:
+                mfg_name = mfg_field.description
+            except AttributeError:
+                raise N2KDefinitionError("PGN %d:%s - Missing Manufacturer name in Description" % (self._id, self._name))
+            # now retrieve the manufacturer id from the name
+            try:
+                self._manufacturer_id = Manufacturers.get_from_key(mfg_name).code
+            except KeyError:
+                raise N2KDefinitionError("PGN %d:%s - Unknown Manufacturer name %s" % (self._id, self._name, mfg_name))
 
     def __str__(self):
         return "%s %s" % (self._id_str, self._name)
@@ -259,12 +317,35 @@ class PGNDef:
     def fields(self):
         return self._fields.values()
 
-    def field(self, name):
-        return self._fields[name]
+    def nb_fields(self) -> int:
+        return len(self._field_list)
+
+    def search_field(self, name):
+        # need to perform a full search
+        for f in self._field_list:
+            if isinstance(f, (BitField, RepeatedFieldSet)):
+                try:
+                    return f.search_field(name)
+                except KeyError:
+                    continue
+            elif f.name == name:
+                return f
+        raise KeyError
 
     @property
     def pdu_format(self):
         return self._pdu_format
+
+    @property
+    def is_proprietary(self) -> bool:
+        return self._proprietary
+
+    @property
+    def manufacturer_id(self) -> int:
+        if self._manufacturer_id is not None:
+            return self._manufacturer_id
+        else:
+            raise ValueError
 
     def pgn_data(self):
         data = [
@@ -470,6 +551,10 @@ class Field:
     @property
     def abs_bit_offset(self):
         return self.BitOffset
+
+    @property
+    def description(self):
+        return self.Description
 
     @property
     def start_byte(self):
@@ -854,6 +939,9 @@ class RepeatedFieldSet:
     def name(self):
         return self._name
 
+    def search_field(self, name):
+        return self._subfields[name]
+
     def descr(self):
         out = "%s %s" % (self._name, "RepeatedFieldSet")
         for f in self._subfields.values():
@@ -931,4 +1019,21 @@ class ASCIIFixField(Field):
         return self.encode_str(value, buffer, index)
 
 
+class ProprietaryPGNSet:
 
+    def __init__(self):
+        self._variants = {}
+
+    def add_variant(self, manufacturer_id: int, pgn_def: PGNDef):
+        self._variants[manufacturer_id] = pgn_def
+
+    def get_variant(self, manufacturer_id) -> PGNDef:
+            return self._variants[manufacturer_id]
+
+    @property
+    def is_proprietary(self) -> bool:
+        return True
+
+    def pgns(self):
+        for p in self._variants.values():
+            yield p

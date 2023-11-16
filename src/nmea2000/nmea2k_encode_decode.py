@@ -81,6 +81,9 @@ class BitFieldDef:
     def bit_length(self):
         return self._field.bit_length
 
+    def field(self):
+        return self._field
+
     def __str__(self):
         return "Field %s offset %d length %d" % (self._field.name, self._rel_offset, self._field.bit_length)
 
@@ -153,6 +156,12 @@ class BitField:
             res = bfdef.get_value(val)
             _logger.debug("Decoding field %s (%dbits) result=%s" % (bfdef.field_name(), bfdef.bit_length(), str(res)))
             result_fields[bfdef.field_name()] = res
+
+    def search_field(self, name):
+        for bf in self._fields:
+            if bf.field_name() == name:
+                return bf.field()
+        raise KeyError
 
 
 class DecodeSpecs:

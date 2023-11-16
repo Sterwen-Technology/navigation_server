@@ -111,6 +111,7 @@
       <ByteLength>5</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
+          <Description>Lowrance</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </Field>
@@ -480,6 +481,7 @@
       <ByteLength>8</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
+          <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </Field>
@@ -652,12 +654,10 @@
     </PGNDefn>
     <PGNDefn PGN="126720">
       <Name>Maretron: Slave Response</Name>
-      <Proprietary>
-        <Manufacturer>Maretron</Manufacturer>
-      </Proprietary>
       <ByteLength>8</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
+          <Description>Maretron</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </Field>
@@ -981,6 +981,7 @@
     <PGNDefn PGN="126720">
       <Name>Manufacturer Proprietary: Addressable Multi-Frame</Name>
       <ByteLength>2</ByteLength>
+      <Scope>Ignored</Scope>
       <Fields>
         <Field Name="Manufacturer Code">
           <BitOffset>0</BitOffset>
@@ -7010,6 +7011,7 @@
       <ByteLength>42</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
+          <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </Field>
@@ -7064,6 +7066,7 @@
       <ByteLength>113</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
+          <Description>Navico</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </Field>
@@ -7275,6 +7278,7 @@
       <ByteLength>2</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
+          <Description>Suzuki</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </Field>
@@ -7362,6 +7366,7 @@
       <ByteLength>14</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
+          <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </Field>
@@ -8088,6 +8093,7 @@
       <ByteLength>9</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
+          <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </Field>
@@ -8134,6 +8140,7 @@
       <ByteLength>9</ByteLength>
       <Fields>
         <Field Name="Manufacturer Code">
+          <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </Field>

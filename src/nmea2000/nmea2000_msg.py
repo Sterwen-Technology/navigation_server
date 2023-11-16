@@ -34,6 +34,8 @@ class N2KEncodeError(Exception):
 
 class NMEA2000Msg:
 
+    __slots__ = ('_pgn', '_prio', '_sa', '_da', '_is_iso', '_ts', '_fast_packet', '_payload')
+
     ts_format = "%H:%M:%S.%f"
 
     def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytes = None, timestamp=0.0):
@@ -258,6 +260,8 @@ class NMEA2000Object:
     Specific subclasses can be created to handle special processing
     '''
 
+    __slots__ = ('_pgn', '_pgn_def', '_sa', '_da', '_fields', '_message', '_prio')
+
     def __init__(self, pgn: int):
         self._pgn = pgn
         try:
@@ -328,6 +332,8 @@ class FastPacket:
     An instance is created each time a new sequence is detected
     '''
 
+    __slots__ = ('_key', '_source', '_seq', '_byte_length', '_length', '_pgn', '_frames', '_count', '_nbframes',
+                 '_timestamp')
     @staticmethod
     def compute_key(pgn, addr, seq):
         return pgn + (addr << 16) + (seq << 24)

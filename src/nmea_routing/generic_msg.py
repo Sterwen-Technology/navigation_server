@@ -19,6 +19,8 @@ _logger = logging.getLogger("ShipDataServer."+__name__)
 
 class NavGenericMsg:
 
+    __slots__ = ('_type', '_msg', '_raw', '_datalen')
+
     def __init__(self, msg_type, raw=None, msg=None):
         if msg_type not in [NULL_MSG, TRANSPARENT_MSG, N0183_MSG, N2K_MSG, N0183D_MSG]:
             raise ValueError
