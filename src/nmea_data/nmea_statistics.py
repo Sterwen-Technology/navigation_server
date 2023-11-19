@@ -11,6 +11,7 @@
 
 import logging
 from nmea2000.nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
+from nmea2000.nmea2000_msg import NMEA2000Msg
 
 
 _logger = logging.getLogger("Data_analyser")
@@ -57,9 +58,10 @@ class NMEA183Statistics:
 
 class N2KStatEntry:
 
-    def __init__(self, pgn, sa):
+    def __init__(self, pgn, sa, mfg):
         self._pgn = pgn
         self._sa = sa
+        self._mfg = mfg
         self._count = 0
 
     def add_count(self):
@@ -67,9 +69,9 @@ class N2KStatEntry:
 
     def __str__(self):
         try:
-            pgn_name = PGNDefinitions.pgn_definition(self._pgn).name
+            pgn_name = PGNDefinitions.pgn_definition(self._pgn, self._mfg).name
         except N2KUnknownPGN:
-            pgn_name = "Unknown"
+            pgn_name = "Unknown (Mfg=%d)" % self._mfg
 
         return "PGN %d (%s) sa %d: %d" % (self._pgn, pgn_name, self._sa, self._count)
 
@@ -80,14 +82,21 @@ class N2KStatistics:
         self._entries = {}
         self._total_msg = 0
 
-    def add_entry(self, pgn, sa):
-        key = sa << 18 + pgn
+    def add_entry(self, msg):
+
+        if PGNDefinitions.is_pgn_proprietary(msg.pgn):
+            manufacturer = msg.get_manufacturer()
+            # print("PGN", msg.pgn, "Manufacturer", manufacturer)
+            key = msg.sa << 29 + msg.pgn << 11 + manufacturer
+        else:
+            manufacturer = 0
+            key = msg.sa << 18 + msg.pgn
         self._total_msg += 1
         new_entry = False
         try:
             entry = self._entries[key]
         except KeyError:
-            entry = N2KStatEntry(pgn, sa)
+            entry = N2KStatEntry(msg.pgn, msg.sa, manufacturer)
             new_entry = True
         entry.add_count()
         if new_entry:

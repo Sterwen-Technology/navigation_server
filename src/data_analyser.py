@@ -17,10 +17,11 @@ import grpc
 import signal
 import time
 from generated.input_server_pb2_grpc import NMEAInputServerServicer, add_NMEAInputServerServicer_to_server
-from generated.input_server_pb2 import server_resp
+from generated.nmea_messages_pb2 import server_resp
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
+from nmea2000.nmea2000_msg import NMEA2000Msg
 
 _version = "V1.00"
 
@@ -63,7 +64,9 @@ class DataServicer(NMEAInputServerServicer):
         resp.reportCode = 0
         if request.HasField("N2K_msg"):
             msg = request.N2K_msg
-            self._dataset.add_n2kentry(msg.pgn, msg.sa)
+            n2k_msg = NMEA2000Msg(msg.pgn, protobuf=msg)
+            # print(n2k_msg.format2())
+            self._dataset.add_n2kentry(n2k_msg)
         elif request.HasField("N0183_msg"):
             msg = request.N0183_msg
             self._dataset.add_n183entry(msg.talker, msg.formatter)
@@ -114,8 +117,8 @@ class DataStatistics:
     def set_server(self, server):
         self._server = server
 
-    def add_n2kentry(self, pgn, sa):
-        self._n2kstats.add_entry(pgn, sa)
+    def add_n2kentry(self, msg):
+        self._n2kstats.add_entry(msg)
 
     def add_n183entry(self, talker, formatter):
         self._n183stats.add_entry(talker, formatter)

@@ -13,7 +13,7 @@ import logging
 from can import Bus, Message, CanError
 from nmea2000.nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
 from nmea2000.nmea2k_pgndefs import PGNDef, PGNDefinitions, N2KUnknownPGN
-from utilities.message_trace import NMEAMsgTrace, MessageTraceError
+from log_replay.message_trace import NMEAMsgTrace, MessageTraceError
 import threading
 import queue
 import time
@@ -170,11 +170,7 @@ class SocketCANInterface(threading.Thread):
             if data is None:
                 return None
         else:
-            try:
-                fp = PGNDefinitions.pgn_definition(pgn).fast_packet()
-            except N2KUnknownPGN:
-                fp = False
-            if fp:
+            if PGNDef.fast_packet_check(pgn):
                 self._fp_handler.process_frame(pgn, sa, data)
                 return None
         # end fast packet handling

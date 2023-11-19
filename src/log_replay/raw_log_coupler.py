@@ -13,11 +13,12 @@ import threading
 import queue
 import time
 
-from utilities.raw_log_reader import RawLogFile
-from nmea_routing.coupler import Coupler
+from log_replay.raw_log_reader import RawLogFile, LogReadError
+from nmea_routing.coupler import Coupler, CouplerOpenRefused, IncompleteMessage
 from nmea0183.nmea0183_msg import NMEA0183Msg, NMEAInvalidFrame
-from nmea2000.nmea2000_msg import FastPacketHandler, fromProprietaryNmea
-from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG
+from nmea2000.nmea2000_msg import FastPacketHandler, fromProprietaryNmea, FastPacketException, NMEA2000Msg, N2KUnknownPGN
+from nmea2000.nmea2k_pgndefs import PGNDefinitions, PGNDef
+from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
 from nmea_routing.shipmodul_if import ShipModulInterface
 from nmea_routing.ydn2k_coupler import YDCoupler
 
@@ -27,7 +28,7 @@ _logger = logging.getLogger("ShipDataServer."+__name__)
 class AsynchLogReader(threading.Thread):
 
     def __init__(self, out_queue, process_message):
-        super().__init__()
+        super().__init__(daemon=True)
         self._logfile = None
         self._out_queue = out_queue
         self._stop_flag = False
@@ -58,17 +59,19 @@ class AsynchLogReader(threading.Thread):
                 continue
             try:
                 frame = self._logfile.read_message()
-            except ValueError:
-                _logger.error("LogCoupler error in message or end of file index=%d date:%s msg:%s" %
-                              (self._logfile.index,
-                               self._logfile.get_current_log_date(),
-                               self._logfile.message(self._logfile.index)))
+            except LogReadError as err:
+                if err.reason == "EOF":
+                    _logger.info("Log Coupler End of file")
+                else:
+                    _logger.error("LogCoupler error in message index=%d msg:%s" %
+                                  (self._logfile.index,
+                                   err.reason))
                 self._out_queue.put(NavGenericMsg(NULL_MSG))
                 break
 
             try:
                 msg = self._process_message(frame)
-            except ValueError:
+            except IncompleteMessage:
                 continue
             self._out_queue.put(msg)
 
@@ -87,6 +90,7 @@ class RawLogCoupler(Coupler):
         self._fast_packet_handler = FastPacketHandler(self)
         self._in_queue = None
         self._reader = None
+        self._max_attempt = 1  # never retry
         # filters
         pgn_white_list = opts.getlist('pgn_white_list', int)
         if pgn_white_list is not None and len(pgn_white_list) > 0:
@@ -96,6 +100,10 @@ class RawLogCoupler(Coupler):
 
     def open(self):
         _logger.info("LogCoupler %s opening log file %s" % (self.name(), self._filename))
+        if self._logfile is not None:
+            # we can't reopen a file
+            raise CouplerOpenRefused
+
         try:
             self._logfile = RawLogFile(self._filename)
         except IOError:
@@ -109,6 +117,8 @@ class RawLogCoupler(Coupler):
                 self._reader = AsynchLogReader(self._in_queue, self.process_n2k)
         elif self._logfile.file_type == "YDCoupler":
             self._reader = AsynchLogReader(self._in_queue, self.process_yd_frame)
+        elif self._logfile.file_type == "SocketCANInterface":
+            self._reader = AsynchLogReader(self._in_queue, self.process_can_frame)
 
         self._reader.open(self._logfile)
         self._state = self.OPEN
@@ -153,7 +163,7 @@ class RawLogCoupler(Coupler):
                           (self._logfile.index,
                            self._logfile.get_current_log_date(),
                            self._logfile.message(self._logfile.index)))
-            raise ValueError
+            raise IncompleteMessage
         return msg0183
 
     def process_nmea0183(self, frame):
@@ -174,6 +184,41 @@ class RawLogCoupler(Coupler):
     def process_yd_frame(self, frame):
         msg = YDCoupler.decode_frame(self, frame, self._pgn_white_list)
         return msg
+
+    def process_can_frame(self, frame):
+
+        try:
+            can_id = int(frame[:8], 16)
+            data = bytearray.fromhex(frame[9:])
+        except ValueError:
+            _logger.error("Log coupler => erroneous frame:%s" % frame)
+            raise IncompleteMessage
+
+        pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
+        sa = can_id & 0xFF
+        if self._pgn_white_list is not None:
+            if pgn not in self._pgn_white_list:
+                raise IncompleteMessage
+        prio = (can_id >> 26) & 0x7
+        # Fast packet handling
+        if self._fast_packet_handler.is_pgn_active(pgn, sa, data):
+            try:
+                data = self._fast_packet_handler.process_frame(pgn, sa, data)
+            except FastPacketException as e:
+                _logger.error("CAN interface Fast packet error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
+                raise IncompleteMessage
+            if data is None:
+                raise IncompleteMessage
+        else:
+            if PGNDef.fast_packet_check(pgn):
+                self._fast_packet_handler.process_frame(pgn, sa, data)
+                raise IncompleteMessage
+        # end fast packet handling
+        n2k_msg = NMEA2000Msg(pgn, prio, sa, da, data)
+        if n2k_msg is not None:
+            return NavGenericMsg(N2K_MSG, msg=n2k_msg)
+        else:
+            raise IncompleteMessage
 
     def log_file_characteristics(self) -> dict:
         if self._state is self.NOT_READY:

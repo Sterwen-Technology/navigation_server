@@ -102,6 +102,8 @@ class BitField:
         8: ("<Q", lambda v: v[0])
         }
 
+    struct_2b = struct.Struct("<H")
+
     def __init__(self, field, no):
         self._bit_length = 0
         self._byte_length = 0
@@ -162,6 +164,10 @@ class BitField:
             if bf.field_name() == name:
                 return bf.field()
         raise KeyError
+
+    @staticmethod
+    def decode_uint16(data):
+        return BitField.struct_2b.unpack(data[:2])[0]
 
 
 class DecodeSpecs:

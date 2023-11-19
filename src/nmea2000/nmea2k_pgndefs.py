@@ -67,6 +67,10 @@ class PGNDefinitions(XMLDefinitionFile):
     def print_pgndef(pgn: int, output, manufacturer_id=0):
         PGNDefinitions.pgn_definitions.pgn_def(pgn, manufacturer_id).print_description(output)
 
+    @staticmethod
+    def is_pgn_proprietary(pgn: int) -> bool:
+        return PGNDefinitions.pgn_definitions.is_proprietary_entry(pgn)
+
     def __init__(self, xml_file):
 
         super().__init__(xml_file, 'PGNDefns')
@@ -87,7 +91,7 @@ class PGNDefinitions(XMLDefinitionFile):
             if pgn.is_proprietary:
                 _logger.debug("PGN %d is proprietary" % pgn.id)
                 if existing_entry is None:
-                    existing_entry = ProprietaryPGNSet()
+                    existing_entry = ProprietaryPGNSet(pgn.id)
                     self._pgn_defs[pgn.id] = existing_entry
                 existing_entry.add_variant(pgn.manufacturer_id, pgn)
                 self._pgn_count += 1
@@ -126,6 +130,13 @@ class PGNDefinitions(XMLDefinitionFile):
             return entry.get_variant(manufacturer_id)
         else:
             return entry
+
+    def is_proprietary_entry(self, number: int) -> bool:
+        try:
+            return self._pgn_defs[number].is_proprietary
+        except KeyError:
+            raise N2KUnknownPGN("Unknown PGN %d" % number)
+
 
 
 PGNRange = namedtuple('PGNRange', ['start', 'to', 'pdu', 'value', 'description'])
@@ -1021,14 +1032,24 @@ class ASCIIFixField(Field):
 
 class ProprietaryPGNSet:
 
-    def __init__(self):
+    def __init__(self, pgn):
         self._variants = {}
+        self._default = None
+        self._pgn = pgn
 
     def add_variant(self, manufacturer_id: int, pgn_def: PGNDef):
         self._variants[manufacturer_id] = pgn_def
+        if self._default is None:
+            self._default = pgn_def
 
     def get_variant(self, manufacturer_id) -> PGNDef:
-            return self._variants[manufacturer_id]
+        if manufacturer_id == 0:
+            return self._default
+        else:
+            try:
+                return self._variants[manufacturer_id]
+            except KeyError:
+                raise N2KUnknownPGN("PGN %d => Unknown variant for manufacturer %d " % (self._pgn, manufacturer_id))
 
     @property
     def is_proprietary(self) -> bool:

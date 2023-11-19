@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     23/10/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -40,7 +40,6 @@ class NMEAGrpcDataClient:
             self._filters = FilterSet(filter_names)
         self._publisher = None
         self._nmea0183_raw = opts.get('nmea0138_raw', bool, True)
-
 
     def name(self):
         return self._name

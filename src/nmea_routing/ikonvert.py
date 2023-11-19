@@ -10,17 +10,14 @@
 #-------------------------------------------------------------------------------
 
 import serial
-import logging
 import threading
 import queue
 import base64
-import time
-import traceback
 
 from nmea_routing.coupler import Coupler
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.generic_msg import *
-from utilities.message_trace import NMEAMsgTrace
+from log_replay.message_trace import NMEAMsgTrace
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 

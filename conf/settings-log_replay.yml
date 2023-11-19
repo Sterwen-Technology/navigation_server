@@ -41,11 +41,12 @@ couplers:
 
 - LogReader:
     class: RawLogCoupler
-    logfile: /mnt/meaban/Bateau/tests/TRACE-MiniPlex3-230720-0644.log
+    logfile: /mnt/meaban/Bateau/tests/TRACE-CAN-if-can0-231101-1516.log
     autostart: true
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
     direction: read_only
+    # pgn_white_list: [126720]
     # data_sink: DataAnalyzer
     # pgn_white_list: [130842]
 

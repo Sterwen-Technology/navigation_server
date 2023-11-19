@@ -16,6 +16,7 @@ from nmea_routing.IPCoupler import BufferedIPCoupler
 from nmea2000.nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
 from nmea2000.nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG
+from nmea_routing.coupler import IncompleteMessage
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -46,7 +47,7 @@ class YDCoupler(BufferedIPCoupler):
         data_len = len(fields) - 3
         if data_len <= 0:
             _logger.error("YDCoupler - Invalid frame %s" % frame)
-            raise ValueError
+            raise IncompleteMessage
 
         def decode_msgid(msgid):
             pgn = int(msgid[1:6], 16) & 0x3FFFF
@@ -58,7 +59,7 @@ class YDCoupler(BufferedIPCoupler):
 
         if pgn_white_list is not None:
             if pgn not in pgn_white_list:
-                raise ValueError
+                raise IncompleteMessage
 
         if fields[1] == b'T':
             # reply on send
@@ -66,17 +67,17 @@ class YDCoupler(BufferedIPCoupler):
                 # there should be no send
                 if pgn not in [60159, 61183, 61236, 126996]:
                     _logger.error("YD Coupler unexpected reply from %d pgn:%d %s" % (sa, pgn, frame))
-                    raise ValueError
+                    raise IncompleteMessage
             else:
                 _logger.debug("%s reply on send: %s" % (coupler.name(), frame))
                 try:
                     coupler._reply_queue.put(frame, block=False)
                 except queue.Full:
                     _logger.critical("YD write feedback queue full")
-                raise ValueError
+                    raise IncompleteMessage
         elif fields[1] != b'R':
             _logger.error("YDCoupler - Invalid frame %s" % frame)
-            raise ValueError
+            raise IncompleteMessage
 
         # pgn, prio, sa = decode_msgid(fields[2])
 
@@ -90,7 +91,7 @@ class YDCoupler(BufferedIPCoupler):
             try:
                 fp = PGNDefinitions.pgn_definition(pgn).fast_packet()
             except N2KUnknownPGN:
-                raise ValueError
+                raise IncompleteMessage
             return fp
 
         if coupler.fast_packet_handler.is_pgn_active(pgn, sa, data):
@@ -99,12 +100,12 @@ class YDCoupler(BufferedIPCoupler):
             except FastPacketException as e:
                 _logger.error("YDCoupler Fast packet error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
                 coupler.add_event_trace(str(e))
-                raise ValueError
+                raise IncompleteMessage
             if data is None:
-                raise ValueError  # no error but just to escape
+                raise IncompleteMessage  # no error but just to escape
         elif check_pgn():
             coupler.fast_packet_handler.process_frame(pgn, sa, data)
-            raise ValueError  # no error but just to escape
+            raise IncompleteMessage  # no error but just to escape
 
         msg = NMEA2000Msg(pgn, prio, sa, 0, data)
         gmsg = NavGenericMsg(N2K_MSG, raw=frame, msg=msg)

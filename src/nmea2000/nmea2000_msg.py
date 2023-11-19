@@ -15,6 +15,7 @@ from google.protobuf.json_format import MessageToJson
 import base64
 
 from nmea2000.nmea2k_pgndefs import *
+from nmea2000.nmea2k_encode_decode import BitField
 
 from generated.nmea2000_pb2 import nmea2000pb
 from nmea_routing.generic_msg import *
@@ -38,28 +39,31 @@ class NMEA2000Msg:
 
     ts_format = "%H:%M:%S.%f"
 
-    def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytes = None, timestamp=0.0):
+    def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytes = None, timestamp=0.0,
+                 protobuf=None):
         self._pgn = pgn
-        self._prio = prio
-        self._sa = sa
-        self._da = da
+        if protobuf is None:
+            self._prio = prio
+            self._sa = sa
+            self._da = da
+            # change in version 1.3 => become float and referenced to the epoch
+            # change in version 1.5 => timestamp is kept from original one
+            if timestamp == 0.0:
+                self._ts = time.time()
+            else:
+                self._ts = timestamp
+            if payload is not None:
+                self._payload = payload
+                if len(payload) <= 8:
+                    self._fast_packet = False
+                else:
+                    self._fast_packet = True
+            else:
+                self._payload = None
+        else:
+            self.from_protobuf(protobuf)
         # define if the PGN is part of ISO and base protocol (do not carry navigation data)
         self._is_iso = PGNDef.pgn_for_controller(pgn)
-        # change in version 1.3 => become float and referenced to the epoch
-        # change in version 1.5 => timestamp is kept from original one
-        if timestamp == 0.0:
-            self._ts = time.time()
-        else:
-            self._ts = timestamp
-        if payload is not None:
-            self._payload = payload
-            if len(payload) <= 8:
-                self._fast_packet = False
-            else:
-                self._fast_packet = True
-        else:
-            self._payload = None
-
 
     @property
     def pgn(self):
@@ -157,6 +161,13 @@ class NMEA2000Msg:
             _logger.error("Type error %s on payload PGN %d type %s" % (e, self._pgn, type(self._payload)))
         return res
 
+    def from_protobuf(self, pb_msg: nmea2000pb):
+        self._sa = pb_msg.sa
+        self._da = pb_msg.da
+        self._prio = pb_msg.priority
+        self._ts = pb_msg.timestamp
+        self._payload = pb_msg.payload
+
     def serialize(self):
         return MessageToJson(self.as_protobuf())
 
@@ -187,6 +198,17 @@ class NMEA2000Msg:
     def asPGNST(self):
         msg_data = b'!PGNST,%d,%1d,%d,%d,%s\r\n' % (self._pgn, self._prio, self._sa, self._ts, self._payload.hex())
         return msg_data
+
+    def get_manufacturer(self) -> int:
+        '''
+        Read the manufacturer code in the payload. It is assumed that the message includes the Mfg Code
+        No checj here on message type
+        :return:
+        manufacturer code on int (11bits)
+        '''
+        mfg = BitField.decode_uint16(self._payload) & (2**11 - 1)
+        # print("PGN", self._pgn, "SA", self._sa, ":", self._payload.hex(), "mfg=", mfg, "%4X" % mfg)
+        return mfg
 
 
 def fromProprietaryNmea(msg: NMEA0183Msg) -> NMEA2000Msg:

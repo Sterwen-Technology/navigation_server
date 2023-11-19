@@ -12,6 +12,7 @@
 import datetime
 import logging
 import os
+import threading
 
 from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG
@@ -42,6 +43,7 @@ class NMEAMsgTrace:
             raise MessageTraceError
         self._trace_fd.write("H0|%s|V1.4\n" % trace_type)
         self._msg_count = 0
+        self._trace_lock = threading.Lock()
 
     def trace(self, direction, msg: NavGenericMsg):
         if self._trace_fd is not None:
@@ -88,6 +90,7 @@ class NMEAMsgTrace:
         """
 
         if self._trace_fd is not None:
+            self._trace_lock.acquire()
             ts_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             if direction == self.TRACE_IN:
                 fc = "R%d#%s>" % (self._msg_count, ts_str)
@@ -102,6 +105,7 @@ class NMEAMsgTrace:
                     msg = msg.decode()
                 except UnicodeDecodeError as err:
                     _logger.error("Trace raw on %s error %s on %s" % (self._name, err, msg))
+                    self._trace_lock.release()
                     return err.end
 
             if strip_suffix is not None:
@@ -111,13 +115,16 @@ class NMEAMsgTrace:
                 self._trace_fd.write(fc)
                 self._trace_fd.write(msg)
                 self._trace_fd.write('\n')
+                self._trace_lock.release()
             except IOError as err:
                 _logger.error("Error writing log file: %s" % err)
+                self._trace_lock.release()
                 raise MessageTraceError
         return 0
 
     def trace_n2k_raw(self, pgn, sa, prio, data, direction=TRACE_IN):
         if self._trace_fd is not None:
+            self._trace_lock.acquire()
             ts_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             if direction == self.TRACE_IN:
                 fc = "N%d#%s>" % (self._msg_count, ts_str)
@@ -126,12 +133,15 @@ class NMEAMsgTrace:
             self._msg_count += 1
             try:
                 self._trace_fd.write("%s%06d|%05X|%3d|%d|%s\n" % (fc, pgn, pgn, sa, prio, data.hex()))
+                self._trace_lock.release()
             except IOError as err:
                 _logger.error("Error writing log file:%s" % err)
+                self._trace_lock.release()
                 raise MessageTraceError
 
     def trace_n2k_raw_can(self, time_stamp:datetime.datetime, msg_count, direction, trace_str: str):
         if self._trace_fd is not None:
+            self._trace_lock.acquire()
             ts_str = time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f")
             if direction == self.TRACE_IN:
                 fc = "R%d#%s>" % (msg_count, ts_str)
@@ -144,17 +154,22 @@ class NMEAMsgTrace:
                 self._trace_fd.write(fc)
                 self._trace_fd.write(trace_str)
                 self._trace_fd.write('\n')
+                self._trace_lock.release()
             except IOError as err:
                 _logger.error("Error writing log file: %s" % err)
+                self._trace_lock.release()
                 raise MessageTraceError
 
     def add_event_trace(self, message: str):
         if self._trace_fd is not None:
+            self._trace_lock.acquire()
             try:
                 self._trace_fd.write("Event#>")
                 self._trace_fd.write(message)
                 self._trace_fd.write('\n')
+                self._trace_lock.release()
             except IOError as err:
                 _logger.error("Error writing log file: %s" % err)
+                self._trace_lock.release()
                 raise MessageTraceError
 

@@ -14,7 +14,7 @@ import logging
 
 from nmea_routing.server_common import NavTCPServer, ConnectionRecord
 from nmea_routing.publisher import Publisher
-from nmea_routing.coupler import Coupler
+from nmea_routing.coupler import Coupler, IncompleteMessage
 from nmea_routing.IPCoupler import BufferedIPCoupler
 from nmea_routing.generic_msg import *
 from nmea0183.nmea0183_msg import NMEA0183Msg, NMEA0183Sentences
@@ -196,7 +196,7 @@ class ShipModulInterface(BufferedIPCoupler):
                 fp = PGNDef.fast_packet_check(pgn)
             except N2KUnknownPGN as e:
                 _logger.info("%s MXPGN decode %s SA=%d data=%s" % (coupler.name(), e, source_addr, data.hex()))
-                raise ValueError
+                raise IncompleteMessage
             return fp
 
         # self.trace_n2k_raw(pgn, source_addr, prio, data)
@@ -208,9 +208,9 @@ class ShipModulInterface(BufferedIPCoupler):
             except FastPacketException as e:
                 _logger.error("Shipmodul Fast packet error %s pgn %d data %s" % (e, pgn, data.hex()))
                 coupler.add_event_trace(str(e))
-                raise ValueError
+                raise IncompleteMessage
             if data is None:
-                raise ValueError  # no error but just to escape
+                raise IncompleteMessage  # no error but just to escape
         elif check_pgn():
             _logger.debug("Shipmodul PGN %d is fast packet" % pgn)
             try:
@@ -218,7 +218,7 @@ class ShipModulInterface(BufferedIPCoupler):
             except FastPacketException as e:
                 _logger.error("Shipmodul Fast packet error %s on initial frame pgn %d data %s" % (e, pgn, data.hex()))
                 coupler.add_event_trace(str(e))
-            raise ValueError  # no error but just to escape
+            raise IncompleteMessage  # no error but just to escape
         msg = NMEA2000Msg(pgn, prio, source_addr, dest_addr, data)
         _logger.debug("Shipmodul PGN decode:%s" % str(msg))  # very intensive => to be removed
         gmsg = NavGenericMsg(N2K_MSG, msg=msg)

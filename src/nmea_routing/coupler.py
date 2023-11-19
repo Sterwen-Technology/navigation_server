@@ -8,8 +8,6 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
-import datetime
-import os
 import socket
 
 
@@ -22,7 +20,7 @@ from nmea_routing.publisher import PublisherOverflow
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
 from nmea2000.nmea2000_msg import NMEA2000Msg, NMEA2000Writer
 from nmea2000.nmea2k_pgndefs import PGNDef
-from utilities.message_trace import NMEAMsgTrace, MessageTraceError
+from log_replay.message_trace import NMEAMsgTrace, MessageTraceError
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -41,6 +39,14 @@ class CouplerTimeOut(CouplerReadError):
 
 
 class CouplerNotPresent(Exception):
+    pass
+
+
+class CouplerOpenRefused(Exception):
+    pass
+
+
+class IncompleteMessage(Exception):
     pass
 
 
@@ -206,25 +212,36 @@ class Coupler(threading.Thread):
         self._count_stamp = time.monotonic()
         nb_attempts = 0
         while not self._stopflag:
+            #
+            #   Open communication section
+            #
             if self._state == self.NOT_READY:
-                if not self.open():
-                    nb_attempts += 1
-                    if nb_attempts > self._max_attempt:
-                        _logger.error("Failed to open %s after %d attempts => coupler stops" % (
-                            self.name(), self._max_attempt
-                        ))
-                        break
-                    time.sleep(self._open_delay)
-                    continue
-                else:
-                    nb_attempts = 0
+                if nb_attempts >= self._max_attempt:
+                    _logger.error("Failed to open %s after %d attempts => coupler stops" % (
+                        self.name(), self._max_attempt
+                    ))
+                    break
+                try:
+                    if not self.open():
+                        nb_attempts += 1
+                        time.sleep(self._open_delay)
+                        continue
+                    else:
+                        nb_attempts = 0
+                except CouplerOpenRefused:
+                    _logger.critical("Fatal exception on coupler %s" % self._name)
+                    break
 
+            #  write only section
             if self._direction == self.WRITE_ONLY or self._suspend_flag:
                 if self._stopflag:
                     break
                 time.sleep(1.0)
                 continue
 
+            #
+            #  read section
+            #
             try:
                 msg = self.read()
                 if msg.type == NULL_MSG:
@@ -233,7 +250,6 @@ class Coupler(threading.Thread):
                     continue
                 else:
                     _logger.debug("%s push:%s" % (self.name(), msg))
-
             except CouplerTimeOut:
                 continue
             except (socket.timeout, CouplerReadError):
@@ -380,18 +396,19 @@ class Coupler(threading.Thread):
         while fetch_next:
             msg = self._read()
             self.trace(NMEAMsgTrace.TRACE_IN, msg)
-            # _logger.debug("Read:%s", msg)
+            # _logger.debug("Read primary:%s", msg)
             # if self._data_sink is not None:
                 # self._data_sink.send_msg(msg)
             # print(msg.printable())
             if msg.type == N2K_MSG:
-                if self._n2k_controller is not None and msg.is_iso_protocol():
+                if self._n2k_controller is not None and msg.msg.is_iso_protocol:
                     fetch_next = True
                     self._n2k_controller.send_message(msg.msg)
                 else:
                     fetch_next = False
             else:
                 fetch_next = False
+        # _logger.debug("Read valid data:%s", msg)
         return msg
 
     def _read(self) -> NavGenericMsg:

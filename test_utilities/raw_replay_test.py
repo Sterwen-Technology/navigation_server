@@ -9,13 +9,12 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 
-import socket
-import sys,os
+import sys
 import logging
 
 from argparse import ArgumentParser
 
-from src.utilities.raw_log_reader import RawLogFile
+from log_replay.raw_log_reader import RawLogFile, RawLogCANMessage
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -69,6 +68,7 @@ def main():
     records = RawLogFile(opts.file)
     for msg in records.get_messages(0, 50):
         print(msg)
+    print("Source addresses", RawLogCANMessage.source_addresses)
 
 
 if __name__ == '__main__':

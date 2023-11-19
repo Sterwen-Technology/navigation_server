@@ -43,7 +43,7 @@ from nmea_routing.ydn2k_coupler import YDCoupler
 from nmea_routing.serial_nmeaport import NMEASerialPort
 from nmea_data.data_client import NMEAGrpcDataClient
 from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter, NMEA2000TimeFilter
-from utilities.raw_log_coupler import RawLogCoupler
+from log_replay.raw_log_coupler import RawLogCoupler
 from nmea_routing.grpc_nmea_coupler import GrpcNmeaCoupler
 
 from utilities.log_utilities import NavigationLogSystem

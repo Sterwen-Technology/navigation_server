@@ -17,11 +17,34 @@ import threading
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
+class LogReadError(Exception):
+
+    def __init__(self, reason, message=None, index=0, record_time=0):
+        self._reason = reason
+        self._message = message
+        self._index = index
+        self._record_time = record_time
+
+    @property
+    def reason(self):
+        return self._reason
+
+    @property
+    def message(self):
+        return self._message
+
+    @property
+    def index(self):
+        return self._index
+
+    @property
+    def record_time(self):
+        return self._record_time
+
+
 class RawLogRecord:
 
-    def __init__(self, timestamp, message):
-        self._timestamp = timestamp
-        self._message = message[:len(message)-1].encode() + b'\r\n'
+    __slots__ = ('_timestamp', '_message')
 
     @property
     def timestamp(self):
@@ -30,6 +53,34 @@ class RawLogRecord:
     @property
     def message(self):
         return self._message
+
+
+class RawLogNMEARecord(RawLogRecord):
+
+    def __init__(self, timestamp, message):
+        self._timestamp = timestamp
+        self._message = message.encode() + b'\r\n'
+
+
+class RawLogCANMessage(RawLogRecord):
+
+    source_addresses = []
+
+    def __init__(self, timestamp, message):
+        self._timestamp = timestamp
+        self._message = message
+        # find the source address
+        try:
+            sa = int(message[6:8], 16)
+        except ValueError:
+            _logger.error("RawLog read message error %s" % message)
+            return
+        if sa not in self.source_addresses:
+            self.source_addresses.append(sa)
+
+    @staticmethod
+    def seen_addresses():
+        return RawLogCANMessage.source_addresses
 
 
 class RawLogFile:
@@ -45,9 +96,7 @@ class RawLogFile:
 
         def read_decode(l):
             if l[0] != 'R':
-                if l[0] != 'H':
-                    _logger.error('Wrong line type:%s' % l)
-                raise ValueError
+                raise LogReadError('WRONG PREFIX', message=l)
 
             ih = l.find('#')
             if ih == -1:
@@ -56,7 +105,7 @@ class RawLogFile:
             if i_sup == -1:
                 raise ValueError
             date_str = l[ih+1:i_sup]
-            message = l[i_sup+1:]
+            message = l[i_sup+1:len(l)-1]  # removing trailing LF
             timestamp = datetime.datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f")
             return timestamp, message
 
@@ -70,6 +119,10 @@ class RawLogFile:
             fields = line.split('|')
             self._type = fields[1]
         _logger.info("Log file type:%s" % self._type)
+        if self._type == "SocketCANInterface":
+            record_class = RawLogCANMessage
+        else:
+            record_class = RawLogNMEARecord
         nb_record = 1
         self._records = []
         self._tick_index = []
@@ -80,17 +133,23 @@ class RawLogFile:
         except ValueError:
             pass
         self._t0 = ts
-        self._records.append(RawLogRecord(ts, msg))
+        self._records.append(record_class(ts, msg))
         self._nb_tick = 0
         self._next_tick_date = self._t0 + datetime.timedelta(seconds=tick_interval)
 
+        line_nb = 1
         for line in fd.readlines():
+            line_nb += 1
             try:
                 ts, msg = read_decode(line)
             except ValueError:
                 continue
+            except LogReadError as err:
+                # print("Error on line", line_nb, line)
+                _logger.error("Log file error %s on line %d:%s" % (err.reason, line_nb, line.rstrip('\r\n')))
+                continue
 
-            self._records.append(RawLogRecord(ts, msg))
+            self._records.append(record_class(ts, msg))
             if ts >= self._next_tick_date:
                 # ok we record the index of the tick
                 self._tick_index.append(nb_record)
@@ -160,7 +219,10 @@ class RawLogFile:
         except IndexError:
             _logger.info("Raw Log Reader - Index out of range: %d" % self._index)
             self._lock.release()
-            raise ValueError
+            if self._index >= len(self._records):
+                raise LogReadError("EOF")
+            else:
+                raise LogReadError("INDEX ERROR", index=self._index)
         delta = (record.timestamp - self._t0).total_seconds()
         wait_time = delta - self._current_replay_time
         if wait_time > 0.0:
