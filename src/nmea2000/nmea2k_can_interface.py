@@ -12,8 +12,9 @@ import datetime
 import logging
 from can import Bus, Message, CanError
 from nmea2000.nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
-from nmea2000.nmea2k_pgndefs import PGNDef, PGNDefinitions, N2KUnknownPGN
+from nmea2000.nmea2k_pgn_definition import PGNDef
 from log_replay.message_trace import NMEAMsgTrace, MessageTraceError
+from utilities.global_variables import find_pgn
 import threading
 import queue
 import time
@@ -240,7 +241,7 @@ class SocketCANInterface(threading.Thread):
         _logger.debug("CAN interface send in queue message: %s" % n2k_msg.format1())
 
         # Fast packet processing
-        if PGNDefinitions.pgn_definition(n2k_msg.pgn).fast_packet():
+        if find_pgn(n2k_msg.pgn).fast_packet():
             for data in self._fp_handler.split_message(n2k_msg.pgn, n2k_msg.payload):
                 msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.time(), data=data)
                 try:

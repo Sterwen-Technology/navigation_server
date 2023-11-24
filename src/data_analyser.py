@@ -74,6 +74,12 @@ class DataServicer(NMEAInputServerServicer):
             _logger.error("pushNMEA unknown type of message")
         return resp
 
+    def status(self, request, context):
+        resp = server_resp()
+        resp.reportCode = 0
+        resp.status = "OK"
+        return resp
+
 
 class GrpcServer:
 

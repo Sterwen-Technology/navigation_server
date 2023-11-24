@@ -48,6 +48,7 @@ from nmea_routing.grpc_nmea_coupler import GrpcNmeaCoupler
 
 from utilities.log_utilities import NavigationLogSystem
 from utilities.global_exceptions import ObjectCreationError
+from utilities.global_variables import MessageServerGlobals
 
 
 def _parser():
@@ -59,7 +60,7 @@ def _parser():
     return p
 
 
-version = "V1.54"
+MessageServerGlobals.version = "V1.60"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -251,7 +252,8 @@ def main():
             os.chdir(default_base_dir)
     # print("Current directory", os.getcwd())
     # set log for the configuration phase
-    NavigationLogSystem.create_log("Starting Navigation server version %s - copyright Sterwen Technology 2021-2023" % version)
+    NavigationLogSystem.create_log("Starting Navigation server version %s - copyright Sterwen Technology 2021-2023" %
+                                   MessageServerGlobals.version)
 
     # build the configuration from the file
     config = NavigationConfiguration(opts.settings)
@@ -287,8 +289,10 @@ def main():
 
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     nmea0183_msg.NMEA0183Sentences.init(config.get_option('talker', 'ST'))
-    Manufacturers.build_manufacturers(config.get_option('manufacturer_xml', './def/Manufacturers.N2kDfn.xml'))
-    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
+    MessageServerGlobals.manufacturers = Manufacturers(config.get_option('manufacturer_xml',
+                                                                         './def/Manufacturers.N2kDfn.xml'))
+    MessageServerGlobals.pgn_definitions = PGNDefinitions(config.get_option("nmea2000_xml",
+                                                                            './def/PGNDefns.N2kDfn.xml'))
 
     if config.get_option('decode_definition_only', False):
         _logger.info("Decode only mode -> no active server")

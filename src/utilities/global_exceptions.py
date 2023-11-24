@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------------------
-# Name:        global exceptions accross the application
+# Name:        global exceptions across the application
 # Purpose:
 #
 # Author:      Laurent Carré
@@ -11,4 +11,28 @@
 
 
 class ObjectCreationError(Exception):
+    pass
+
+
+class N2KDecodeException(Exception):
+    pass
+
+
+class N2KDecodeEOLException(N2KDecodeException):
+    pass
+
+
+class N2KMissingEnumKeyException(N2KDecodeException):
+    pass
+
+
+class N2KUnknownPGN(Exception):
+    pass
+
+
+class N2KDefinitionError(Exception):
+    pass
+
+
+class N2KEncodeException(Exception):
     pass

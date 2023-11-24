@@ -41,30 +41,12 @@ class Manufacturer:
 
 class Manufacturers(XMLDefinitionFile):
 
-    _manufacturers = None
-
-    @staticmethod
-    def build_manufacturers(xml_file):
-        Manufacturers._manufacturers = Manufacturers(xml_file)
-
-    @staticmethod
-    def instance():
-        return Manufacturers._manufacturers
-
-    @staticmethod
-    def get_from_key(key: str) -> Manufacturer:
-        return Manufacturers._manufacturers.by_key(key)
-
-    @staticmethod
-    def get_from_code(code: int) -> Manufacturer:
-        return Manufacturers._manufacturers.by_code(code)
-
     def __init__(self, xml_file):
 
-        super().__init__(xml_file, 'Manufacturers')
+        super().__init__(xml_file)
         self._manufacturer_by_code = {}
         self._manufacturer_by_key = {}
-        for mfg_def in self._definitions.iterfind('Manufacturer'):
+        for mfg_def in self.get_definitions('Manufacturers').iterfind('Manufacturer'):
             name = mfg_def.find('Name').text
             code = int(mfg_def.find('Code').text)
             key = mfg_def.find('Key')

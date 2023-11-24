@@ -1,8 +1,67 @@
 <?xml version="1.0"?>
-<PGNDefnCollection xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="0.9">
+<PGNDefnCollection xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="1.0">
   <Date>$Date: 2023-10-06$</Date>
   <Comment>Version for limited release - works with navigation data server version 1.5</Comment>
   <CreatorCode>Sterwen Technology from Keversoft NMEA2000 Analyzer</CreatorCode>
+  <GlobalEnums>
+    <Comment>Definitions of Enums that can be used in several PGN</Comment>
+    <Enum Name="Device Class">
+          <BitLength>7</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="Reserved for 2000 Use" />
+            <EnumPair Value="10" Name="System tools" />
+            <EnumPair Value="20" Name="Safety systems" />
+            <EnumPair Value="25" Name="Inter/Intranetwork Device" />
+            <EnumPair Value="30" Name="Electrical Distribution" />
+            <EnumPair Value="35" Name="Electrical Generation" />
+            <EnumPair Value="40" Name="Steering and Control Surfaces" />
+            <EnumPair Value="50" Name="Propulsion systems" />
+            <EnumPair Value="60" Name="Navigation systems" />
+            <EnumPair Value="70" Name="Communication systems" />
+            <EnumPair Value="75" Name="Sensor Communication Interface" />
+            <EnumPair Value="80" Name="Instrumentation/general systems" />
+            <EnumPair Value="85" Name="External Environment" />
+            <EnumPair Value="90" Name="Internal Environmental (HVAC) systems" />
+            <EnumPair Value="100" Name="Deck, Cargo and Fishing Equipment" />
+            <EnumPair Value="120" Name="Display" />
+            <EnumPair Value="125" Name="Entertainment" />
+          </EnumValues>
+    </Enum>
+    <Enum Name="Temperature Source">
+          <BitLength>8</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="Sea Temperature" />
+            <EnumPair Value="1" Name="Outside Temperature" />
+            <EnumPair Value="2" Name="Inside Temperature" />
+            <EnumPair Value="3" Name="Engine Room Temperature" />
+            <EnumPair Value="4" Name="Main Cabin Temperature" />
+            <EnumPair Value="5" Name="Live Well Temperature" />
+            <EnumPair Value="6" Name="Bait Well Temperature" />
+            <EnumPair Value="7" Name="Refridgeration Temperature" />
+            <EnumPair Value="8" Name="Heating System Temperature" />
+            <EnumPair Value="9" Name="Dew Point Temperature" />
+            <EnumPair Value="10" Name="Wind Chill Temperature, Apparent" />
+            <EnumPair Value="11" Name="Wind Chill Temperature, Theoretical" />
+            <EnumPair Value="12" Name="Heat Index Temperature" />
+            <EnumPair Value="13" Name="Freezer Temperature" />
+            <EnumPair Value="14" Name="Exhaust Gas Temperature" />
+          </EnumValues>
+        </Enum>
+    <Enum Name="GNSS type">
+          <BitLength>4</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="GPS" />
+            <EnumPair Value="1" Name="GLONASS" />
+            <EnumPair Value="2" Name="GPS+GLONASS" />
+            <EnumPair Value="3" Name="GPS+SBAS/WAAS" />
+            <EnumPair Value="4" Name="GPS+SBAS/WAAS+GLONASS" />
+            <EnumPair Value="5" Name="Chayka" />
+            <EnumPair Value="6" Name="integrated" />
+            <EnumPair Value="7" Name="surveyed" />
+            <EnumPair Value="8" Name="Galileo" />
+          </EnumValues>
+        </Enum>
+  </GlobalEnums>
   <PGNDefns>
     <PGNDefn PGN="59392">
       <Name>ISO Acknowledgement</Name>
@@ -80,11 +139,11 @@
       <Name>Airmar: Boot State Acknowledgment</Name>
       <ByteLength>3</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -110,11 +169,11 @@
       <Name>Lowrance: Temperature</Name>
       <ByteLength>5</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Lowrance</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -130,10 +189,10 @@
           <BitOffset>16</BitOffset>
           <BitLength>4</BitLength>
         </InstanceField>
-        <UIntField Name="Temperature Source">
+        <EnumField Name="Temperature Source" Definition="Temperature Source">
           <BitOffset>20</BitOffset>
           <BitLength>4</BitLength>
-        </UIntField>
+        </EnumField>
         <UDblField Name="Actual Temperature">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
@@ -147,11 +206,11 @@
       <Name>Airmar: Boot State Request</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -169,11 +228,11 @@
       <Name>Simnet: Configure Temperature Sensor</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -191,11 +250,11 @@
       <Name>Airmar: Access Level</Name>
       <ByteLength>7</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -237,11 +296,11 @@
       <Name>Simnet: Trim Tab Sensor Calibration</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -259,11 +318,11 @@
       <Name>Simnet: Paddle Wheel Speed Configuration</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -281,11 +340,11 @@
       <Name>Simnet: Clear Fluid Level Warnings</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -303,11 +362,11 @@
       <Name>Simnet: LGC-2000 Configuration</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -325,11 +384,11 @@
       <Name>Simnet: Reprogram Status</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -347,11 +406,11 @@
       <Name>Simnet: Autopilot Mode</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -369,15 +428,15 @@
       <Name>Raymarine: Pilot heading</Name>
       <ByteLength>7</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Raymarine</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
-        <Field Name="SID">
+        </UIntField>
+        <UIntField Name="SID">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
-        </Field>
+        </UIntField>
         <UDblField Name="True Heading">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
@@ -394,15 +453,15 @@
       <Name>Raymarine: Pilot locked heading</Name>
       <ByteLength>7</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Raymarine</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
-        <Field Name="SID">
+        </UIntField>
+        <UIntField Name="SID">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
-        </Field>
+        </UIntField>
         <UDblField Name="True Heading">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
@@ -420,38 +479,38 @@
       <Name>Raymarine: Pilot mode</Name>
       <ByteLength>7</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Raymarine</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
-        <Field Name="SID">
+        </UIntField>
+        <UIntField Name="SID">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
-        </Field>
-        <Field Name="Pilot Mode">
+        </UIntField>
+        <UIntField Name="Pilot Mode">
           <BitOffset>24</BitOffset>
           <BitLength>8</BitLength>
-        </Field>
-        <Field Name="Sub Mode">
+        </UIntField>
+        <UIntField Name="Sub Mode">
           <BitOffset>32</BitOffset>
           <BitLength>8</BitLength>
-        </Field>
-        <Field Name="Pilot Mode Data">
+        </UIntField>
+        <UIntField Name="Pilot Mode Data">
           <BitOffset>40</BitOffset>
           <BitLength>8</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="65408">
       <Name>Airmar: Depth Quality Factor</Name>
       <ByteLength>4</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -480,11 +539,11 @@
       <Name>Airmar: Device Information</Name>
       <ByteLength>8</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -523,11 +582,11 @@
       <Name>Simnet: Autopilot Mode</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -656,11 +715,11 @@
       <Name>Maretron: Slave Response</Name>
       <ByteLength>8</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Maretron</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -719,11 +778,11 @@
         <MessageId>0</MessageId>
       </Proprietary>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -828,11 +887,11 @@
       <Name>Airmar: Attitude Offset</Name>
       <ByteLength>9</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -876,11 +935,11 @@
       <ByteLength>24</ByteLength>
       <Comment>Changed bit offest to have all values aligned on bytes boundaries - not tested</Comment>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -983,10 +1042,10 @@
       <ByteLength>2</ByteLength>
       <Scope>Ignored</Scope>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -1005,11 +1064,11 @@
       <Name>Airmar: Addressable Multi-Frame</Name>
       <ByteLength>3</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -1038,11 +1097,11 @@
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>8</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="Source">
           <BitOffset>12</BitOffset>
           <BitLength>4</BitLength>
@@ -1083,16 +1142,16 @@
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>24</BitOffset>
           <BitLength>8</BitLength>
-        </Field>
-        <Field Name="Reserved">
+        </UIntField>
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>32</BitOffset>
           <BitLength>32</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="126996">
@@ -1250,11 +1309,11 @@
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
         </InstanceField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>8</BitOffset>
           <BitLength>5</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="Direction Order">
           <BitOffset>13</BitOffset>
           <BitLength>3</BitLength>
@@ -1392,11 +1451,11 @@
             <EnumPair Value="8" Name="WMM 2020" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>12</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Age of service">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>16</BitOffset>
@@ -2068,10 +2127,10 @@
           <BitOffset>24</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>26</BitOffset>
           <BitLength>6</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Inverter Mode">
           <BitOffset>32</BitOffset>
           <BitLength>8</BitLength>
@@ -2410,6 +2469,10 @@
     <PGNDefn PGN="129025">
       <Name>Position, Rapid Update</Name>
       <ByteLength>8</ByteLength>
+      <Generate>
+        <Coding>Optimized</Coding>
+        <Decode>Full</Decode>
+      </Generate>
       <Fields>
         <DblField Name="Latitude" key="latitude">
           <BitOffset>0</BitOffset>
@@ -2442,11 +2505,11 @@
             <EnumPair Value="1" Name="Magnetic" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved1">
+        <UIntField Name="Reserved1">
           <Description>Reserved</Description>
           <BitOffset>10</BitOffset>
           <BitLength>6</BitLength>
-        </Field>
+        </UIntField>
         <UDblField Name="COG">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
@@ -2459,11 +2522,11 @@
           <FormatAs>Speed</FormatAs>
           <Scale>0.01</Scale>
         </UDblField>
-        <Field Name="Reserved2">
+        <UIntField Name="Reserved2">
           <Description>Reserved</Description>
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129027">
@@ -2510,11 +2573,11 @@
           <BitOffset>26</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>28</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <UDblField Name="Course Over Ground">
           <BitOffset>32</BitOffset>
           <BitLength>32</BitLength>
@@ -2581,20 +2644,9 @@
             <EnumPair Value="8" Name="Simulate mode" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="GNSS type">
+        <EnumField Name="GNSS type" Definition="GNSS type">
           <BitOffset>252</BitOffset>
           <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="GPS" />
-            <EnumPair Value="1" Name="GLONASS" />
-            <EnumPair Value="2" Name="GPS+GLONASS" />
-            <EnumPair Value="3" Name="GPS+SBAS/WAAS" />
-            <EnumPair Value="4" Name="GPS+SBAS/WAAS+GLONASS" />
-            <EnumPair Value="5" Name="Chayka" />
-            <EnumPair Value="6" Name="integrated" />
-            <EnumPair Value="7" Name="surveyed" />
-            <EnumPair Value="8" Name="Galileo" />
-          </EnumValues>
         </EnumField>
         <EnumField Name="Integrity">
           <BitOffset>256</BitOffset>
@@ -2605,11 +2657,11 @@
             <EnumPair Value="2" Name="Caution" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>258</BitOffset>
           <BitLength>6</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Number of SVs">
           <Description>Number of satellites used in solution</Description>
           <BitOffset>264</BitOffset>
@@ -2643,20 +2695,9 @@
             <BitOffset>0</BitOffset>
             <BitLength>4</BitLength>
           </UIntField>
-          <EnumField Name="Reference Station Type">
+          <EnumField Name="Reference Station Type" Definition="GNSS type">
             <BitOffset>4</BitOffset>
             <BitLength>4</BitLength>
-            <EnumValues>
-              <EnumPair Value="0" Name="GPS" />
-              <EnumPair Value="1" Name="GLONASS" />
-              <EnumPair Value="2" Name="GPS+GLONASS" />
-              <EnumPair Value="3" Name="GPS+SBAS/WAAS" />
-              <EnumPair Value="4" Name="GPS+SBAS/WAAS+GLONASS" />
-              <EnumPair Value="5" Name="Chayka" />
-              <EnumPair Value="6" Name="integrated" />
-              <EnumPair Value="7" Name="surveyed" />
-              <EnumPair Value="8" Name="Galileo" />
-            </EnumValues>
           </EnumField>
           <DblField Name="Age of DGNSS Corrections">
             <BitOffset>8</BitOffset>
@@ -3038,11 +3079,11 @@
           <BitOffset>152</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>156</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="Type of ship">
           <BitOffset>160</BitOffset>
           <BitLength>8</BitLength>
@@ -3097,24 +3138,13 @@
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
         </UDblField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>184</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
-        <EnumField Name="GNSS type">
+        </UIntField>
+        <EnumField Name="GNSS type" Definition="GNSS type">
           <BitOffset>188</BitOffset>
           <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="undefined" />
-            <EnumPair Value="1" Name="GPS" />
-            <EnumPair Value="2" Name="GLONASS" />
-            <EnumPair Value="3" Name="GPS+GLONASS" />
-            <EnumPair Value="4" Name="Loran-C" />
-            <EnumPair Value="5" Name="Chayka" />
-            <EnumPair Value="6" Name="integrated" />
-            <EnumPair Value="7" Name="surveyed" />
-            <EnumPair Value="8" Name="Galileo" />
-          </EnumValues>
         </EnumField>
         <DblField Name="Length">
           <BitOffset>192</BitOffset>
@@ -3153,10 +3183,10 @@
           <BitOffset>417</BitOffset>
           <BitLength>1</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>418</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>422</BitOffset>
           <BitLength>5</BitLength>
@@ -3272,11 +3302,11 @@
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>8</BitOffset>
           <BitLength>1</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="Navigation Terminated">
           <BitOffset>9</BitOffset>
           <BitLength>1</BitLength>
@@ -3285,10 +3315,10 @@
             <EnumPair Value="1" Name="Yes" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>10</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="XTE mode">
           <BitOffset>12</BitOffset>
           <BitLength>4</BitLength>
@@ -3425,10 +3455,10 @@
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>64</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Supplementary Route/WP data available">
           <BitOffset>66</BitOffset>
           <BitLength>2</BitLength>
@@ -3487,11 +3517,11 @@
             <EnumPair Value="1" Name="Magnetic" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>10</BitOffset>
           <BitLength>6</BitLength>
-        </Field>
+        </UIntField>
         <UDblField Name="Set">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
@@ -3531,11 +3561,11 @@
             <EnumPair Value="4" Name="Waypoint" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>44</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Mark ID">
           <BitOffset>48</BitOffset>
           <BitLength>32</BitLength>
@@ -3561,11 +3591,11 @@
           <BitLength>2</BitLength>
           <EnumValues />
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>14</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UDblField Name="Bearing, Origin to Destination">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
@@ -3692,11 +3722,11 @@
             <EnumPair Value="7" Name="Unknown" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="Actual Mode">
           <BitOffset>13</BitOffset>
           <BitLength>3</BitLength>
@@ -3747,11 +3777,11 @@
             <EnumPair Value="3" Name="Range residuals used to calculate position" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>10</BitOffset>
           <BitLength>6</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Sats in View">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
@@ -3915,11 +3945,11 @@
           <BitOffset>8</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>12</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Latitude expected error">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
@@ -4262,10 +4292,10 @@
           <BitOffset>80</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <Field Name="Binary Data">
+        <UIntField Name="Binary Data">
           <BitOffset>88</BitOffset>
           <BitLength>64</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129793">
@@ -4318,11 +4348,11 @@
             <EnumPair Value="1" Name="in use" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>NMEA reserved to align next data on byte boundary</Description>
           <BitOffset>106</BitOffset>
           <BitLength>6</BitLength>
-        </Field>
+        </UIntField>
         <UDblField Name="Position Time">
           <Description>Seconds since midnight</Description>
           <BitOffset>112</BitOffset>
@@ -4340,30 +4370,19 @@
           <BitLength>16</BitLength>
           <FormatAs>Date</FormatAs>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>NMEA reserved to align next data on byte boundary</Description>
           <BitOffset>184</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
-        <EnumField Name="GNSS type">
+        </UIntField>
+        <EnumField Name="GNSS type" Definition="GNSS type">
           <BitOffset>188</BitOffset>
           <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="undefined" />
-            <EnumPair Value="1" Name="GPS" />
-            <EnumPair Value="2" Name="GLONASS" />
-            <EnumPair Value="3" Name="GPS+GLONASS" />
-            <EnumPair Value="4" Name="Loran-C" />
-            <EnumPair Value="5" Name="Chayka" />
-            <EnumPair Value="6" Name="integrated" />
-            <EnumPair Value="7" Name="surveyed" />
-            <EnumPair Value="8" Name="Galileo" />
-          </EnumValues>
         </EnumField>
-        <Field Name="Spare">
+        <UIntField Name="Spare">
           <BitOffset>192</BitOffset>
           <BitLength>8</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129794">
@@ -4502,20 +4521,9 @@
             <EnumPair Value="1" Name="ITU-R M.1371-3" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="GNSS type">
+        <EnumField Name="GNSS type" Definition="GNSS type">
           <BitOffset>586</BitOffset>
           <BitLength>4</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="undefined" />
-            <EnumPair Value="1" Name="GPS" />
-            <EnumPair Value="2" Name="GLONASS" />
-            <EnumPair Value="3" Name="GPS+GLONASS" />
-            <EnumPair Value="4" Name="Loran-C" />
-            <EnumPair Value="5" Name="Chayka" />
-            <EnumPair Value="6" Name="integrated" />
-            <EnumPair Value="7" Name="surveyed" />
-            <EnumPair Value="8" Name="Galileo" />
-          </EnumValues>
         </EnumField>
         <EnumField Name="DTE">
           <BitOffset>590</BitOffset>
@@ -4525,11 +4533,11 @@
             <EnumPair Value="1" Name="not available" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>591</BitOffset>
           <BitLength>1</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>592</BitOffset>
           <BitLength>5</BitLength>
@@ -4566,11 +4574,11 @@
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
         </IntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>40</BitOffset>
           <BitLength>1</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>41</BitOffset>
           <BitLength>5</BitLength>
@@ -4591,28 +4599,28 @@
           <BitOffset>48</BitOffset>
           <BitLength>32</BitLength>
         </IntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>80</BitOffset>
           <BitLength>6</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Retransmit flag">
           <BitOffset>86</BitOffset>
           <BitLength>1</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>87</BitOffset>
           <BitLength>1</BitLength>
-        </Field>
+        </UIntField>
         <IntField Name="Number of Bits in Binary Data Field">
           <BitOffset>88</BitOffset>
           <BitLength>16</BitLength>
         </IntField>
-        <Field Name="Binary Data">
+        <UIntField Name="Binary Data">
           <BitOffset>104</BitOffset>
           <BitLength>64</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129796">
@@ -4637,11 +4645,11 @@
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>40</BitOffset>
           <BitLength>1</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>41</BitOffset>
           <BitLength>5</BitLength>
@@ -4654,30 +4662,30 @@
             <EnumPair Value="5" Name="Reserved" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>46</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Destination ID #1">
           <BitOffset>48</BitOffset>
           <BitLength>32</BitLength>
         </UIntField>
-        <Field Name="Sequence Number for ID 1">
+        <UIntField Name="Sequence Number for ID 1">
           <Description>reserved</Description>
           <BitOffset>80</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
-        <Field Name="Reserved">
+        </UIntField>
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>82</BitOffset>
           <BitLength>6</BitLength>
-        </Field>
-        <Field Name="Sequence Number for ID n">
+        </UIntField>
+        <UIntField Name="Sequence Number for ID n">
           <Description>reserved</Description>
           <BitOffset>88</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129797">
@@ -4702,11 +4710,11 @@
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>40</BitOffset>
           <BitLength>1</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>41</BitOffset>
           <BitLength>5</BitLength>
@@ -4719,19 +4727,19 @@
             <EnumPair Value="5" Name="Reserved" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>46</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Number of Bits in Binary Data Field">
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <Field Name="Binary Data">
+        <UIntField Name="Binary Data">
           <BitOffset>64</BitOffset>
           <BitLength>2040</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129798">
@@ -4827,11 +4835,11 @@
             <EnumPair Value="1" Name="Not available" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>241</BitOffset>
           <BitLength>7</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129799">
@@ -4888,11 +4896,11 @@
           <BitOffset>8</BitOffset>
           <BitLength>30</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>40</BitOffset>
           <BitLength>5</BitLength>
@@ -4905,20 +4913,20 @@
             <EnumPair Value="5" Name="Reserved" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>45</BitOffset>
           <BitLength>3</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Destination ID">
           <BitOffset>48</BitOffset>
           <BitLength>30</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>78</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129801">
@@ -4943,11 +4951,11 @@
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>40</BitOffset>
           <BitLength>1</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>41</BitOffset>
           <BitLength>5</BitLength>
@@ -4968,20 +4976,20 @@
           <BitOffset>48</BitOffset>
           <BitLength>32</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>80</BitOffset>
           <BitLength>6</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Retransmit flag">
           <BitOffset>86</BitOffset>
           <BitLength>1</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>87</BitOffset>
           <BitLength>1</BitLength>
-        </Field>
+        </UIntField>
         <ASCIIField Name="Safety Related Text">
           <BitOffset>88</BitOffset>
           <BitLength>2040</BitLength>
@@ -5010,11 +5018,11 @@
           <BitOffset>8</BitOffset>
           <BitLength>30</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>40</BitOffset>
           <BitLength>5</BitLength>
@@ -5027,11 +5035,11 @@
             <EnumPair Value="5" Name="Reserved" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>45</BitOffset>
           <BitLength>3</BitLength>
-        </Field>
+        </UIntField>
         <StringField Name="Safety Related Text">
           <BitOffset>0</BitOffset>
           <BitLength>-1</BitLength>
@@ -5060,11 +5068,11 @@
           <BitOffset>8</BitOffset>
           <BitLength>30</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>40</BitOffset>
           <BitLength>5</BitLength>
@@ -5077,20 +5085,20 @@
             <EnumPair Value="5" Name="Reserved" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>45</BitOffset>
           <BitLength>3</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Destination ID">
           <BitOffset>48</BitOffset>
           <BitLength>30</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>78</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Message ID A">
           <BitOffset>80</BitOffset>
           <BitLength>8</BitLength>
@@ -5099,11 +5107,11 @@
           <BitOffset>88</BitOffset>
           <BitLength>14</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>102</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <IntField Name="Message ID B">
           <BitOffset>104</BitOffset>
           <BitLength>8</BitLength>
@@ -5112,11 +5120,11 @@
           <BitOffset>112</BitOffset>
           <BitLength>14</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>126</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129804">
@@ -5141,11 +5149,11 @@
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
         </IntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>40</BitOffset>
           <BitLength>1</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>41</BitOffset>
           <BitLength>5</BitLength>
@@ -5158,11 +5166,11 @@
             <EnumPair Value="5" Name="Reserved" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>46</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <IntField Name="Destination ID">
           <BitOffset>48</BitOffset>
           <BitLength>32</BitLength>
@@ -5199,11 +5207,11 @@
           <BitOffset>8</BitOffset>
           <BitLength>30</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>40</BitOffset>
           <BitLength>5</BitLength>
@@ -5216,11 +5224,11 @@
             <EnumPair Value="5" Name="Reserved" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>45</BitOffset>
           <BitLength>3</BitLength>
-        </Field>
+        </UIntField>
         <IntField Name="Offset">
           <BitOffset>48</BitOffset>
           <BitLength>10</BitLength>
@@ -5261,11 +5269,11 @@
           <BitOffset>8</BitOffset>
           <BitLength>30</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <EnumField Name="AIS Transceiver information">
           <BitOffset>40</BitOffset>
           <BitLength>5</BitLength>
@@ -5278,11 +5286,11 @@
             <EnumPair Value="5" Name="Reserved" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>45</BitOffset>
           <BitLength>3</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Channel A">
           <BitOffset>48</BitOffset>
           <BitLength>7</BitLength>
@@ -5291,11 +5299,11 @@
           <BitOffset>55</BitOffset>
           <BitLength>7</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>62</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Power">
           <Description>reserved</Description>
           <BitOffset>64</BitOffset>
@@ -5329,11 +5337,11 @@
           <FormatAs>Latitude</FormatAs>
           <Scale>1E-07</Scale>
         </DblField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>208</BitOffset>
           <BitLength>6</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Addressed or Broadcast Message Indicator">
           <BitOffset>214</BitOffset>
           <BitLength>2</BitLength>
@@ -5346,11 +5354,11 @@
           <BitOffset>223</BitOffset>
           <BitLength>7</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>230</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Transitional Zone Size">
           <BitOffset>232</BitOffset>
           <BitLength>8</BitLength>
@@ -5381,20 +5389,20 @@
           <BitOffset>8</BitOffset>
           <BitLength>30</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Tx/Rx Mode">
           <BitOffset>40</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>42</BitOffset>
           <BitLength>6</BitLength>
-        </Field>
+        </UIntField>
         <DblField Name="North East Longitude Corner 1">
           <BitOffset>48</BitOffset>
           <BitLength>32</BitLength>
@@ -5423,20 +5431,20 @@
           <BitOffset>176</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>184</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Ship and Cargo Filter">
           <BitOffset>186</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>192</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reporting Interval">
           <BitOffset>194</BitOffset>
           <BitLength>16</BitLength>
@@ -5681,11 +5689,11 @@
           <BitOffset>224</BitOffset>
           <BitLength>32</BitLength>
         </IntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>256</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Spare">
           <Description>0=unavailable</Description>
           <BitOffset>258</BitOffset>
@@ -5734,11 +5742,11 @@
           <BitOffset>144</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>150</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Number of Routes in Database">
           <BitOffset>152</BitOffset>
           <BitLength>16</BitLength>
@@ -5781,11 +5789,11 @@
           <BitOffset>40</BitOffset>
           <BitLength>64</BitLength>
         </ASCIIField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>104</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="WP Identification Method">
           <BitOffset>108</BitOffset>
           <BitLength>2</BitLength>
@@ -5849,10 +5857,10 @@
           <BitOffset>164</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>166</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="XTE Limit for the Route">
           <BitOffset>168</BitOffset>
           <BitLength>16</BitLength>
@@ -5975,10 +5983,10 @@
           <BitOffset>72</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>76</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130070">
@@ -6291,26 +6299,9 @@
           <BitOffset>8</BitOffset>
           <BitLength>8</BitLength>
         </InstanceField>
-        <EnumField Name="Temperature Source">
+        <EnumField Name="Temperature Source" Definition="Temperature Source">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Sea Temperature" />
-            <EnumPair Value="1" Name="Outside Temperature" />
-            <EnumPair Value="2" Name="Inside Temperature" />
-            <EnumPair Value="3" Name="Engine Room Temperature" />
-            <EnumPair Value="4" Name="Main Cabin Temperature" />
-            <EnumPair Value="5" Name="Live Well Temperature" />
-            <EnumPair Value="6" Name="Bait Well Temperature" />
-            <EnumPair Value="7" Name="Refridgeration Temperature" />
-            <EnumPair Value="8" Name="Heating System Temperature" />
-            <EnumPair Value="9" Name="Dew Point Temperature" />
-            <EnumPair Value="10" Name="Wind Chill Temperature, Apparent" />
-            <EnumPair Value="11" Name="Wind Chill Temperature, Theoretical" />
-            <EnumPair Value="12" Name="Heat Index Temperature" />
-            <EnumPair Value="13" Name="Freezer Temperature" />
-            <EnumPair Value="14" Name="Exhaust Gas Temperature" />
-          </EnumValues>
         </EnumField>
         <UDblField Name="Actual Temperature">
           <BitOffset>24</BitOffset>
@@ -6392,10 +6383,10 @@
           <BitLength>32</BitLength>
           <Scale>0.1</Scale>
         </UDblField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>56</BitOffset>
           <BitLength>8</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130315">
@@ -6426,10 +6417,10 @@
           <BitOffset>24</BitOffset>
           <BitLength>32</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>56</BitOffset>
           <BitLength>8</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130316">
@@ -6445,28 +6436,9 @@
           <BitOffset>8</BitOffset>
           <BitLength>8</BitLength>
         </InstanceField>
-        <EnumField Name="Temperature Source">
+        <EnumField Name="Temperature Source" Definition="Temperature Source">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Sea Temperature" />
-            <EnumPair Value="1" Name="Outside Temperature" />
-            <EnumPair Value="2" Name="Inside Temperature" />
-            <EnumPair Value="3" Name="Engine Room Temperature" />
-            <EnumPair Value="4" Name="Main Cabin Temperature" />
-            <EnumPair Value="5" Name="Live Well Temperature" />
-            <EnumPair Value="6" Name="Bait Well Temperature" />
-            <EnumPair Value="7" Name="Refridgeration Temperature" />
-            <EnumPair Value="8" Name="Heating System Temperature" />
-            <EnumPair Value="9" Name="Dew Point Temperature" />
-            <EnumPair Value="10" Name="Wind Chill Temperature, Apparent" />
-            <EnumPair Value="11" Name="Wind Chill Temperature, Theoretical" />
-            <EnumPair Value="12" Name="Heat Index Temperature" />
-            <EnumPair Value="13" Name="Freezer Temperature" />
-            <EnumPair Value="14" Name="Exhaust Gas Temperature" />
-            <EnumPair Value="253" Name="Not Suppoerted" />
-            <EnumPair Value="254" Name="Error" />
-          </EnumValues>
         </EnumField>
         <UDblField Name="Actual Temperature">
           <BitOffset>24</BitOffset>
@@ -6507,10 +6479,10 @@
             <EnumPair Value="1" Name="Rising" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>6</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Measurement Date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>8</BitOffset>
@@ -6547,14 +6519,14 @@
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <Field Name="Station ID">
+        <UIntField Name="Station ID">
           <BitOffset>152</BitOffset>
           <BitLength>16</BitLength>
-        </Field>
-        <Field Name="Station Name">
+        </UIntField>
+        <UIntField Name="Station Name">
           <BitOffset>168</BitOffset>
           <BitLength>16</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130321">
@@ -6572,10 +6544,10 @@
             <EnumPair Value="4" Name="Manual" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>4</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Measurement Date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>8</BitOffset>
@@ -6613,14 +6585,14 @@
           <Offset>-273.15</Offset>
           <Scale>0.01</Scale>
         </UDblField>
-        <Field Name="Station ID">
+        <UIntField Name="Station ID">
           <BitOffset>168</BitOffset>
           <BitLength>16</BitLength>
-        </Field>
-        <Field Name="Station Name">
+        </UIntField>
+        <UIntField Name="Station Name">
           <BitOffset>184</BitOffset>
           <BitLength>16</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130322">
@@ -6631,10 +6603,10 @@
           <BitOffset>0</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>4</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Measurement Date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>8</BitOffset>
@@ -6684,14 +6656,14 @@
           <Offset>-273.15</Offset>
           <Scale>0.01</Scale>
         </UDblField>
-        <Field Name="Station ID">
+        <UIntField Name="Station ID">
           <BitOffset>200</BitOffset>
           <BitLength>16</BitLength>
-        </Field>
-        <Field Name="Station Name">
+        </UIntField>
+        <UIntField Name="Station Name">
           <BitOffset>216</BitOffset>
           <BitLength>16</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130323">
@@ -6702,10 +6674,10 @@
           <BitOffset>0</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>4</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Measurement Date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>8</BitOffset>
@@ -6752,11 +6724,11 @@
             <EnumPair Value="3" Name="True (boat referenced)" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>155</BitOffset>
           <BitLength>5</BitLength>
-        </Field>
+        </UIntField>
         <DblField Name="Wind Gusts">
           <BitOffset>160</BitOffset>
           <BitLength>16</BitLength>
@@ -6773,14 +6745,14 @@
           <Offset>-273.15</Offset>
           <Scale>0.01</Scale>
         </UDblField>
-        <Field Name="Station ID">
+        <UIntField Name="Station ID">
           <BitOffset>208</BitOffset>
           <BitLength>16</BitLength>
-        </Field>
-        <Field Name="Station Name">
+        </UIntField>
+        <UIntField Name="Station Name">
           <BitOffset>224</BitOffset>
           <BitLength>16</BitLength>
-        </Field>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130324">
@@ -6791,10 +6763,10 @@
           <BitOffset>0</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <BitOffset>4</BitOffset>
           <BitLength>4</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Measurement Date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>8</BitOffset>
@@ -6841,11 +6813,11 @@
             <EnumPair Value="3" Name="True (boat referenced)" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>155</BitOffset>
           <BitLength>5</BitLength>
-        </Field>
+        </UIntField>
         <DblField Name="Wind Gusts">
           <BitOffset>160</BitOffset>
           <BitLength>16</BitLength>
@@ -6924,11 +6896,11 @@
             <EnumPair Value="1" Name="Magnetic" />
           </EnumValues>
         </EnumField>
-        <Field Name="Reserved">
+        <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>6</BitOffset>
           <BitLength>2</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="SID">
           <BitOffset>8</BitOffset>
           <BitLength>8</BitLength>
@@ -7010,11 +6982,11 @@
       <Name>Simrad: Text Message</Name>
       <ByteLength>42</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7065,11 +7037,11 @@
       <Name>Navico: Product Information</Name>
       <ByteLength>113</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Navico</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7119,11 +7091,11 @@
       <Name>Simnet: Reprogram Data</Name>
       <ByteLength>261</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7143,21 +7115,21 @@
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
         </IntField>
-        <Field Name="Data">
+        <BytesField Name="Data">
           <BitOffset>48</BitOffset>
           <BitLength>2040</BitLength>
-        </Field>
+        </BytesField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130819">
       <Name>Simnet: Request Reprogram</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7175,11 +7147,11 @@
       <Name>Simnet: Reprogram Status</Name>
       <ByteLength>7</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7209,11 +7181,11 @@
       <Name>Lowrance: unknown</Name>
       <ByteLength>10</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Lowrance</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7255,11 +7227,11 @@
       <Name>Simnet: Set Serial Number</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7277,11 +7249,11 @@
       <Name>Suzuki: Engine and Storage Device Config</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Suzuki</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7299,11 +7271,11 @@
       <Name>Simnet: Fuel Used - High Resolution</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7321,11 +7293,11 @@
       <Name>Simnet: Engine and Tank Configuration</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7343,11 +7315,11 @@
       <Name>Simnet: Set Engine and Tank Configuration</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7365,11 +7337,11 @@
       <Name>Simnet: Fluid Level Sensor Configuration</Name>
       <ByteLength>14</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7432,11 +7404,11 @@
       <Name>Simnet: Fuel Flow Turbine Configuration</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7454,11 +7426,11 @@
       <Name>Simnet: Fluid Level Warning</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7476,11 +7448,11 @@
       <Name>Simnet: Pressure Sensor Configuration</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7498,11 +7470,11 @@
       <Name>Simnet: Data User Group Configuration</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7520,11 +7492,11 @@
       <Name>Simnet: AIS Class B static data (msg 24 Part B)</Name>
       <ByteLength>37</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7660,11 +7632,11 @@
       <Name>Simnet: AIS Class B static data (msg 24 Part A)</Name>
       <ByteLength>29</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7713,11 +7685,11 @@
       <Name>Simnet: Sonar Status, Frequency and DSP Voltage</Name>
       <ByteLength>2</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7735,11 +7707,11 @@
       <Name>Simnet: Parameter Handle</Name>
       <ByteLength>13</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7820,11 +7792,11 @@
       <Name>Simnet: Event Command: AP command</Name>
       <ByteLength>12</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7888,11 +7860,11 @@
       <Name>Simnet: Event Command: Alarm?</Name>
       <ByteLength>12</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7944,11 +7916,11 @@
       <Name>Simnet: Event Command: Unknown</Name>
       <ByteLength>12</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -7986,11 +7958,11 @@
       <Name>Simnet: Event Reply: AP command</Name>
       <ByteLength>12</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -8054,11 +8026,11 @@
       <Name>Simnet: Alarm Message</Name>
       <ByteLength>261</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Simrad</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -8092,11 +8064,11 @@
       <Name>Airmar: Additional Weather Data</Name>
       <ByteLength>9</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -8139,11 +8111,11 @@
       <Name>Airmar: Heater Control</Name>
       <ByteLength>9</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <Description>Airmar</Description>
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
@@ -8187,10 +8159,10 @@
       <Scope>Ignored</Scope>
       <ByteLength>7</ByteLength>
       <Fields>
-        <Field Name="Manufacturer Code">
+        <UIntField Name="Manufacturer Code">
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
-        </Field>
+        </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>

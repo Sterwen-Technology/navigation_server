@@ -20,6 +20,7 @@ from nmea_routing.filters import FilterSet
 
 from nmea_routing.generic_msg import *
 from nmea_routing.configuration import NavigationConfiguration
+from utilities.global_variables import find_pgn
 
 
 _logger = logging.getLogger("ShipDataServer" + "." + __name__)
@@ -29,7 +30,7 @@ class PgnRecord:
 
     def __init__(self, pgn: int):
         self._pgn = pgn
-        self._pgn_def = PGNDefinitions.pgn_defs().pgn_def(pgn)
+        self._pgn_def = find_pgn(pgn)
         self._clock = time.time()
         self._count = 1
 

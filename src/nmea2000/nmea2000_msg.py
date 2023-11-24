@@ -21,6 +21,7 @@ from generated.nmea2000_pb2 import nmea2000pb
 from nmea_routing.generic_msg import *
 from nmea0183.nmea0183_msg import process_nmea0183_frame, NMEA0183Msg
 from utilities.date_time_utilities import format_timestamp
+from utilities.global_variables import find_pgn
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -107,7 +108,7 @@ class NMEA2000Msg:
         return self._ts
 
     def display(self):
-        pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
+        pgn_def = find_pgn(self._pgn)
         print("PGN %d|%04X|%s|time:%s" % (self._pgn, self._pgn, pgn_def.name,
                                           format_timestamp(self._ts, self.ts_format)))
 
@@ -122,7 +123,7 @@ class NMEA2000Msg:
         Generate a string to display the message with PGN name
         '''
         try:
-            pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
+            pgn_def = find_pgn(self._pgn)
             name = pgn_def.name
         except N2KUnknownPGN:
             name = "Unknown PGN"
@@ -173,7 +174,7 @@ class NMEA2000Msg:
 
     def decode(self):
         try:
-            pgn_def = PGNDefinitions.pgn_defs().pgn_def(self._pgn)
+            pgn_def = find_pgn(self._pgn)
         except N2KUnknownPGN:
             _logger.error("No definition for PGN %d => cannot decode" % self._pgn)
             return
@@ -287,7 +288,7 @@ class NMEA2000Object:
     def __init__(self, pgn: int):
         self._pgn = pgn
         try:
-            self._pgn_def = PGNDefinitions.pgn_definition(pgn)
+            self._pgn_def = find_pgn(pgn)
         except N2KUnknownPGN:
             _logger.error("NMEA2000Object creation with unknown PGN %d" % pgn)
             raise

@@ -18,6 +18,7 @@ from nmea2000.nmea2k_publisher import PgnRecord
 from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeException
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_factory import NMEA2000Factory
+from utilities.global_variables import MessageServerGlobals
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -101,7 +102,7 @@ class NMEA2000Device:
             self._properties['System ISO Name'] = self._iso_name.name_value
             self._properties['Manufacturer Code'] = mfg_code
             try:
-                self._properties['Manufacturer Name'] = Manufacturers.get_from_code(mfg_code).name
+                self._properties['Manufacturer Name'] = MessageServerGlobals.manufacturers.by_code(mfg_code).name
             except KeyError:
                 self._properties['Manufacturer Name'] = "Manufacturer#%d" % mfg_code
 

@@ -14,7 +14,7 @@ trace_dir: /mnt/meaban/Bateau/tests
 log_module:
     nmea2000.nmea2k_pgndefs: INFO
 
-decode_definition_only: false
+decode_definition_only: true
 
 servers:
 

@@ -21,7 +21,7 @@ class XMLDecodeError(Exception):
 
 class XMLDefinitionFile:
 
-    def __init__(self, xml_file, definitions_tag):
+    def __init__(self, xml_file):
 
         try:
             self._tree = ET.parse(xml_file)
@@ -31,6 +31,9 @@ class XMLDefinitionFile:
 
         self._root = self._tree.getroot()
         # print(self._root.tag)
-        self._definitions = self._root.find(definitions_tag)
-        if self._definitions is None:
-            raise XMLDecodeError("Missing definitions tag %s" % definitions_tag)
+
+    def get_definitions(self, tag):
+        definitions = self._root.find(tag)
+        if definitions is None:
+            raise XMLDecodeError("Missing definitions tag %s" % tag)
+        return definitions

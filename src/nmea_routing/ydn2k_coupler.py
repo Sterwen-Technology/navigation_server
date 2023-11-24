@@ -17,6 +17,7 @@ from nmea2000.nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketExce
 from nmea2000.nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG
 from nmea_routing.coupler import IncompleteMessage
+from utilities.global_variables import find_pgn
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -89,7 +90,7 @@ class YDCoupler(BufferedIPCoupler):
 
         def check_pgn():
             try:
-                fp = PGNDefinitions.pgn_definition(pgn).fast_packet()
+                fp = find_pgn(pgn).fast_packet()
             except N2KUnknownPGN:
                 raise IncompleteMessage
             return fp
