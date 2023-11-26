@@ -16,8 +16,9 @@ import time
 from log_replay.raw_log_reader import RawLogFile, LogReadError
 from nmea_routing.coupler import Coupler, CouplerOpenRefused, IncompleteMessage
 from nmea0183.nmea0183_msg import NMEA0183Msg, NMEAInvalidFrame
-from nmea2000.nmea2000_msg import FastPacketHandler, fromProprietaryNmea, FastPacketException, NMEA2000Msg, N2KUnknownPGN
-from nmea2000.nmea2k_pgndefs import PGNDefinitions, PGNDef
+from nmea2000.nmea2000_msg import fromProprietaryNmea, NMEA2000Msg
+from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
+from nmea2000.nmea2k_pgndefs import PGNDef
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
 from nmea_routing.shipmodul_if import ShipModulInterface
 from nmea_routing.ydn2k_coupler import YDCoupler

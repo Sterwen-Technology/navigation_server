@@ -11,7 +11,8 @@
 import datetime
 import logging
 from can import Bus, Message, CanError
-from nmea2000.nmea2000_msg import NMEA2000Msg, FastPacketHandler, FastPacketException
+from nmea2000.nmea2000_msg import NMEA2000Msg
+from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
 from nmea2000.nmea2k_pgn_definition import PGNDef
 from log_replay.message_trace import NMEAMsgTrace, MessageTraceError
 from utilities.global_variables import find_pgn
@@ -177,7 +178,6 @@ class SocketCANInterface(threading.Thread):
         # end fast packet handling
         n2k_msg = NMEA2000Msg(pgn, prio, sa, da, data)
         if n2k_msg is not None:
-
             try:
                 self._queue.put(n2k_msg, block=False)
             except queue.Full:

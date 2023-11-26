@@ -21,7 +21,8 @@ import time
 from nmea_routing.generic_msg import *
 from nmea_routing.coupler import Coupler, CouplerReadError, CouplerTimeOut, IncompleteMessage
 from nmea0183.nmea0183_msg import process_nmea0183_frame, NMEAInvalidFrame, NMEA0183Msg
-from nmea2000.nmea2000_msg import fromProprietaryNmea, FastPacketHandler
+from nmea2000.nmea2000_msg import fromProprietaryNmea
+from nmea2000.nmea2k_fast_packet import FastPacketHandler
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
