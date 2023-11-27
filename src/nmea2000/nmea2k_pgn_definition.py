@@ -162,6 +162,7 @@ class PGNDef:
             return
 
         _logger.debug("Starting fields analysis for PGN %d %s" % (self._id, self._name))
+        field_index = 0
         for field in fields.iter():
             if field.tag.endswith('Field'):
                 try:
@@ -171,6 +172,8 @@ class PGNDef:
                     _logger.error("PGN %d Field class %s not defined for %s" % (self._id, field.tag, field.get('Name')))
                     continue
                 fo = field_class(field)
+                fo.set_index(field_index)
+                field_index += 1
                 bf_state = self.check_bitfield(fo)
                 if bf_state == self.NO_BITFIELD:
                     self._fields[fo.name] = fo
@@ -233,6 +236,10 @@ class PGNDef:
         # iterator respecting the order of declaration
         for f in self._field_list:
             yield f
+
+    @property
+    def field_list(self):
+        return self._field_list
 
     def search_field(self, name) -> Field:
         # need to perform a full search

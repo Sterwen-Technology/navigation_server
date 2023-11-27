@@ -46,7 +46,7 @@ couplers:
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
     direction: read_only
-    # pgn_white_list: [126720]
+    pgn_white_list: [129025]
     # data_sink: DataAnalyzer
     # pgn_white_list: [130842]
 
@@ -72,15 +72,11 @@ data_clients:
 
 publishers:
 
-- TraceRaymarine:
-    class: N2KTracePublisher
-    filters: [RaymarineProprietary]
-    output: PRINT
-
 - TraceAll:
     class: N2KTracePublisher
     output: PRINT
-    active: false
+    active: true
+    flexible_decode: false
     couplers: [LogReader]
 
 

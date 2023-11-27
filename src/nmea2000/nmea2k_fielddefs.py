@@ -30,6 +30,7 @@ class Field:
         self._end_byte = 0
         self._bit_offset = 0
         self._byte_length = 0
+        self._index = -1
         self._variable_length = False
         self._name = xml.attrib['Name']
         self._keyword = xml.attrib.get('key')
@@ -96,11 +97,26 @@ class Field:
         return self._keyword
 
     @property
+    def index(self) -> int:
+        return self._index
+
+    def set_index(self, index):
+        self._index = index
+
+    @property
     def decode_string(self) -> str:
         raise NotImplementedError("To be defined in subclasses")
 
     @property
     def decode_method(self) -> int:
+        raise NotImplementedError("To be defined in subclasses")
+
+    @property
+    def python_type(self):
+        raise NotImplementedError("To be defined in subclasses")
+
+    @property
+    def protobuf_type(self):
         raise NotImplementedError("To be defined in subclasses")
 
     def descr(self):
@@ -226,6 +242,20 @@ class Field:
             pass
         return round(value)
 
+    @property
+    def scale(self):
+        try:
+            return self.Scale
+        except AttributeError:
+            return None
+
+    @property
+    def offset(self):
+        try:
+            return self.Offset
+        except AttributeError:
+            return None
+
     def no_value(self):
         if self._byte_length <= 4:
             return DecodeDefinitions.uint_invalid[self._byte_length]
@@ -257,38 +287,6 @@ class Field:
     def encode_value(self, value, buffer, index) -> int:
         return self._value_coder.encode(value, buffer, index)
 
-    '''
-    def encode_uint(self, value: int, buffer: bytearray, index) -> int:
-        if self._byte_length == 1:
-            buffer[index] = value & 0xFF
-            return 1
-        elif self._byte_length == 2:
-            struct.pack_into('<H', buffer, index, value & 0xFFFF)
-            return 2
-        elif self._byte_length == 3:
-            b = struct.pack('<I', value & 0xFFFFFF)
-            buffer[index:] = b[:3]
-            return 3
-        elif self._byte_length == 4:
-            struct.pack_into('<I', buffer, index, value)
-            return 4
-        elif self._byte_length == 8:
-            struct.pack_into('<Q', buffer, index, value)
-            return 8
-        else:
-            raise N2KEncodeException("Cannot encode uint l=%d" % self._byte_length)
-
-    def encode_int(self, value: int, buffer: bytearray, index):
-        if self._byte_length == 2:
-            struct.pack_into('<i', buffer, index, value & 0xFFFF)
-            return 2
-        if self._byte_length == 4:
-            struct.pack_into('<l', buffer, index, value)
-        else:
-            raise N2KEncodeException("Cannot encode uint l=%d" % self._byte_length)
-
-    '''
-
     def encode_str(self, str_value: str, buffer: bytearray, index):
         if self._variable_length:
             buffer[index: index + len(str_value)] = str_value.encode()
@@ -296,6 +294,10 @@ class Field:
         else:
             buffer[index: index + self._byte_length] = str_value.encode()[:self._byte_length]
             return self._byte_length
+
+
+decode_uint_str = {1: "B", 2: "H", 4: "I", 8: "Q"}
+decode_int_str = {1: "b", 2: "h", 4: "i", 8: "q"}
 
 
 class UIntField(Field):
@@ -306,8 +308,19 @@ class UIntField(Field):
     def decode_value(self, payload, specs):
         return self.extract_value(payload, specs)
 
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_NUMBER
 
-class InstanceField(Field):
+    @property
+    def decode_string(self) -> str:
+        if self.is_bit_value():
+            raise ValueError
+        else:
+            return decode_uint_str[self._byte_length]
+
+
+class InstanceField(UIntField):
 
     def __init__(self, xml):
         super().__init__(xml)
@@ -358,6 +371,17 @@ class EnumField(Field):
             res.value = self._global_enum(enum_index)
         return res
 
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_NUMBER
+
+    @property
+    def decode_string(self) -> str:
+        if self.is_bit_value():
+            raise ValueError
+        else:
+            return decode_uint_str[self._byte_length]
+
 
 class EnumIntField(EnumField):
 
@@ -382,6 +406,17 @@ class IntField(Field):
     def is_bit_value(self) -> bool:
         return False
 
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_NUMBER
+
+    @property
+    def decode_string(self) -> str:
+        if self.is_bit_value():
+            raise ValueError
+        else:
+            return decode_int_str[self._byte_length]
+
 
 class DblField(Field):
 
@@ -403,6 +438,21 @@ class DblField(Field):
         val_int = self.convert_to_int(value)
         return super().encode_value(val_int, buffer, index)
 
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_NUMBER
+
+    @property
+    def decode_string(self) -> str:
+        if self.is_bit_value():
+            raise ValueError
+        else:
+            return decode_int_str[self._byte_length]
+
+    @property
+    def python_type(self):
+        return "float"
+
 
 class UDblField(Field):
 
@@ -422,6 +472,21 @@ class UDblField(Field):
         val_int = self.convert_to_int(value)
         return super().encode_value(val_int, buffer, index)
 
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_NUMBER
+
+    @property
+    def decode_string(self) -> str:
+        if self.is_bit_value():
+            raise ValueError
+        else:
+            return decode_int_str[self._byte_length]
+
+    @property
+    def python_type(self):
+        return "float"
+
 
 class ASCIIField(Field):
 
@@ -437,6 +502,10 @@ class ASCIIField(Field):
     def encode_value(self, value, buffer, index) -> int:
         return self.encode_str(value, buffer, index)
 
+    @property
+    def decode_method(self):
+        return VARIABLE_LENGTH_BYTES
+
 
 class StringField(Field):
 
@@ -451,6 +520,10 @@ class StringField(Field):
 
     def encode_value(self, value, buffer, index) -> int:
         return self.encode_str(value, buffer, index)
+
+    @property
+    def decode_method(self):
+        return VARIABLE_LENGTH_BYTES
 
 
 class FixLengthStringField(Field):
@@ -479,6 +552,10 @@ class FixLengthStringField(Field):
         buffer[index: index + self._byte_length] = value
         return self._byte_length
 
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_BYTES
+
 
 class NameField(Field):
     '''
@@ -505,6 +582,10 @@ class NameField(Field):
         buffer[index:] = value.bytes()
         return 8
 
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_NUMBER
+
 
 class CommunicationStatusField(Field):
 
@@ -518,11 +599,19 @@ class CommunicationStatusField(Field):
         res.invalid()
         return res
 
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_NUMBER
+
 
 class BytesField(Field):
 
     def __init__(self, xml):
         super().__init__(xml)
+
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_NUMBER
 
 
 class RepeatedFieldSet:
@@ -625,3 +714,6 @@ class ASCIIFixField(Field):
     def encode_value(self, value, buffer, index) -> int:
         return self.encode_str(value, buffer, index)
 
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_BYTES

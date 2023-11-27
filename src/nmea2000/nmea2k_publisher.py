@@ -16,7 +16,7 @@ import os
 from nmea_routing.publisher import Publisher
 from nmea2000.nmea2k_pgndefs import *
 from nmea_routing.filters import FilterSet
-
+from nmea2000.nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
 
 from nmea_routing.generic_msg import *
 from nmea_routing.configuration import NavigationConfiguration
@@ -89,6 +89,7 @@ class N2KTracePublisher(Publisher):
     def __init__(self, opts):
         super().__init__(opts)
         filter_names = opts.getlist('filters', str)
+        self._flexible = opts.get('flexible_decode', bool, True)
         if filter_names is not None and len(filter_names) > 0:
             _logger.info("Publisher:%s filter set:%s" % (self.name(), filter_names))
             self._filters = FilterSet(filter_names)
@@ -122,13 +123,22 @@ class N2KTracePublisher(Publisher):
                 return True
         '''
         # print("decoding %s", msg.format1())
-        try:
-            res = msg.decode()
-        except N2KDecodeException:
-            return True
-        except Exception as e:
-            _logger.error("Error decoding PGN: %s message:%s" % (e, msg.format1()))
-            return True
+        if self._flexible:
+            try:
+                res = msg.decode()
+            except N2KDecodeException:
+                return True
+            except Exception as e:
+                _logger.error("Error decoding PGN: %s message:%s" % (e, msg.format1()))
+                return True
+        else:
+            try:
+                res = get_n2k_decoded_object(msg)
+            except N2KMissingDecodeEncodeException:
+                return True
+            except Exception as e:
+                _logger.error("Error decoding PGN: %s message:%s" % (e, msg.format1()))
+                return True
 
         _logger.debug("Trace publisher msg:%s" % res)
         if res is not None:

@@ -67,6 +67,8 @@ def main():
     if opts.python:
         output_file = os.path.join(opts.directory, output_file_base + ".py")
         python_gen = PythonPGNGenerator(output_file)
+        python_gen.gen_classes()
+        python_gen.close()
 
 
 if __name__ == '__main__':
