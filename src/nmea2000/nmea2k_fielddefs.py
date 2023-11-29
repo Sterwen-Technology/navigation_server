@@ -13,14 +13,15 @@
 import logging
 
 from nmea2000.nmea2k_name import NMEA2000Name
-from nmea2000.nmea2k_encode_decode import DecodeSpecs, N2KDecodeResult, DecodeDefinitions
+from nmea2000.nmea2k_encode_decode import (DecodeSpecs, N2KDecodeResult, DecodeDefinitions, FIXED_LENGTH_NUMBER,
+                                           FIXED_LENGTH_BYTES, VARIABLE_LENGTH_BYTES)
 from utilities.global_variables import MessageServerGlobals
 from utilities.global_exceptions import *
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-(FIXED_LENGTH_NUMBER, FIXED_LENGTH_BYTES, VARIABLE_LENGTH_BYTES) = range(200, 203)
+
 
 
 class Field:
@@ -110,6 +111,10 @@ class Field:
     @property
     def decode_method(self) -> int:
         raise NotImplementedError("To be defined in subclasses")
+
+    @property
+    def nb_decode_slots(self) -> int:
+        return 1
 
     @property
     def python_type(self):
@@ -319,6 +324,10 @@ class UIntField(Field):
         else:
             return decode_uint_str[self._byte_length]
 
+    @property
+    def python_type(self):
+        return 'int'
+
 
 class InstanceField(UIntField):
 
@@ -330,15 +339,15 @@ class EnumField(Field):
 
     def __init__(self, xml):
         super().__init__(xml, do_not_process=("EnumValues", "EnumPair"))
-        global_enum_name = xml.get('Definition')
+        self._global_enum_name = xml.get('Definition')
         self._global_enum = None
-        if global_enum_name is not None:
+        if self._global_enum_name is not None:
             # now we need to look into the global enum table
             try:
-                self._global_enum = MessageServerGlobals.enums.get_enum(global_enum_name)
+                self._global_enum = MessageServerGlobals.enums.get_enum(self._global_enum_name)
                 print("EnumField", self.name, "Use global enum", self._global_enum.name)
             except KeyError:
-                _logger.error("Global enum definition %s non-existent" % global_enum_name)
+                _logger.error("Global enum definition %s non-existent" % self._global_enum_name)
         if self._global_enum is None:
             self._value_pair = {}
             enum_values = xml.find('EnumValues')
@@ -382,6 +391,17 @@ class EnumField(Field):
         else:
             return decode_uint_str[self._byte_length]
 
+    @property
+    def python_type(self):
+        return 'int'
+
+    @property
+    def global_enum(self):
+        return self._global_enum_name
+
+    def get_enum_dict(self):
+        return self._value_pair
+
 
 class EnumIntField(EnumField):
 
@@ -416,6 +436,10 @@ class IntField(Field):
             raise ValueError
         else:
             return decode_int_str[self._byte_length]
+
+    @property
+    def python_type(self):
+        return 'int'
 
 
 class DblField(Field):

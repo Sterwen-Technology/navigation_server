@@ -15,7 +15,8 @@ import datetime
 from collections import namedtuple
 
 from nmea2000.nmea2k_pgn_definition import PGNDef
-from nmea2000.nmea2k_fielddefs import FIXED_LENGTH_BYTES, FIXED_LENGTH_NUMBER, VARIABLE_LENGTH_BYTES
+from nmea2000.nmea2k_encode_decode import BitField
+from nmea2000.nmea2k_fielddefs import FIXED_LENGTH_BYTES, FIXED_LENGTH_NUMBER, VARIABLE_LENGTH_BYTES, EnumField
 from utilities.global_variables import MessageServerGlobals
 
 
@@ -23,8 +24,13 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 AttributeDef = namedtuple("AttributeDef", ["method", "variable", "field", "field_index",
                                            "field_type", "scale", "offset"])
+BitFieldAttributeDef = namedtuple("BitFieldAttributeDef", ["method", "variable", "field",
+                                            "field_index", "field_type", "nb_slots", "mask", "bit_offset"])
 
 ClassDef = namedtuple("ClassDef", ["pgn", "manufacturer", "class_name"])
+
+EnumDef = namedtuple("EnumDef", ["global_ref", "method", "enum_dict"])
+
 
 class PythonPGNGenerator:
 
@@ -91,17 +97,43 @@ class PythonPGNGenerator:
         except ValueError:
             manufacturer = 0
         attributes = []
+        enums = []
         decode_str = "<"
+        decode_index = 0
         for field in pgn_def.field_list:
             print("Field:", field.name)
             if field.decode_method == FIXED_LENGTH_NUMBER:
                 decode_str += field.decode_string
+                print("DEcode str:", decode_str)
             else:
                 raise NotImplementedError
-            if field.keyword is not None:
+            current_attr = None
+            if isinstance(field, BitField):
+                # need to look in subfields
+                for sub_field in field.sub_fields():
+                    if sub_field.field().keyword is not None:
+                        a_field = sub_field.field()
+                        current_attr = BitFieldAttributeDef(a_field.keyword, '_%s' % a_field.keyword, a_field,
+                                                               decode_index, 'int', field.nb_decode_slots,
+                                                               sub_field.mask, sub_field.bit_offset)
+                        attributes.append(current_attr)
+
+            elif field.keyword is not None:
                 # need to generate a local variable and cess method
-                attributes.append(AttributeDef(field.keyword, '_%s' % field.keyword, field, field.index,
-                                               field.python_type, field.scale, field.offset))
+                current_attr = AttributeDef(field.keyword, '_%s' % field.keyword, field, decode_index,
+                                               field.python_type, field.scale, field.offset)
+                attributes.append(current_attr)
+
+            decode_index += field.nb_decode_slots
+
+            # check enum for local generation
+            if current_attr is not None:
+                if issubclass(type(current_attr.field), EnumField):
+                    enum_def = EnumDef(current_attr.field.global_enum, current_attr.method,
+                                       current_attr.field.get_enum_dict())
+                    enums.append(enum_def)
+
+            # end attributes analysis loop
 
         nb_attributes = len(attributes)
         last_attr = nb_attributes - 1
@@ -118,8 +150,33 @@ class PythonPGNGenerator:
         for attr in attributes[:last_attr]:
             self._of.write("'%s', " % attr.variable)
         self._of.write("'%s')\n" % attributes[last_attr].variable)
+        # enums or enum reference
+        for enum in enums:
+            self.write_indent()
+            self._of.write(f"_{enum.method}_enum = ")
+            if enum.global_ref is not None:
+                self._of.write(f"MessageServerGlobals.enums.get_enum({enum.global_ref})\n")
+            else:
+                self._of.write("{\n")
+                nb_enums = len(enum.enum_dict)
+                count = 0
+                self.level = 2
+                for key, text in enum.enum_dict.items():
+                    self.write_indent()
+                    self._of.write(f"{key}: '{text}'")
+                    if count < nb_enums -1:
+                        self._of.write(",\n")
+                    else:
+                        self._of.write("\n")
+                    count += 1
+                self.write_indent()
+                self._of.write("}\n")
+        # enums
+
+
 
         #  __init__ method
+        self.level = 1
         self._of.write("\n")
         self.write_indent()
         self._of.write("def __init__(self, message=None, protobuf=None):\n")
@@ -147,7 +204,23 @@ class PythonPGNGenerator:
             self.write_indent()
             self._of.write("self.%s = value\n\n" % attr.variable)
             self.level = 1
-        # decode method
+        #
+        # enums property
+        for enum in enums:
+            self.write_indent()
+            self._of.write("@property\n")
+            self.write_indent()
+            self._of.write(f"def {enum.method}_text(self) -> str:\n")
+            self.level = 2
+            self.write_indent()
+            if enum.global_ref is not None:
+                self._of.write(f"return self._{enum.method}_enum.get_enum(self._{enum.method})\n\n")
+            else:
+                self._of.write(f"return self._{enum.method}_enum.get(self._{enum.method}, '{enum.method} key error')\n\n")
+            self.level = 1
+        #
+        # decode method =================================================
+        #
         self.write_indent()
         self._of.write("def decode_payload(self, payload):\n")
         self.level = 2
@@ -155,16 +228,24 @@ class PythonPGNGenerator:
         self._of.write("val = self._decode_struct.unpack(payload)\n")
         for attr in attributes:
             self.write_indent()
-            self._of.write("self.%s = " % attr.variable)
-            print("facteurs", attr.scale, attr.offset)
-            if attr.scale is not None:
-                self._of.write("val[%d] * %s" % (attr.field_index, str(attr.scale)))
-            elif attr.field_type == "float":
-                self._of.write("float(val[%d])" % attr.field_index)
-            else:
-                self._of.write("val[%d]" % attr.field_index)
-            if attr.offset is not None:
-                self._of.write(" + %s" % str(attr.offset))
+            print(attr.__class__.__name__)
+            if isinstance(attr, AttributeDef):
+                self._of.write("self.%s = " % attr.variable)
+                if attr.scale is not None:
+                    self._of.write("val[%d] * %s" % (attr.field_index, str(attr.scale)))
+                elif attr.field_type == "float":
+                    self._of.write("float(val[%d])" % attr.field_index)
+                else:
+                    self._of.write("val[%d]" % attr.field_index)
+                if attr.offset is not None:
+                    self._of.write(" + %s" % str(attr.offset))
+            elif isinstance(attr, BitFieldAttributeDef):
+                self._of.write(f"word = val[{attr.field_index}]")
+                if attr.nb_slots == 2:
+                    self._of.write(f" + val[{attr.field_index} + 1] << 16")
+                self._of.write("\n")
+                self.write_indent()
+                self._of.write(f"self.{attr.variable} = (word >> {attr.bit_offset}) & {attr.mask}")
             self._of.write("\n")
         self.level = 1
         self._of.write("\n")

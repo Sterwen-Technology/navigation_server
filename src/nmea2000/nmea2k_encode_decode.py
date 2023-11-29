@@ -58,6 +58,9 @@ class N2KDecodeResult:
         self._increment = False
 
 
+(FIXED_LENGTH_NUMBER, FIXED_LENGTH_BYTES, VARIABLE_LENGTH_BYTES) = range(200, 203)
+
+
 class BitFieldDef:
 
     def __init__(self, field, rel_offset, is_enumfield: bool):
@@ -83,6 +86,14 @@ class BitFieldDef:
 
     def field(self):
         return self._field
+
+    @property
+    def mask(self) -> int:
+        return self._value_mask
+
+    @property
+    def bit_offset(self) -> int:
+        return self._rel_offset
 
     def __str__(self):
         return "Field %s offset %d length %d" % (self._field.name, self._rel_offset, self._field.bit_length)
@@ -168,6 +179,23 @@ class BitField:
     @staticmethod
     def decode_uint16(data):
         return BitField.struct_2b.unpack(data[:2])[0]
+
+    # set of methods for code generation
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_NUMBER
+
+    @property
+    def decode_string(self) -> str:
+        return self.struct_format[self._byte_length][0][1:]
+
+    @property
+    def nb_decode_slots(self) -> int:
+        return len(self.struct_format[self._byte_length][0]) - 1
+
+    def sub_fields(self):
+        for bfdef in self._fields:
+            yield bfdef
 
 
 class DecodeSpecs:

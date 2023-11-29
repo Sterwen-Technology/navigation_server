@@ -45,7 +45,7 @@ class NMEA2000Enum:
             if attrib.tag == 'EnumPair':
                 value = int(attrib.get('Value'))
                 name = attrib.get('Name')
-                print("Enum",value,"=", name)
+                # print("Enum",value,"=", name)
                 self._enum_pair[value] = name
 
     def get_name(self, value: int):
