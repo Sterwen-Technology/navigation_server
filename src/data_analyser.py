@@ -16,12 +16,14 @@ from concurrent import futures
 import grpc
 import signal
 import time
+import os
 from generated.input_server_pb2_grpc import NMEAInputServerServicer, add_NMEAInputServerServicer_to_server
 from generated.nmea_messages_pb2 import server_resp
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
 from nmea2000.nmea2000_msg import NMEA2000Msg
+from utilities.global_variables import MessageServerGlobals
 
 _version = "V1.00"
 
@@ -29,7 +31,7 @@ _version = "V1.00"
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
 
-    p.add_argument('-d', '--directory', action='store', type=str, default='/data/solidsense/navigation_data')
+    p.add_argument('-d', '--directory', action='store', type=str, default='/mnt/meaban/Bateau/tests')
     p.add_argument('-p', '--port', action="store", type=int, default=4504)
     p.add_argument('-sim', '--simulator', action="store")
 
@@ -104,11 +106,12 @@ class GrpcServer:
 
 class DataStatistics:
 
-    def __init__(self):
+    def __init__(self, file):
         self._n2kstats = N2KStatistics()
         self._n183stats = NMEA183Statistics()
         self._server = None
         self._sigtime = 0
+        self._file = file
         signal.signal(signal.SIGINT, self.handler)
 
     def handler(self, signum, frame):
@@ -116,6 +119,7 @@ class DataStatistics:
         if t - self._sigtime > 10.0:
             self._sigtime = t
             self._n2kstats.print_entries()
+            self._n2kstats.write_entries(self._file)
             self._n183stats.print_entries()
         else:
             self._server.stop()
@@ -138,10 +142,11 @@ def main():
     loghandler.setFormatter(logformat)
     _logger.addHandler(loghandler)
     _logger.setLevel(logging.INFO)
+    output_file = os.path.join(opts.directory, 'pgn.csv')
 
-    Manufacturers.build_manufacturers('./def/Manufacturers.N2kDfn.xml')
-    PGNDefinitions.build_definitions('./def/PGNDefns.N2kDfn.xml')
-    stats = DataStatistics()
+    MessageServerGlobals.manufacturers = Manufacturers('./def/Manufacturers.N2kDfn.xml')
+    MessageServerGlobals.pgn_definitions = PGNDefinitions('./def/PGNDefns.N2kDfn.xml')
+    stats = DataStatistics(output_file)
     grpc_server = GrpcServer(opts, stats)
     stats.set_server(grpc_server)
     grpc_server.start()

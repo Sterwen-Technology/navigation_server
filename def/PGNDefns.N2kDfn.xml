@@ -1091,8 +1091,12 @@
     <PGNDefn PGN="126992">
       <Name>System Time</Name>
       <ByteLength>8</ByteLength>
+      <Generate>
+        <Coding>Optimized</Coding>
+        <Decode>Full</Decode>
+      </Generate>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -1102,7 +1106,7 @@
           <BitOffset>8</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <EnumField Name="Source">
+        <EnumField Name="Source" key="source">
           <BitOffset>12</BitOffset>
           <BitLength>4</BitLength>
           <EnumValues>
@@ -1114,13 +1118,13 @@
             <EnumPair Value="5" Name="Local Crystal clock" />
           </EnumValues>
         </EnumField>
-        <UIntField Name="Date">
+        <UIntField Name="Date" key="date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Date</FormatAs>
         </UIntField>
-        <UDblField Name="Time">
+        <UDblField Name="Time" key="time">
           <Description>Seconds since midnight</Description>
           <BitOffset>32</BitOffset>
           <BitLength>32</BitLength>
@@ -1132,13 +1136,17 @@
     <PGNDefn PGN="126993">
       <Name>Heartbeat</Name>
       <ByteLength>8</ByteLength>
+      <Generate>
+        <Coding>Optimized</Coding>
+        <Decode>Full</Decode>
+      </Generate>
       <Fields>
-        <UDblField Name="Interval">
+        <UDblField Name="Interval" key="interval">
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
           <Scale>10</Scale>
         </UDblField>
-        <UIntField Name="Status">
+        <UIntField Name="Status" key="status">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
@@ -6293,28 +6301,32 @@
     <PGNDefn PGN="130312">
       <Name>Temperature</Name>
       <ByteLength>8</ByteLength>
+      <Generate>
+        <Coding>Optimized</Coding>
+        <Decode>Full</Decode>
+      </Generate>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <InstanceField Name="Temperature Instance">
+        <InstanceField Name="Temperature Instance" key="temperature_instance">
           <BitOffset>8</BitOffset>
           <BitLength>8</BitLength>
         </InstanceField>
-        <EnumField Name="Temperature Source" Definition="Temperature Source">
+        <EnumField Name="Temperature Source" Definition="Temperature Source" key="temperature_source">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </EnumField>
-        <UDblField Name="Actual Temperature">
+        <UDblField Name="Actual Temperature" key="actual_temperature">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Temperature</FormatAs>
           <Offset>-273.15</Offset>
           <Scale>0.01</Scale>
         </UDblField>
-        <UDblField Name="Set Temperature">
+        <UDblField Name="Set Temperature" key="set_temperature">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Temperature</FormatAs>

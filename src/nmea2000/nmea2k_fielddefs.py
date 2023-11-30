@@ -21,9 +21,6 @@ from utilities.global_exceptions import *
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-
-
-
 class Field:
 
     def __init__(self, xml, do_not_process=None):
@@ -35,8 +32,8 @@ class Field:
         self._variable_length = False
         self._name = xml.attrib['Name']
         self._keyword = xml.attrib.get('key')
-        if self._keyword is not None:
-            print("Field", self._name, "Keyword", self._keyword)
+        # if self._keyword is not None:
+            #  print("Field", self._name, "Keyword", self._keyword)
         self._attributes = {}
         # print("Field name:", self._name, "class:", self.__class__.__name__)
         for attrib in xml.iter():
@@ -345,7 +342,7 @@ class EnumField(Field):
             # now we need to look into the global enum table
             try:
                 self._global_enum = MessageServerGlobals.enums.get_enum(self._global_enum_name)
-                print("EnumField", self.name, "Use global enum", self._global_enum.name)
+                # print("EnumField", self.name, "Use global enum", self._global_enum.name)
             except KeyError:
                 _logger.error("Global enum definition %s non-existent" % self._global_enum_name)
         if self._global_enum is None:
@@ -360,6 +357,8 @@ class EnumField(Field):
                 if index.isdigit():
                     index = int(index)
                 self._value_pair[index] = value.attrib['Name']
+        else:
+            self._value_pair = None
         # print(self._value_pair)
 
     def get_name(self, value):
@@ -635,7 +634,7 @@ class BytesField(Field):
 
     @property
     def decode_method(self):
-        return FIXED_LENGTH_NUMBER
+        return FIXED_LENGTH_BYTES
 
 
 class RepeatedFieldSet:
@@ -645,6 +644,7 @@ class RepeatedFieldSet:
         self._pgn = pgn
         self._count = xml.attrib["Count"]
         self._subfields = {}
+        self._field_list = []
         for field in xml.iter():
             if field.tag.endswith('Field'):
                 try:
@@ -654,6 +654,7 @@ class RepeatedFieldSet:
                     continue
                 fo = field_class(field)
                 self._subfields[fo.name] = fo
+                self._field_list.append(fo)
 
     @property
     def name(self):

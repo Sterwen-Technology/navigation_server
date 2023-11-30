@@ -10,8 +10,11 @@
 #-------------------------------------------------------------------------------
 
 import logging
+import csv
 from nmea2000.nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
+from nmea2000.nmea2k_pgn_definition import PGNDef
 from nmea2000.nmea2000_msg import NMEA2000Msg
+from utilities.global_variables import find_pgn
 
 
 _logger = logging.getLogger("Data_analyser")
@@ -67,9 +70,12 @@ class N2KStatEntry:
     def add_count(self):
         self._count += 1
 
+    def iterable(self):
+        return self._pgn, self._sa, self._mfg, self._count
+
     def __str__(self):
         try:
-            pgn_name = PGNDefinitions.pgn_definition(self._pgn, self._mfg).name
+            pgn_name = find_pgn(self._pgn, self._mfg).name
         except N2KUnknownPGN:
             pgn_name = "Unknown (Mfg=%d)" % self._mfg
 
@@ -84,7 +90,7 @@ class N2KStatistics:
 
     def add_entry(self, msg):
 
-        if PGNDefinitions.is_pgn_proprietary(msg.pgn):
+        if PGNDef.is_pgn_proprietary(msg.pgn):
             manufacturer = msg.get_manufacturer()
             # print("PGN", msg.pgn, "Manufacturer", manufacturer)
             key = msg.sa << 29 + msg.pgn << 11 + manufacturer
@@ -106,4 +112,11 @@ class N2KStatistics:
         print("Total number of N2K messages:%d" % self._total_msg)
         for entry in self._entries.values():
             print(entry)
+
+    def write_entries(self, file):
+        with open(file,'w') as fp:
+            csv_writer = csv.writer(fp, dialect='excel')
+            for entry in self._entries.values():
+                csv_writer.writerow(entry.iterable())
+
 

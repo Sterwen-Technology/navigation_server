@@ -18,5 +18,5 @@ class MessageServerGlobals:
     version = None
 
 
-def find_pgn(pgn: int):
-    return MessageServerGlobals.pgn_definitions.pgn_definition(pgn)
+def find_pgn(pgn: int, mfg_id: int = 0):
+    return MessageServerGlobals.pgn_definitions.pgn_definition(pgn, mfg_id)

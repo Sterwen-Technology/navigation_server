@@ -131,7 +131,7 @@ class PGNDef:
                     self._coding = gen_attr.text
                 if gen_attr.tag == 'Decode':
                     self._decode = gen_attr.text
-            print("Code generation for", self._name, self._coding, self._decode)
+            # print("Code generation for", self._name, self._coding, self._decode)
         else:
             self._generate = False
         self._proprietary = self.is_pgn_proprietary(self._id)
