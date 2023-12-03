@@ -41,7 +41,7 @@ couplers:
 
 - LogReader:
     class: RawLogCoupler
-    logfile: /mnt/meaban/Bateau/tests/TRACE-CAN-if-can0-231101-Corrigee.log
+    logfile: C:\Users\laure\Laurent-Drive\Logiciel bateau\tests\TRACE-CAN-if-can0-231101-Corrigee.log
     autostart: true
     nmea2000_controller: NMEANetwork
     protocol: nmea2000

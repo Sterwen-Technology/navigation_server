@@ -13,6 +13,7 @@
 import logging
 
 from nmea2000.nmea2000_msg import NMEA2000Msg
+from utilities.global_variables import MessageServerGlobals
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -33,8 +34,15 @@ class NMEA2000OptimObject:
             self.from_protobuf(protobuf)
 
     def decode_payload(self, payload):
+        self.decode_payload_segment(payload, 0)
+
+    def decode_payload_segment(self, payload, from_byte):
         raise NotImplementedError("To be implemented in subclasses")
 
     def from_protobuf(self, protobuf):
         raise NotImplementedError("To be implemented in subclasses")
+
+    def resolve_global_enum(self, enum_set: str, enum_value: int):
+        return MessageServerGlobals.enums.get_enum(enum_set).get_name(enum_value)
+
 
