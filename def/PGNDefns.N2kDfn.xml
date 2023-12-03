@@ -1091,10 +1091,7 @@
     <PGNDefn PGN="126992">
       <Name>System Time</Name>
       <ByteLength>8</ByteLength>
-      <Generate>
-        <Coding>Optimized</Coding>
-        <Decode>Full</Decode>
-      </Generate>
+      <Generate>Yes</Generate>
       <Fields>
         <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
@@ -1136,10 +1133,7 @@
     <PGNDefn PGN="126993">
       <Name>Heartbeat</Name>
       <ByteLength>8</ByteLength>
-      <Generate>
-        <Coding>Optimized</Coding>
-        <Decode>Full</Decode>
-      </Generate>
+      <Generate>Yes</Generate>
       <Fields>
         <UDblField Name="Interval" key="interval">
           <BitOffset>0</BitOffset>
@@ -2477,10 +2471,7 @@
     <PGNDefn PGN="129025">
       <Name>Position, Rapid Update</Name>
       <ByteLength>8</ByteLength>
-      <Generate>
-        <Coding>Optimized</Coding>
-        <Decode>Full</Decode>
-      </Generate>
+      <Generate>Yes</Generate>
       <Fields>
         <DblField Name="Latitude" key="latitude">
           <BitOffset>0</BitOffset>
@@ -2499,10 +2490,7 @@
     <PGNDefn PGN="129026">
       <Name>COG &amp; SOG, Rapid Update</Name>
       <ByteLength>8</ByteLength>
-      <Generate>
-        <Coding>Optimized</Coding>
-        <Decode>Full</Decode>
-      </Generate>
+      <Generate>Yes</Generate>
       <Fields>
         <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
@@ -2605,43 +2593,44 @@
     <PGNDefn PGN="129029">
       <Name>GNSS Position Data</Name>
       <ByteLength>43</ByteLength>
+      <Generate>Yes</Generate>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <UIntField Name="Date">
+        <UIntField Name="Date" key="date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Date</FormatAs>
         </UIntField>
-        <UDblField Name="Time">
+        <UDblField Name="Time" key="time">
           <Description>Seconds since midnight</Description>
           <BitOffset>24</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Time</FormatAs>
           <Scale>0.0001</Scale>
         </UDblField>
-        <DblField Name="Latitude">
+        <DblField Name="Latitude" key="latitude">
           <BitOffset>56</BitOffset>
           <BitLength>64</BitLength>
           <FormatAs>Latitude</FormatAs>
           <Scale>1E-16</Scale>
         </DblField>
-        <DblField Name="Longitude">
+        <DblField Name="Longitude" key="longitude">
           <BitOffset>120</BitOffset>
           <BitLength>64</BitLength>
           <FormatAs>Longitude</FormatAs>
           <Scale>1E-16</Scale>
         </DblField>
-        <DblField Name="Altitude">
+        <DblField Name="Altitude" key="altitude">
           <BitOffset>184</BitOffset>
           <BitLength>64</BitLength>
           <Scale>1E-6</Scale>
         </DblField>
-        <EnumField Name="Method">
+        <EnumField Name="Method" key="method">
           <BitOffset>248</BitOffset>
           <BitLength>4</BitLength>
           <EnumValues>
@@ -2656,11 +2645,11 @@
             <EnumPair Value="8" Name="Simulate mode" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="GNSS type" Definition="GNSS type">
+        <EnumField Name="GNSS type" Definition="GNSS type" key="GNSS_type">
           <BitOffset>252</BitOffset>
           <BitLength>4</BitLength>
         </EnumField>
-        <EnumField Name="Integrity">
+        <EnumField Name="Integrity" key="integrity">
           <BitOffset>256</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -2674,44 +2663,44 @@
           <BitOffset>258</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <UIntField Name="Number of SVs">
+        <UIntField Name="Number of SVs" key="number_of_sv">
           <Description>Number of satellites used in solution</Description>
           <BitOffset>264</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <DblField Name="HDOP">
+        <DblField Name="HDOP" key="HDOP">
           <Description>Horizontal dilution of precision</Description>
           <BitOffset>272</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <DblField Name="PDOP">
+        <DblField Name="PDOP" key="PDOP">
           <Description>Probable dilution of precision</Description>
           <BitOffset>288</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <DblField Name="Geoidal Separation">
+        <DblField Name="Geoidal Separation" key="geoidal_separation">
           <Description>Geoidal Separation</Description>
           <BitOffset>304</BitOffset>
           <BitLength>32</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <UIntField Name="nStations">
+        <UIntField Name="nStations" key="nb_ref_stations">
           <Description>Number of reference stations</Description>
           <BitOffset>336</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <RepeatedFieldSet Name="Reference Stations" Count="nStations">
-          <UIntField Name="Reference Station ID">
+        <RepeatedFieldSet Name="Reference Stations" Count="nStations" key="ref_stations">
+          <UIntField Name="Reference Station ID" key="station_id">
             <BitOffset>0</BitOffset>
             <BitLength>4</BitLength>
           </UIntField>
-          <EnumField Name="Reference Station Type" Definition="GNSS type">
+          <EnumField Name="Reference Station Type" Definition="GNSS type" key="GNSS_type">
             <BitOffset>4</BitOffset>
             <BitLength>4</BitLength>
           </EnumField>
-          <DblField Name="Age of DGNSS Corrections">
+          <DblField Name="Age of DGNSS Corrections" key="age_DGNSS_correction">
             <BitOffset>8</BitOffset>
             <BitLength>16</BitLength>
             <Scale>0.01</Scale>
@@ -6301,10 +6290,7 @@
     <PGNDefn PGN="130312">
       <Name>Temperature</Name>
       <ByteLength>8</ByteLength>
-      <Generate>
-        <Coding>Optimized</Coding>
-        <Decode>Full</Decode>
-      </Generate>
+      <Generate>Yes</Generate>
       <Fields>
         <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>

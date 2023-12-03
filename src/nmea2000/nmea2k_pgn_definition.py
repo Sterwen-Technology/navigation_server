@@ -17,6 +17,7 @@ from utilities.global_variables import MessageServerGlobals
 from utilities.object_utilities import build_subclass_dict
 from nmea2000.nmea2k_fielddefs import RepeatedFieldSet, Field
 from nmea2000.nmea2k_encode_decode import BitField, BitFieldSplitException
+from nmea2000.nmea2k_bitfield_generator import BitFieldGenerator
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -24,7 +25,7 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 PGNRange = namedtuple('PGNRange', ['start', 'to', 'pdu', 'value', 'description'])
 
 
-class PGNDef:
+class PGNDef (BitFieldGenerator):
 
     trace_enum_error = False
     trace_decode_warning = False
@@ -46,8 +47,6 @@ class PGNDef:
     ]
 
     pgn_service = [59392, 59904, 60928, 65240, 126208, 126464, 126993, 126996]
-
-    (NO_BITFIELD, NEW_BITFIELD, BITFIELD_IN_PROGRESS) = range(0, 3)
 
     @staticmethod
     def set_trace(enum_error: bool, warning: bool):
@@ -103,6 +102,8 @@ class PGNDef:
         return False
 
     def __init__(self, pgnxml):
+
+        BitFieldGenerator.__init__(self)
         self._id_str = pgnxml.attrib['PGN']
         self._xml = pgnxml
         self._id = int(self._id_str)
@@ -125,21 +126,16 @@ class PGNDef:
         self._name = pgnxml.find('Name').text
         gen = pgnxml.find("Generate")
         if gen is not None:
-            self._generate = True
-            for gen_attr in gen.iter():
-                if gen_attr.tag == 'Coding':
-                    self._coding = gen_attr.text
-                if gen_attr.tag == 'Decode':
-                    self._decode = gen_attr.text
-            # print("Code generation for", self._name, self._coding, self._decode)
+            if gen.text == "Yes":
+                self._generate = True
+                # print("Code generation for", self._name)
         else:
             self._generate = False
         self._proprietary = self.is_pgn_proprietary(self._id)
         self._manufacturer_id = None
         self._fields = {}
         self._fast_packet = False
-        self._bitfield_in_create = None
-        self._bitfield_no = 1
+
         bl = pgnxml.find('ByteLength')
         if bl is not None:
             self._byte_length = int(bl.text)
@@ -174,24 +170,14 @@ class PGNDef:
                 fo = field_class(field)
                 fo.set_index(field_index)
                 field_index += 1
-                bf_state = self.check_bitfield(fo)
-                if bf_state == self.NO_BITFIELD:
-                    self._fields[fo.name] = fo
-                    self._field_list.append(fo)
-                elif bf_state == self.NEW_BITFIELD:
-                    self._fields[self._bitfield_in_create.name] = self._bitfield_in_create
-                    self._field_list.append(self._bitfield_in_create)
+                self.check_bf_add_field(fo)
 
             elif field.tag == "RepeatedFieldSet":
                 fo = RepeatedFieldSet(field, self)
                 self._fields[fo.name] = fo
                 self._field_list.append(fo)
                 break
-        if self._bitfield_in_create is not None:
-            try:
-                self._bitfield_in_create.finalize()
-            except ValueError:
-                _logger.error("PGN %d error finalizing last bitfield" % self._id)
+        self.check_and_finalize()
         if self._proprietary:
             # look for the manufacturer
             try:
@@ -252,6 +238,10 @@ class PGNDef:
             elif f.name == name:
                 return f
         raise KeyError
+
+    def add_field(self, field):
+        self._fields[field.name] = field
+        self._field_list.append(field)
 
     @property
     def pdu_format(self):
@@ -357,26 +347,6 @@ class PGNDef:
             # print("Encoded field", f.name, len(buffer[:index]), "Index:", index)
         return buffer[:index]
 
-    def check_bitfield(self, field) -> int:
-        if field.is_bit_value():
-            if self._bitfield_in_create is not None:
-                try:
-                    self._bitfield_in_create.add_field(field)
-                    return self.BITFIELD_IN_PROGRESS
-                except BitFieldSplitException:
-                    self._bitfield_in_create.finalize()
-                    self._bitfield_in_create = BitField(field, self._bitfield_no)
-                    self._bitfield_no += 1
-                    return self.NEW_BITFIELD
-            else:
-                self._bitfield_in_create = BitField(field, self._bitfield_no)
-                self._bitfield_no += 1
-                return self.NEW_BITFIELD
-        else:
-            if self._bitfield_in_create is not None:
-                self._bitfield_in_create.finalize()
-                self._bitfield_in_create = None
-            return self.NO_BITFIELD
 
 
 

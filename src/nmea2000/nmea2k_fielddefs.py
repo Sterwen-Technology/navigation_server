@@ -14,7 +14,8 @@ import logging
 
 from nmea2000.nmea2k_name import NMEA2000Name
 from nmea2000.nmea2k_encode_decode import (DecodeSpecs, N2KDecodeResult, DecodeDefinitions, FIXED_LENGTH_NUMBER,
-                                           FIXED_LENGTH_BYTES, VARIABLE_LENGTH_BYTES)
+                                           FIXED_LENGTH_BYTES, VARIABLE_LENGTH_BYTES, REPEATED_FIELD_SET)
+from nmea2000.nmea2k_bitfield_generator import BitFieldGenerator
 from utilities.global_variables import MessageServerGlobals
 from utilities.global_exceptions import *
 
@@ -637,12 +638,40 @@ class BytesField(Field):
         return FIXED_LENGTH_BYTES
 
 
-class RepeatedFieldSet:
+class ASCIIFixField(Field):
+
+    def __init__(self, xml):
+        super().__init__(xml, do_not_process=['SubString'])
+        # print(self._name, self._bit_offset, self._byte_length, self.BitOffset, self.BitLength)
+        self._subfields = []
+
+    def decode_value(self, payload, specs):
+        res = N2KDecodeResult(self._name)
+        # if we have some invalidated characters at the end
+        null_start = payload[specs.start:specs.end].find(0xff)
+        if null_start > 0:
+            specs.end = null_start
+        res.value = payload[specs.start:specs.end].decode()
+        # print(self._name, specs.start, specs.end, self._byte_length,":", res.value)
+        return res
+
+    def encode_value(self, value, buffer, index) -> int:
+        return self.encode_str(value, buffer, index)
+
+    @property
+    def decode_method(self):
+        return FIXED_LENGTH_BYTES
+
+
+class RepeatedFieldSet (BitFieldGenerator):
 
     def __init__(self, xml, pgn):
+
+        super().__init__()
         self._name = xml.attrib['Name']
         self._pgn = pgn
         self._count = xml.attrib["Count"]
+        self._keyword = xml.attrib.get("key")
         self._subfields = {}
         self._field_list = []
         for field in xml.iter():
@@ -653,15 +682,23 @@ class RepeatedFieldSet:
                     _logger.error("Field class %s not defined in PGN %d" % (field.tag, pgn))
                     continue
                 fo = field_class(field)
-                self._subfields[fo.name] = fo
-                self._field_list.append(fo)
+                self.check_bf_add_field(fo)
+        self.check_and_finalize()
 
     @property
     def name(self):
         return self._name
 
+    @property
+    def id(self) -> int:
+        return self._pgn.id
+
     def search_field(self, name):
         return self._subfields[name]
+
+    def add_field(self, fo):
+        self._subfields[fo.name] = fo
+        self._field_list.append(fo)
 
     def descr(self):
         out = "%s %s" % (self._name, "RepeatedFieldSet")
@@ -718,27 +755,23 @@ class RepeatedFieldSet:
     def type(self):
         return self.__class__.__name__
 
-
-class ASCIIFixField(Field):
-
-    def __init__(self, xml):
-        super().__init__(xml, do_not_process=['SubString'])
-        # print(self._name, self._bit_offset, self._byte_length, self.BitOffset, self.BitLength)
-        self._subfields = []
-
-    def decode_value(self, payload, specs):
-        res = N2KDecodeResult(self._name)
-        # if we have some invalidated characters at the end
-        null_start = payload[specs.start:specs.end].find(0xff)
-        if null_start > 0:
-            specs.end = null_start
-        res.value = payload[specs.start:specs.end].decode()
-        # print(self._name, specs.start, specs.end, self._byte_length,":", res.value)
-        return res
-
-    def encode_value(self, value, buffer, index) -> int:
-        return self.encode_str(value, buffer, index)
+    @property
+    def decode_method(self) -> int:
+        return REPEATED_FIELD_SET
 
     @property
-    def decode_method(self):
-        return FIXED_LENGTH_BYTES
+    def keyword(self) -> str:
+        return self._keyword
+
+    @property
+    def count_method(self) -> str:
+        return self._pgn.search_field(self._count).keyword
+
+    @property
+    def field_list(self):
+        return self._field_list
+
+    @property
+    def python_type(self):
+        return 'list'
+

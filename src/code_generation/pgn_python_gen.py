@@ -16,7 +16,8 @@ from collections import namedtuple
 
 from nmea2000.nmea2k_pgn_definition import PGNDef
 from nmea2000.nmea2k_encode_decode import BitField
-from nmea2000.nmea2k_fielddefs import FIXED_LENGTH_BYTES, FIXED_LENGTH_NUMBER, VARIABLE_LENGTH_BYTES, EnumField
+from nmea2000.nmea2k_fielddefs import (FIXED_LENGTH_BYTES, FIXED_LENGTH_NUMBER, VARIABLE_LENGTH_BYTES, EnumField,
+                                        REPEATED_FIELD_SET)
 from utilities.global_variables import MessageServerGlobals
 
 
@@ -25,11 +26,13 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 AttributeDef = namedtuple("AttributeDef", ["method", "variable", "field", "field_index",
                                            "field_type", "scale", "offset"])
 BitFieldAttributeDef = namedtuple("BitFieldAttributeDef", ["method", "variable", "field",
-                                            "field_index", "field_type", "nb_slots", "mask", "bit_offset"])
+                                  "field_index", "field_type", "nb_slots", "mask", "bit_offset"])
 
 ClassDef = namedtuple("ClassDef", ["pgn", "manufacturer", "class_name"])
 
 EnumDef = namedtuple("EnumDef", ["global_ref", "method", "enum_dict"])
+
+RepeatAttributeDef = namedtuple("RepeatAttributeDef", ["method", "variable", "count_method", "class_name", "field_type"])
 
 
 class PythonPGNGenerator:
@@ -107,33 +110,37 @@ class PythonPGNGenerator:
             if field.decode_method == FIXED_LENGTH_NUMBER:
                 decode_str += field.decode_string
 
-            else:
-                raise NotImplementedError
-            current_attr = None
-            if isinstance(field, BitField):
-                # need to look in subfields
-                for sub_field in field.sub_fields():
-                    if sub_field.field().keyword is not None:
-                        a_field = sub_field.field()
-                        current_attr = BitFieldAttributeDef(a_field.keyword, '_%s' % a_field.keyword, a_field,
-                                                            decode_index, 'int', field.nb_decode_slots,
-                                                            sub_field.mask, sub_field.bit_offset)
-                        attributes.append(current_attr)
+                current_attr = None
+                if isinstance(field, BitField):
+                    # need to look in subfields
+                    for sub_field in field.sub_fields():
+                        if sub_field.field().keyword is not None:
+                            a_field = sub_field.field()
+                            current_attr = BitFieldAttributeDef(a_field.keyword, '_%s' % a_field.keyword, a_field,
+                                                                decode_index, 'int', field.nb_decode_slots,
+                                                                sub_field.mask, sub_field.bit_offset)
+                            attributes.append(current_attr)
 
-            elif field.keyword is not None:
-                # need to generate a local variable and cess method
-                current_attr = AttributeDef(field.keyword, '_%s' % field.keyword, field, decode_index,
-                                            field.python_type, field.scale, field.offset)
-                attributes.append(current_attr)
+                elif field.keyword is not None:
+                    # need to generate a local variable and access method
+                    current_attr = AttributeDef(field.keyword, '_%s' % field.keyword, field, decode_index,
+                                                field.python_type, field.scale, field.offset)
+                    attributes.append(current_attr)
 
-            decode_index += field.nb_decode_slots
+                decode_index += field.nb_decode_slots
 
-            # check enum for local generation
-            if current_attr is not None:
-                if issubclass(type(current_attr.field), EnumField):
-                    enum_def = EnumDef(current_attr.field.global_enum, current_attr.method,
-                                       current_attr.field.get_enum_dict())
-                    enums.append(enum_def)
+                # check enum for local generation
+                if current_attr is not None:
+                    if issubclass(type(current_attr.field), EnumField):
+                        enum_def = EnumDef(current_attr.field.global_enum, current_attr.method,
+                                           current_attr.field.get_enum_dict())
+                        enums.append(enum_def)
+
+            elif field.decode_method == REPEATED_FIELD_SET:
+                # first let's generate the sub_class
+                class_name = self.gen_repeat_class(field)
+                attributes.append(RepeatAttributeDef(field.keyword, f"_{field.keyword}", field.count_method,
+                                                     class_name, field.python_type))
 
             # end attributes analysis loop
         return attributes, enums, decode_str
@@ -329,6 +336,24 @@ class PythonPGNGenerator:
         self.write_indent()
         self._of.write(f"return self._{method}\n\n")
         self.dec_indent()
+
+    def gen_repeat_class(self, repeat_field):
+        class_name = f"{repeat_field.keyword.title()}Class"
+        # self.inc_indent()
+        self.write_indent()
+        self._of.write(f"class {class_name}:\n")
+        self.inc_indent()
+        attributes, enums, decode_str = self.analyze_attributes(repeat_field.field_list)
+        nb_attributes = len(attributes)
+        last_attr = nb_attributes - 1
+        self.gen_class_variables(attributes, decode_str, last_attr)
+        self.gen_accessors_methods(attributes, enums)
+        self.gen_decode_encode_methods(attributes, last_attr)
+        self.dec_indent()
+        self.dec_indent()
+        return class_name
+
+
 
 
 
