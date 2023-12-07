@@ -35,7 +35,7 @@ def _parser():
 
 
 parser = _parser()
-_logger = logging.getLogger("Data_analyser")
+_logger = logging.getLogger("ShipDataServer")
 
 
 class Options(object):
