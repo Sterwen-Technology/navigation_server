@@ -17,6 +17,7 @@ from argparse import ArgumentParser
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from utilities.global_variables import MessageServerGlobals
+from code_generation.nmea2000_meta import nmea2000_gen_meta
 from code_generation.pgn_python_gen import PythonPGNGenerator
 
 
@@ -64,6 +65,9 @@ def main():
     MessageServerGlobals.manufacturers = Manufacturers('./def/Manufacturers.N2kDfn.xml')
     MessageServerGlobals.pgn_definitions = PGNDefinitions('./def/PGNDefns.N2kDfn.xml')
     output_file_base = "nmea2000_classes_gen"
+    _logger.info("Generating NMEA2000 meta model")
+    class_list = nmea2000_gen_meta()
+    _logger.info(f"Generated meta model for {len(class_list)} PGN")
     if opts.python:
         output_file = os.path.join(opts.directory, output_file_base + ".py")
         python_gen = PythonPGNGenerator(output_file)
