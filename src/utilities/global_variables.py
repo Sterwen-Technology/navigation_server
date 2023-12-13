@@ -20,3 +20,8 @@ class MessageServerGlobals:
 
 def find_pgn(pgn: int, mfg_id: int = 0):
     return MessageServerGlobals.pgn_definitions.pgn_definition(pgn, mfg_id)
+
+
+class Typedef:
+
+    (UINT, INT, FLOAT, STRING, BYTES) = range(10, 15)

@@ -42,7 +42,15 @@ class NMEA2000OptimObject:
     def from_protobuf(self, protobuf):
         raise NotImplementedError("To be implemented in subclasses")
 
-    def resolve_global_enum(self, enum_set: str, enum_value: int):
+    @staticmethod
+    def resolve_global_enum(enum_set: str, enum_value: int):
         return MessageServerGlobals.enums.get_enum(enum_set).get_name(enum_value)
+
+
+def check_valid(value: int, mask: int, default: int) -> int:
+    if value == mask:
+        return default
+    else:
+        return value
 
 

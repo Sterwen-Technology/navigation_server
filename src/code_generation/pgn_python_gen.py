@@ -12,27 +12,11 @@
 
 import logging
 import datetime
-from collections import namedtuple
 
-from nmea2000.nmea2k_pgn_definition import PGNDef
-from nmea2000.nmea2k_encode_decode import BitField
-from nmea2000.nmea2k_fielddefs import (FIXED_LENGTH_BYTES, FIXED_LENGTH_NUMBER, VARIABLE_LENGTH_BYTES, EnumField,
-                                        REPEATED_FIELD_SET)
-from utilities.global_variables import MessageServerGlobals
 
+from code_generation.nmea2000_meta import BitFieldAttributeDef, RepeatAttributeDef, ScalarAttributeDef, NMEA2000Meta
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
-
-AttributeDef = namedtuple("AttributeDef", ["method", "variable", "field", "field_index",
-                                           "field_type", "scale", "offset"])
-BitFieldAttributeDef = namedtuple("BitFieldAttributeDef", ["method", "variable", "field",
-                                  "field_index", "field_type", "nb_slots", "mask", "bit_offset"])
-
-ClassDef = namedtuple("ClassDef", ["pgn", "manufacturer", "class_name"])
-
-EnumDef = namedtuple("EnumDef", ["global_ref", "method", "enum_dict"])
-
-RepeatAttributeDef = namedtuple("RepeatAttributeDef", ["method", "variable", "count_method", "class_name", "field_type"])
 
 
 class PythonPGNGenerator:
@@ -55,8 +39,9 @@ class PythonPGNGenerator:
 
         # generate imports
         self._of.write("import struct\n")
-        self._of.write("\nfrom nmea2000.generated_base import %s\n" % self.base_class)
-        self._of.write("from utilities.global_variables import MessageServerGlobals\n")
+        self._of.write(f"\nfrom nmea2000.generated_base import {self.base_class}, check_valid\n")
+        # self._of.write("from utilities.global_variables import MessageServerGlobals\n")
+        self._of.write('\n')
 
     def close(self):
         self._of.close()
@@ -73,10 +58,11 @@ class PythonPGNGenerator:
     def set_level(self, level):
         self._level = level
 
-    def gen_classes(self):
-        class_def_list = []
-        for cls in MessageServerGlobals.pgn_definitions.generation_iter():
-            class_def_list.append(self.gen_class(cls))
+    def gen_classes(self, class_def_list: list):
+
+        # generate all classes
+        for cls in class_def_list:
+            self.gen_class(cls)
         # now write the class dictionary
         self.set_level(0)
         self._of.write("\n#####################################################################\n")
@@ -85,7 +71,7 @@ class PythonPGNGenerator:
         self._of.write("nmea2k_generated_classes = {\n")
         self.set_level(2)
 
-        def write_cls_entry(cls_def: ClassDef):
+        def write_cls_entry(cls_def: NMEA2000Meta):
             self._of.write(f"{cls_def.pgn}: {cls_def.class_name}")
 
         for cls in class_def_list[:len(class_def_list)-1]:
@@ -98,52 +84,6 @@ class PythonPGNGenerator:
         self.write_indent()
         self._of.write("}\n")
         self._of.write("# end of generated file\n")
-
-    def analyze_attributes(self, field_list):
-
-        attributes = []
-        enums = []
-        decode_str = "<"
-        decode_index = 0
-        for field in field_list:
-            print("Field:", field.name)
-            if field.decode_method == FIXED_LENGTH_NUMBER:
-                decode_str += field.decode_string
-
-                current_attr = None
-                if isinstance(field, BitField):
-                    # need to look in subfields
-                    for sub_field in field.sub_fields():
-                        if sub_field.field().keyword is not None:
-                            a_field = sub_field.field()
-                            current_attr = BitFieldAttributeDef(a_field.keyword, '_%s' % a_field.keyword, a_field,
-                                                                decode_index, 'int', field.nb_decode_slots,
-                                                                sub_field.mask, sub_field.bit_offset)
-                            attributes.append(current_attr)
-
-                elif field.keyword is not None:
-                    # need to generate a local variable and access method
-                    current_attr = AttributeDef(field.keyword, '_%s' % field.keyword, field, decode_index,
-                                                field.python_type, field.scale, field.offset)
-                    attributes.append(current_attr)
-
-                decode_index += field.nb_decode_slots
-
-                # check enum for local generation
-                if current_attr is not None:
-                    if issubclass(type(current_attr.field), EnumField):
-                        enum_def = EnumDef(current_attr.field.global_enum, current_attr.method,
-                                           current_attr.field.get_enum_dict())
-                        enums.append(enum_def)
-
-            elif field.decode_method == REPEATED_FIELD_SET:
-                # first let's generate the sub_class
-                class_name = self.gen_repeat_class(field)
-                attributes.append(RepeatAttributeDef(field.keyword, f"_{field.keyword}", field.count_method,
-                                                     class_name, field.python_type))
-
-            # end attributes analysis loop
-        return attributes, enums, decode_str
 
     def gen_class_variables(self, attributes, decode_str, last_attr):
         self.write_indent()
@@ -187,7 +127,6 @@ class PythonPGNGenerator:
                 self.write_indent()
                 self._of.write("}\n")
                 self.dec_indent()
-        self._of.write("\n")
         # enums end
 
     def gen_accessors_methods(self, attributes, enums):
@@ -213,7 +152,7 @@ class PythonPGNGenerator:
             self.inc_indent()
             self.write_indent()
             if enum.global_ref is not None:
-                self._of.write(f"return self.resolve_global_enum(self._{enum.method}_enum, self._{enum.method})\n\n")
+                self._of.write(f"return {self.base_class}.resolve_global_enum(self._{enum.method}_enum, self._{enum.method})\n\n")
             else:
                 self._of.write(f"return self._{enum.method}_enum.get(self._{enum.method}, '{enum.method} key error')\n\n")
             self.dec_indent()
@@ -229,19 +168,22 @@ class PythonPGNGenerator:
         self._of.write("val = self._decode_struct.unpack_from(payload, from_byte)\n")
         for attr in attributes:
             self.write_indent()
-            print("Decode for", attr.method, attr.__class__.__name__)
-            if isinstance(attr, AttributeDef):
-                self._of.write("self.%s = " % attr.variable)
-                if attr.scale is not None:
-                    self._of.write("val[%d] * %s" % (attr.field_index, str(attr.scale)))
-                elif attr.field_type == "float":
-                    self._of.write("float(val[%d])" % attr.field_index)
+            # print("Decode for", attr.method, attr.__class__.__name__)
+            if isinstance(attr, ScalarAttributeDef):
+                if attr.need_check:
+                    self._of.write(f"self.{attr.variable} = check_valid(val[{attr.field_index}], {attr.invalid_mask}, {attr.default})")
                 else:
-                    self._of.write("val[%d]" % attr.field_index)
-                if attr.offset is not None:
-                    self._of.write(" + %s" % str(attr.offset))
+                    self._of.write("self.%s = " % attr.variable)
+                    if attr.scale is not None:
+                        self._of.write("val[%d] * %s" % (attr.field_index, str(attr.scale)))
+                    elif attr.field_type == "float":
+                        self._of.write("float(val[%d])" % attr.field_index)
+                    else:
+                        self._of.write("val[%d]" % attr.field_index)
+                    if attr.offset is not None:
+                        self._of.write(" + %s" % str(attr.offset))
             elif isinstance(attr, BitFieldAttributeDef):
-                print(attr.method, attr.nb_slots, attr.bit_offset)
+                # print(attr.method, attr.nb_slots, attr.bit_offset)
                 if attr.nb_slots == 2:
                     self._of.write(f"word = val[{attr.field_index}] + val[{attr.field_index} + 1] << 16\n")
                     self.write_indent()
@@ -276,24 +218,25 @@ class PythonPGNGenerator:
         self._of.write("\n")
         # encode method
         self.write_indent()
-        self._of.write("def encode_payload(self):\n")
+        self._of.write("def encode_payload_segment(self, from_byte):\n")
         self.inc_indent()
 
         val_encode = []
         numvi = 0
         # compute the size of the output buffer
         # fixed determined size
+        self.write_indent()
         self._of.write(f"buf_size = self.__class__.size()")
         if isinstance(attributes[last_attr], RepeatAttributeDef):
             last_encoded_main_index = last_attr
-            self._of.write(f" + (self.{attributes[last_attr].count_method} * {attributes[last_attr].class_name}.size())")
+            self._of.write(f" + (self.{attributes[last_attr].count_method} * self.{attributes[last_attr].class_name}.size())")
         else:
             last_encoded_main_index = len(attributes)
 
         self._of.write("\n")
         self.write_indent()
-        self._of.write(f"buffer = bytearray[buf_size]\n")
-        self.write_indent()
+        self._of.write(f"buffer = bytearray(buf_size)\n")
+        # self.write_indent()
         # first need to convert in int if float
         for attr in attributes[:last_encoded_main_index]:
             if attr.field_type == "float":
@@ -311,38 +254,35 @@ class PythonPGNGenerator:
                 self._of.write(")\n")
             else:
                 val_encode.append("self.%s" % attr.variable)
+
         self.write_indent()
-        self._of.write("self._decode_struct.pack_into(buffer, self.__class__.size, ")
-        for val in val_encode[:last_attr]:
+        self._of.write("self._decode_struct.pack_into(buffer, from_byte, ")
+        for val in val_encode[:last_attr - 1]:
             self._of.write("%s, " % val)
-        self._of.write("%s)\n" % val_encode[last_attr])
+        self._of.write("%s)\n" % val_encode[last_attr-1])
+        self._of.write("\n")
 
+    def gen_class(self, pgn_def: NMEA2000Meta):
 
-    def gen_class(self, pgn_def: PGNDef) -> ClassDef:
-
-        print("Start generating class for PGN", pgn_def.id, pgn_def.name)
+        print("Generating class for PGN", pgn_def.pgn, pgn_def.name)
         self.set_level(0)
-        self._of.write('\n\n')
-        class_name = "Pgn%dClass" % pgn_def.id
-        self._of.write("class %s(%s):\n\n" % (class_name, self.base_class))
+        self._of.write('\n')
+        self._of.write("class %s(%s):\n\n" % (pgn_def.class_name, self.base_class))
         self.inc_indent()
-        try:
-            manufacturer = pgn_def.manufacturer_id
-        except ValueError:
-            manufacturer = 0
+        if pgn_def.repeat_field_set is not None:
+            # generate inner class
+            self.gen_repeat_class(pgn_def.repeat_field_set)
+            self._of.write("\n")
 
-        attributes, enums, decode_str = self.analyze_attributes(pgn_def.field_list)
-        nb_attributes = len(attributes)
-        last_attr = nb_attributes - 1
-        print("Decode str:", decode_str)
+        # print("Decode str:", pgn_def.decode_str)
         # now start generating
         # class variables
         self.write_indent()
-        self._of.write("_pgn = %d\n" % pgn_def.id)
+        self._of.write("_pgn = %d\n" % pgn_def.pgn)
         self.write_indent()
         self._of.write("_name = '%s'\n" % pgn_def.name)
-        self.gen_class_variables(attributes, decode_str, last_attr)
-        self.gen_enums_definition(enums)
+        self.gen_class_variables(pgn_def.attributes, pgn_def.decode_str, pgn_def.last_attr)
+        self.gen_enums_definition(pgn_def.enums)
 
         #  __init__ method
         # self.inc_indent()
@@ -359,9 +299,9 @@ class PythonPGNGenerator:
         self.gen_getter('pgn', 'int')
         self.gen_getter('name', 'str')
 
-        self.gen_accessors_methods(attributes, enums)
+        self.gen_accessors_methods(pgn_def.attributes, pgn_def.enums)
 
-        self.gen_decode_encode_methods(attributes, last_attr)
+        self.gen_decode_encode_methods(pgn_def.attributes, pgn_def.last_attr)
 
         # string conversion method
         self.dec_indent()
@@ -370,11 +310,10 @@ class PythonPGNGenerator:
         self.inc_indent()
         self.write_indent()
         self._of.write("return f'PGN{self._pgn}({self._name}) [")
-        for attr in attributes[:last_attr]:
+        for attr in pgn_def.attributes[:pgn_def.last_attr]:
             self._of.write("%s={self.%s}, " % (attr.method, attr.variable))
-        self._of.write("%s={self.%s}]'\n\n" % (attributes[last_attr].method, attributes[last_attr].variable))
-
-        return ClassDef(pgn_def.id, manufacturer, class_name)
+        self._of.write("%s={self.%s}]'\n\n" % (pgn_def.attributes[pgn_def.last_attr].method,
+                                               pgn_def.attributes[pgn_def.last_attr].variable))
 
     def gen_getter(self, method, var_type):
         self.write_indent()
@@ -386,34 +325,15 @@ class PythonPGNGenerator:
         self._of.write(f"return self._{method}\n\n")
         self.dec_indent()
 
-    def gen_repeat_class(self, repeat_field):
-        class_name = f"{repeat_field.keyword.title()}Class"
+    def gen_repeat_class(self, repeat_field: RepeatAttributeDef):
+
         # self.inc_indent()
         self.write_indent()
-        self._of.write(f"class {class_name}:\n")
+        self._of.write(f"class {repeat_field.class_name}:\n")
         self.inc_indent()
-        attributes, enums, decode_str = self.analyze_attributes(repeat_field.field_list)
-        nb_attributes = len(attributes)
-        last_attr = nb_attributes - 1
-        self.gen_class_variables(attributes, decode_str, last_attr)
-        self.gen_enums_definition(enums)
-        self.gen_accessors_methods(attributes, enums)
-        self.gen_decode_encode_methods(attributes, last_attr)
+        self.gen_class_variables(repeat_field.attributes, repeat_field.decode_str, repeat_field.last_attr)
+        self.gen_enums_definition(repeat_field.enums)
+        self.gen_accessors_methods(repeat_field.attributes, repeat_field.enums)
+        self.gen_decode_encode_methods(repeat_field.attributes, repeat_field.last_attr)
         self.dec_indent()
         self.dec_indent()
-        return class_name
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

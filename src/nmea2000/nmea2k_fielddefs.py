@@ -16,7 +16,7 @@ from nmea2000.nmea2k_name import NMEA2000Name
 from nmea2000.nmea2k_encode_decode import (DecodeSpecs, N2KDecodeResult, DecodeDefinitions, FIXED_LENGTH_NUMBER,
                                            FIXED_LENGTH_BYTES, VARIABLE_LENGTH_BYTES, REPEATED_FIELD_SET)
 from nmea2000.nmea2k_bitfield_generator import BitFieldGenerator
-from utilities.global_variables import MessageServerGlobals
+from utilities.global_variables import MessageServerGlobals, Typedef
 from utilities.global_exceptions import *
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -165,6 +165,10 @@ class Field:
 
     def is_enum(self) -> bool:
         return issubclass(type(self), EnumField)
+
+    @property
+    def typedef(self):
+        raise NotImplementedError
 
     def print_description(self, output):
         output.write("\t Field %s (%s)\n" % (self.name, self.type()))
@@ -326,6 +330,10 @@ class UIntField(Field):
     def python_type(self):
         return 'int'
 
+    @property
+    def typedef(self):
+        return Typedef.UINT
+
 
 class InstanceField(UIntField):
 
@@ -396,6 +404,10 @@ class EnumField(Field):
         return 'int'
 
     @property
+    def typedef(self):
+        return Typedef.UINT
+
+    @property
     def global_enum(self):
         return self._global_enum_name
 
@@ -441,6 +453,10 @@ class IntField(Field):
     def python_type(self):
         return 'int'
 
+    @property
+    def typedef(self):
+        return Typedef.INT
+
 
 class DblField(Field):
 
@@ -477,6 +493,10 @@ class DblField(Field):
     def python_type(self):
         return "float"
 
+    @property
+    def typedef(self):
+        return Typedef.FLOAT
+
 
 class UDblField(Field):
 
@@ -511,6 +531,10 @@ class UDblField(Field):
     def python_type(self):
         return "float"
 
+    @property
+    def typedef(self):
+        return Typedef.FLOAT
+
 
 class ASCIIField(Field):
 
@@ -530,6 +554,10 @@ class ASCIIField(Field):
     def decode_method(self):
         return VARIABLE_LENGTH_BYTES
 
+    @property
+    def typedef(self):
+        return Typedef.STRING
+
 
 class StringField(Field):
 
@@ -548,6 +576,10 @@ class StringField(Field):
     @property
     def decode_method(self):
         return VARIABLE_LENGTH_BYTES
+
+    @property
+    def typedef(self):
+        return Typedef.STRING
 
 
 class FixLengthStringField(Field):
@@ -579,6 +611,10 @@ class FixLengthStringField(Field):
     @property
     def decode_method(self):
         return FIXED_LENGTH_BYTES
+
+    @property
+    def typedef(self):
+        return Typedef.STRING
 
 
 class NameField(Field):
@@ -637,6 +673,10 @@ class BytesField(Field):
     def decode_method(self):
         return FIXED_LENGTH_BYTES
 
+    @property
+    def typedef(self):
+        return Typedef.BYTES
+
 
 class ASCIIFixField(Field):
 
@@ -661,6 +701,10 @@ class ASCIIFixField(Field):
     @property
     def decode_method(self):
         return FIXED_LENGTH_BYTES
+
+    @property
+    def typedef(self):
+        return Typedef.STRING
 
 
 class RepeatedFieldSet (BitFieldGenerator):
