@@ -245,6 +245,7 @@ class NMEA2000Meta(FieldSetMeta):
         print(f"generating meta model for: {self._name} PGN {self._pgn}")
         super().__init__(pgn_def.field_list)
         self._class_name = f"Pgn{self._pgn}Class"
+        self._msg_class_name = f"Pgn{self._pgn}Message"
 
     @property
     def pgn(self) -> int:
@@ -260,6 +261,10 @@ class NMEA2000Meta(FieldSetMeta):
     @property
     def class_name(self) -> str:
         return self._class_name
+
+    @property
+    def msg_class_name(self) -> str:
+        return self._msg_class_name
 
     @property
     def name(self) -> str:

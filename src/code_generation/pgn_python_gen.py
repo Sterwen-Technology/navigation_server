@@ -14,7 +14,8 @@ import logging
 import datetime
 
 
-from code_generation.nmea2000_meta import BitFieldAttributeDef, RepeatAttributeDef, ScalarAttributeDef, NMEA2000Meta
+from code_generation.nmea2000_meta import (BitFieldAttributeDef, RepeatAttributeDef, ScalarAttributeDef, NMEA2000Meta,
+                                           FieldSetMeta)
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -22,7 +23,8 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 class PythonPGNGenerator:
 
     level_indent = ['', '    ', '        ', '            ', '                ']
-    base_class = 'NMEA2000OptimObject'
+    base_class = 'NMEA2000Payload'
+    message_base_class = 'NMEA2000DecodedMsg'
 
     def __init__(self, output_file):
 
@@ -39,7 +41,9 @@ class PythonPGNGenerator:
 
         # generate imports
         self._of.write("import struct\n")
-        self._of.write(f"\nfrom nmea2000.generated_base import {self.base_class}, check_valid\n")
+        self._of.write(f"\nfrom nmea2000.generated_base import {self.base_class}, {self.message_base_class}, check_valid\n")
+        self._of.write("from generated.nmea2000_pb2 import nmea2000_decoded_pb\n")
+        self._of.write("from nmea2000.nmea2000_msg import NMEA2000Msg\n")
         # self._of.write("from utilities.global_variables import MessageServerGlobals\n")
         self._of.write('\n')
 
@@ -48,6 +52,10 @@ class PythonPGNGenerator:
 
     def write_indent(self):
         self._of.write(self.level_indent[self._level])
+
+    def write(self, output_str: str):
+        self.write_indent()
+        self._of.write(output_str)
 
     def inc_indent(self):
         self._level += 1
@@ -58,11 +66,19 @@ class PythonPGNGenerator:
     def set_level(self, level):
         self._level = level
 
-    def gen_classes(self, class_def_list: list):
-
+    def gen_classes(self, class_def_list: list, protobuf_conv):
+        # add protobuf import
+        if protobuf_conv:
+            self._of.write("from generated.nmea2000_classes_gen_pb2 import *")
         # generate all classes
         for cls in class_def_list:
-            self.gen_class(cls)
+            self.gen_class(cls, protobuf_conv)
+        self.set_level(0)
+        self._of.write("\n#####################################################################\n")
+        self._of.write("#         Messages implementation classes\n")
+        self._of.write("#####################################################################\n")
+        for cls in class_def_list:
+            self.gen_message_class(cls, protobuf_conv)
         # now write the class dictionary
         self.set_level(0)
         self._of.write("\n#####################################################################\n")
@@ -72,7 +88,7 @@ class PythonPGNGenerator:
         self.set_level(2)
 
         def write_cls_entry(cls_def: NMEA2000Meta):
-            self._of.write(f"{cls_def.pgn}: {cls_def.class_name}")
+            self._of.write(f"{cls_def.pgn}: {cls_def.msg_class_name}")
 
         for cls in class_def_list[:len(class_def_list)-1]:
             self.write_indent()
@@ -127,6 +143,7 @@ class PythonPGNGenerator:
                 self.write_indent()
                 self._of.write("}\n")
                 self.dec_indent()
+        self._of.write('\n')
         # enums end
 
     def gen_accessors_methods(self, attributes, enums):
@@ -260,23 +277,26 @@ class PythonPGNGenerator:
         for val in val_encode[:last_attr - 1]:
             self._of.write("%s, " % val)
         self._of.write("%s)\n" % val_encode[last_attr-1])
+        self.dec_indent()
         self._of.write("\n")
 
-    def gen_class(self, pgn_def: NMEA2000Meta):
+    def gen_class(self, pgn_def: NMEA2000Meta, protobuf_conv: bool):
 
         print("Generating class for PGN", pgn_def.pgn, pgn_def.name)
         self.set_level(0)
         self._of.write('\n')
         self._of.write("class %s(%s):\n\n" % (pgn_def.class_name, self.base_class))
-        self.inc_indent()
         if pgn_def.repeat_field_set is not None:
             # generate inner class
-            self.gen_repeat_class(pgn_def.repeat_field_set)
+            self.inc_indent()
+            self.gen_repeat_class(pgn_def.repeat_field_set, protobuf_conv, pgn_def.class_name)
+            self.dec_indent()
             self._of.write("\n")
 
         # print("Decode str:", pgn_def.decode_str)
         # now start generating
         # class variables
+        self.inc_indent()
         self.write_indent()
         self._of.write("_pgn = %d\n" % pgn_def.pgn)
         self.write_indent()
@@ -303,8 +323,11 @@ class PythonPGNGenerator:
 
         self.gen_decode_encode_methods(pgn_def.attributes, pgn_def.last_attr)
 
+        if protobuf_conv:
+            self.gen_from_protobuf(pgn_def)
+
         # string conversion method
-        self.dec_indent()
+
         self.write_indent()
         self._of.write("def __str__(self):\n")
         self.inc_indent()
@@ -316,16 +339,13 @@ class PythonPGNGenerator:
                                                pgn_def.attributes[pgn_def.last_attr].variable))
 
     def gen_getter(self, method, var_type):
-        self.write_indent()
-        self._of.write("@property\n")
-        self.write_indent()
-        self._of.write(f"def {method}(self) -> {var_type}:\n")
+        self.write("@property\n")
+        self.write(f"def {method}(self) -> {var_type}:\n")
         self.inc_indent()
-        self.write_indent()
-        self._of.write(f"return self._{method}\n\n")
+        self.write(f"return self._{method}\n\n")
         self.dec_indent()
 
-    def gen_repeat_class(self, repeat_field: RepeatAttributeDef):
+    def gen_repeat_class(self, repeat_field: RepeatAttributeDef, protobuf_conv, outer_class):
 
         # self.inc_indent()
         self.write_indent()
@@ -333,7 +353,88 @@ class PythonPGNGenerator:
         self.inc_indent()
         self.gen_class_variables(repeat_field.attributes, repeat_field.decode_str, repeat_field.last_attr)
         self.gen_enums_definition(repeat_field.enums)
+        # gen __init__ method
+        self.write_indent()
+        self._of.write('def __init__(self, protobuf=None):\n')
+        self.inc_indent()
+        self.write_indent()
+        self._of.write('if protobuf is not None:\n')
+        self.inc_indent()
+        self.write_indent()
+        self._of.write('self.from_protobuf(protobuf)\n')
+        self.dec_indent()
+        self.dec_indent()
+        self._of.write('\n')
         self.gen_accessors_methods(repeat_field.attributes, repeat_field.enums)
         self.gen_decode_encode_methods(repeat_field.attributes, repeat_field.last_attr)
+        if protobuf_conv:
+            self.gen_from_protobuf(repeat_field, outer_class)
         self.dec_indent()
+
+    def gen_from_protobuf(self, pgn_def, base_class=None):
+        self.write_indent()
+        if base_class is not None:
+            class_name = f'{base_class}Pb.{pgn_def.class_name}Pb'
+        else:
+            class_name = pgn_def.class_name + 'Pb'
+        self._of.write(f'def from_protobuf(self, message: {class_name}):\n')
+        self.inc_indent()
+        for attr in pgn_def.attributes:
+            self.write_indent()
+            if isinstance(attr, RepeatAttributeDef):
+                self._of.write(f'self.{attr.variable} = []\n')
+                self.write_indent()
+                self._of.write(f'for sub_set in message.{attr.method}:\n')
+                self.inc_indent()
+                self.write_indent()
+                self._of.write(f'self.{attr.variable}.append(self.{attr.class_name}(protobuf=sub_set))\n')
+                self.dec_indent()
+            else:
+                self._of.write(f'self.{attr.variable} = message.{attr.method}\n')
         self.dec_indent()
+        self._of.write('\n')
+        # now generate the conversion to protobuf
+        self.write_indent()
+        self._of.write(f'def as_protobuf(self) -> {class_name}:\n')
+        self.inc_indent()
+        self.write_indent()
+        self._of.write(f'message = {class_name}()\n')
+        for attr in pgn_def.attributes:
+            self.write_indent()
+            if isinstance(attr, RepeatAttributeDef):
+                self._of.write(f'for sub_set in self.{attr.variable}:\n')
+                self.inc_indent()
+                self.write_indent()
+                self._of.write(f'message.{attr.method}.append(sub_set.as_protobuf())\n')
+                self.dec_indent()
+            else:
+                self._of.write(f'message.{attr.method} = self.{attr.variable}\n')
+        self.write_indent()
+        self._of.write('return message\n')
+        self.dec_indent()
+        self._of.write('\n')
+
+    def gen_message_class(self, pgn_def: NMEA2000Meta, protobuf_conv):
+        self.set_level(0)
+        self._of.write('\n')
+        self._of.write(f'class {pgn_def.msg_class_name}({self.message_base_class}, {pgn_def.class_name}):\n\n')
+        self.inc_indent()
+        self.write('def __init__(self, message: NMEA2000Msg = None, protobuf: nmea2000_decoded_pb = None):\n')
+        self.inc_indent()
+        self.write('if message is not None:\n')
+        self.inc_indent()
+        self.write('assert (message.pgn == self.pgn)\n')
+        self.write('super().__init__(message=message)\n')
+        self.write("self.decode_payload(message.payload)\n")
+        self.dec_indent()
+        self.write('elif protobuf is not None:\n')
+        self.inc_indent()
+        self.write('assert (protobuf.pgn == self.pgn)\n')
+        self.write('super().__init__(protobuf=protobuf)\n')
+        if protobuf_conv:
+            # ok we will process de the full protobuf
+            self.write('self.unpack_payload(protobuf)\n')
+        self._of.write('\n')
+
+
+

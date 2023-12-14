@@ -14,27 +14,19 @@ import logging
 
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from utilities.global_variables import MessageServerGlobals
+from generated.nmea2000_pb2 import nmea2000_decoded_pb
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-class NMEA2000OptimObject:
-
-    __slots__ = ('_sa', '_ts')
-
-    def __init__(self, message: NMEA2000Msg = None, protobuf=None):
-
-        if message is not None:
-            self._sa = message.sa
-            self._ts = message.timestamp
-            self.decode_payload(message.payload)
-        elif protobuf is not None:
-            self._sa = protobuf.sa
-            self._ts = protobuf.timestamp
-            self.from_protobuf(protobuf)
+class NMEA2000Payload:
 
     def decode_payload(self, payload):
         self.decode_payload_segment(payload, 0)
+
+    def unpack_payload(self, protobuf: nmea2000_decoded_pb):
+        payload = protobuf.payload.Unpack()
+        self.from_protobuf(payload)
 
     def decode_payload_segment(self, payload, from_byte):
         raise NotImplementedError("To be implemented in subclasses")
@@ -52,5 +44,35 @@ def check_valid(value: int, mask: int, default: int) -> int:
         return default
     else:
         return value
+
+
+class NMEA2000DecodedMsg:
+
+    # __slots__ = ('_sa', '_timestamp', '_priority')
+
+    def __init__(self, message: NMEA2000Msg = None, protobuf: nmea2000_decoded_pb = None):
+
+        if message is not None:
+            # initialization from a NMEA2000 CAN message
+            self._sa = message.sa
+            self._timestamp = message.timestamp
+            self._priority = message.prio
+        elif protobuf is not None:
+            self._sa = protobuf.sa
+            self._timestamp = protobuf.timestamp
+            self._priority = protobuf.priority
+
+    def protobuf_message(self) -> nmea2000_decoded_pb:
+        message = nmea2000_decoded_pb()
+        message.sa = self._sa
+        message.timestamp = self._timestamp
+        message.priority = self._priority
+        message.payload.Pack(self.as_protobuf())
+
+    def as_protobuf(self):
+        raise NotImplementedError
+
+
+
 
 

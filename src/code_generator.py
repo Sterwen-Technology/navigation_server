@@ -34,6 +34,7 @@ def _parser():
                    default="./src/protobuf")
     p.add_argument('-pb', '--protobuf', action="store_true")
     p.add_argument('-py', '--python', action="store_true")
+    p.add_argument('-cv', '--protobuf_conv', action="store_true")
 
     return p
 
@@ -74,7 +75,7 @@ def main():
     if opts.python:
         output_file = os.path.join(opts.python_dir, output_file_base + ".py")
         python_gen = PythonPGNGenerator(output_file)
-        python_gen.gen_classes(class_list)
+        python_gen.gen_classes(class_list, opts.protobuf_conv)
         python_gen.close()
     if opts.protobuf:
         output_file = os.path.join(opts.protobuf_dir, output_file_base + ".proto")

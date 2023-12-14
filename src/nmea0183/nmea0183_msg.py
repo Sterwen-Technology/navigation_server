@@ -30,7 +30,7 @@ class NMEAInvalidFrame(Exception):
 
 class NMEA0183Msg(NavGenericMsg):
 
-    __slots__ = ('_checksum', '_datalen_s', '_ts', '_delimiter', '_address', '_datafield_s', '_proprietary')
+    __slots__ = ('_checksum', '_datalen_s', '_ts', '_delimiter', '_address', '_datafields_s', '_proprietary')
 
     def __init__(self, data, checksum=True, timestamp=None):
         super().__init__(N0183_MSG, raw=data)
