@@ -24,8 +24,8 @@ class NMEA2000Payload:
     def decode_payload(self, payload):
         self.decode_payload_segment(payload, 0)
 
-    def unpack_payload(self, protobuf: nmea2000_decoded_pb):
-        payload = protobuf.payload.Unpack()
+    def unpack_payload(self, protobuf: nmea2000_decoded_pb, payload):
+        protobuf.payload.Unpack(payload)
         self.from_protobuf(payload)
 
     def decode_payload_segment(self, payload, from_byte):
@@ -64,14 +64,14 @@ class NMEA2000DecodedMsg:
 
     def protobuf_message(self) -> nmea2000_decoded_pb:
         message = nmea2000_decoded_pb()
+        message.pgn = self.pgn  # implemented in specific subclasses
         message.sa = self._sa
         message.timestamp = self._timestamp
         message.priority = self._priority
-        message.payload.Pack(self.as_protobuf())
-
-    def as_protobuf(self):
-        raise NotImplementedError
-
+        _logger.debug("Protobuf encoding for PGN%d" % self.pgn)
+        pl_pb = self.as_protobuf()  # as_protobuf implemented in subclasses
+        message.payload.Pack(pl_pb)
+        return message
 
 
 

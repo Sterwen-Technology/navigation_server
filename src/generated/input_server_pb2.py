@@ -12,11 +12,12 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
+import nmea2000_pb2 as nmea2000__pb2
 import generated.nmea_messages_pb2 as nmea__messages__pb2
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12input_server.proto\x1a\x13nmea_messages.proto2_\n\x0fNMEAInputServer\x12%\n\x06status\x12\x0b.server_cmd\x1a\x0c.server_resp\"\x00\x12%\n\x08pushNMEA\x12\t.nmea_msg\x1a\x0c.server_resp\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12input_server.proto\x1a\x0enmea2000.proto\x1a\x13nmea_messages.proto2\x9a\x01\n\x0fNMEAInputServer\x12%\n\x06status\x12\x0b.server_cmd\x1a\x0c.server_resp\"\x00\x12%\n\x08pushNMEA\x12\t.nmea_msg\x1a\x0c.server_resp\"\x00\x12\x39\n\x11pushDecodedNMEA2K\x12\x14.nmea2000_decoded_pb\x1a\x0c.server_resp\"\x00\x62\x06proto3')
 
 
 
@@ -24,6 +25,6 @@ _NMEAINPUTSERVER = DESCRIPTOR.services_by_name['NMEAInputServer']
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _NMEAINPUTSERVER._serialized_start=43
-  _NMEAINPUTSERVER._serialized_end=138
+  _NMEAINPUTSERVER._serialized_start=60
+  _NMEAINPUTSERVER._serialized_end=214
 # @@protoc_insertion_point(module_scope)

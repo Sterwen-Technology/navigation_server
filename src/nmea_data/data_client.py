@@ -14,6 +14,8 @@ import logging
 import grpc
 
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, N0183_MSG
+from nmea2000.nmea2000_msg import NMEA2000Msg
+from nmea2000.nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
 from nmea_routing.filters import FilterSet
 from nmea_routing.publisher import Publisher
 
@@ -35,6 +37,7 @@ class NMEAGrpcDataClient:
         self._stub = NMEAInputServerStub(self._channel)
         self._couplers = []
         self._filters = None
+        self._decoded_n2k = opts.get('decoded_n2k', bool, False)
         filter_names = opts.getlist('filters', str)
         if filter_names is not None and len(filter_names) > 0:
             self._filters = FilterSet(filter_names)
@@ -46,8 +49,11 @@ class NMEAGrpcDataClient:
 
     def send_msg(self, msg_to_send: NavGenericMsg):
         _logger.debug("DataClient send_msg %s" % msg_to_send.printable())
-        msg = nmea_msg()
+        if msg_to_send.type == N2K_MSG and self._decoded_n2k:
+            self.send_decoded_msg(msg_to_send.msg)
+            return
 
+        msg = nmea_msg()
         if msg_to_send.type == N0183_MSG:
             msg_to_send.as_protobuf(msg.N0183_msg, set_raw=self._nmea0183_raw)
         else:
@@ -61,6 +67,32 @@ class NMEAGrpcDataClient:
             else:
                 _logger.error("Data client %s GRPC Server %s not accessible" % (self._name, self._address))
                 self._publisher.stop()
+
+    def send_decoded_msg(self, msg_to_send: NMEA2000Msg):
+        '''
+        Transform NMEA2000 direct CAN into NMEA2000 Object and Protobuf and send
+        '''
+        try:
+            n2k_object = get_n2k_decoded_object(msg_to_send)
+        except N2KMissingDecodeEncodeException:
+            # _logger.error("No decoding class defined for PGN %d" % msg_to_send.pgn)
+            return
+        try:
+            msg = n2k_object.protobuf_message()
+        except Exception as e:
+            _logger.error(str(e))
+            return
+        try:
+            resp = self._stub.pushDecodedNMEA2K(msg)
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.error("Server Status - Error accessing server:%s" % err)
+            else:
+                _logger.error("Data client %s GRPC Server %s not accessible" % (self._name, self._address))
+                self._publisher.stop()
+            return
+        if resp.reportCode != 0:
+            _logger.error("Data client reported error from server:%s" % resp.status)
 
     def add_coupler(self, coupler):
         self._couplers.append(coupler)
