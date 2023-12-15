@@ -2,6 +2,8 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
+import generated.nmea2000_pb2 as nmea2000__pb2
+
 import generated.nmea_messages_pb2 as nmea__messages__pb2
 
 
@@ -25,6 +27,11 @@ class NMEAInputServerStub(object):
                 request_serializer=nmea__messages__pb2.nmea_msg.SerializeToString,
                 response_deserializer=nmea__messages__pb2.server_resp.FromString,
                 )
+        self.pushDecodedNMEA2K = channel.unary_unary(
+                '/NMEAInputServer/pushDecodedNMEA2K',
+                request_serializer=nmea2000__pb2.nmea2000_decoded_pb.SerializeToString,
+                response_deserializer=nmea__messages__pb2.server_resp.FromString,
+                )
 
 
 class NMEAInputServerServicer(object):
@@ -42,6 +49,12 @@ class NMEAInputServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def pushDecodedNMEA2K(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_NMEAInputServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -53,6 +66,11 @@ def add_NMEAInputServerServicer_to_server(servicer, server):
             'pushNMEA': grpc.unary_unary_rpc_method_handler(
                     servicer.pushNMEA,
                     request_deserializer=nmea__messages__pb2.nmea_msg.FromString,
+                    response_serializer=nmea__messages__pb2.server_resp.SerializeToString,
+            ),
+            'pushDecodedNMEA2K': grpc.unary_unary_rpc_method_handler(
+                    servicer.pushDecodedNMEA2K,
+                    request_deserializer=nmea2000__pb2.nmea2000_decoded_pb.FromString,
                     response_serializer=nmea__messages__pb2.server_resp.SerializeToString,
             ),
     }
@@ -95,6 +113,23 @@ class NMEAInputServer(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/NMEAInputServer/pushNMEA',
             nmea__messages__pb2.nmea_msg.SerializeToString,
+            nmea__messages__pb2.server_resp.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def pushDecodedNMEA2K(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/NMEAInputServer/pushDecodedNMEA2K',
+            nmea2000__pb2.nmea2000_decoded_pb.SerializeToString,
             nmea__messages__pb2.server_resp.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -11,10 +11,12 @@
 
 syntax = "proto3";
 
+import "nmea2000.proto";
 import "nmea_messages.proto";
 
 service NMEAInputServer {
   rpc status (server_cmd) returns (server_resp) {}
   rpc pushNMEA( nmea_msg ) returns (server_resp) {}
+  rpc pushDecodedNMEA2K (nmea2000_decoded_pb) returns (server_resp) {}
 }
 

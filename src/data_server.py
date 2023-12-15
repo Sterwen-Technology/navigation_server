@@ -18,12 +18,14 @@ import grpc
 import signal
 import time
 from generated.input_server_pb2_grpc import NMEAInputServerServicer, add_NMEAInputServerServicer_to_server
-from generated.input_server_pb2 import server_resp
+from generated.nmea_messages_pb2 import server_resp
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
 from nmea_data.data_configuration import NavigationDataConfiguration
 from utilities.log_utilities import NavigationLogSystem
+from utilities.global_variables import MessageServerGlobals
+from nmea2000.nmea2k_decode_dispatch import get_n2k_object_from_protobuf
 
 _version = "V0.1"
 
@@ -72,6 +74,25 @@ class DataServicer(NMEAInputServerServicer):
             self._dataset.add_n183entry(msg.talker, msg.formatter)
         else:
             _logger.error("pushNMEA unknown type of message")
+        return resp
+
+    def pushDecodedNMEA2K(self, request, context):
+        resp = server_resp()
+        resp.reportCode = 0
+        try:
+            n2k_object = get_n2k_object_from_protobuf(request)
+        except Exception as e:
+            resp.reportCode = 1
+            resp.status = str(e)
+            return resp
+        print(n2k_object)
+        return resp
+
+    def status(self, request, context):
+        resp = server_resp()
+        resp.reportCode = 0
+        resp.status = "OK"
+        print("######################## New Session from client###############################")
         return resp
 
 
@@ -136,8 +157,8 @@ def main():
     config = NavigationDataConfiguration(opts.settings)
     NavigationLogSystem.finalize_log(config)
     _logger.info("Navigation data server working directory:%s" % os.getcwd())
-    Manufacturers.build_manufacturers(config.get_option('manufacturer_xml', './def/Manufacturers.N2kDfn.xml'))
-    PGNDefinitions.build_definitions(config.get_option("nmea2000_xml", './def/PGNDefns.N2kDfn.xml'))
+    MessageServerGlobals.manufacturers = Manufacturers('./def/Manufacturers.N2kDfn.xml')
+    MessageServerGlobals.pgn_definitions = PGNDefinitions('./def/PGNDefns.N2kDfn.xml')
     stats = DataStatistics()
     grpc_server = GrpcServer(opts, stats)
     stats.set_server(grpc_server)

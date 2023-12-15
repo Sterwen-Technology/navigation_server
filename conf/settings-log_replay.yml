@@ -21,6 +21,7 @@ log_module:
   nmea2000.n2k_name: INFO
   nmea2000.nmea2k_pgndefs: INFO
   nmea2000.nmea2k_encode_decode: INFO
+  nmea2000.generated_base: INFO
 
 servers:
 
@@ -69,14 +70,15 @@ data_clients:
 - DataSender:
       class: NMEAGrpcDataClient
       address: 127.0.0.1
-      port: 4601
+      decoded_n2k: true
+      port: 4504
 
 publishers:
 
 - TraceAll:
     class: N2KTracePublisher
     output: PRINT
-    active: true
+    active: false
     flexible_decode: false
     couplers: [LogReader]
 

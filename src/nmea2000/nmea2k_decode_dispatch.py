@@ -11,6 +11,7 @@
 import logging
 
 from generated.nmea2000_classes_gen import nmea2k_generated_classes
+from generated.nmea2000_pb2 import nmea2000_decoded_pb
 from nmea2000.nmea2k_pgn_definition import PGNDef
 from nmea2000.generated_base import NMEA2000DecodedMsg
 from nmea2000.nmea2000_msg import NMEA2000Msg
@@ -27,7 +28,7 @@ def get_n2k_decoded_object(msg: NMEA2000Msg):
     try:
         n2k_obj_class = nmea2k_generated_classes[msg.pgn]
     except KeyError:
-        _logger.error(f"No decoding class defined for PGN {msg.pgn}")
+        # _logger.error(f"No decoding class defined for PGN {msg.pgn}")
         raise N2KMissingDecodeEncodeException
 
     if PGNDef.is_pgn_proprietary(msg.pgn):
@@ -43,6 +44,15 @@ def get_n2k_decoded_object(msg: NMEA2000Msg):
     return n2k_obj_class(message=msg)
 
 
+def get_n2k_object_from_protobuf(protobuf: nmea2000_decoded_pb):
+
+    try:
+        n2k_obj_class = nmea2k_generated_classes[protobuf.pgn]
+    except KeyError:
+        _logger.error(f"No decoding class defined for PGN {protobuf.pgn}")
+        raise N2KMissingDecodeEncodeException
+
+    return n2k_obj_class(protobuf=protobuf)
 
 
 

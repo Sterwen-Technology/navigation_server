@@ -433,7 +433,7 @@ class PythonPGNGenerator:
         self.write('super().__init__(protobuf=protobuf)\n')
         if protobuf_conv:
             # ok we will process de the full protobuf
-            self.write('self.unpack_payload(protobuf)\n')
+            self.write(f'self.unpack_payload(protobuf, {pgn_def.class_name}Pb())\n')
         self._of.write('\n')
 
 
