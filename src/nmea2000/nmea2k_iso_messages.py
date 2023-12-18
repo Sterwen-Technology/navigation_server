@@ -13,7 +13,7 @@ import logging
 
 from nmea2000.nmea2000_msg import NMEA2000Msg, NMEA2000Object
 from nmea2000.nmea2k_name import NMEA2000Name
-from nmea2000.nmea2k_pgndefs import PGNDefinitions
+from generated.nmea2000_classes_gen import Pgn126996Class
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -62,21 +62,11 @@ class ISORequest(NMEA2000Object):
         return self._req_pgn
 
 
-class ProductInformation(NMEA2000Object):
+class ProductInformation(Pgn126996Class):
 
     def __init__(self):
-        super().__init__(126996)
         self._da = 255
-        self._prio = 7
-
-    def update(self):
-        # no internal representation - only fields
-        pass
-
-    def set_field(self, field, value):
-        if self._fields is None:
-            self._fields = {}
-        self._fields[field] = value
+        self._priority = 7
 
     def set_product_information(self, model_id: str, software_version: str, model_version: str, serial_code: str):
         def build_fix_str(val):
@@ -85,12 +75,9 @@ class ProductInformation(NMEA2000Object):
                 raise ValueError
             return val + str(nb_space*' ')
 
-        product_info = build_fix_str(model_id)
-        product_info += build_fix_str(software_version)
-        product_info += build_fix_str(model_version)
-        product_info += build_fix_str(serial_code)
-        self.set_field('Product information', product_info)
+        self._product_information = build_fix_str(model_id)
+        self._product_information += build_fix_str(software_version)
+        self._product_information += build_fix_str(model_version)
+        self._product_information += build_fix_str(serial_code)
 
-    def encode_payload(self) -> bytes:
-        return self._pgn_def.encode_payload(self._fields)
 

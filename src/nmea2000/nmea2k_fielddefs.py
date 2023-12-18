@@ -558,6 +558,10 @@ class ASCIIField(Field):
     def typedef(self):
         return Typedef.STRING
 
+    @property
+    def python_type(self):
+        return 'str'
+
 
 class StringField(Field):
 
@@ -580,6 +584,10 @@ class StringField(Field):
     @property
     def typedef(self):
         return Typedef.STRING
+
+    @property
+    def python_type(self):
+        return 'str'
 
 
 class FixLengthStringField(Field):
@@ -705,6 +713,10 @@ class ASCIIFixField(Field):
     @property
     def typedef(self):
         return Typedef.STRING
+
+    @property
+    def python_type(self):
+        return 'str'
 
 
 class RepeatedFieldSet (BitFieldGenerator):

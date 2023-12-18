@@ -43,7 +43,7 @@ class PGNDefinitions(XMLDefinitionFile):
                 if pgn.to_be_generated:
                     self._to_be_generated.append(pgn)
             except N2KDefinitionError as e:
-                _logger.error("%s PGN ignored" % e)
+                # _logger.error("%s PGN ignored" % e)
                 continue
             if pgn.nb_fields() == 0:
                 _logger.info("PGN %d:%s with no fields => ignored" % (pgn.id, pgn.name))

@@ -14,13 +14,13 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1anmea2000_classes_gen.proto\"Q\n\x10Pgn126992ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0e\n\x06source\x18\x02 \x01(\r\x12\x0c\n\x04\x64\x61te\x18\x03 \x01(\r\x12\x0c\n\x04time\x18\x04 \x01(\x02\"4\n\x10Pgn126993ClassPb\x12\x10\n\x08interval\x18\x01 \x01(\x02\x12\x0e\n\x06status\x18\x02 \x01(\r\"7\n\x10Pgn129025ClassPb\x12\x10\n\x08latitude\x18\x01 \x01(\x02\x12\x11\n\tlongitude\x18\x02 \x01(\x02\"V\n\x10Pgn129026ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x15\n\rCOG_reference\x18\x02 \x01(\r\x12\x0b\n\x03\x43OG\x18\x03 \x01(\x02\x12\x0b\n\x03SOG\x18\x04 \x01(\x02\"\xae\x03\n\x10Pgn129029ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0c\n\x04\x64\x61te\x18\x02 \x01(\r\x12\x0c\n\x04time\x18\x03 \x01(\x02\x12\x10\n\x08latitude\x18\x04 \x01(\x01\x12\x11\n\tlongitude\x18\x05 \x01(\x01\x12\x10\n\x08\x61ltitude\x18\x06 \x01(\x01\x12\x0e\n\x06method\x18\x07 \x01(\r\x12\x11\n\tGNSS_type\x18\x08 \x01(\r\x12\x11\n\tintegrity\x18\t \x01(\r\x12\x14\n\x0cnumber_of_sv\x18\n \x01(\r\x12\x0c\n\x04HDOP\x18\x0b \x01(\x02\x12\x0c\n\x04PDOP\x18\x0c \x01(\x02\x12\x1a\n\x12geoidal_separation\x18\r \x01(\x02\x12\x17\n\x0fnb_ref_stations\x18\x0e \x01(\r\x12;\n\x0cref_stations\x18\x0f \x03(\x0b\x32%.Pgn129029ClassPb.Ref_StationsClassPb\x1aZ\n\x13Ref_StationsClassPb\x12\x12\n\nstation_id\x18\x01 \x01(\r\x12\x11\n\tGNSS_type\x18\x02 \x01(\r\x12\x1c\n\x14\x61ge_DGNSS_correction\x18\x03 \x01(\x02\"\x94\x01\n\x10Pgn130312ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x1c\n\x14temperature_instance\x18\x02 \x01(\r\x12\x1a\n\x12temperature_source\x18\x03 \x01(\r\x12\x1a\n\x12\x61\x63tual_temperature\x18\x04 \x01(\x02\x12\x17\n\x0fset_temperature\x18\x05 \x01(\x02\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1anmea2000_classes_gen.proto\"Q\n\x10Pgn126992ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0e\n\x06source\x18\x02 \x01(\r\x12\x0c\n\x04\x64\x61te\x18\x03 \x01(\r\x12\x0c\n\x04time\x18\x04 \x01(\x02\"4\n\x10Pgn126993ClassPb\x12\x10\n\x08interval\x18\x01 \x01(\x02\x12\x0e\n\x06status\x18\x02 \x01(\r\"y\n\x10Pgn126996ClassPb\x12\x18\n\x10nmea2000_version\x18\x01 \x01(\r\x12\x14\n\x0cproduct_code\x18\x02 \x01(\r\x12\x1b\n\x13\x63\x65rtification_level\x18\x03 \x01(\r\x12\x18\n\x10load_equivalency\x18\x04 \x01(\r\"V\n\x10Pgn129026ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x15\n\rCOG_reference\x18\x02 \x01(\r\x12\x0b\n\x03\x43OG\x18\x03 \x01(\x02\x12\x0b\n\x03SOG\x18\x04 \x01(\x02\"\xae\x03\n\x10Pgn129029ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0c\n\x04\x64\x61te\x18\x02 \x01(\r\x12\x0c\n\x04time\x18\x03 \x01(\x02\x12\x10\n\x08latitude\x18\x04 \x01(\x01\x12\x11\n\tlongitude\x18\x05 \x01(\x01\x12\x10\n\x08\x61ltitude\x18\x06 \x01(\x01\x12\x0e\n\x06method\x18\x07 \x01(\r\x12\x11\n\tGNSS_type\x18\x08 \x01(\r\x12\x11\n\tintegrity\x18\t \x01(\r\x12\x14\n\x0cnumber_of_sv\x18\n \x01(\r\x12\x0c\n\x04HDOP\x18\x0b \x01(\x02\x12\x0c\n\x04PDOP\x18\x0c \x01(\x02\x12\x1a\n\x12geoidal_separation\x18\r \x01(\x02\x12\x17\n\x0fnb_ref_stations\x18\x0e \x01(\r\x12;\n\x0cref_stations\x18\x0f \x03(\x0b\x32%.Pgn129029ClassPb.Ref_StationsClassPb\x1aZ\n\x13Ref_StationsClassPb\x12\x12\n\nstation_id\x18\x01 \x01(\r\x12\x11\n\tGNSS_type\x18\x02 \x01(\r\x12\x1c\n\x14\x61ge_DGNSS_correction\x18\x03 \x01(\x02\"\x94\x01\n\x10Pgn130312ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x1c\n\x14temperature_instance\x18\x02 \x01(\r\x12\x1a\n\x12temperature_source\x18\x03 \x01(\r\x12\x1a\n\x12\x61\x63tual_temperature\x18\x04 \x01(\x02\x12\x17\n\x0fset_temperature\x18\x05 \x01(\x02\x62\x06proto3')
 
 
 
 _PGN126992CLASSPB = DESCRIPTOR.message_types_by_name['Pgn126992ClassPb']
 _PGN126993CLASSPB = DESCRIPTOR.message_types_by_name['Pgn126993ClassPb']
-_PGN129025CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129025ClassPb']
+_PGN126996CLASSPB = DESCRIPTOR.message_types_by_name['Pgn126996ClassPb']
 _PGN129026CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129026ClassPb']
 _PGN129029CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129029ClassPb']
 _PGN129029CLASSPB_REF_STATIONSCLASSPB = _PGN129029CLASSPB.nested_types_by_name['Ref_StationsClassPb']
@@ -39,12 +39,12 @@ Pgn126993ClassPb = _reflection.GeneratedProtocolMessageType('Pgn126993ClassPb', 
   })
 _sym_db.RegisterMessage(Pgn126993ClassPb)
 
-Pgn129025ClassPb = _reflection.GeneratedProtocolMessageType('Pgn129025ClassPb', (_message.Message,), {
-  'DESCRIPTOR' : _PGN129025CLASSPB,
+Pgn126996ClassPb = _reflection.GeneratedProtocolMessageType('Pgn126996ClassPb', (_message.Message,), {
+  'DESCRIPTOR' : _PGN126996CLASSPB,
   '__module__' : 'nmea2000_classes_gen_pb2'
-  # @@protoc_insertion_point(class_scope:Pgn129025ClassPb)
+  # @@protoc_insertion_point(class_scope:Pgn126996ClassPb)
   })
-_sym_db.RegisterMessage(Pgn129025ClassPb)
+_sym_db.RegisterMessage(Pgn126996ClassPb)
 
 Pgn129026ClassPb = _reflection.GeneratedProtocolMessageType('Pgn129026ClassPb', (_message.Message,), {
   'DESCRIPTOR' : _PGN129026CLASSPB,
@@ -82,14 +82,14 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _PGN126992CLASSPB._serialized_end=111
   _PGN126993CLASSPB._serialized_start=113
   _PGN126993CLASSPB._serialized_end=165
-  _PGN129025CLASSPB._serialized_start=167
-  _PGN129025CLASSPB._serialized_end=222
-  _PGN129026CLASSPB._serialized_start=224
-  _PGN129026CLASSPB._serialized_end=310
-  _PGN129029CLASSPB._serialized_start=313
-  _PGN129029CLASSPB._serialized_end=743
-  _PGN129029CLASSPB_REF_STATIONSCLASSPB._serialized_start=653
-  _PGN129029CLASSPB_REF_STATIONSCLASSPB._serialized_end=743
-  _PGN130312CLASSPB._serialized_start=746
-  _PGN130312CLASSPB._serialized_end=894
+  _PGN126996CLASSPB._serialized_start=167
+  _PGN126996CLASSPB._serialized_end=288
+  _PGN129026CLASSPB._serialized_start=290
+  _PGN129026CLASSPB._serialized_end=376
+  _PGN129029CLASSPB._serialized_start=379
+  _PGN129029CLASSPB._serialized_end=809
+  _PGN129029CLASSPB_REF_STATIONSCLASSPB._serialized_start=719
+  _PGN129029CLASSPB_REF_STATIONSCLASSPB._serialized_end=809
+  _PGN130312CLASSPB._serialized_start=812
+  _PGN130312CLASSPB._serialized_end=960
 # @@protoc_insertion_point(module_scope)

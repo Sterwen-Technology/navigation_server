@@ -10,6 +10,7 @@
 # -------------------------------------------------------------------------------
 
 import logging
+import struct
 from collections import namedtuple
 
 from nmea2000.nmea2k_pgn_definition import PGNDef
@@ -45,7 +46,7 @@ class AttributeGen:
         return 2**self._field.bit_length-1
 
 
-class HiddenAttribute(AttributeGen):
+class ReservedAttribute(AttributeGen):
 
     def __init__(self, field, decode_index):
         super().__init__(field, decode_index)
@@ -53,7 +54,7 @@ class HiddenAttribute(AttributeGen):
 
 class AttributeDef(AttributeGen):
 
-    def __init__(self, field, decode_index):
+    def __init__(self, field, decode_index=-1):
         super().__init__(field, decode_index)
         self._variable = f"_{field.keyword}"
         self._need_check = False
@@ -140,51 +141,173 @@ class EnumDef:
         return self._field.get_enum_dict()
 
 
+class DecodeSegment:
+
+    (VALUE_SET, FIX_LENGTH, VARIABLE_LENGTH) = range(1, 4)
+
+    def __init__(self, segment_type, start_byte):
+        self._segment_type = segment_type
+        self._start_byte = start_byte
+        if segment_type == self.VALUE_SET:
+            self._decode_string = "<"
+            self._attributes = []
+            self._variable = None
+        else:
+            self._decode_string = None
+            self._attributes = None
+        self._length = 0
+
+    def add_decode_field(self, field_str: str):
+        if self._segment_type == self.VALUE_SET:
+            self._decode_string += field_str
+        else:
+            raise ValueError
+
+    def add_attribute(self, attribute):
+        if self._segment_type == self.VALUE_SET:
+            self._attributes.append(attribute)
+        else:
+            raise ValueError
+
+    def set_attribute(self, attribute):
+        if self._segment_type != self.VALUE_SET:
+            self._attributes = attribute
+        else:
+            raise ValueError
+
+    def set_variable(self, variable: str):
+        self._variable = variable
+
+    @property
+    def variable(self) -> str:
+        return self._variable
+
+    def set_length(self, length):
+        if self._segment_type == self.FIX_LENGTH:
+            self._length = length
+
+    def compute_length(self):
+        if self._segment_type == self.VALUE_SET:
+            self._length = struct.calcsize(self._decode_string)
+
+    @property
+    def segment_type(self):
+        return self._segment_type
+
+    @property
+    def start_byte(self):
+        return self._start_byte
+
+    @property
+    def attributes(self):
+        return self._attributes
+
+    @property
+    def length(self):
+        if self._length == 0 and self._segment_type == self.VALUE_SET:
+            self.compute_length()
+        return self._length
+
+    @property
+    def decode_string(self):
+        return self._decode_string
+
+
 class FieldSetMeta:
 
     def __init__(self, field_list):
         self._field_list = field_list
         self._attributes = []
+        self._reserved_attributes = []
         self._attr_dict = {}
         self._enums = []
-        self._decode_str = None
+        self._segments = []
         self._decode_index = 0
         self._repeat_field_set = None
+        self._variable_size = False
+        self._static_size = 0
+
         self.analyze_attributes(field_list)
         self._nb_attributes = len(self._attributes)
         self._last_attr = self._nb_attributes - 1
 
     def analyze_attributes(self, field_list):
-        self._decode_str = "<"
+        # we assume always starting with a ValueSet
+        segment = DecodeSegment(DecodeSegment.VALUE_SET, 0)
+        current_byte = 0
+        self._segments.append(segment)
 
         for field in field_list:
             # print("Field:", field.name)
             if field.decode_method == FIXED_LENGTH_NUMBER:
-                self._decode_str += field.decode_string
 
+                if segment.segment_type != DecodeSegment.VALUE_SET:
+                    # need to change segment type
+                    current_byte += segment.length
+                    segment = DecodeSegment(DecodeSegment.VALUE_SET, current_byte)
+                    self._decode_index = 0
+                    self._segments.append(segment)
+
+                segment.add_decode_field(field.decode_string)
                 current_attr = None
                 if isinstance(field, BitField):
                     # need to look in subfields
                     for sub_field in field.sub_fields():
+                        a_field = sub_field.field()  # a_field is the one that appears in the PGN definition
                         if sub_field.field().keyword is not None:
-                            a_field = sub_field.field()
                             current_attr = BitFieldAttributeDef(field, a_field, sub_field, self._decode_index)
                             self._attributes.append(current_attr)
                             self._attr_dict[current_attr.method] = current_attr
+                            segment.add_attribute(current_attr)
+                        else:
+                            attr = ReservedAttribute(a_field, self._decode_index)
+                            segment.add_attribute(attr)
+                            self._reserved_attributes.append(attr)
 
                 elif field.keyword is not None:
                     # need to generate a local variable and access method
                     current_attr = ScalarAttributeDef(field, self._decode_index)
                     self._attributes.append(current_attr)
                     self._attr_dict[current_attr.method] = current_attr
+                    segment.add_attribute(current_attr)
+                else:
+                    attr = ReservedAttribute(field, self._decode_index)
+                    segment.add_attribute(attr)
+                    self._reserved_attributes.append(attr)
 
                 self._decode_index += field.nb_decode_slots
-
                 # check enum for local generation
                 if current_attr is not None:
                     if issubclass(type(current_attr.field), EnumField):
                         enum_def = EnumDef(current_attr.field)
                         self._enums.append(enum_def)
+
+            elif field.decode_method == FIXED_LENGTH_BYTES:
+                current_byte += segment.length
+                segment = DecodeSegment(DecodeSegment.FIX_LENGTH, current_byte)
+                self._segments.append(segment)
+                segment.set_length(field.length())
+                if field.keyword is not None:
+                    current_attr = AttributeDef(field)
+                    self._attributes.append(current_attr)
+                    self._attr_dict[current_attr.method] = current_attr
+                else:
+                    current_attr = ReservedAttribute(field, -1)
+                    self._reserved_attributes.append(current_attr)
+                segment.set_attribute(current_attr)
+
+            elif field.decode_method == VARIABLE_LENGTH_BYTES:
+                current_byte += segment.length
+                segment = DecodeSegment(DecodeSegment.VARIABLE_LENGTH, current_byte)
+                if field.keyword is not None:
+                    current_attr = AttributeDef(field)
+                    self._attributes.append(current_attr)
+                    self._attr_dict[current_attr.method] = current_attr
+                else:
+                    current_attr = ReservedAttribute(field, -1)
+                    self._reserved_attributes.append(current_attr)
+                segment.set_attribute(current_attr)
+                self._variable_size = True
 
             elif field.decode_method == REPEATED_FIELD_SET:
                 # first let's generate the sub_class
@@ -193,10 +316,14 @@ class FieldSetMeta:
                 self._attr_dict[self._repeat_field_set.method] = self._repeat_field_set
 
             # end attributes analysis loop
+        decode_var = "_struct_str_"
+        nb_var = 0
+        for segment in self._segments:
+            if segment.segment_type == DecodeSegment.VALUE_SET:
+                segment.set_variable(f"{decode_var}{nb_var}")
+                nb_var += 1
+            self._static_size += segment.length
 
-    @property
-    def decode_str(self) -> str:
-        return self._decode_str
 
     @property
     def attributes(self) -> list:
@@ -212,6 +339,22 @@ class FieldSetMeta:
 
     def get_attribute(self, key):
         return self._attr_dict[key]
+
+    @property
+    def nb_segments(self) -> int:
+        return len(self._segments)
+
+    @property
+    def segments(self) -> list:
+        return self._segments
+
+    @property
+    def variable_size(self) -> bool:
+        return self._variable_size
+
+    @property
+    def static_size(self) -> int:
+        return self._static_size
 
 
 class RepeatAttributeDef(FieldSetMeta, AttributeDef):
@@ -245,7 +388,6 @@ class NMEA2000Meta(FieldSetMeta):
         print(f"generating meta model for: {self._name} PGN {self._pgn}")
         super().__init__(pgn_def.field_list)
         self._class_name = f"Pgn{self._pgn}Class"
-        self._msg_class_name = f"Pgn{self._pgn}Message"
 
     @property
     def pgn(self) -> int:
@@ -259,12 +401,12 @@ class NMEA2000Meta(FieldSetMeta):
             return 0
 
     @property
-    def class_name(self) -> str:
-        return self._class_name
+    def is_proprietary(self) -> bool:
+        return self._pgn_def.is_proprietary
 
     @property
-    def msg_class_name(self) -> str:
-        return self._msg_class_name
+    def class_name(self) -> str:
+        return self._class_name
 
     @property
     def name(self) -> str:

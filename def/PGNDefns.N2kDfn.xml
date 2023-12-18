@@ -1091,7 +1091,7 @@
     <PGNDefn PGN="126992">
       <Name>System Time</Name>
       <ByteLength>8</ByteLength>
-      <Generate>Yes</Generate>
+      <Scope>Generate</Scope>
       <Fields>
         <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
@@ -1133,7 +1133,7 @@
     <PGNDefn PGN="126993">
       <Name>Heartbeat</Name>
       <ByteLength>8</ByteLength>
-      <Generate>Yes</Generate>
+      <Scope>Generate</Scope>
       <Fields>
         <UDblField Name="Interval" key="interval">
           <BitOffset>0</BitOffset>
@@ -1158,33 +1158,38 @@
     </PGNDefn>
     <PGNDefn PGN="126996">
       <Name>Product Information</Name>
-      <ByteLength>-1</ByteLength>
+      <Scope>Generate</Scope>
+      <ByteLength>134</ByteLength>
       <Fields>
-        <UIntField Name="NMEA 2000 Version">
+        <UIntField Name="NMEA 2000 Version" key="nmea2000_version">
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <UIntField Name="Product Code">
+        <UIntField Name="Product Code" key="product_code">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <ASCIIFixField Name="Product information">
+        <ASCIIFixField Name="Product information" key="product_information">
           <BitOffset>32</BitOffset>
           <BitLength>1024</BitLength>
           <SubString Name="Model ID">
+            <ByteLength>32</ByteLength>
           </SubString>
           <SubString Name="Software Version Code">
+            <ByteLength>32</ByteLength>
           </SubString>
           <SubString Name="Model Version">
+            <ByteLength>32</ByteLength>
           </SubString>
           <SubString Name="Model Serial Code">
+            <ByteLength>32</ByteLength>
           </SubString>
         </ASCIIFixField>
-        <UIntField Name="Certification Level">
+        <UIntField Name="Certification Level" key="certification_level">
           <BitOffset>1056</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="Load Equivalency">
+        <UIntField Name="Load Equivalency" key="load_equivalency">
           <Description>Bus load for this device is x*50 mA</Description>
           <BitOffset>1064</BitOffset>
           <BitLength>8</BitLength>
@@ -2471,7 +2476,7 @@
     <PGNDefn PGN="129025">
       <Name>Position, Rapid Update</Name>
       <ByteLength>8</ByteLength>
-      <Generate>Yes</Generate>
+      <Scope>Gnerate</Scope>
       <Fields>
         <DblField Name="Latitude" key="latitude">
           <BitOffset>0</BitOffset>
@@ -2490,7 +2495,7 @@
     <PGNDefn PGN="129026">
       <Name>COG &amp; SOG, Rapid Update</Name>
       <ByteLength>8</ByteLength>
-      <Generate>Yes</Generate>
+      <Scope>Generate</Scope>
       <Fields>
         <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
@@ -2593,7 +2598,7 @@
     <PGNDefn PGN="129029">
       <Name>GNSS Position Data</Name>
       <ByteLength>43</ByteLength>
-      <Generate>Yes</Generate>
+      <Scope>Generate</Scope>
       <Fields>
         <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
@@ -6290,7 +6295,7 @@
     <PGNDefn PGN="130312">
       <Name>Temperature</Name>
       <ByteLength>8</ByteLength>
-      <Generate>Yes</Generate>
+      <Scope>Generate</Scope>
       <Fields>
         <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>

@@ -107,12 +107,16 @@ class PGNDef (BitFieldGenerator):
         self._id_str = pgnxml.attrib['PGN']
         self._xml = pgnxml
         self._id = int(self._id_str)
+        self._generate = False
+        self._name = pgnxml.find('Name').text
         # check of we decode it
         in_scope = pgnxml.find('Scope')
         if in_scope is not None:
             if in_scope.text == 'Ignored':
-                _logger.info("PGN %d ignored from the XML file" % self._id)
+                _logger.info("PGN %d (%s) ignored from the XML file" % (self._id, self._name))
                 raise N2KDefinitionError("Marked as Ignored")
+            elif in_scope.text == 'Generate':
+                self._generate = True
         # now determine the type of PGN we have
         self._pdu_format = (self._id >> 8) & 0xFF
         if self._pdu_format < 240:
@@ -123,14 +127,7 @@ class PGNDef (BitFieldGenerator):
         else:
             self.pdu_type = self.PDU2
         self._range = self.find_range(self._id)
-        self._name = pgnxml.find('Name').text
-        gen = pgnxml.find("Generate")
-        if gen is not None:
-            if gen.text == "Yes":
-                self._generate = True
-                # print("Code generation for", self._name)
-        else:
-            self._generate = False
+
         self._proprietary = self.is_pgn_proprietary(self._id)
         self._manufacturer_id = None
         self._fields = {}

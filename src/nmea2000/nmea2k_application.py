@@ -83,12 +83,12 @@ class NMEA2000Application(NMEA2000Device):
         self._process_vector[60928] = self.address_claim_receipt
         self._controller.add_subscriber(59904, self.iso_request)
         self._product_information = ProductInformation()
-        self._product_information.set_field('NMEA 2000 Version', 2100)
-        self._product_information.set_field('Product Code', 150)
+        self._product_information.nmea2000_version = 2100
+        self._product_information.product_information = 150
         self._product_information.set_product_information('NMEA MESSAGE ROUTER', 'Version 1.4',
                                                           'ROUTER Sterwen Technology', '00001')
-        self._product_information.set_field('Certification Level', 0)
-        self._product_information.set_field('Load Equivalency', 1)
+        self._product_information.certification_level = 0
+        self._product_information.load_equivalency = 1
 
     def send_address_claim(self):
         self.respond_address_claim()

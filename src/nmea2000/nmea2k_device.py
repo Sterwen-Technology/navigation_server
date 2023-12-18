@@ -110,15 +110,15 @@ class NMEA2000Device:
 
         if self._obj_126996 is None:
             self._changed = True
-            _logger.info("Processing Product information for address %d: %s" % (self._address, n2k_obj.fields))
+            _logger.info("Processing Product information for address %d: %s" % (self._address, n2k_obj))
             self._obj_126996 = n2k_obj
-            self.set_property(self._obj_126996.fields, 'NMEA 2000 Version')
-            self.set_property(self._obj_126996.fields, 'Product Code')
-            self.set_property(self._obj_126996.fields, 'Certification Level')
-            self.set_property(self._obj_126996.fields, 'Load Equivalency')
+            self._properties['NMEA 2000 Version'] = n2k_obj.nmea2000_version
+            self._properties['Product Code'] = n2k_obj.product_code
+            self._properties['Certification Level'] = n2k_obj.certification_level
+            self._properties['Load Equivalency'] = n2k_obj.load_equivalency
             try:
-                pi = self._obj_126996.fields['Product information']
-            except KeyError:
+                pi = n2k_obj.product_information
+            except AttributeError:
                 _logger.error("No Product Information in PGN 126996")
                 return
             lpi = len(pi)

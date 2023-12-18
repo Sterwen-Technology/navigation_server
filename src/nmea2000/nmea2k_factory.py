@@ -13,6 +13,7 @@ import logging
 
 from nmea2000.nmea2k_iso_messages import *
 from nmea2000.nmea2000_msg import NMEA2000Msg, NMEA2000Object
+from nmea2000.nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -22,7 +23,7 @@ class NMEA2000Factory:
     table = {
         59904: ISORequest,
         60928: AddressClaim,
-        126996: ProductInformation
+        # 126996: ProductInformation
     }
 
     @staticmethod
@@ -30,8 +31,12 @@ class NMEA2000Factory:
         try:
             obj = NMEA2000Factory.table[message.pgn]()
         except KeyError:
-            _logger.warning("Cannot build NMEA2000Object class for PGN %d - build generic object instead" % message.pgn)
-            obj = NMEA2000Object(message.pgn)
+            try:
+                obj = get_n2k_decoded_object(message)
+                return obj
+            except N2KMissingDecodeEncodeException:
+                _logger.warning("Cannot build NMEA2000Object class for PGN %d - build generic object instead" % message.pgn)
+                obj = NMEA2000Object(message.pgn)
         return obj.from_message(message)
 
 

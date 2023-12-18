@@ -15,7 +15,8 @@ import datetime
 
 
 from code_generation.nmea2000_meta import (BitFieldAttributeDef, RepeatAttributeDef, ScalarAttributeDef, NMEA2000Meta,
-                                           FieldSetMeta)
+                                           FieldSetMeta, DecodeSegment, ReservedAttribute)
+from utilities.global_variables import Typedef
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -41,7 +42,7 @@ class PythonPGNGenerator:
 
         # generate imports
         self.write("import struct\n")
-        self.write(f"\nfrom nmea2000.generated_base import {self.base_class}, {self.message_base_class}, check_valid\n")
+        self.write(f"\nfrom nmea2000.generated_base import *\n")
         self.write("from generated.nmea2000_pb2 import nmea2000_decoded_pb\n")
         self.write("from nmea2000.nmea2000_msg import NMEA2000Msg\n")
         # self._of.write("from utilities.global_variables import MessageServerGlobals\n")
@@ -80,8 +81,8 @@ class PythonPGNGenerator:
         self.write("\n#####################################################################\n")
         self.write("#         Messages implementation classes\n")
         self.write("#####################################################################\n")
-        for cls in class_def_list:
-            self.gen_message_class(cls, protobuf_conv)
+        #for cls in class_def_list:
+            # self.gen_message_class(cls, protobuf_conv)
         # now write the class dictionary
         self.set_level(0)
         self.write("\n#####################################################################\n")
@@ -91,7 +92,7 @@ class PythonPGNGenerator:
         self.set_level(2)
 
         def write_cls_entry(cls_def: NMEA2000Meta):
-            self.write(f"{cls_def.pgn}: {cls_def.msg_class_name}")
+            self.write(f"{cls_def.pgn}: {cls_def.class_name}")
 
         for cls in class_def_list[:len(class_def_list)-1]:
             write_cls_entry(cls)
@@ -102,18 +103,90 @@ class PythonPGNGenerator:
         self.set_level(0)
         self.write("# end of generated file\n")
 
-    def gen_class_variables(self, attributes, decode_str, last_attr):
-        self.write("_decode_struct = struct.Struct('%s')\n" % decode_str)
-        self.write("_decode_struct_size = _decode_struct.size\n")
+    def gen_class(self, pgn_def: NMEA2000Meta, protobuf_conv: bool):
+
+        print("Generating class for PGN", pgn_def.pgn, pgn_def.name)
+        self.set_level(0)
+        self.write('\n')
+        self.write(f"class {pgn_def.class_name}({self.message_base_class}):\n\n")
+        if pgn_def.repeat_field_set is not None:
+            # generate inner class
+            self.inc_indent()
+            self.gen_repeat_class(pgn_def.repeat_field_set, protobuf_conv, pgn_def.class_name)
+            self.dec_indent()
+            self.nl()
+
+        # print("Decode str:", pgn_def.decode_str)
+        # now start generating
+        # class variables
+        self.inc_indent()
+        self.write("_pgn = %d\n" % pgn_def.pgn)
+        self.write("_name = '%s'\n" % pgn_def.name)
+        self.write(f"_proprietary = {pgn_def.is_proprietary}\n")
+        if pgn_def.is_proprietary:
+            self.write(f"_manufacturer_id = {pgn_def.manufacturer}")
+        self.gen_class_variables(pgn_def, pgn_def.attributes, pgn_def.last_attr)
+        self.nl()
+        self.gen_enums_definition(pgn_def.enums)
+        self.nl()
+
+        #  __init__ method
+        # self.inc_indent()
+        self.write("def __init__(self, message=None, protobuf=None):\n")
+        self.inc_indent()
+        self.write("super().__init__(message, protobuf)\n")
+        self.nl()
+        # properties methods
+        self.dec_indent()
+        # access to class parameters
+        self.gen_getter('pgn', 'int')
+        self.gen_getter('name', 'str')
+        self.gen_getter('proprietary', 'bool')
+        if pgn_def.is_proprietary:
+            self.gen_getter('manufacturer_id', 'int')
+
+        self.gen_accessors_methods(pgn_def.attributes, pgn_def.enums)
+
+        self.gen_decode_encode(pgn_def)
+
+        if protobuf_conv:
+            self.gen_from_protobuf(pgn_def)
+
+        # string conversion method
+
+        self.write("def __str__(self):\n")
+        self.inc_indent()
+        self.write("return f'PGN{self._pgn}({self._name}) [")
+        for attr in pgn_def.attributes[:pgn_def.last_attr]:
+            self._of.write("%s={self.%s}, " % (attr.method, attr.variable))
+        self._of.write("%s={self.%s}]'\n\n" % (pgn_def.attributes[pgn_def.last_attr].method,
+                                               pgn_def.attributes[pgn_def.last_attr].variable))
+
+    def gen_class_variables(self, pgn_def: NMEA2000Meta, attributes, last_attr):
+        for segment in pgn_def.segments:
+            if segment.segment_type == DecodeSegment.VALUE_SET:
+                self.write(f"{segment.variable} = struct.Struct('{segment.decode_string}')\n")
+                self.write(f"{segment.variable}_size = {segment.variable}.size\n")
         self.write("__slots__ = (")
         for attr in attributes[:last_attr]:
             self._of.write("'%s', " % attr.variable)
         self._of.write("'%s')\n\n" % attributes[last_attr].variable)
-        self.write("@classmethod\n")
-        self.write("def size(cls) -> int:\n")
+        if not pgn_def.variable_size:
+            self.write(f"_static_size = {pgn_def.static_size}\n")
+            self.nl()
+            self.write("@classmethod\n")
+            self.write("def size(cls):\n")
+            self.inc_indent()
+            self.write("return cls._static_size\n")
+            self.dec_indent()
+        self.nl()
+        self.write("@staticmethod\n")
+        self.write("def variable_size() -> bool:\n")
         self.inc_indent()
-        self.write(f"return cls._decode_struct_size\n")
+        self.write(f"return {pgn_def.variable_size}\n")
         self.dec_indent()
+        self.nl()
+
 
     def gen_enums_definition(self, enums):
         # enums or enum reference
@@ -154,19 +227,61 @@ class PythonPGNGenerator:
             self.write(f"def {enum.method}_text(self) -> str:\n")
             self.inc_indent()
             if enum.global_ref is not None:
-                self.write(f"return {self.base_class}.resolve_global_enum(self._{enum.method}_enum, self._{enum.method})\n\n")
+                self.write(f"return resolve_global_enum(self._{enum.method}_enum, self._{enum.method})\n\n")
             else:
                 self.write(f"return self._{enum.method}_enum.get(self._{enum.method}, '{enum.method} key error')\n\n")
             self.dec_indent()
 
-    def gen_decode_encode_methods(self, attributes, last_attr):
+    def gen_decode_encode(self, pgn_def):
         #
         # decode method =================================================
         #
-        self.write("def decode_payload_segment(self, payload, from_byte):\n")
+        self.write("def decode_payload(self, payload, start_byte=0):\n")
         self.inc_indent()
-        self.write("val = self._decode_struct.unpack_from(payload, from_byte)\n")
-        for attr in attributes:
+        for segment in pgn_def.segments:
+            print("Start segment", segment.segment_type, segment.start_byte, segment.length)
+            if segment.segment_type == DecodeSegment.VALUE_SET:
+                self.gen_decode_value_set_segment(segment)
+            elif segment.segment_type == DecodeSegment.FIX_LENGTH:
+                self.gen_decode_fix_length_segment(segment)
+
+        if not isinstance(pgn_def, RepeatAttributeDef):
+            if pgn_def.repeat_field_set is not None:
+                self.gen_repeated_decode(pgn_def.repeat_field_set)
+
+        self.dec_indent()
+        self.nl()
+        #
+        # encode method
+        #
+        self.write("def encode_payload(self) -> bytearray:\n")
+        self.inc_indent()
+        # compute the buffer size
+        # compute the size of the output buffer
+        # fixed determined size
+        self.write(f"buf_size = self.__class__.size()")
+        self.nl()
+        self.write(f"buffer = bytearray(buf_size)\n")
+        for segment in pgn_def.segments:
+
+            if segment.segment_type == DecodeSegment.VALUE_SET:
+                self.gen_encode_value_set_segment(segment)
+            elif segment.segment_type == DecodeSegment.FIX_LENGTH:
+                self.gen_encode_fix_length(segment)
+
+        if not isinstance(pgn_def, RepeatAttributeDef):
+            if pgn_def.repeat_field_set is not None:
+                self.gen_repeated_encode(pgn_def.repeat_field_set)
+            self.write("return buffer\n")
+        self.dec_indent()
+        self.nl()
+
+    def gen_decode_value_set_segment(self, segment: DecodeSegment):
+
+        self.write(f"val = self.{segment.variable}.unpack_from(payload, {segment.start_byte} + start_byte)\n")
+        for attr in segment.attributes:
+            if issubclass(attr.__class__, ReservedAttribute):
+                continue
             # print("Decode for", attr.method, attr.__class__.__name__)
             if isinstance(attr, ScalarAttributeDef):
                 if attr.need_check:
@@ -198,38 +313,36 @@ class PythonPGNGenerator:
                     else:
                         self._of.write(f"(val[{attr.field_index}] << {attr.bit_offset}) ")
                 self._of.write(f"& 0x{attr.mask:X}")
+            self.nl()
 
-            elif isinstance(attr, RepeatAttributeDef):
-                self.write("start_byte = self._decode_struct_size\n")
-                self.write(f"self.{attr.variable} = []\n")
-                self.write(f"for i in range(0, self.{attr.count_method}):\n")
-                self.inc_indent()
-                self.write(f"self.{attr.variable}.append(self.{attr.class_name}().decode_payload_segment(payload, start_byte))\n")
-                self.write(f"start_byte += self.{attr.class_name}.size()")
-                self.dec_indent()
-            self._of.write("\n")
-        self.dec_indent()
-        self._of.write("\n")
-        # encode method
-        self.write("def encode_payload_segment(self, from_byte):\n")
+    def gen_decode_fix_length_segment(self, segment: DecodeSegment):
+        self.write(f"self.{segment.attributes.variable} = ")
+        if segment.attributes.typedef == Typedef.STRING:
+            self._of.write("clean_string(")
+        else:
+            self._of.write("clean_bytes(")
+        self._of.write(f"payload[{segment.start_byte} + start_byte: {segment.start_byte+segment.length} + start_byte])\n")
+
+
+    def gen_repeated_decode(self, attr):
+        self.write("start_byte = self._static_size\n")
+        self.write(f"self.{attr.variable} = []\n")
+        self.write(f"for i in range(0, self.{attr.count_method}):\n")
         self.inc_indent()
+        self.write(f"self.{attr.variable}.append(self.{attr.class_name}().decode_payload(payload, start_byte))\n")
+        self.write(f"start_byte += self.{attr.class_name}.size()")
+        self.dec_indent()
+        self.nl()
 
+    def gen_encode_value_set_segment(self, segment: DecodeSegment):
         val_encode = []
         numvi = 0
-        # compute the size of the output buffer
-        # fixed determined size
-        self.write(f"buf_size = self.__class__.size()")
-        if isinstance(attributes[last_attr], RepeatAttributeDef):
-            last_encoded_main_index = last_attr
-            self._of.write(f" + (self.{attributes[last_attr].count_method} * self.{attributes[last_attr].class_name}.size())")
-        else:
-            last_encoded_main_index = len(attributes)
 
-        self._of.write("\n")
-        self.write(f"buffer = bytearray(buf_size)\n")
         # self.write_indent()
         # first need to convert in int if float
-        for attr in attributes[:last_encoded_main_index]:
+        for attr in segment.attributes:
+            if issubclass(attr.__class__, ReservedAttribute):
+                continue
             if attr.field_type == "float":
                 vi = f"v{numvi}"
                 numvi += 1
@@ -243,67 +356,14 @@ class PythonPGNGenerator:
                     self._of.write(f" / {attr.scale}")
                 self._of.write(")\n")
             else:
-                val_encode.append("self.%s" % attr.variable)
+                val_encode.append(f"self.{attr.variable}")
 
-        self.write("self._decode_struct.pack_into(buffer, from_byte, ")
-        for val in val_encode[:last_attr - 1]:
+        self.write(f"self.{segment.variable}.pack_into(buffer, {segment.start_byte}, ")
+        last_attr = len(val_encode) - 1
+        for val in val_encode[:last_attr]:
             self._of.write("%s, " % val)
-        self._of.write("%s)\n" % val_encode[last_attr-1])
-        self.dec_indent()
-        self._of.write("\n")
+        self._of.write("%s)\n" % val_encode[last_attr])
 
-    def gen_class(self, pgn_def: NMEA2000Meta, protobuf_conv: bool):
-
-        print("Generating class for PGN", pgn_def.pgn, pgn_def.name)
-        self.set_level(0)
-        self.write('\n')
-        self.write("class %s(%s):\n\n" % (pgn_def.class_name, self.base_class))
-        if pgn_def.repeat_field_set is not None:
-            # generate inner class
-            self.inc_indent()
-            self.gen_repeat_class(pgn_def.repeat_field_set, protobuf_conv, pgn_def.class_name)
-            self.dec_indent()
-            self.nl()
-
-        # print("Decode str:", pgn_def.decode_str)
-        # now start generating
-        # class variables
-        self.inc_indent()
-        self.write("_pgn = %d\n" % pgn_def.pgn)
-        self.write("_name = '%s'\n" % pgn_def.name)
-        self.gen_class_variables(pgn_def.attributes, pgn_def.decode_str, pgn_def.last_attr)
-        self.nl()
-        self.gen_enums_definition(pgn_def.enums)
-        self.nl()
-
-        #  __init__ method
-        # self.inc_indent()
-        self.write("def __init__(self, message=None, protobuf=None):\n")
-        self.inc_indent()
-        self.write("super().__init__(message, protobuf)\n")
-        self.nl()
-        # properties methods
-        self.dec_indent()
-        # access to class parameters
-        self.gen_getter('pgn', 'int')
-        self.gen_getter('name', 'str')
-
-        self.gen_accessors_methods(pgn_def.attributes, pgn_def.enums)
-
-        self.gen_decode_encode_methods(pgn_def.attributes, pgn_def.last_attr)
-
-        if protobuf_conv:
-            self.gen_from_protobuf(pgn_def)
-
-        # string conversion method
-
-        self.write("def __str__(self):\n")
-        self.inc_indent()
-        self.write("return f'PGN{self._pgn}({self._name}) [")
-        for attr in pgn_def.attributes[:pgn_def.last_attr]:
-            self._of.write("%s={self.%s}, " % (attr.method, attr.variable))
-        self._of.write("%s={self.%s}]'\n\n" % (pgn_def.attributes[pgn_def.last_attr].method,
-                                               pgn_def.attributes[pgn_def.last_attr].variable))
 
     def gen_getter(self, method, var_type):
         self.write("@property\n")
@@ -318,21 +378,24 @@ class PythonPGNGenerator:
         self.write(f"class {repeat_field.class_name}:\n")
         self.nl()
         self.inc_indent()
-        self.gen_class_variables(repeat_field.attributes, repeat_field.decode_str, repeat_field.last_attr)
+        self.gen_class_variables(repeat_field, repeat_field.attributes, repeat_field.last_attr)
         self.nl()
         self.gen_enums_definition(repeat_field.enums)
         self.nl()
         # gen __init__ method
         self.write('def __init__(self, protobuf=None):\n')
         self.inc_indent()
-        self.write('if protobuf is not None:\n')
-        self.inc_indent()
-        self.write('self.from_protobuf(protobuf)\n')
-        self.dec_indent()
+        if protobuf_conv:
+            self.write('if protobuf is not None:\n')
+            self.inc_indent()
+            self.write('self.from_protobuf(protobuf)\n')
+            self.dec_indent()
+        else:
+            self.write("pass\n")
         self.dec_indent()
         self.nl()
         self.gen_accessors_methods(repeat_field.attributes, repeat_field.enums)
-        self.gen_decode_encode_methods(repeat_field.attributes, repeat_field.last_attr)
+        self.gen_decode_encode(repeat_field)
         if protobuf_conv:
             self.gen_from_protobuf(repeat_field, outer_class)
         self.dec_indent()
@@ -370,7 +433,15 @@ class PythonPGNGenerator:
                 self._of.write(f'message.{attr.method} = self.{attr.variable}\n')
         self.write('return message\n')
         self.dec_indent()
-        self._of.write('\n')
+        self.nl()
+        if base_class is None:
+            self.write("def unpack_protobuf(self, protobuf: nmea2000_decoded_pb):\n")
+            self.inc_indent()
+            self.write(f'payload = {pgn_def.class_name}Pb()\n')
+            self.write('protobuf.payload.Unpack(payload)\n')
+            self.write("self.from_protobuf(payload)\n")
+            self.dec_indent()
+            self.nl()
 
     def gen_message_class(self, pgn_def: NMEA2000Meta, protobuf_conv):
         self.set_level(0)
@@ -391,8 +462,10 @@ class PythonPGNGenerator:
         self.write('super().__init__(protobuf=protobuf)\n')
         if protobuf_conv:
             # ok we will process de the full protobuf
-            self.write(f'self.unpack_payload(protobuf, {pgn_def.class_name}Pb())\n')
-        self._of.write('\n')
+            self.write(f'payload = {pgn_def.class_name}Pb()\n')
+            self.write('protobuf.payload.Unpack(payload)\n')
+            self.write("self.from_protobuf(payload)\n")
+        self.nl()
 
 
 
