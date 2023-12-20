@@ -50,6 +50,11 @@ class ReservedAttribute(AttributeGen):
 
     def __init__(self, field, decode_index):
         super().__init__(field, decode_index)
+        self._default_value = 2**field.bit_length - 1
+
+    @property
+    def default_value(self) -> int:
+        return self._default_value
 
 
 class AttributeDef(AttributeGen):
@@ -90,6 +95,26 @@ class AttributeDef(AttributeGen):
 
 
 class BitFieldAttributeDef(AttributeDef):
+
+    def __init__(self, bitfield: BitField, field: Field, sub_field: BitFieldDef, decode_index: int):
+        super().__init__(field, decode_index)
+        self._bitfield = bitfield
+        self._sub_field = sub_field
+
+    @property
+    def nb_slots(self) -> int:
+        return self._bitfield.nb_decode_slots
+
+    @property
+    def mask(self) -> int:
+        return self._sub_field.mask
+
+    @property
+    def bit_offset(self) -> int:
+        return self._sub_field.bit_offset
+
+
+class ReservedBitFieldAttribute(ReservedAttribute):
 
     def __init__(self, bitfield: BitField, field: Field, sub_field: BitFieldDef, decode_index: int):
         super().__init__(field, decode_index)
@@ -260,7 +285,7 @@ class FieldSetMeta:
                             self._attr_dict[current_attr.method] = current_attr
                             segment.add_attribute(current_attr)
                         else:
-                            attr = ReservedAttribute(a_field, self._decode_index)
+                            attr = ReservedBitFieldAttribute(a_field, a_field, sub_field, self._decode_index)
                             segment.add_attribute(attr)
                             self._reserved_attributes.append(attr)
 

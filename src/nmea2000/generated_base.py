@@ -45,16 +45,13 @@ def clean_string(bytes_to_clean) -> str:
     return str_to_clean.strip('@\x20\x00')
 
 
-def insert_string(buffer, start, last, string_to_insert):
-    max_len = last - start
-    if len(string_to_insert) > max_len:
-        bytes_to_insert = string_to_insert[:max_len].encode()
+def insert_string(buffer, start, length, string_to_insert):
+    if len(string_to_insert) > length:
+        bytes_to_insert = string_to_insert[:length].encode()
     else:
         bytes_to_insert = string_to_insert.encode()
     last_to_insert = start + len(bytes_to_insert)
     buffer[start: last_to_insert] = bytes_to_insert
-
-
 
 
 class NMEA2000DecodedMsg:

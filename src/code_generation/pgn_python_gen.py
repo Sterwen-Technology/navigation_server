@@ -15,7 +15,7 @@ import datetime
 
 
 from code_generation.nmea2000_meta import (BitFieldAttributeDef, RepeatAttributeDef, ScalarAttributeDef, NMEA2000Meta,
-                                           FieldSetMeta, DecodeSegment, ReservedAttribute)
+                                           FieldSetMeta, DecodeSegment, ReservedAttribute, ReservedBitFieldAttribute)
 from utilities.global_variables import Typedef
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -44,7 +44,7 @@ class PythonPGNGenerator:
         self.write("import struct\n")
         self.write(f"\nfrom nmea2000.generated_base import *\n")
         self.write("from generated.nmea2000_pb2 import nmea2000_decoded_pb\n")
-        self.write("from nmea2000.nmea2000_msg import NMEA2000Msg\n")
+        # self.write("from nmea2000.nmea2000_msg import NMEA2000Msg\n")
         # self._of.write("from utilities.global_variables import MessageServerGlobals\n")
         self.write('\n')
 
@@ -77,12 +77,7 @@ class PythonPGNGenerator:
         # generate all classes
         for cls in class_def_list:
             self.gen_class(cls, protobuf_conv)
-        self.set_level(0)
-        self.write("\n#####################################################################\n")
-        self.write("#         Messages implementation classes\n")
-        self.write("#####################################################################\n")
-        #for cls in class_def_list:
-            # self.gen_message_class(cls, protobuf_conv)
+
         # now write the class dictionary
         self.set_level(0)
         self.write("\n#####################################################################\n")
@@ -126,7 +121,7 @@ class PythonPGNGenerator:
         if pgn_def.is_proprietary:
             self.write(f"_manufacturer_id = {pgn_def.manufacturer}")
         self.gen_class_variables(pgn_def, pgn_def.attributes, pgn_def.last_attr)
-        self.nl()
+        # self.nl()
         self.gen_enums_definition(pgn_def.enums)
         self.nl()
 
@@ -254,16 +249,21 @@ class PythonPGNGenerator:
         #
         # encode method
         #
-        self.write("def encode_payload(self) -> bytearray:\n")
-        self.inc_indent()
-        # compute the buffer size
-        # compute the size of the output buffer
-        # fixed determined size
-        self.write(f"buf_size = self.__class__.size()")
-        self.nl()
-        self.write(f"buffer = bytearray(buf_size)\n")
-        for segment in pgn_def.segments:
+        if isinstance(pgn_def, RepeatAttributeDef):
+            # here we need to generate a complementary encoding only
+            self.write("def encode_payload(self, buffer, start_byte):\n")
+            self.inc_indent()
+        else:
+            self.write("def encode_payload(self) -> bytearray:\n")
+            self.inc_indent()
+            # compute the buffer size
+            # compute the size of the output buffer
+            # fixed determined size
+            self.write(f"buf_size = self.__class__.size()\n")
+            self.write(f"buffer = bytearray(buf_size)\n")
+            self.write("start_byte = 0\n")
 
+        for segment in pgn_def.segments:
             if segment.segment_type == DecodeSegment.VALUE_SET:
                 self.gen_encode_value_set_segment(segment)
             elif segment.segment_type == DecodeSegment.FIX_LENGTH:
@@ -311,7 +311,7 @@ class PythonPGNGenerator:
                     if attr.bit_offset == 0:
                         self._of.write(f"val[{attr.field_index}] ")
                     else:
-                        self._of.write(f"(val[{attr.field_index}] << {attr.bit_offset}) ")
+                        self._of.write(f"(val[{attr.field_index}] >> {attr.bit_offset}) ")
                 self._of.write(f"& 0x{attr.mask:X}")
             self.nl()
 
@@ -323,6 +323,11 @@ class PythonPGNGenerator:
             self._of.write("clean_bytes(")
         self._of.write(f"payload[{segment.start_byte} + start_byte: {segment.start_byte+segment.length} + start_byte])\n")
 
+    def gen_encode_fix_length(self, segment: DecodeSegment):
+        if segment.attributes.typedef == Typedef.STRING:
+            self.write(f"insert_string(buffer, {segment.start_byte} + start_byte, {segment.length}, self.{segment.attributes.variable})\n")
+        else:
+            self.write(f"insert_byte(buffer, {segment.start_byte} + start_byte, {segment.length}, self.{segment.attributes.variable})\n")
 
     def gen_repeated_decode(self, attr):
         self.write("start_byte = self._static_size\n")
@@ -342,8 +347,21 @@ class PythonPGNGenerator:
         # first need to convert in int if float
         for attr in segment.attributes:
             if issubclass(attr.__class__, ReservedAttribute):
-                continue
-            if attr.field_type == "float":
+                vi = f"v{numvi}"
+                if isinstance(attr, ReservedBitFieldAttribute):
+                    if len(val_encode) - 1 < attr.field_index:
+                        # need to increase the index
+                        self.write(f"{vi} = 0x{attr.default_value:x} << {attr.bit_offset}\n")
+                        numvi += 1
+                        val_encode.append(vi)
+                    else:
+                        # we stay on the same index
+                        self.write(f"{val_encode[attr.field_index]} |= 0x{attr.default_value:x} << {attr.bit_offset}\n")
+                else:
+                    numvi += 1
+                    val_encode.append(vi)
+                    self.write(f"{vi} = 0x{attr.default_value:x}\n")
+            elif attr.field_type == "float":
                 vi = f"v{numvi}"
                 numvi += 1
                 val_encode.append(vi)
@@ -355,14 +373,30 @@ class PythonPGNGenerator:
                 if attr.scale is not None:
                     self._of.write(f" / {attr.scale}")
                 self._of.write(")\n")
+            elif isinstance(attr, BitFieldAttributeDef):
+                vi = f"v{numvi}"
+                if len(val_encode) - 1 < attr.field_index:
+                    # need to stay on the same index
+                    self.write(f"{vi} = (self.{attr.variable} & 0x{attr.mask:x}) << {attr.bit_offset}\n")
+                    numvi += 1
+                    val_encode.append(vi)
+                else:
+                    self.write(f"{val_encode[attr.field_index]} |= (self.{attr.variable} & 0x{attr.mask:x}) << {attr.bit_offset}\n")
             else:
                 val_encode.append(f"self.{attr.variable}")
 
-        self.write(f"self.{segment.variable}.pack_into(buffer, {segment.start_byte}, ")
+        self.write(f"self.{segment.variable}.pack_into(buffer, {segment.start_byte} + start_byte, ")
         last_attr = len(val_encode) - 1
         for val in val_encode[:last_attr]:
             self._of.write("%s, " % val)
         self._of.write("%s)\n" % val_encode[last_attr])
+
+    def gen_repeated_encode(self, field_set: RepeatAttributeDef):
+        self.write(f"for repeat_field in self.{field_set.variable}:\n")
+        self.inc_indent()
+        self.write(f"repeat_field.encode_payload(buffer, start_byte)\n")
+        self.write(f"start_byte += self.{field_set.class_name}.size()\n")
+        self.dec_indent()
 
 
     def gen_getter(self, method, var_type):

@@ -111,8 +111,7 @@ class NavigationMainServer:
 
     @staticmethod
     def version():
-        global version
-        return version
+        return MessageServerGlobals.version
 
     def add_server(self, server):
         if type(server) == Console:
