@@ -28,7 +28,7 @@ from nmea_routing.console import Console
 from nmea_routing.publisher import *
 from nmea_routing.client_publisher import *
 from nmea_routing.internal_gps import InternalGps
-from nmea2000.nmea2k_publisher import N2KTracePublisher
+from nmea2000.nmea2k_publisher import N2KTracePublisher, N2KStatisticPublisher
 # from simulator_input import *
 from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
 from nmea_routing.IPCoupler import NMEATCPReader
@@ -266,7 +266,7 @@ def main():
     config.add_class(Injector)
     config.add_class(iKonvert)
     config.add_class(N2KTracePublisher)
-    # config.add_class(N2KProbePublisher) obsolete class
+    config.add_class(N2KStatisticPublisher)
     config.add_class(InternalGps)
     config.add_class(MPPT_Coupler)
     config.add_class(YDCoupler)

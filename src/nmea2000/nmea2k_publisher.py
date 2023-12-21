@@ -17,6 +17,7 @@ from nmea_routing.publisher import Publisher
 from nmea2000.nmea2k_pgndefs import *
 from nmea_routing.filters import FilterSet
 from nmea2000.nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
+from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
 
 from nmea_routing.generic_msg import *
 from nmea_routing.configuration import NavigationConfiguration
@@ -46,44 +47,6 @@ class PgnRecord:
         self._count += 1
 
 
-'''
-class N2KProbePublisher(Publisher):
-
-    def __init__(self, opts):
-        _logger.info("Instantiating N2KProbePublisher")
-        self._interval = int(opts['interval']) * 1e9
-        self._records = {}
-        super().__init__(opts)
-
-    def process_msg(self, gen_msg):
-        # print("Process msg pgn", msg.pgn)
-        if gen_msg.type != N2K_MSG:
-            return
-        msg = gen_msg.msg
-        clock = time.time_ns()
-        display = False
-        if msg.pgn == 0:
-            return False
-        try:
-            rec = self._records[msg.pgn]
-        except KeyError:
-            display = True
-            rec = PgnRecord(msg.pgn, clock)
-            self._records[msg.pgn] = rec
-        else:
-            rec.tick()
-            if rec.check(clock, self._interval):
-                display = True
-        if display:
-            print(rec)
-        return True
-
-    def dump_records(self):
-        for rec in self._records.values():
-            print(rec)
-'''
-
-
 class N2KTracePublisher(Publisher):
 
     def __init__(self, opts):
@@ -109,6 +72,7 @@ class N2KTracePublisher(Publisher):
             except IOError as e:
                 _logger.error("Trace file error %s" % e)
                 self._trace_fd = None
+        self._stats = N2KStatistics()
 
     def process_msg(self, gen_msg):
         if gen_msg.type != N2K_MSG:
@@ -135,6 +99,7 @@ class N2KTracePublisher(Publisher):
             try:
                 res = get_n2k_decoded_object(msg)
             except N2KMissingDecodeEncodeException:
+                self._stats.add_entry(msg)
                 return True
             except Exception as e:
                 _logger.error("Error decoding PGN: %s message:%s" % (e, msg.format1()))
@@ -151,7 +116,30 @@ class N2KTracePublisher(Publisher):
         return True
 
     def stop(self):
+        print("List of missing decode for PGN")
+        self._stats.print_entries()
         if self._trace_fd is not None:
             self._trace_fd.close()
         super().stop()
+
+
+class N2KStatisticPublisher(Publisher):
+
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._n183_stats = NMEA183Statistics()
+        self._n2k_stats = N2KStatistics()
+
+    def process_msg(self, msg: NavGenericMsg):
+        if msg.type == N0183_MSG:
+            self._n183_stats.add_entry(msg.talker, msg.formatter)
+        else:
+            self._n2k_stats.add_entry(msg.msg)
+        return True
+
+    def stop(self):
+        self._n183_stats.print_entries()
+        self._n2k_stats.print_entries()
+        super().stop()
+
 

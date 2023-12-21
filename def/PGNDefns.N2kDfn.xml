@@ -61,6 +61,53 @@
             <EnumPair Value="8" Name="Galileo" />
           </EnumValues>
         </Enum>
+    <Enum Name="Type of ship">
+          <BitLength>8</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="unavailable" />
+            <EnumPair Value="20" Name="Wing In Ground" />
+            <EnumPair Value="29" Name="Wing In Ground (no other information)" />
+            <EnumPair Value="30" Name="Fishing" />
+            <EnumPair Value="31" Name="Towing" />
+            <EnumPair Value="32" Name="Towing exceeds 200m or wider than 25m" />
+            <EnumPair Value="33" Name="Engaged in dredging or underwater operations" />
+            <EnumPair Value="34" Name="Engaged in diving operations" />
+            <EnumPair Value="35" Name="Engaged in military operations" />
+            <EnumPair Value="36" Name="Sailing" />
+            <EnumPair Value="37" Name="Pleasure" />
+            <EnumPair Value="40" Name="High speed craft" />
+            <EnumPair Value="71" Name="Cargo ship carrying dangerous goods" />
+            <EnumPair Value="72" Name="Cargo ship hazard cat B" />
+            <EnumPair Value="73" Name="Cargo ship hazard cat C" />
+            <EnumPair Value="74" Name="Cargo ship hazard cat D" />
+            <EnumPair Value="79" Name="Cargo ship (no additional information)" />
+            <EnumPair Value="50" Name="Pilot vessel" />
+            <EnumPair Value="51" Name="SAR" />
+            <EnumPair Value="52" Name="Tug" />
+            <EnumPair Value="53" Name="Port tender" />
+            <EnumPair Value="54" Name="Anti-pollution" />
+            <EnumPair Value="55" Name="Law enforcement" />
+            <EnumPair Value="56" Name="Spare" />
+            <EnumPair Value="57" Name="Spare #2" />
+            <EnumPair Value="58" Name="Medical" />
+            <EnumPair Value="59" Name="RR Resolution No.18" />
+            <EnumPair Value="60" Name="Passenger ship" />
+            <EnumPair Value="69" Name="Passenger ship (no additional information)" />
+            <EnumPair Value="70" Name="Cargo ship" />
+            <EnumPair Value="80" Name="Tanker" />
+            <EnumPair Value="81" Name="Tanker carrying dangerous goods" />
+            <EnumPair Value="82" Name="Tanker hazard cat B" />
+            <EnumPair Value="83" Name="Tanker hazard cat C" />
+            <EnumPair Value="84" Name="Tanker hazard cat D" />
+            <EnumPair Value="89" Name="Tanker (no additional information)" />
+            <EnumPair Value="90" Name="Other" />
+            <EnumPair Value="91" Name="Other carrying dangerous goods" />
+            <EnumPair Value="92" Name="Other hazard cat B" />
+            <EnumPair Value="93" Name="Other hazard cat C" />
+            <EnumPair Value="94" Name="Other hazard cat D" />
+            <EnumPair Value="99" Name="Other (no additional information)" />
+          </EnumValues>
+        </Enum>
   </GlobalEnums>
   <PGNDefns>
     <PGNDefn PGN="59392">
@@ -426,6 +473,8 @@
     </PGNDefn>
     <PGNDefn PGN="65359">
       <Name>Raymarine: Pilot heading</Name>
+      <Scope>Generate</Scope>
+      <Flags>ReadOnly</Flags>
       <ByteLength>7</ByteLength>
       <Fields>
         <UIntField Name="Manufacturer Code">
@@ -433,16 +482,16 @@
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </UIntField>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UDblField Name="True Heading">
+        <UDblField Name="True Heading" key="true_heading">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.0057295779513082332</Scale>
         </UDblField>
-        <UDblField Name="Magnetic Heading">
+        <UDblField Name="Magnetic Heading" key="magnetic_heading">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.0057295779513082332</Scale>
@@ -477,6 +526,7 @@
      <PGNDefn PGN="65379">
        <Comment>Partial reverse engineering</Comment>
       <Name>Raymarine: Pilot mode</Name>
+       <Scope>Generate</Scope>
       <ByteLength>7</ByteLength>
       <Fields>
         <UIntField Name="Manufacturer Code">
@@ -484,19 +534,19 @@
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </UIntField>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="Pilot Mode">
+        <UIntField Name="Pilot Mode" key="pilot_mode">
           <BitOffset>24</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="Sub Mode">
+        <UIntField Name="Sub Mode" key="sub_mode">
           <BitOffset>32</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="Pilot Mode Data">
+        <UIntField Name="Pilot Mode Data" key="pilot_mode_data">
           <BitOffset>40</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
@@ -1159,6 +1209,7 @@
     <PGNDefn PGN="126996">
       <Name>Product Information</Name>
       <Scope>Generate</Scope>
+      <Flags>ReadWrite</Flags>
       <ByteLength>134</ByteLength>
       <Fields>
         <UIntField Name="NMEA 2000 Version" key="nmea2000_version">
@@ -1310,9 +1361,10 @@
     </PGNDefn>
     <PGNDefn PGN="127245">
       <Name>Rudder</Name>
+      <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <InstanceField Name="Instance">
+        <InstanceField Name="Instance" key="instance">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
         </InstanceField>
@@ -1321,7 +1373,7 @@
           <BitOffset>8</BitOffset>
           <BitLength>5</BitLength>
         </UIntField>
-        <EnumField Name="Direction Order">
+        <EnumField Name="Direction Order" key="direction">
           <BitOffset>13</BitOffset>
           <BitLength>3</BitLength>
           <EnumValues>
@@ -1331,13 +1383,13 @@
             <EnumPair Value="7" Name="Unavailable" />
           </EnumValues>
         </EnumField>
-        <DblField Name="Angle Order">
+        <DblField Name="Angle Order" key="angle">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
         </DblField>
-        <DblField Name="Position">
+        <DblField Name="Position" key="position">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
@@ -1351,32 +1403,33 @@
     </PGNDefn>
     <PGNDefn PGN="127250">
       <Name>Vessel Heading</Name>
+      <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <UDblField Name="Heading">
+        <UDblField Name="Heading" key="heading">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
         </UDblField>
-        <DblField Name="Deviation">
+        <DblField Name="Deviation" key="deviation">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
         </DblField>
-        <DblField Name="Variation">
+        <DblField Name="Variation" key="variation">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
         </DblField>
-        <EnumField Name="Reference">
+        <EnumField Name="Reference" key="reference">
           <BitOffset>56</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -2281,24 +2334,25 @@
     </PGNDefn>
     <PGNDefn PGN="128259">
       <Name>Speed</Name>
+      <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <DblField Name="Speed Water Referenced">
+        <DblField Name="Speed Water Referenced" key="speed_through_water">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <DblField Name="Speed Ground Referenced">
+        <DblField Name="Speed Ground Referenced" key="speed_over_ground_ref">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <EnumField Name="Speed Water Referenced Type">
+        <EnumField Name="Speed Water Referenced Type" key="speed_through_water_reference">
           <BitOffset>40</BitOffset>
           <BitLength>8</BitLength>
           <EnumValues>
@@ -2317,27 +2371,28 @@
     </PGNDefn>
     <PGNDefn PGN="128267">
       <Name>Water Depth</Name>
+      <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <UDblField Name="Depth">
+        <UDblField Name="Depth" key="depth">
           <Description>Depth below transducer</Description>
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Length</FormatAs>
           <Scale>0.01</Scale>
         </UDblField>
-        <DblField Name="Offset">
+        <DblField Name="Offset" key="offset">
           <Description>Distance between transducer and surface (positive) or keel (negative)</Description>
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.001</Scale>
         </DblField>
-        <DblField Name="Offset">
+        <DblField Name="Offset" key="range">
           <Description>Measurement range</Description>
           <BitOffset>56</BitOffset>
           <BitLength>8</BitLength>
@@ -2476,7 +2531,7 @@
     <PGNDefn PGN="129025">
       <Name>Position, Rapid Update</Name>
       <ByteLength>8</ByteLength>
-      <Scope>Gnerate</Scope>
+      <Scope>Generate</Scope>
       <Fields>
         <DblField Name="Latitude" key="latitude">
           <BitOffset>0</BitOffset>
@@ -2855,12 +2910,13 @@
     <PGNDefn PGN="129039">
       <Name>AIS Class B Position Report</Name>
       <ByteLength>26</ByteLength>
+      <Scope>Generate</Scope>
       <Fields>
-        <UIntField Name="Message ID">
+        <UIntField Name="Message ID" key="message_id">
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" key="repeat_indicator">
           <BitOffset>6</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -2870,23 +2926,23 @@
             <EnumPair Value="3" Name="Final retransmission" />
           </EnumValues>
         </EnumField>
-        <IntField Name="User ID">
+        <IntField Name="User ID" key="mmsi">
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
         </IntField>
-        <DblField Name="Longitude">
+        <DblField Name="Longitude" key="longitude">
           <BitOffset>40</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Latitude</FormatAs>
           <Scale>1E-07</Scale>
         </DblField>
-        <DblField Name="Latitude">
+        <DblField Name="Latitude" key="latitude">
           <BitOffset>72</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Longitude</FormatAs>
           <Scale>1E-07</Scale>
         </DblField>
-        <EnumField Name="Position Accuracy">
+        <EnumField Name="Position Accuracy" key="position_accuracy">
           <BitOffset>104</BitOffset>
           <BitLength>1</BitLength>
           <EnumValues>
@@ -2894,7 +2950,7 @@
             <EnumPair Value="1" Name="High" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="RAIM">
+        <EnumField Name="RAIM" key="RAIM">
           <BitOffset>105</BitOffset>
           <BitLength>1</BitLength>
           <EnumValues>
@@ -2902,7 +2958,7 @@
             <EnumPair Value="1" Name="in use" />
           </EnumValues>
         </EnumField>
-        <EnumIntField Name="Time Stamp">
+        <EnumIntField Name="Time Stamp" key="timestamp">
           <Description>0-59 = UTC second when the report was generated</Description>
           <BitOffset>106</BitOffset>
           <BitLength>6</BitLength>
@@ -2913,23 +2969,37 @@
             <EnumPair Value="63" Name="Positioning system is inoperative" />
           </EnumValues>
         </EnumIntField>
-        <UDblField Name="COG">
+        <UDblField Name="COG" key="COG">
           <BitOffset>112</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
         </UDblField>
-        <UDblField Name="SOG">
+        <UDblField Name="SOG" key="SOG">
           <BitOffset>128</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Speed</FormatAs>
           <Scale>0.01</Scale>
         </UDblField>
-        <CommunicationStatusField Name="AIS Communication State">
-            <BitOffset>144</BitOffset>
-            <BitLength>24</BitLength>
-        </CommunicationStatusField>
-        <UDblField Name="Heading">
+        <UIntField Name="Communication State" key="communication_state">
+          <Description>Information used by the TDMA slot allocation algorithm and synchronization information</Description>
+          <BitOffset>144</BitOffset>
+          <BitLength>19</BitLength>
+        </UIntField>
+        <EnumField Name="AIS Transceiver information" key="transceiver_info">
+          <BitOffset>163</BitOffset>
+          <BitLength>5</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="Channel A VDL reception" />
+            <EnumPair Value="1" Name="Channel B VDL reception" />
+            <EnumPair Value="2" Name="Channel A VDL transmission" />
+            <EnumPair Value="3" Name="Channel B VDL transmission" />
+            <EnumPair Value="4" Name="Own information not broadcast" />
+            <EnumPair Value="5" Name="Reserved" />
+            <EnumPair Value="6" Name="Reserved" />
+          </EnumValues>
+        </EnumField>
+        <UDblField Name="Heading" key="heading">
           <Description>True heading</Description>
           <BitOffset>168</BitOffset>
           <BitLength>16</BitLength>
@@ -2944,7 +3014,7 @@
           <BitOffset>192</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <EnumField Name="Unit type">
+        <EnumField Name="Unit type" key="unit_type">
           <BitOffset>194</BitOffset>
           <BitLength>1</BitLength>
           <EnumValues>
@@ -2969,7 +3039,7 @@
             <EnumPair Value="1" Name="Yes" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="Band">
+        <EnumField Name="Band" key="band">
           <BitOffset>197</BitOffset>
           <BitLength>1</BitLength>
           <EnumValues>
@@ -2977,7 +3047,7 @@
             <EnumPair Value="1" Name="entire marine band" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="Can handle Msg 22">
+        <EnumField Name="Can handle Msg 22" key="handle_msg22">
           <Description>Whether device supports message 22</Description>
           <BitOffset>198</BitOffset>
           <BitLength>1</BitLength>
@@ -2986,7 +3056,7 @@
             <EnumPair Value="1" Name="Yes" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="AIS mode">
+        <EnumField Name="AIS mode" key="AIS_mode">
           <BitOffset>199</BitOffset>
           <BitLength>1</BitLength>
           <EnumValues>
@@ -2994,7 +3064,7 @@
             <EnumPair Value="1" Name="Assigned" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="AIS communication state">
+        <EnumField Name="AIS communication state" key="AIS_communication_state">
           <BitOffset>200</BitOffset>
           <BitLength>1</BitLength>
           <EnumValues>
@@ -3770,13 +3840,14 @@
     <PGNDefn PGN="129540">
       <Name>GNSS Sats in View</Name>
       <ByteLength>219</ByteLength>
+      <Scope>Generate</Scope>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <EnumField Name="Mode">
+        <EnumField Name="Mode" key="mode">
           <BitOffset>8</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -3788,40 +3859,40 @@
           <BitOffset>10</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <UIntField Name="Sats in View">
+        <UIntField Name="Sats in View" key="sats_in_view">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <RepeatedFieldSet Name="Satellites data" Count="Sats in View">
-          <UIntField Name="Sat #">
+        <RepeatedFieldSet Name="Satellites data" Count="Sats in View" key="satellites_data">
+          <UIntField Name="Sat #" key="satellite_number">
             <BitOffset>0</BitOffset>
             <BitLength>8</BitLength>
           </UIntField>
-          <DblField Name="Elevation">
+          <DblField Name="Elevation" key="elevation">
             <BitOffset>8</BitOffset>
             <BitLength>16</BitLength>
             <FormatAs>Heading</FormatAs>
             <Units>degrees</Units>
             <Scale>0.0057295779513082332</Scale>
           </DblField>
-          <DblField Name="Azimuth">
+          <DblField Name="Azimuth" key="azimuth">
             <BitOffset>24</BitOffset>
             <BitLength>16</BitLength>
             <FormatAs>Heading</FormatAs>
             <Units>degrees</Units>
             <Scale>0.0057295779513082332</Scale>
           </DblField>
-          <DblField Name="SNR">
+          <DblField Name="SNR" key="signal_noise_ratio">
             <BitOffset>40</BitOffset>
             <BitLength>16</BitLength>
             <Units>dB</Units>
             <Scale>0.01</Scale>
           </DblField>
-          <UIntField Name="Range residuals">
+          <UIntField Name="Range residuals" key="range_residuals">
             <BitOffset>56</BitOffset>
             <BitLength>32</BitLength>
           </UIntField>
-          <EnumField Name="Status">
+          <EnumField Name="Status" key="status">
             <BitOffset>88</BitOffset>
             <BitLength>4</BitLength>
             <EnumValues>
@@ -5593,13 +5664,14 @@
     </PGNDefn>
     <PGNDefn PGN="129810">
       <Name>AIS Class B static data (msg 24 Part B)</Name>
+      <Scope>Generate</Scope>
       <ByteLength>33</ByteLength>
       <Fields>
-        <UIntField Name="Message ID">
+        <UIntField Name="Message ID" key="message_id">
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat indicator">
+        <EnumField Name="Repeat indicator" key="repeat_indicator">
           <BitOffset>6</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -5609,88 +5681,44 @@
             <EnumPair Value="3" Name="Final retransmission" />
           </EnumValues>
         </EnumField>
-        <IntField Name="User ID">
+        <IntField Name="User ID" key="mmsi">
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
         </IntField>
-        <EnumField Name="Type of ship">
+        <EnumField Name="Type of ship" Definition="Type of ship" key="type_of_ship">
           <BitOffset>40</BitOffset>
           <BitLength>8</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="unavailable" />
-            <EnumPair Value="20" Name="Wing In Ground" />
-            <EnumPair Value="29" Name="Wing In Ground (no other information)" />
-            <EnumPair Value="30" Name="Fishing" />
-            <EnumPair Value="31" Name="Towing" />
-            <EnumPair Value="32" Name="Towing exceeds 200m or wider than 25m" />
-            <EnumPair Value="33" Name="Engaged in dredging or underwater operations" />
-            <EnumPair Value="34" Name="Engaged in diving operations" />
-            <EnumPair Value="35" Name="Engaged in military operations" />
-            <EnumPair Value="36" Name="Sailing" />
-            <EnumPair Value="37" Name="Pleasure" />
-            <EnumPair Value="40" Name="High speed craft" />
-            <EnumPair Value="71" Name="Cargo ship carrying dangerous goods" />
-            <EnumPair Value="72" Name="Cargo ship hazard cat B" />
-            <EnumPair Value="73" Name="Cargo ship hazard cat C" />
-            <EnumPair Value="74" Name="Cargo ship hazard cat D" />
-            <EnumPair Value="79" Name="Cargo ship (no additional information)" />
-            <EnumPair Value="50" Name="Pilot vessel" />
-            <EnumPair Value="51" Name="SAR" />
-            <EnumPair Value="52" Name="Tug" />
-            <EnumPair Value="53" Name="Port tender" />
-            <EnumPair Value="54" Name="Anti-pollution" />
-            <EnumPair Value="55" Name="Law enforcement" />
-            <EnumPair Value="56" Name="Spare" />
-            <EnumPair Value="57" Name="Spare #2" />
-            <EnumPair Value="58" Name="Medical" />
-            <EnumPair Value="59" Name="RR Resolution No.18" />
-            <EnumPair Value="60" Name="Passenger ship" />
-            <EnumPair Value="69" Name="Passenger ship (no additional information)" />
-            <EnumPair Value="70" Name="Cargo ship" />
-            <EnumPair Value="80" Name="Tanker" />
-            <EnumPair Value="81" Name="Tanker carrying dangerous goods" />
-            <EnumPair Value="82" Name="Tanker hazard cat B" />
-            <EnumPair Value="83" Name="Tanker hazard cat C" />
-            <EnumPair Value="84" Name="Tanker hazard cat D" />
-            <EnumPair Value="89" Name="Tanker (no additional information)" />
-            <EnumPair Value="90" Name="Other" />
-            <EnumPair Value="91" Name="Other carrying dangerous goods" />
-            <EnumPair Value="92" Name="Other hazard cat B" />
-            <EnumPair Value="93" Name="Other hazard cat C" />
-            <EnumPair Value="94" Name="Other hazard cat D" />
-            <EnumPair Value="99" Name="Other (no additional information)" />
-          </EnumValues>
         </EnumField>
-        <FixLengthStringField Name="Vendor ID">
+        <FixLengthStringField Name="Vendor ID" key="vendor_id">
           <BitOffset>48</BitOffset>
           <BitLength>56</BitLength>
         </FixLengthStringField>
-        <FixLengthStringField Name="Callsign">
+        <FixLengthStringField Name="Callsign" key="call_sign">
           <Description>0=unavailable</Description>
           <BitOffset>104</BitOffset>
           <BitLength>56</BitLength>
         </FixLengthStringField>
-        <DblField Name="Length">
+        <DblField Name="Length" key="length">
           <BitOffset>160</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
         </DblField>
-        <DblField Name="Beam">
+        <DblField Name="Beam" key="beam">
           <BitOffset>176</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
         </DblField>
-        <DblField Name="Position reference from Starboard">
+        <DblField Name="Position reference from Starboard" key="position_from_starboard">
           <BitOffset>192</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
         </DblField>
-        <DblField Name="Position reference from Bow">
+        <DblField Name="Position reference from Bow" key="position_from_bow">
           <BitOffset>208</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
         </DblField>
-        <IntField Name="Mothership User ID">
+        <IntField Name="Mothership User ID" key="mothership_mmsi">
           <Description>MMSI of mother ship sent by daughter vessels</Description>
           <BitOffset>224</BitOffset>
           <BitLength>32</BitLength>
@@ -6170,19 +6198,20 @@
     </PGNDefn>
     <PGNDefn PGN="130306">
       <Name>Wind Data</Name>
+      <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <DblField Name="Wind Speed">
+        <DblField Name="Wind Speed" key="wind_speed">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <UDblField Name="Wind Angle">
+        <UDblField Name="Wind Angle" key="wind_angle">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
@@ -6193,7 +6222,7 @@
           <BitOffset>40</BitOffset>
           <BitLength>5</BitLength>
         </UIntField>
-        <EnumField Name="Reference">
+        <EnumField Name="Reference" key="reference">
           <BitOffset>45</BitOffset>
           <BitLength>3</BitLength>
           <EnumValues>
@@ -6215,28 +6244,29 @@
     </PGNDefn>
     <PGNDefn PGN="130310">
       <Name>Environmental Parameters</Name>
+      <Scope>Generate</Scope>
       <ByteLength>7</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <UDblField Name="Water Temperature">
+        <UDblField Name="Water Temperature" key="water_temperature">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Temperature</FormatAs>
           <Offset>-273.15</Offset>
           <Scale>0.01</Scale>
         </UDblField>
-        <UDblField Name="Outside Ambient Air Temperature">
+        <UDblField Name="Outside Ambient Air Temperature" key="outside_air_temperature">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Temperature</FormatAs>
           <Offset>-273.15</Offset>
           <Scale>0.01</Scale>
         </UDblField>
-        <UIntField Name="Atmospheric Pressure">
+        <UIntField Name="Atmospheric Pressure" key="atmospheric_temperature">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
@@ -6248,14 +6278,15 @@
     </PGNDefn>
     <PGNDefn PGN="130311">
       <Name>Environmental Parameters</Name>
+      <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <EnumField Name="Temperature Instance">
+        <EnumField Name="Temperature Instance" key="temperature_instance">
           <BitOffset>8</BitOffset>
           <BitLength>6</BitLength>
           <EnumValues>
@@ -6266,7 +6297,7 @@
             <EnumPair Value="4" Name="Main Cabin Temperature" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="Humidity Instance">
+        <EnumField Name="Humidity Instance" key="humidity_instance">
           <BitOffset>14</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -6274,19 +6305,19 @@
             <EnumPair Value="1" Name="Outside" />
           </EnumValues>
         </EnumField>
-        <UDblField Name="Temperature">
+        <UDblField Name="Temperature" key="temperature">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Temperature</FormatAs>
           <Offset>-273.15</Offset>
           <Scale>0.01</Scale>
         </UDblField>
-        <DblField Name="Humidity">
+        <DblField Name="Humidity" key="humidity">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.004</Scale>
         </DblField>
-        <UIntField Name="Atmospheric Pressure">
+        <UIntField Name="Atmospheric Pressure" key="atmospheric_pressure">
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
@@ -6432,29 +6463,30 @@
     </PGNDefn>
     <PGNDefn PGN="130316">
       <Name>Temperature Extended Range</Name>
+      <Scope>Generate-Not</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <InstanceField Name="Temperature Instance">
+        <InstanceField Name="Temperature Instance" key="temperature_instance">
           <BitOffset>8</BitOffset>
           <BitLength>8</BitLength>
         </InstanceField>
-        <EnumField Name="Temperature Source" Definition="Temperature Source">
+        <EnumField Name="Temperature Source" Definition="Temperature Source" key="temperature_source">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </EnumField>
-        <UDblField Name="Actual Temperature">
+        <UDblField Name="Actual Temperature" key="actual_temperature">
           <BitOffset>24</BitOffset>
           <BitLength>24</BitLength>
           <FormatAs>Temperature</FormatAs>
           <Offset>-273.15</Offset>
           <Scale>0.001</Scale>
         </UDblField>
-        <UDblField Name="Set Temperature">
+        <UDblField Name="Set Temperature" key="set_temperature">
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Temperature</FormatAs>
@@ -6952,33 +6984,34 @@
     <PGNDefn PGN="130578">
       <Name>Vessel Speed Components</Name>
       <ByteLength>12</ByteLength>
+      <Scope>Generate</Scope>
       <Fields>
-        <DblField Name="Longitudinal Speed, Water-referenced">
+        <DblField Name="Longitudinal Speed, Water-referenced" key="longitudinal_speed_water">
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.001</Scale>
         </DblField>
-        <DblField Name="Transverse Speed, Water-referenced">
+        <DblField Name="Transverse Speed, Water-referenced" key="transverse_speed_water">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.001</Scale>
         </DblField>
-        <DblField Name="Longitudinal Speed, Ground-referenced">
+        <DblField Name="Longitudinal Speed, Ground-referenced" key="longitudinal_speed_ground">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.001</Scale>
         </DblField>
-        <DblField Name="Transverse Speed, Ground-referenced">
+        <DblField Name="Transverse Speed, Ground-referenced" key="transverse_speed_ground">
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.001</Scale>
         </DblField>
-        <DblField Name="Stern Speed, Water-referenced">
+        <DblField Name="Stern Speed, Water-referenced" key="stern_speed_water">
           <BitOffset>64</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.001</Scale>
         </DblField>
-        <DblField Name="Stern Speed, Ground-referenced">
+        <DblField Name="Stern Speed, Ground-referenced" key="stern_speed_ground">
           <BitOffset>80</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.001</Scale>
@@ -7515,12 +7548,12 @@
             <EnumPair Value="4" Name="Marine" />
           </EnumValues>
         </EnumField>
-        <UIntField Name="Message ID">
+        <UIntField Name="Message ID" key="message_id">
           <Description>Msg 24 Part B</Description>
           <BitOffset>16</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat indicator">
+        <EnumField Name="Repeat indicator" key="repeat_indicator">
           <BitOffset>22</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -7542,53 +7575,9 @@
           <BitOffset>40</BitOffset>
           <BitLength>32</BitLength>
         </IntField>
-        <EnumField Name="Type of ship">
+        <EnumField Name="Type of ship" Definition="Type of ship" key="type_of_ship">
           <BitOffset>72</BitOffset>
           <BitLength>8</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="unavailable" />
-            <EnumPair Value="20" Name="Wing In Ground" />
-            <EnumPair Value="29" Name="Wing In Ground (no other information)" />
-            <EnumPair Value="30" Name="Fishing" />
-            <EnumPair Value="31" Name="Towing" />
-            <EnumPair Value="32" Name="Towing exceeds 200m or wider than 25m" />
-            <EnumPair Value="33" Name="Engaged in dredging or underwater operations" />
-            <EnumPair Value="34" Name="Engaged in diving operations" />
-            <EnumPair Value="35" Name="Engaged in military operations" />
-            <EnumPair Value="36" Name="Sailing" />
-            <EnumPair Value="37" Name="Pleasure" />
-            <EnumPair Value="40" Name="High speed craft" />
-            <EnumPair Value="71" Name="Cargo ship carrying dangerous goods" />
-            <EnumPair Value="72" Name="Cargo ship hazard cat B" />
-            <EnumPair Value="73" Name="Cargo ship hazard cat C" />
-            <EnumPair Value="74" Name="Cargo ship hazard cat D" />
-            <EnumPair Value="79" Name="Cargo ship (no additional information)" />
-            <EnumPair Value="50" Name="Pilot vessel" />
-            <EnumPair Value="51" Name="SAR" />
-            <EnumPair Value="52" Name="Tug" />
-            <EnumPair Value="53" Name="Port tender" />
-            <EnumPair Value="54" Name="Anti-pollution" />
-            <EnumPair Value="55" Name="Law enforcement" />
-            <EnumPair Value="56" Name="Spare" />
-            <EnumPair Value="57" Name="Spare #2" />
-            <EnumPair Value="58" Name="Medical" />
-            <EnumPair Value="59" Name="RR Resolution No.18" />
-            <EnumPair Value="60" Name="Passenger ship" />
-            <EnumPair Value="69" Name="Passenger ship (no additional information)" />
-            <EnumPair Value="70" Name="Cargo ship" />
-            <EnumPair Value="80" Name="Tanker" />
-            <EnumPair Value="81" Name="Tanker carrying dangerous goods" />
-            <EnumPair Value="82" Name="Tanker hazard cat B" />
-            <EnumPair Value="83" Name="Tanker hazard cat C" />
-            <EnumPair Value="84" Name="Tanker hazard cat D" />
-            <EnumPair Value="89" Name="Tanker (no additional information)" />
-            <EnumPair Value="90" Name="Other" />
-            <EnumPair Value="91" Name="Other carrying dangerous goods" />
-            <EnumPair Value="92" Name="Other hazard cat B" />
-            <EnumPair Value="93" Name="Other hazard cat C" />
-            <EnumPair Value="94" Name="Other hazard cat D" />
-            <EnumPair Value="99" Name="Other (no additional information)" />
-          </EnumValues>
         </EnumField>
         <ASCIIField Name="Vendor ID">
           <BitOffset>80</BitOffset>
@@ -7637,6 +7626,7 @@
     </PGNDefn>
     <PGNDefn PGN="130842">
       <Name>Simnet: AIS Class B static data (msg 24 Part A)</Name>
+      <Scope>Generate</Scope>
       <ByteLength>29</ByteLength>
       <Fields>
         <UIntField Name="Manufacturer Code">
@@ -7655,12 +7645,12 @@
             <EnumPair Value="4" Name="Marine" />
           </EnumValues>
         </EnumField>
-        <UIntField Name="Message ID">
+        <UIntField Name="Message ID" key="message_id">
           <Description>Msg 24 Part A</Description>
           <BitOffset>16</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat indicator">
+        <EnumField Name="Repeat indicator" key="repeat_indicator">
           <BitOffset>22</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -7678,11 +7668,11 @@
           <BitOffset>32</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <IntField Name="User ID">
+        <IntField Name="User ID" key="mmsi">
           <BitOffset>40</BitOffset>
           <BitLength>32</BitLength>
         </IntField>
-        <FixLengthStringField Name="Name">
+        <FixLengthStringField Name="Name" key="ship_name">
           <BitOffset>72</BitOffset>
           <BitLength>160</BitLength>
         </FixLengthStringField>

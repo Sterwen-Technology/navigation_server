@@ -13,7 +13,6 @@ import logging
 from generated.nmea2000_classes_gen import nmea2k_generated_classes
 from generated.nmea2000_pb2 import nmea2000_decoded_pb
 from nmea2000.nmea2k_pgn_definition import PGNDef
-from nmea2000.generated_base import NMEA2000DecodedMsg
 from nmea2000.nmea2000_msg import NMEA2000Msg
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -31,7 +30,7 @@ def get_n2k_decoded_object(msg: NMEA2000Msg):
         # _logger.error(f"No decoding class defined for PGN {msg.pgn}")
         raise N2KMissingDecodeEncodeException
 
-    if PGNDef.is_pgn_proprietary(msg.pgn):
+    if PGNDef.is_pgn_proprietary(msg.pgn) and isinstance(n2k_obj_class, dict):
         # find the actual class for the manufacturer
         mfg_id = msg.get_manufacturer()
         try:

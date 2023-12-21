@@ -54,6 +54,13 @@ def insert_string(buffer, start, length, string_to_insert):
     buffer[start: last_to_insert] = bytes_to_insert
 
 
+def check_convert_float(val: int, invalid_mask: int, scale: float, offset: float = 0.0) -> float:
+    if val == -1 or val == invalid_mask:
+        return float('nan')
+    else:
+        return (val * scale) + offset
+
+
 class NMEA2000DecodedMsg:
 
     __slots__ = ('_sa', '_da', '_timestamp', '_priority')

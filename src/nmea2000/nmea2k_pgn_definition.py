@@ -117,6 +117,11 @@ class PGNDef (BitFieldGenerator):
                 raise N2KDefinitionError("Marked as Ignored")
             elif in_scope.text == 'Generate':
                 self._generate = True
+        flags = pgnxml.find("Flags")
+        if flags is not None:
+            self._flags = flags.text.split(',')
+        else:
+            self._flags = None
         # now determine the type of PGN we have
         self._pdu_format = (self._id >> 8) & 0xFF
         if self._pdu_format < 240:
@@ -258,6 +263,11 @@ class PGNDef (BitFieldGenerator):
     @property
     def to_be_generated(self) -> bool:
         return self._generate
+
+    def has_flag(self, flag: str) -> bool:
+        if self._flags is None:
+            return False
+        return flag in self._flags
 
     def pgn_data(self):
         data = [

@@ -17,7 +17,7 @@ from nmea2000.nmea2k_pgn_definition import PGNDef
 from nmea2000.nmea2k_encode_decode import BitField, BitFieldDef
 from nmea2000.nmea2k_fielddefs import (FIXED_LENGTH_BYTES, FIXED_LENGTH_NUMBER, VARIABLE_LENGTH_BYTES, EnumField,
                                        REPEATED_FIELD_SET, Field)
-from utilities.global_variables import MessageServerGlobals
+from utilities.global_variables import MessageServerGlobals, manufacturer_name
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -59,11 +59,12 @@ class ReservedAttribute(AttributeGen):
 
 class AttributeDef(AttributeGen):
 
-    def __init__(self, field, decode_index=-1):
+    def __init__(self, field: Field, decode_index=-1):
         super().__init__(field, decode_index)
         self._variable = f"_{field.keyword}"
         self._need_check = False
         self._default = 0
+
 
     @property
     def method(self) -> str:
@@ -92,6 +93,7 @@ class AttributeDef(AttributeGen):
     @property
     def typedef(self):
         return self._field.typedef
+
 
 
 class BitFieldAttributeDef(AttributeDef):
@@ -138,6 +140,7 @@ class ScalarAttributeDef(AttributeDef):
 
     def __init__(self, field, decode_index):
         super().__init__(field, decode_index)
+        self._invalid_value = 2 ** field.bit_length - 1
 
     @property
     def scale(self) -> float:
@@ -146,6 +149,10 @@ class ScalarAttributeDef(AttributeDef):
     @property
     def offset(self) -> float:
         return self._field.offset
+
+    @property
+    def invalid_value(self) -> int:
+        return self._invalid_value
 
 
 class EnumDef:
@@ -412,7 +419,16 @@ class NMEA2000Meta(FieldSetMeta):
         self._pgn_def = pgn_def
         print(f"generating meta model for: {self._name} PGN {self._pgn}")
         super().__init__(pgn_def.field_list)
-        self._class_name = f"Pgn{self._pgn}Class"
+        if pgn_def.is_proprietary:
+            self._class_name = f"Pgn{self._pgn}Mfg{self.manufacturer}Class"
+        else:
+            self._class_name = f"Pgn{self._pgn}Class"
+        self._read_only = pgn_def.has_flag('ReadOnly')
+        if pgn_def.has_flag('ReadWrite'):
+            self._read_only = False
+            self._force_write = True
+        else:
+            self._force_write = False
 
     @property
     def pgn(self) -> int:
@@ -424,6 +440,10 @@ class NMEA2000Meta(FieldSetMeta):
             return self._pgn_def.manufacturer_id
         except ValueError:
             return 0
+
+    @property
+    def manufacturer_name(self) -> str:
+        return manufacturer_name(self.manufacturer)
 
     @property
     def is_proprietary(self) -> bool:
@@ -440,6 +460,13 @@ class NMEA2000Meta(FieldSetMeta):
     @property
     def repeat_field_set(self):
         return self._repeat_field_set
+
+    @property
+    def read_only(self) -> bool:
+        return self.is_proprietary or self._read_only
+    @property
+    def force_write(self) -> bool:
+        return self._force_write
 
 
 def nmea2000_gen_meta():

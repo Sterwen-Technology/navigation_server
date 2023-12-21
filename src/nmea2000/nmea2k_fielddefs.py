@@ -624,6 +624,10 @@ class FixLengthStringField(Field):
     def typedef(self):
         return Typedef.STRING
 
+    @property
+    def python_type(self) -> str:
+        return 'str'
+
 
 class NameField(Field):
     '''

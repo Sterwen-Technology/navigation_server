@@ -1,0 +1,7 @@
+#!/bin/bash
+# first generate the protobuf
+python src/code_generator.py -pb
+# now generate the protobuf python
+./gen_proto
+# en finally generate the NMEA2000 python
+python src/code_generator.py -py -cv $*
