@@ -95,7 +95,6 @@ class AttributeDef(AttributeGen):
         return self._field.typedef
 
 
-
 class BitFieldAttributeDef(AttributeDef):
 
     def __init__(self, bitfield: BitField, field: Field, sub_field: BitFieldDef, decode_index: int):
@@ -140,7 +139,10 @@ class ScalarAttributeDef(AttributeDef):
 
     def __init__(self, field, decode_index):
         super().__init__(field, decode_index)
-        self._invalid_value = 2 ** field.bit_length - 1
+        if field.signed:
+            self._invalid_value = 2 ** (field.bit_length - 1) - 1
+        else:
+            self._invalid_value = 2 ** field.bit_length - 1
 
     @property
     def scale(self) -> float:
@@ -153,6 +155,10 @@ class ScalarAttributeDef(AttributeDef):
     @property
     def invalid_value(self) -> int:
         return self._invalid_value
+
+    @property
+    def nb_slots(self) -> int:
+        return self._field.nb_decode_slots
 
 
 class EnumDef:

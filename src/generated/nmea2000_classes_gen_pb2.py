@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1anmea2000_classes_gen.proto\"[\n\x16Pgn65359Mfg1851ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x14\n\x0ctrue_heading\x18\x02 \x01(\x02\x12\x18\n\x10magnetic_heading\x18\x03 \x01(\x02\"j\n\x16Pgn65379Mfg1851ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x12\n\npilot_mode\x18\x02 \x01(\r\x12\x10\n\x08sub_mode\x18\x03 \x01(\r\x12\x17\n\x0fpilot_mode_data\x18\x04 \x01(\r\"Q\n\x10Pgn126992ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0e\n\x06source\x18\x02 \x01(\r\x12\x0c\n\x04\x64\x61te\x18\x03 \x01(\r\x12\x0c\n\x04time\x18\x04 \x01(\x02\"4\n\x10Pgn126993ClassPb\x12\x10\n\x08interval\x18\x01 \x01(\x02\x12\x0e\n\x06status\x18\x02 \x01(\r\"y\n\x10Pgn126996ClassPb\x12\x18\n\x10nmea2000_version\x18\x01 \x01(\r\x12\x14\n\x0cproduct_code\x18\x02 \x01(\r\x12\x1b\n\x13\x63\x65rtification_level\x18\x03 \x01(\r\x12\x18\n\x10load_equivalency\x18\x04 \x01(\r\"X\n\x10Pgn127245ClassPb\x12\x10\n\x08instance\x18\x01 \x01(\r\x12\x11\n\tdirection\x18\x02 \x01(\r\x12\r\n\x05\x61ngle\x18\x03 \x01(\x02\x12\x10\n\x08position\x18\x04 \x01(\x02\"o\n\x10Pgn127250ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0f\n\x07heading\x18\x02 \x01(\x02\x12\x11\n\tdeviation\x18\x03 \x01(\x02\x12\x11\n\tvariation\x18\x04 \x01(\x02\x12\x11\n\treference\x18\x05 \x01(\r\"\x88\x01\n\x10Pgn128259ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x1b\n\x13speed_through_water\x18\x02 \x01(\x02\x12\x1d\n\x15speed_over_ground_ref\x18\x03 \x01(\x02\x12%\n\x1dspeed_through_water_reference\x18\x04 \x01(\r\"D\n\x10Pgn128267ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\r\n\x05\x64\x65pth\x18\x02 \x01(\x02\x12\x0e\n\x06offset\x18\x03 \x01(\x02\"7\n\x10Pgn129025ClassPb\x12\x10\n\x08latitude\x18\x01 \x01(\x02\x12\x11\n\tlongitude\x18\x02 \x01(\x02\"V\n\x10Pgn129026ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x15\n\rCOG_reference\x18\x02 \x01(\r\x12\x0b\n\x03\x43OG\x18\x03 \x01(\x02\x12\x0b\n\x03SOG\x18\x04 \x01(\x02\"\xae\x03\n\x10Pgn129029ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0c\n\x04\x64\x61te\x18\x02 \x01(\r\x12\x0c\n\x04time\x18\x03 \x01(\x02\x12\x10\n\x08latitude\x18\x04 \x01(\x01\x12\x11\n\tlongitude\x18\x05 \x01(\x01\x12\x10\n\x08\x61ltitude\x18\x06 \x01(\x01\x12\x0e\n\x06method\x18\x07 \x01(\r\x12\x11\n\tGNSS_type\x18\x08 \x01(\r\x12\x11\n\tintegrity\x18\t \x01(\r\x12\x14\n\x0cnumber_of_sv\x18\n \x01(\r\x12\x0c\n\x04HDOP\x18\x0b \x01(\x02\x12\x0c\n\x04PDOP\x18\x0c \x01(\x02\x12\x1a\n\x12geoidal_separation\x18\r \x01(\x02\x12\x17\n\x0fnb_ref_stations\x18\x0e \x01(\r\x12;\n\x0cref_stations\x18\x0f \x03(\x0b\x32%.Pgn129029ClassPb.Ref_StationsClassPb\x1aZ\n\x13Ref_StationsClassPb\x12\x12\n\nstation_id\x18\x01 \x01(\r\x12\x11\n\tGNSS_type\x18\x02 \x01(\r\x12\x1c\n\x14\x61ge_DGNSS_correction\x18\x03 \x01(\x02\"\xde\x02\n\x10Pgn129039ClassPb\x12\x12\n\nmessage_id\x18\x01 \x01(\r\x12\x18\n\x10repeat_indicator\x18\x02 \x01(\r\x12\x0c\n\x04mmsi\x18\x03 \x01(\x05\x12\x11\n\tlongitude\x18\x04 \x01(\x02\x12\x10\n\x08latitude\x18\x05 \x01(\x02\x12\x19\n\x11position_accuracy\x18\x06 \x01(\r\x12\x0c\n\x04RAIM\x18\x07 \x01(\r\x12\x11\n\ttimestamp\x18\x08 \x01(\r\x12\x0b\n\x03\x43OG\x18\t \x01(\x02\x12\x0b\n\x03SOG\x18\n \x01(\x02\x12\x18\n\x10transceiver_info\x18\x0b \x01(\r\x12\x0f\n\x07heading\x18\x0c \x01(\x02\x12\x11\n\tunit_type\x18\r \x01(\r\x12\x0c\n\x04\x62\x61nd\x18\x0e \x01(\r\x12\x14\n\x0chandle_msg22\x18\x0f \x01(\r\x12\x10\n\x08\x41IS_mode\x18\x10 \x01(\r\x12\x1f\n\x17\x41IS_communication_state\x18\x11 \x01(\r\"\xaa\x02\n\x10Pgn129540ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0c\n\x04mode\x18\x02 \x01(\r\x12\x14\n\x0csats_in_view\x18\x03 \x01(\r\x12\x41\n\x0fsatellites_data\x18\x04 \x03(\x0b\x32(.Pgn129540ClassPb.Satellites_DataClassPb\x1a\x9b\x01\n\x16Satellites_DataClassPb\x12\x18\n\x10satellite_number\x18\x01 \x01(\r\x12\x11\n\televation\x18\x02 \x01(\x02\x12\x0f\n\x07\x61zimuth\x18\x03 \x01(\x02\x12\x1a\n\x12signal_noise_ratio\x18\x04 \x01(\x02\x12\x17\n\x0frange_residuals\x18\x05 \x01(\r\x12\x0e\n\x06status\x18\x06 \x01(\r\"\xd7\x01\n\x10Pgn129810ClassPb\x12\x12\n\nmessage_id\x18\x01 \x01(\r\x12\x18\n\x10repeat_indicator\x18\x02 \x01(\r\x12\x0c\n\x04mmsi\x18\x03 \x01(\x05\x12\x14\n\x0ctype_of_ship\x18\x04 \x01(\r\x12\x0e\n\x06length\x18\x05 \x01(\x02\x12\x0c\n\x04\x62\x65\x61m\x18\x06 \x01(\x02\x12\x1f\n\x17position_from_starboard\x18\x07 \x01(\x02\x12\x19\n\x11position_from_bow\x18\x08 \x01(\x02\x12\x17\n\x0fmothership_mmsi\x18\t \x01(\x05\"`\n\x10Pgn130306ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x12\n\nwind_speed\x18\x02 \x01(\x02\x12\x12\n\nwind_angle\x18\x03 \x01(\x02\x12\x11\n\treference\x18\x04 \x01(\r\"\x82\x01\n\x10Pgn130310ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x19\n\x11water_temperature\x18\x02 \x01(\x02\x12\x1f\n\x17outside_air_temperature\x18\x03 \x01(\x02\x12\x1f\n\x17\x61tmospheric_temperature\x18\x04 \x01(\r\"\xa3\x01\n\x10Pgn130311ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x1c\n\x14temperature_instance\x18\x02 \x01(\r\x12\x19\n\x11humidity_instance\x18\x03 \x01(\r\x12\x13\n\x0btemperature\x18\x04 \x01(\x02\x12\x10\n\x08humidity\x18\x05 \x01(\x02\x12\x1c\n\x14\x61tmospheric_pressure\x18\x06 \x01(\r\"\x94\x01\n\x10Pgn130312ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x1c\n\x14temperature_instance\x18\x02 \x01(\r\x12\x1a\n\x12temperature_source\x18\x03 \x01(\r\x12\x1a\n\x12\x61\x63tual_temperature\x18\x04 \x01(\x02\x12\x17\n\x0fset_temperature\x18\x05 \x01(\x02\"\xcf\x01\n\x10Pgn130578ClassPb\x12 \n\x18longitudinal_speed_water\x18\x01 \x01(\x02\x12\x1e\n\x16transverse_speed_water\x18\x02 \x01(\x02\x12!\n\x19longitudinal_speed_ground\x18\x03 \x01(\x02\x12\x1f\n\x17transverse_speed_ground\x18\x04 \x01(\x02\x12\x19\n\x11stern_speed_water\x18\x05 \x01(\x02\x12\x1a\n\x12stern_speed_ground\x18\x06 \x01(\x02\"U\n\x17Pgn130842Mfg1857ClassPb\x12\x12\n\nmessage_id\x18\x01 \x01(\r\x12\x18\n\x10repeat_indicator\x18\x02 \x01(\r\x12\x0c\n\x04mmsi\x18\x03 \x01(\x05\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1anmea2000_classes_gen.proto\"[\n\x16Pgn65359Mfg1851ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x14\n\x0ctrue_heading\x18\x02 \x01(\x02\x12\x18\n\x10magnetic_heading\x18\x03 \x01(\x02\"j\n\x16Pgn65379Mfg1851ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x12\n\npilot_mode\x18\x02 \x01(\r\x12\x10\n\x08sub_mode\x18\x03 \x01(\r\x12\x17\n\x0fpilot_mode_data\x18\x04 \x01(\r\"Q\n\x10Pgn126992ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0e\n\x06source\x18\x02 \x01(\r\x12\x0c\n\x04\x64\x61te\x18\x03 \x01(\r\x12\x0c\n\x04time\x18\x04 \x01(\x02\"4\n\x10Pgn126993ClassPb\x12\x10\n\x08interval\x18\x01 \x01(\x02\x12\x0e\n\x06status\x18\x02 \x01(\r\"y\n\x10Pgn126996ClassPb\x12\x18\n\x10nmea2000_version\x18\x01 \x01(\r\x12\x14\n\x0cproduct_code\x18\x02 \x01(\r\x12\x1b\n\x13\x63\x65rtification_level\x18\x03 \x01(\r\x12\x18\n\x10load_equivalency\x18\x04 \x01(\r\"X\n\x10Pgn127245ClassPb\x12\x10\n\x08instance\x18\x01 \x01(\r\x12\x11\n\tdirection\x18\x02 \x01(\r\x12\r\n\x05\x61ngle\x18\x03 \x01(\x02\x12\x10\n\x08position\x18\x04 \x01(\x02\"o\n\x10Pgn127250ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0f\n\x07heading\x18\x02 \x01(\x02\x12\x11\n\tdeviation\x18\x03 \x01(\x02\x12\x11\n\tvariation\x18\x04 \x01(\x02\x12\x11\n\treference\x18\x05 \x01(\r\"A\n\x10Pgn127488ClassPb\x12\x17\n\x0f\x65ngine_instance\x18\x01 \x01(\r\x12\x14\n\x0c\x65ngine_speed\x18\x02 \x01(\x02\"\xba\x01\n\x10Pgn127489ClassPb\x12\x17\n\x0f\x65ngine_instance\x18\x01 \x01(\r\x12\x14\n\x0coil_pressure\x18\x02 \x01(\r\x12\x17\n\x0foil_temperature\x18\x03 \x01(\x02\x12\x13\n\x0btemperature\x18\x04 \x01(\x02\x12\x1a\n\x12\x61lternator_voltage\x18\x05 \x01(\x02\x12\x11\n\tfuel_rate\x18\x06 \x01(\x02\x12\x1a\n\x12total_engine_hours\x18\x07 \x01(\x02\"v\n\x10Pgn127508ClassPb\x12\x18\n\x10\x62\x61ttery_instance\x18\x01 \x01(\r\x12\x0f\n\x07voltage\x18\x02 \x01(\x02\x12\x0f\n\x07\x63urrent\x18\x03 \x01(\x02\x12\x13\n\x0btemperature\x18\x04 \x01(\x02\x12\x11\n\tsystem_id\x18\x05 \x01(\r\"\x88\x01\n\x10Pgn128259ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x1b\n\x13speed_through_water\x18\x02 \x01(\x02\x12\x1d\n\x15speed_over_ground_ref\x18\x03 \x01(\x02\x12%\n\x1dspeed_through_water_reference\x18\x04 \x01(\r\"D\n\x10Pgn128267ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\r\n\x05\x64\x65pth\x18\x02 \x01(\x02\x12\x0e\n\x06offset\x18\x03 \x01(\x02\"7\n\x10Pgn129025ClassPb\x12\x10\n\x08latitude\x18\x01 \x01(\x02\x12\x11\n\tlongitude\x18\x02 \x01(\x02\"V\n\x10Pgn129026ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x15\n\rCOG_reference\x18\x02 \x01(\r\x12\x0b\n\x03\x43OG\x18\x03 \x01(\x02\x12\x0b\n\x03SOG\x18\x04 \x01(\x02\"\xae\x03\n\x10Pgn129029ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0c\n\x04\x64\x61te\x18\x02 \x01(\r\x12\x0c\n\x04time\x18\x03 \x01(\x02\x12\x10\n\x08latitude\x18\x04 \x01(\x01\x12\x11\n\tlongitude\x18\x05 \x01(\x01\x12\x10\n\x08\x61ltitude\x18\x06 \x01(\x01\x12\x0e\n\x06method\x18\x07 \x01(\r\x12\x11\n\tGNSS_type\x18\x08 \x01(\r\x12\x11\n\tintegrity\x18\t \x01(\r\x12\x14\n\x0cnumber_of_sv\x18\n \x01(\r\x12\x0c\n\x04HDOP\x18\x0b \x01(\x02\x12\x0c\n\x04PDOP\x18\x0c \x01(\x02\x12\x1a\n\x12geoidal_separation\x18\r \x01(\x02\x12\x17\n\x0fnb_ref_stations\x18\x0e \x01(\r\x12;\n\x0cref_stations\x18\x0f \x03(\x0b\x32%.Pgn129029ClassPb.Ref_StationsClassPb\x1aZ\n\x13Ref_StationsClassPb\x12\x12\n\nstation_id\x18\x01 \x01(\r\x12\x11\n\tGNSS_type\x18\x02 \x01(\r\x12\x1c\n\x14\x61ge_DGNSS_correction\x18\x03 \x01(\x02\"\xac\x02\n\x10Pgn129038ClassPb\x12\x12\n\nmessage_id\x18\x01 \x01(\r\x12\x18\n\x10repeat_indicator\x18\x02 \x01(\r\x12\x0c\n\x04mmsi\x18\x03 \x01(\x05\x12\x11\n\tlongitude\x18\x04 \x01(\x02\x12\x10\n\x08latitude\x18\x05 \x01(\x02\x12\x19\n\x11position_accuracy\x18\x06 \x01(\r\x12\x0c\n\x04RAIM\x18\x07 \x01(\r\x12\x11\n\ttimestamp\x18\x08 \x01(\r\x12\x0b\n\x03\x43OG\x18\t \x01(\x02\x12\x0b\n\x03SOG\x18\n \x01(\x02\x12\x1f\n\x17transceiver_information\x18\x0b \x01(\r\x12\x0f\n\x07heading\x18\x0c \x01(\x02\x12\x14\n\x0crate_of_turn\x18\r \x01(\x02\x12\x19\n\x11navigation_status\x18\x0e \x01(\r\"\xde\x02\n\x10Pgn129039ClassPb\x12\x12\n\nmessage_id\x18\x01 \x01(\r\x12\x18\n\x10repeat_indicator\x18\x02 \x01(\r\x12\x0c\n\x04mmsi\x18\x03 \x01(\x05\x12\x11\n\tlongitude\x18\x04 \x01(\x02\x12\x10\n\x08latitude\x18\x05 \x01(\x02\x12\x19\n\x11position_accuracy\x18\x06 \x01(\r\x12\x0c\n\x04RAIM\x18\x07 \x01(\r\x12\x11\n\ttimestamp\x18\x08 \x01(\r\x12\x0b\n\x03\x43OG\x18\t \x01(\x02\x12\x0b\n\x03SOG\x18\n \x01(\x02\x12\x18\n\x10transceiver_info\x18\x0b \x01(\r\x12\x0f\n\x07heading\x18\x0c \x01(\x02\x12\x11\n\tunit_type\x18\r \x01(\r\x12\x0c\n\x04\x62\x61nd\x18\x0e \x01(\r\x12\x14\n\x0chandle_msg22\x18\x0f \x01(\r\x12\x10\n\x08\x41IS_mode\x18\x10 \x01(\r\x12\x1f\n\x17\x41IS_communication_state\x18\x11 \x01(\r\"\xaa\x02\n\x10Pgn129540ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x0c\n\x04mode\x18\x02 \x01(\r\x12\x14\n\x0csats_in_view\x18\x03 \x01(\r\x12\x41\n\x0fsatellites_data\x18\x04 \x03(\x0b\x32(.Pgn129540ClassPb.Satellites_DataClassPb\x1a\x9b\x01\n\x16Satellites_DataClassPb\x12\x18\n\x10satellite_number\x18\x01 \x01(\r\x12\x11\n\televation\x18\x02 \x01(\x02\x12\x0f\n\x07\x61zimuth\x18\x03 \x01(\x02\x12\x1a\n\x12signal_noise_ratio\x18\x04 \x01(\x02\x12\x17\n\x0frange_residuals\x18\x05 \x01(\r\x12\x0e\n\x06status\x18\x06 \x01(\r\"\xd8\x02\n\x10Pgn129794ClassPb\x12\x12\n\nmessage_id\x18\x01 \x01(\r\x12\x18\n\x10repeat_indicator\x18\x02 \x01(\r\x12\x0c\n\x04mmsi\x18\x03 \x01(\x05\x12\x12\n\nIMO_number\x18\x04 \x01(\x05\x12\x14\n\x0ctype_of_ship\x18\x05 \x01(\r\x12\x0e\n\x06length\x18\x06 \x01(\x02\x12\x0c\n\x04\x62\x65\x61m\x18\x07 \x01(\x02\x12\x1f\n\x17position_from_starboard\x18\x08 \x01(\x02\x12\x19\n\x11position_from_bow\x18\t \x01(\x02\x12\x10\n\x08\x45TA_date\x18\n \x01(\r\x12\x10\n\x08\x45TA_time\x18\x0b \x01(\x02\x12\r\n\x05\x64raft\x18\x0c \x01(\x02\x12\x13\n\x0b\x41IS_version\x18\r \x01(\r\x12\x11\n\tGNSS_type\x18\x0e \x01(\r\x12\x0b\n\x03\x44TE\x18\x0f \x01(\r\x12\x1c\n\x14\x41IS_transceiver_info\x18\x10 \x01(\r\"N\n\x10Pgn129809ClassPb\x12\x12\n\nmessage_id\x18\x01 \x01(\r\x12\x18\n\x10repeat_indicator\x18\x02 \x01(\r\x12\x0c\n\x04mmsi\x18\x03 \x01(\x05\"\xd7\x01\n\x10Pgn129810ClassPb\x12\x12\n\nmessage_id\x18\x01 \x01(\r\x12\x18\n\x10repeat_indicator\x18\x02 \x01(\r\x12\x0c\n\x04mmsi\x18\x03 \x01(\x05\x12\x14\n\x0ctype_of_ship\x18\x04 \x01(\r\x12\x0e\n\x06length\x18\x05 \x01(\x02\x12\x0c\n\x04\x62\x65\x61m\x18\x06 \x01(\x02\x12\x1f\n\x17position_from_starboard\x18\x07 \x01(\x02\x12\x19\n\x11position_from_bow\x18\x08 \x01(\x02\x12\x17\n\x0fmothership_mmsi\x18\t \x01(\x05\"`\n\x10Pgn130306ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x12\n\nwind_speed\x18\x02 \x01(\x02\x12\x12\n\nwind_angle\x18\x03 \x01(\x02\x12\x11\n\treference\x18\x04 \x01(\r\"\x7f\n\x10Pgn130310ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x19\n\x11water_temperature\x18\x02 \x01(\x02\x12\x1f\n\x17outside_air_temperature\x18\x03 \x01(\x02\x12\x1c\n\x14\x61tmospheric_pressure\x18\x04 \x01(\x02\"\xa3\x01\n\x10Pgn130311ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x1c\n\x14temperature_instance\x18\x02 \x01(\r\x12\x19\n\x11humidity_instance\x18\x03 \x01(\r\x12\x13\n\x0btemperature\x18\x04 \x01(\x02\x12\x10\n\x08humidity\x18\x05 \x01(\x02\x12\x1c\n\x14\x61tmospheric_pressure\x18\x06 \x01(\x02\"\x94\x01\n\x10Pgn130312ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x1c\n\x14temperature_instance\x18\x02 \x01(\r\x12\x1a\n\x12temperature_source\x18\x03 \x01(\r\x12\x1a\n\x12\x61\x63tual_temperature\x18\x04 \x01(\x02\x12\x17\n\x0fset_temperature\x18\x05 \x01(\x02\"k\n\x10Pgn130314ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x19\n\x11pressure_instance\x18\x02 \x01(\r\x12\x17\n\x0fpressure_source\x18\x03 \x01(\r\x12\x10\n\x08pressure\x18\x04 \x01(\x02\"x\n\x10Pgn130316ClassPb\x12\x11\n\tsystem_id\x18\x01 \x01(\r\x12\x1c\n\x14temperature_instance\x18\x02 \x01(\r\x12\x1a\n\x12temperature_source\x18\x03 \x01(\r\x12\x17\n\x0fset_temperature\x18\x04 \x01(\x02\"\xcf\x01\n\x10Pgn130578ClassPb\x12 \n\x18longitudinal_speed_water\x18\x01 \x01(\x02\x12\x1e\n\x16transverse_speed_water\x18\x02 \x01(\x02\x12!\n\x19longitudinal_speed_ground\x18\x03 \x01(\x02\x12\x1f\n\x17transverse_speed_ground\x18\x04 \x01(\x02\x12\x19\n\x11stern_speed_water\x18\x05 \x01(\x02\x12\x1a\n\x12stern_speed_ground\x18\x06 \x01(\x02\"\xaa\x01\n\x17Pgn130842Mfg1857ClassPb\x12\x12\n\nmessage_id\x18\x01 \x01(\r\x12\x18\n\x10repeat_indicator\x18\x02 \x01(\r\x12\x0c\n\x04mmsi\x18\x03 \x01(\x05\x12\x14\n\x0ctype_of_ship\x18\x04 \x01(\r\x12\x0e\n\x06length\x18\x05 \x01(\x02\x12\x0c\n\x04\x62\x65\x61m\x18\x06 \x01(\x02\x12\x1f\n\x17position_from_starboard\x18\x07 \x01(\x02\x62\x06proto3')
 
 
 
@@ -25,20 +25,28 @@ _PGN126993CLASSPB = DESCRIPTOR.message_types_by_name['Pgn126993ClassPb']
 _PGN126996CLASSPB = DESCRIPTOR.message_types_by_name['Pgn126996ClassPb']
 _PGN127245CLASSPB = DESCRIPTOR.message_types_by_name['Pgn127245ClassPb']
 _PGN127250CLASSPB = DESCRIPTOR.message_types_by_name['Pgn127250ClassPb']
+_PGN127488CLASSPB = DESCRIPTOR.message_types_by_name['Pgn127488ClassPb']
+_PGN127489CLASSPB = DESCRIPTOR.message_types_by_name['Pgn127489ClassPb']
+_PGN127508CLASSPB = DESCRIPTOR.message_types_by_name['Pgn127508ClassPb']
 _PGN128259CLASSPB = DESCRIPTOR.message_types_by_name['Pgn128259ClassPb']
 _PGN128267CLASSPB = DESCRIPTOR.message_types_by_name['Pgn128267ClassPb']
 _PGN129025CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129025ClassPb']
 _PGN129026CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129026ClassPb']
 _PGN129029CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129029ClassPb']
 _PGN129029CLASSPB_REF_STATIONSCLASSPB = _PGN129029CLASSPB.nested_types_by_name['Ref_StationsClassPb']
+_PGN129038CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129038ClassPb']
 _PGN129039CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129039ClassPb']
 _PGN129540CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129540ClassPb']
 _PGN129540CLASSPB_SATELLITES_DATACLASSPB = _PGN129540CLASSPB.nested_types_by_name['Satellites_DataClassPb']
+_PGN129794CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129794ClassPb']
+_PGN129809CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129809ClassPb']
 _PGN129810CLASSPB = DESCRIPTOR.message_types_by_name['Pgn129810ClassPb']
 _PGN130306CLASSPB = DESCRIPTOR.message_types_by_name['Pgn130306ClassPb']
 _PGN130310CLASSPB = DESCRIPTOR.message_types_by_name['Pgn130310ClassPb']
 _PGN130311CLASSPB = DESCRIPTOR.message_types_by_name['Pgn130311ClassPb']
 _PGN130312CLASSPB = DESCRIPTOR.message_types_by_name['Pgn130312ClassPb']
+_PGN130314CLASSPB = DESCRIPTOR.message_types_by_name['Pgn130314ClassPb']
+_PGN130316CLASSPB = DESCRIPTOR.message_types_by_name['Pgn130316ClassPb']
 _PGN130578CLASSPB = DESCRIPTOR.message_types_by_name['Pgn130578ClassPb']
 _PGN130842MFG1857CLASSPB = DESCRIPTOR.message_types_by_name['Pgn130842Mfg1857ClassPb']
 Pgn65359Mfg1851ClassPb = _reflection.GeneratedProtocolMessageType('Pgn65359Mfg1851ClassPb', (_message.Message,), {
@@ -90,6 +98,27 @@ Pgn127250ClassPb = _reflection.GeneratedProtocolMessageType('Pgn127250ClassPb', 
   })
 _sym_db.RegisterMessage(Pgn127250ClassPb)
 
+Pgn127488ClassPb = _reflection.GeneratedProtocolMessageType('Pgn127488ClassPb', (_message.Message,), {
+  'DESCRIPTOR' : _PGN127488CLASSPB,
+  '__module__' : 'nmea2000_classes_gen_pb2'
+  # @@protoc_insertion_point(class_scope:Pgn127488ClassPb)
+  })
+_sym_db.RegisterMessage(Pgn127488ClassPb)
+
+Pgn127489ClassPb = _reflection.GeneratedProtocolMessageType('Pgn127489ClassPb', (_message.Message,), {
+  'DESCRIPTOR' : _PGN127489CLASSPB,
+  '__module__' : 'nmea2000_classes_gen_pb2'
+  # @@protoc_insertion_point(class_scope:Pgn127489ClassPb)
+  })
+_sym_db.RegisterMessage(Pgn127489ClassPb)
+
+Pgn127508ClassPb = _reflection.GeneratedProtocolMessageType('Pgn127508ClassPb', (_message.Message,), {
+  'DESCRIPTOR' : _PGN127508CLASSPB,
+  '__module__' : 'nmea2000_classes_gen_pb2'
+  # @@protoc_insertion_point(class_scope:Pgn127508ClassPb)
+  })
+_sym_db.RegisterMessage(Pgn127508ClassPb)
+
 Pgn128259ClassPb = _reflection.GeneratedProtocolMessageType('Pgn128259ClassPb', (_message.Message,), {
   'DESCRIPTOR' : _PGN128259CLASSPB,
   '__module__' : 'nmea2000_classes_gen_pb2'
@@ -133,6 +162,13 @@ Pgn129029ClassPb = _reflection.GeneratedProtocolMessageType('Pgn129029ClassPb', 
 _sym_db.RegisterMessage(Pgn129029ClassPb)
 _sym_db.RegisterMessage(Pgn129029ClassPb.Ref_StationsClassPb)
 
+Pgn129038ClassPb = _reflection.GeneratedProtocolMessageType('Pgn129038ClassPb', (_message.Message,), {
+  'DESCRIPTOR' : _PGN129038CLASSPB,
+  '__module__' : 'nmea2000_classes_gen_pb2'
+  # @@protoc_insertion_point(class_scope:Pgn129038ClassPb)
+  })
+_sym_db.RegisterMessage(Pgn129038ClassPb)
+
 Pgn129039ClassPb = _reflection.GeneratedProtocolMessageType('Pgn129039ClassPb', (_message.Message,), {
   'DESCRIPTOR' : _PGN129039CLASSPB,
   '__module__' : 'nmea2000_classes_gen_pb2'
@@ -154,6 +190,20 @@ Pgn129540ClassPb = _reflection.GeneratedProtocolMessageType('Pgn129540ClassPb', 
   })
 _sym_db.RegisterMessage(Pgn129540ClassPb)
 _sym_db.RegisterMessage(Pgn129540ClassPb.Satellites_DataClassPb)
+
+Pgn129794ClassPb = _reflection.GeneratedProtocolMessageType('Pgn129794ClassPb', (_message.Message,), {
+  'DESCRIPTOR' : _PGN129794CLASSPB,
+  '__module__' : 'nmea2000_classes_gen_pb2'
+  # @@protoc_insertion_point(class_scope:Pgn129794ClassPb)
+  })
+_sym_db.RegisterMessage(Pgn129794ClassPb)
+
+Pgn129809ClassPb = _reflection.GeneratedProtocolMessageType('Pgn129809ClassPb', (_message.Message,), {
+  'DESCRIPTOR' : _PGN129809CLASSPB,
+  '__module__' : 'nmea2000_classes_gen_pb2'
+  # @@protoc_insertion_point(class_scope:Pgn129809ClassPb)
+  })
+_sym_db.RegisterMessage(Pgn129809ClassPb)
 
 Pgn129810ClassPb = _reflection.GeneratedProtocolMessageType('Pgn129810ClassPb', (_message.Message,), {
   'DESCRIPTOR' : _PGN129810CLASSPB,
@@ -190,6 +240,20 @@ Pgn130312ClassPb = _reflection.GeneratedProtocolMessageType('Pgn130312ClassPb', 
   })
 _sym_db.RegisterMessage(Pgn130312ClassPb)
 
+Pgn130314ClassPb = _reflection.GeneratedProtocolMessageType('Pgn130314ClassPb', (_message.Message,), {
+  'DESCRIPTOR' : _PGN130314CLASSPB,
+  '__module__' : 'nmea2000_classes_gen_pb2'
+  # @@protoc_insertion_point(class_scope:Pgn130314ClassPb)
+  })
+_sym_db.RegisterMessage(Pgn130314ClassPb)
+
+Pgn130316ClassPb = _reflection.GeneratedProtocolMessageType('Pgn130316ClassPb', (_message.Message,), {
+  'DESCRIPTOR' : _PGN130316CLASSPB,
+  '__module__' : 'nmea2000_classes_gen_pb2'
+  # @@protoc_insertion_point(class_scope:Pgn130316ClassPb)
+  })
+_sym_db.RegisterMessage(Pgn130316ClassPb)
+
 Pgn130578ClassPb = _reflection.GeneratedProtocolMessageType('Pgn130578ClassPb', (_message.Message,), {
   'DESCRIPTOR' : _PGN130578CLASSPB,
   '__module__' : 'nmea2000_classes_gen_pb2'
@@ -221,36 +285,52 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _PGN127245CLASSPB._serialized_end=579
   _PGN127250CLASSPB._serialized_start=581
   _PGN127250CLASSPB._serialized_end=692
-  _PGN128259CLASSPB._serialized_start=695
-  _PGN128259CLASSPB._serialized_end=831
-  _PGN128267CLASSPB._serialized_start=833
-  _PGN128267CLASSPB._serialized_end=901
-  _PGN129025CLASSPB._serialized_start=903
-  _PGN129025CLASSPB._serialized_end=958
-  _PGN129026CLASSPB._serialized_start=960
-  _PGN129026CLASSPB._serialized_end=1046
-  _PGN129029CLASSPB._serialized_start=1049
-  _PGN129029CLASSPB._serialized_end=1479
-  _PGN129029CLASSPB_REF_STATIONSCLASSPB._serialized_start=1389
-  _PGN129029CLASSPB_REF_STATIONSCLASSPB._serialized_end=1479
-  _PGN129039CLASSPB._serialized_start=1482
-  _PGN129039CLASSPB._serialized_end=1832
-  _PGN129540CLASSPB._serialized_start=1835
-  _PGN129540CLASSPB._serialized_end=2133
-  _PGN129540CLASSPB_SATELLITES_DATACLASSPB._serialized_start=1978
-  _PGN129540CLASSPB_SATELLITES_DATACLASSPB._serialized_end=2133
-  _PGN129810CLASSPB._serialized_start=2136
-  _PGN129810CLASSPB._serialized_end=2351
-  _PGN130306CLASSPB._serialized_start=2353
-  _PGN130306CLASSPB._serialized_end=2449
-  _PGN130310CLASSPB._serialized_start=2452
-  _PGN130310CLASSPB._serialized_end=2582
-  _PGN130311CLASSPB._serialized_start=2585
-  _PGN130311CLASSPB._serialized_end=2748
-  _PGN130312CLASSPB._serialized_start=2751
-  _PGN130312CLASSPB._serialized_end=2899
-  _PGN130578CLASSPB._serialized_start=2902
-  _PGN130578CLASSPB._serialized_end=3109
-  _PGN130842MFG1857CLASSPB._serialized_start=3111
-  _PGN130842MFG1857CLASSPB._serialized_end=3196
+  _PGN127488CLASSPB._serialized_start=694
+  _PGN127488CLASSPB._serialized_end=759
+  _PGN127489CLASSPB._serialized_start=762
+  _PGN127489CLASSPB._serialized_end=948
+  _PGN127508CLASSPB._serialized_start=950
+  _PGN127508CLASSPB._serialized_end=1068
+  _PGN128259CLASSPB._serialized_start=1071
+  _PGN128259CLASSPB._serialized_end=1207
+  _PGN128267CLASSPB._serialized_start=1209
+  _PGN128267CLASSPB._serialized_end=1277
+  _PGN129025CLASSPB._serialized_start=1279
+  _PGN129025CLASSPB._serialized_end=1334
+  _PGN129026CLASSPB._serialized_start=1336
+  _PGN129026CLASSPB._serialized_end=1422
+  _PGN129029CLASSPB._serialized_start=1425
+  _PGN129029CLASSPB._serialized_end=1855
+  _PGN129029CLASSPB_REF_STATIONSCLASSPB._serialized_start=1765
+  _PGN129029CLASSPB_REF_STATIONSCLASSPB._serialized_end=1855
+  _PGN129038CLASSPB._serialized_start=1858
+  _PGN129038CLASSPB._serialized_end=2158
+  _PGN129039CLASSPB._serialized_start=2161
+  _PGN129039CLASSPB._serialized_end=2511
+  _PGN129540CLASSPB._serialized_start=2514
+  _PGN129540CLASSPB._serialized_end=2812
+  _PGN129540CLASSPB_SATELLITES_DATACLASSPB._serialized_start=2657
+  _PGN129540CLASSPB_SATELLITES_DATACLASSPB._serialized_end=2812
+  _PGN129794CLASSPB._serialized_start=2815
+  _PGN129794CLASSPB._serialized_end=3159
+  _PGN129809CLASSPB._serialized_start=3161
+  _PGN129809CLASSPB._serialized_end=3239
+  _PGN129810CLASSPB._serialized_start=3242
+  _PGN129810CLASSPB._serialized_end=3457
+  _PGN130306CLASSPB._serialized_start=3459
+  _PGN130306CLASSPB._serialized_end=3555
+  _PGN130310CLASSPB._serialized_start=3557
+  _PGN130310CLASSPB._serialized_end=3684
+  _PGN130311CLASSPB._serialized_start=3687
+  _PGN130311CLASSPB._serialized_end=3850
+  _PGN130312CLASSPB._serialized_start=3853
+  _PGN130312CLASSPB._serialized_end=4001
+  _PGN130314CLASSPB._serialized_start=4003
+  _PGN130314CLASSPB._serialized_end=4110
+  _PGN130316CLASSPB._serialized_start=4112
+  _PGN130316CLASSPB._serialized_end=4232
+  _PGN130578CLASSPB._serialized_start=4235
+  _PGN130578CLASSPB._serialized_end=4442
+  _PGN130842MFG1857CLASSPB._serialized_start=4445
+  _PGN130842MFG1857CLASSPB._serialized_end=4615
 # @@protoc_insertion_point(module_scope)

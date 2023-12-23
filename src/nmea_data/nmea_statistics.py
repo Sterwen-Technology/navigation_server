@@ -41,7 +41,7 @@ class NMEA183Statistics:
         self._total_msg = 0
 
     def add_entry(self, talker, formatter):
-        key = talker + formatter
+        key = str(talker + formatter)
         self._total_msg += 1
         new_entry = False
         try:

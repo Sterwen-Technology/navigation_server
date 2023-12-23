@@ -132,7 +132,7 @@ class N2KStatisticPublisher(Publisher):
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.type == N0183_MSG:
-            self._n183_stats.add_entry(msg.talker, msg.formatter)
+            self._n183_stats.add_entry(msg.talker(), msg.formatter())
         else:
             self._n2k_stats.add_entry(msg.msg)
         return True

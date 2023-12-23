@@ -170,6 +170,10 @@ class Field:
     def typedef(self):
         raise NotImplementedError
 
+    @property
+    def signed(self) -> bool:
+        return False
+
     def print_description(self, output):
         output.write("\t Field %s (%s)\n" % (self.name, self.type()))
 
@@ -303,8 +307,8 @@ class Field:
             return self._byte_length
 
 
-decode_uint_str = {1: "B", 2: "H", 4: "I", 8: "Q"}
-decode_int_str = {1: "b", 2: "h", 4: "i", 8: "q"}
+decode_uint_str = {1: "B", 2: "H", 3: "HB", 4: "I", 8: "Q"}
+decode_int_str = {1: "b", 2: "h", 3: "hb", 4: "i", 8: "q"}
 
 
 class UIntField(Field):
@@ -325,6 +329,10 @@ class UIntField(Field):
             raise ValueError
         else:
             return decode_uint_str[self._byte_length]
+
+    @property
+    def nb_decode_slots(self):
+        return len(decode_int_str[self._byte_length])
 
     @property
     def python_type(self):
@@ -400,6 +408,10 @@ class EnumField(Field):
             return decode_uint_str[self._byte_length]
 
     @property
+    def nb_decode_slots(self) -> int:
+        return len(decode_uint_str[self._byte_length])
+
+    @property
     def python_type(self):
         return 'int'
 
@@ -457,6 +469,14 @@ class IntField(Field):
     def typedef(self):
         return Typedef.INT
 
+    @property
+    def signed(self) -> bool:
+        return True
+
+    @property
+    def nb_decode_slots(self):
+        return len(decode_int_str[self._byte_length])
+
 
 class DblField(Field):
 
@@ -490,12 +510,20 @@ class DblField(Field):
             return decode_int_str[self._byte_length]
 
     @property
+    def nb_decode_slots(self):
+        return len(decode_int_str[self._byte_length])
+
+    @property
     def python_type(self):
         return "float"
 
     @property
     def typedef(self):
         return Typedef.FLOAT
+
+    @property
+    def signed(self) -> bool:
+        return True
 
 
 class UDblField(Field):
@@ -525,7 +553,11 @@ class UDblField(Field):
         if self.is_bit_value():
             raise ValueError
         else:
-            return decode_int_str[self._byte_length]
+            return decode_uint_str[self._byte_length]
+
+    @property
+    def nb_decode_slots(self):
+        return len(decode_uint_str[self._byte_length])
 
     @property
     def python_type(self):

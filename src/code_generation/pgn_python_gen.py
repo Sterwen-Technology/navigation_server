@@ -157,15 +157,20 @@ class PythonPGNGenerator:
         if protobuf_conv:
             self.gen_from_protobuf(pgn_def)
 
+        self.gen_str_conversion(pgn_def, 'PGN{self._pgn}({self._name})')
+
+    def gen_str_conversion(self, pgn_def, header: str):
+
         # string conversion method
 
         self.write("def __str__(self):\n")
         self.inc_indent()
-        self.write("return f'PGN{self._pgn}({self._name}) [")
+        self.write(f"return f'{header} [")
         for attr in pgn_def.attributes[:pgn_def.last_attr]:
             self._of.write("%s={self.%s}, " % (attr.method, attr.variable))
         self._of.write("%s={self.%s}]'\n\n" % (pgn_def.attributes[pgn_def.last_attr].method,
                                                pgn_def.attributes[pgn_def.last_attr].variable))
+        self.dec_indent()
 
     def gen_class_variables(self, pgn_def: FieldSetMeta, attributes, last_attr):
         for segment in pgn_def.segments:
@@ -241,7 +246,7 @@ class PythonPGNGenerator:
         #
         # decode method =================================================
         #
-        self.write("def decode_payload(self, payload, start_byte=0):\n")
+        self.write(f"def decode_payload(self, payload, start_byte=0):\n")
         self.inc_indent()
         for segment in pgn_def.segments:
             # print("Start segment", segment.segment_type, segment.start_byte, segment.length)
@@ -256,7 +261,7 @@ class PythonPGNGenerator:
         if not isinstance(pgn_def, RepeatAttributeDef):
             if pgn_def.repeat_field_set is not None:
                 self.gen_repeated_decode(pgn_def.repeat_field_set)
-
+        self.write("return self\n")
         self.dec_indent()
         self.nl()
         #
@@ -299,32 +304,38 @@ class PythonPGNGenerator:
                 continue
             # print("Decode for", attr.method, attr.__class__.__name__)
             if isinstance(attr, ScalarAttributeDef):
+                if attr.nb_slots == 2:
+                    # ok we need to combine 2 slots
+                    self.write(f"word = val[{attr.field_index}] + (val[{attr.field_index + 1}] << 16)\n")
+                    source_var = "word"
+                else:
+                    source_var = f"val[{attr.field_index}]"
                 if attr.need_check:
-                    self.write(f"self.{attr.variable} = check_valid(val[{attr.field_index}], {attr.invalid_mask}, {attr.default})")
+                    self.write(f"self.{attr.variable} = check_valid({source_var}, {attr.invalid_mask}, {attr.default})")
                 else:
                     self.write(f"self.{attr.variable} = ")
                     if attr.scale is not None:
-                        self._of.write(f"check_convert_float(val[{attr.field_index}], 0x{attr.invalid_value:x}, {str(attr.scale)}")
+                        self._of.write(f"check_convert_float({source_var}, 0x{attr.invalid_value:x}, {str(attr.scale)}")
                         if attr.offset is not None:
                             self._of.write(f", {str(attr.offset)})")
                         else:
                             self._of.write(")")
                     elif attr.field_type == "float":
-                        self._of.write(f"float(val[{attr.field_index}])")
+                        self._of.write(f"float({source_var})")
                         if attr.offset is not None:
                             self._of.write(f" + {str(attr.offset)}")
                     else:
-                        self._of.write(f"val[{attr.field_index}]")
+                        self._of.write(f"{source_var}")
 
             elif isinstance(attr, BitFieldAttributeDef):
                 # print(attr.method, attr.nb_slots, attr.bit_offset)
                 if attr.nb_slots == 2:
-                    self.write(f"word = val[{attr.field_index}] + val[{attr.field_index} + 1] << 16\n")
+                    self.write(f"word = val[{attr.field_index}] + (val[{attr.field_index + 1}] << 16)\n")
                     self.write(f"self.{attr.variable} = ")
                     if attr.bit_offset == 0:
-                        self._of.write("word")
+                        self._of.write("word ")
                     else:
-                        self._of.write(f"(word >> {attr.bit_offset})")
+                        self._of.write(f"(word >> {attr.bit_offset}) ")
 
                 else:
                     self.write(f"self.{attr.variable} = ")
@@ -452,6 +463,8 @@ class PythonPGNGenerator:
         self.gen_decode_encode(repeat_field)
         if protobuf_conv:
             self.gen_from_protobuf(repeat_field, outer_class)
+
+        self.gen_str_conversion(repeat_field, f"({repeat_field.class_name})")
         self.dec_indent()
 
     def gen_from_protobuf(self, pgn_def, base_class=None):
@@ -497,29 +510,6 @@ class PythonPGNGenerator:
             self.dec_indent()
             self.nl()
 
-    def gen_message_class(self, pgn_def: NMEA2000Meta, protobuf_conv):
-        self.set_level(0)
-        self._of.write('\n')
-        self._of.write(f'class {pgn_def.msg_class_name}({self.message_base_class}, {pgn_def.class_name}):\n\n')
-        self.inc_indent()
-        self.write('def __init__(self, message: NMEA2000Msg = None, protobuf: nmea2000_decoded_pb = None):\n')
-        self.inc_indent()
-        self.write('if message is not None:\n')
-        self.inc_indent()
-        self.write('assert (message.pgn == self.pgn)\n')
-        self.write('super().__init__(message=message)\n')
-        self.write("self.decode_payload(message.payload)\n")
-        self.dec_indent()
-        self.write('elif protobuf is not None:\n')
-        self.inc_indent()
-        self.write('assert (protobuf.pgn == self.pgn)\n')
-        self.write('super().__init__(protobuf=protobuf)\n')
-        if protobuf_conv:
-            # ok we will process de the full protobuf
-            self.write(f'payload = {pgn_def.class_name}Pb()\n')
-            self.write('protobuf.payload.Unpack(payload)\n')
-            self.write("self.from_protobuf(payload)\n")
-        self.nl()
 
 
 
