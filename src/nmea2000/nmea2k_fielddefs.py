@@ -568,34 +568,7 @@ class UDblField(Field):
         return Typedef.FLOAT
 
 
-class ASCIIField(Field):
-
-    def __init__(self, xml):
-        super().__init__(xml)
-
-    def decode_value(self, payload, specs):
-        return self.extract_var_str(payload, specs)
-
-    def is_bit_value(self) -> bool:
-        return False
-
-    def encode_value(self, value, buffer, index) -> int:
-        return self.encode_str(value, buffer, index)
-
-    @property
-    def decode_method(self):
-        return VARIABLE_LENGTH_BYTES
-
-    @property
-    def typedef(self):
-        return Typedef.STRING
-
-    @property
-    def python_type(self):
-        return 'str'
-
-
-class StringField(Field):
+class VarLengthStringField(Field):
 
     def __init__(self, xml):
         super().__init__(xml)
@@ -691,23 +664,6 @@ class NameField(Field):
         return FIXED_LENGTH_NUMBER
 
 
-class CommunicationStatusField(Field):
-
-    def __init__(self, xml):
-        super().__init__(xml)
-
-    def decode_value(self, payload, specs):
-        # Dummy function for new
-        res = N2KDecodeResult(self._name)
-        res.actual_length = 3
-        res.invalid()
-        return res
-
-    @property
-    def decode_method(self):
-        return FIXED_LENGTH_NUMBER
-
-
 class BytesField(Field):
 
     def __init__(self, xml):
@@ -720,39 +676,6 @@ class BytesField(Field):
     @property
     def typedef(self):
         return Typedef.BYTES
-
-
-class ASCIIFixField(Field):
-
-    def __init__(self, xml):
-        super().__init__(xml, do_not_process=['SubString'])
-        # print(self._name, self._bit_offset, self._byte_length, self.BitOffset, self.BitLength)
-        self._subfields = []
-
-    def decode_value(self, payload, specs):
-        res = N2KDecodeResult(self._name)
-        # if we have some invalidated characters at the end
-        null_start = payload[specs.start:specs.end].find(0xff)
-        if null_start > 0:
-            specs.end = null_start
-        res.value = payload[specs.start:specs.end].decode()
-        # print(self._name, specs.start, specs.end, self._byte_length,":", res.value)
-        return res
-
-    def encode_value(self, value, buffer, index) -> int:
-        return self.encode_str(value, buffer, index)
-
-    @property
-    def decode_method(self):
-        return FIXED_LENGTH_BYTES
-
-    @property
-    def typedef(self):
-        return Typedef.STRING
-
-    @property
-    def python_type(self):
-        return 'str'
 
 
 class RepeatedFieldSet (BitFieldGenerator):

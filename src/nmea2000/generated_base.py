@@ -12,6 +12,7 @@
 
 import logging
 import time
+from google.protobuf.json_format import MessageToJson
 
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from utilities.global_variables import MessageServerGlobals
@@ -31,18 +32,42 @@ def check_valid(value: int, mask: int, default: int) -> int:
         return value
 
 
-def clean_string(bytes_to_clean) -> str:
+def clean_string(bytes_to_clean: bytearray) -> str:
     null_start = bytes_to_clean.find(0xFF)
     if null_start > 0:
         bytes_to_clean = bytes_to_clean[:null_start]
+    elif null_start == 0:
+        return ''
     if len(bytes_to_clean) == 0:
         return ''
     try:
         str_to_clean = bytes_to_clean.decode()
     except UnicodeError:
-        _logger.error("Error decoding string field %s" % bytes_to_clean)
+        _logger.error("Error decoding string field %s start=%d" % (bytes_to_clean, null_start))
         return ''
-    return str_to_clean.strip('@\x20\x00')
+    result = str_to_clean.rstrip('@\x20\x00')
+    if result.isprintable():
+        return result
+    else:
+        return ''
+
+
+def extract_var_str(payload: bytearray, start_byte: int):
+    str_len = payload[start_byte]
+    total_len = str_len + 2
+    if payload[start_byte + 1] != 1:
+        return '', total_len
+    return clean_string(payload[start_byte + 2: start_byte + total_len]), total_len
+
+
+def insert_var_str(payload: bytearray, start_byte, string_to_insert) -> int:
+    bytes_to_insert = string_to_insert.encode()
+    str_len = len(bytes_to_insert)
+    payload[start_byte] = str_len
+    payload[start_byte + 1] = 1
+    if str_len > 0:
+        payload[start_byte + 2: start_byte + str_len + 2] = bytes_to_insert
+    return str_len + 2
 
 
 def insert_string(buffer, start, length, string_to_insert):
@@ -61,9 +86,18 @@ def check_convert_float(val: int, invalid_mask: int, scale: float, offset: float
         return (val * scale) + offset
 
 
+def convert_to_int(value: float, invalid_mask: int, scale: float, offset: float = 0.0) -> int:
+    if value == float('nan'):
+        return invalid_mask
+    return int((value - offset) / scale)
+
+
+
 class NMEA2000DecodedMsg:
 
     __slots__ = ('_sa', '_da', '_timestamp', '_priority')
+
+    DEFAULT_BUFFER_SIZE = 1024
 
     def __init__(self, message: NMEA2000Msg = None, protobuf: nmea2000_decoded_pb = None):
 
@@ -92,6 +126,10 @@ class NMEA2000DecodedMsg:
         pl_pb = self.as_protobuf()  # as_protobuf implemented in subclasses
         message.payload.Pack(pl_pb)
         return message
+
+    def as_json(self) -> str:
+        message_pb = self.protobuf_message()
+        return MessageToJson(message_pb, including_default_value_fields=True, preserving_proto_field_name=True)
 
     def message(self) -> NMEA2000Msg:
         msg = NMEA2000Msg(self.pgn, self._priority, self._sa, self._da, self._timestamp, self.encode_payload())

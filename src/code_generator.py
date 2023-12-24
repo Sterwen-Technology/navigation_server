@@ -36,6 +36,7 @@ def _parser():
     p.add_argument('-py', '--python', action="store_true")
     p.add_argument('-cv', '--protobuf_conv', action="store_true")
     p.add_argument('-ro', '--read_only', action="store_true")
+    p.add_argument("-pgn", "--pgn", action="store", type=int, default=0)
 
     return p
 
@@ -71,7 +72,7 @@ def main():
     MessageServerGlobals.pgn_definitions = PGNDefinitions('./def/PGNDefns.N2kDfn.xml')
     output_file_base = "nmea2000_classes_gen"
     _logger.info("Generating NMEA2000 meta model")
-    class_list = nmea2000_gen_meta()
+    class_list = nmea2000_gen_meta(opts.pgn)
     _logger.info(f"Generated meta model for {len(class_list)} PGN")
     if opts.python:
         output_file = os.path.join(opts.python_dir, output_file_base + ".py")

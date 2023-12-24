@@ -75,9 +75,9 @@ class ProductInformation(Pgn126996Class):
                 raise ValueError
             return val + str(nb_space*' ')
 
-        self._product_information = build_fix_str(model_id)
-        self._product_information += build_fix_str(software_version)
-        self._product_information += build_fix_str(model_version)
-        self._product_information += build_fix_str(serial_code)
+        self._model_id = build_fix_str(model_id)
+        self._software_version = build_fix_str(software_version)
+        self._model_version = build_fix_str(model_version)
+        self._model_serial_code = build_fix_str(serial_code)
 
 

@@ -116,19 +116,11 @@ class NMEA2000Device:
             self._properties['Product Code'] = n2k_obj.product_code
             self._properties['Certification Level'] = n2k_obj.certification_level
             self._properties['Load Equivalency'] = n2k_obj.load_equivalency
-            try:
-                pi = n2k_obj.product_information
-            except AttributeError:
-                _logger.error("No Product Information in PGN 126996")
-                return
-            lpi = len(pi)
-            self._properties['Product name'] = pi[0:32].rstrip(' \x00')
-            if lpi >= 64:
-                self._properties['Product version'] = pi[32:64].rstrip(' \x00')
-                if lpi >= 96:
-                    self._properties['Description'] = pi[64:96].rstrip(' \x00')
-                    if lpi >= 128:
-                        self._properties['Firmware'] = pi[96:128].rstrip(' \x00')
+            self._properties['Product name'] = n2k_obj.model_id
+
+            self._properties['Product version'] = n2k_obj.model_version
+            self._properties['Description'] = n2k_obj.model_serial_code
+            self._properties['Firmware'] = n2k_obj.software_version
             # print(product_name,"|", product_version,"|", description, "|", firmware)
 
     def asDict(self):
