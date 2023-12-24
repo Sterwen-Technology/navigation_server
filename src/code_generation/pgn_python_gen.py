@@ -105,7 +105,6 @@ class PythonPGNGenerator:
 
     def gen_class(self, pgn_def: NMEA2000Meta, protobuf_conv: bool):
 
-        print("Generating class for PGN", pgn_def.pgn, pgn_def.name)
         self.set_level(0)
         self.write('\n')
         self.write(f"class {pgn_def.class_name}({self.message_base_class}):\n\n")
@@ -113,7 +112,7 @@ class PythonPGNGenerator:
             read_only = False
         else:
             read_only = pgn_def.read_only or self._read_only  # to be improved by allowing specific classes
-
+        print("Generating class for PGN", pgn_def.pgn, pgn_def.name, "Read_only=", read_only)
         if pgn_def.repeat_field_set is not None:
             # generate inner class
             self.inc_indent()
@@ -152,7 +151,15 @@ class PythonPGNGenerator:
 
         self.gen_accessors_methods(pgn_def.attributes, pgn_def.enums, read_only)
 
-        self.gen_decode_encode(pgn_def)
+        if not read_only and pgn_def.repeat_field_set is not None and pgn_def.has_flag('AddItem'):
+            # lets generate an item adder
+            self.gen_item_adder(pgn_def.repeat_field_set)
+
+
+        if pgn_def.variable_size:
+            self.gen_decode_encode_variable(pgn_def, read_only)
+        else:
+            self.gen_decode_encode(pgn_def, read_only)
 
         if protobuf_conv:
             self.gen_from_protobuf(pgn_def)
@@ -225,6 +232,8 @@ class PythonPGNGenerator:
 
         if not read_only:
             for attr in attributes:
+                if isinstance(attr, RepeatAttributeDef):
+                    continue  # no setter for list
                 self.write("@%s.setter\n" % attr.method)
                 self.write("def %s(self, value: %s):\n" % (attr.method, attr.field_type))
                 self.inc_indent()
@@ -242,7 +251,7 @@ class PythonPGNGenerator:
                 self.write(f"return self._{enum.method}_enum.get(self._{enum.method}, '{enum.method} key error')\n\n")
             self.dec_indent()
 
-    def gen_decode_encode(self, pgn_def):
+    def gen_decode_encode(self, pgn_def, read_only: bool):
         #
         # decode method =================================================
         #
@@ -264,6 +273,8 @@ class PythonPGNGenerator:
         self.write("return self\n")
         self.dec_indent()
         self.nl()
+        if read_only:
+            return
         #
         # encode method
         #
@@ -296,9 +307,84 @@ class PythonPGNGenerator:
         self.dec_indent()
         self.nl()
 
-    def gen_decode_value_set_segment(self, segment: DecodeSegment):
+    def gen_decode_encode_variable(self, pgn_def, read_only: bool):
+        '''
+        Generate Python code for classes with variable length segments
+        '''
+        #
+        # decode method =================================================
+        #
+        self.write(f"def decode_payload(self, payload, start_byte=0):\n")
+        self.inc_indent()
+        # self.write("decode_index = start_byte\n")
+        for segment in pgn_def.segments:
+            # print("Start segment", segment.segment_type, segment.start_byte, segment.length)
+            if segment.segment_type == DecodeSegment.VALUE_SET:
+                self.gen_decode_value_set_segment(segment)
+                self.write(f"start_byte += {segment.length}\n")
+            elif segment.segment_type == DecodeSegment.FIX_LENGTH:
+                self.gen_decode_fix_length_segment(segment)
+                self.write(f"start_byte += {segment.length}\n")
+            elif segment.segment_type == DecodeSegment.VARIABLE_LENGTH:
+                self.gen_decode_variable_length(segment)
+            else:
+                _logger.error("PGN %d Unknown segment type" % pgn_def.pgn)
+                raise N2KDecodeException
 
-        self.write(f"val = self.{segment.variable}.unpack_from(payload, {segment.start_byte} + start_byte)\n")
+        if not isinstance(pgn_def, RepeatAttributeDef):
+            if pgn_def.repeat_field_set is not None:
+                self.gen_repeated_decode_variable(pgn_def.repeat_field_set)
+        self.write("return self, start_byte\n")
+        self.dec_indent()
+        self.nl()
+        if read_only:
+            return
+        #
+        # encode method
+        #
+        if isinstance(pgn_def, RepeatAttributeDef):
+            # here we need to generate a complementary encoding only
+            self.write("def encode_payload(self, buffer, start_byte):\n")
+            self.inc_indent()
+        elif not pgn_def.read_only:
+            self.write("def encode_payload(self) -> bytearray:\n")
+            self.inc_indent()
+            # compute the buffer size
+            # compute the size of the output buffer
+            # fixed determined size
+            self.write(f"buf_size = self.DEFAULT_BUFFER_SIZE\n")
+            self.write(f"buffer = bytearray(buf_size)\n")
+            self.write("start_byte = 0\n")
+        else:
+            return
+
+        for segment in pgn_def.segments:
+            if segment.segment_type == DecodeSegment.VALUE_SET:
+                self.gen_encode_value_set_segment(segment, variable_length=True)
+                self.write(f"start_byte += {segment.length}\n")
+            elif segment.segment_type == DecodeSegment.FIX_LENGTH:
+                self.gen_encode_fix_length(segment, variable_length=True)
+                self.write(f"start_byte += {segment.length}\n")
+            elif segment.segment_type == DecodeSegment.VARIABLE_LENGTH:
+                self.gen_encode_var_length(segment)
+
+        if not isinstance(pgn_def, RepeatAttributeDef):
+            if pgn_def.repeat_field_set is not None:
+                self.gen_repeated_encode_variable(pgn_def.repeat_field_set)
+            self.write("return buffer[:start_byte]\n")
+        else:
+            self.write("return start_byte\n")
+        self.dec_indent()
+        self.nl()
+
+    def gen_decode_value_set_segment(self, segment: DecodeSegment, variable_length=False):
+
+        if variable_length:
+            decode_start = "start_byte"
+        else:
+            decode_start = f"{segment.start_byte} + start_byte"
+
+        self.write(f"val = self.{segment.variable}.unpack_from(payload, {decode_start})\n")
         for attr in segment.attributes:
             if issubclass(attr.__class__, ReservedAttribute):
                 continue
@@ -330,7 +416,8 @@ class PythonPGNGenerator:
             elif isinstance(attr, BitFieldAttributeDef):
                 # print(attr.method, attr.nb_slots, attr.bit_offset)
                 if attr.nb_slots == 2:
-                    self.write(f"word = val[{attr.field_index}] + (val[{attr.field_index + 1}] << 16)\n")
+                    if attr.sub_field_index == 0:
+                        self.write(f"word = val[{attr.field_index}] + (val[{attr.field_index + 1}] << 16)\n")
                     self.write(f"self.{attr.variable} = ")
                     if attr.bit_offset == 0:
                         self._of.write("word ")
@@ -346,19 +433,39 @@ class PythonPGNGenerator:
                 self._of.write(f"& 0x{attr.mask:X}")
             self.nl()
 
-    def gen_decode_fix_length_segment(self, segment: DecodeSegment):
+    def gen_decode_fix_length_segment(self, segment: DecodeSegment, variable_length=False):
+        if variable_length:
+            decode_start = "start_byte"
+            decode_end = f"start_byte + {segment.length}"
+        else:
+            decode_start = f"{segment.start_byte} + start_byte"
+            decode_end = f"{segment.start_byte+segment.length} + start_byte"
         self.write(f"self.{segment.attributes.variable} = ")
         if segment.attributes.typedef == Typedef.STRING:
             self._of.write("clean_string(")
         else:
             self._of.write("clean_bytes(")
-        self._of.write(f"payload[{segment.start_byte} + start_byte: {segment.start_byte+segment.length} + start_byte])\n")
+        self._of.write(f"payload[{decode_start}: {decode_end}])\n")
 
-    def gen_encode_fix_length(self, segment: DecodeSegment):
-        if segment.attributes.typedef == Typedef.STRING:
-            self.write(f"insert_string(buffer, {segment.start_byte} + start_byte, {segment.length}, self.{segment.attributes.variable})\n")
+    def gen_decode_variable_length(self, segment:DecodeSegment):
+        # only strings for the moment
+        self.write("dec_str, dec_str_len = extract_var_str(payload, start_byte)\n")
+        self.write(f"self.{segment.attributes.variable} = dec_str\n")
+        self.write("start_byte += dec_str_len\n")
+
+    def gen_encode_fix_length(self, segment: DecodeSegment, variable_length=False):
+        if variable_length:
+            encode_start = "start_byte"
         else:
-            self.write(f"insert_byte(buffer, {segment.start_byte} + start_byte, {segment.length}, self.{segment.attributes.variable})\n")
+            encode_start = f"{segment.start_byte} + start_byte"
+        if segment.attributes.typedef == Typedef.STRING:
+            self.write(f"insert_string(buffer, {encode_start}, {segment.length}, self.{segment.attributes.variable})\n")
+        else:
+            self.write(f"insert_byte(buffer, {encode_start}, {segment.length}, self.{segment.attributes.variable})\n")
+
+    def gen_encode_var_length(self, segment: DecodeSegment):
+        self.write(f"inserted_len = insert_var_str(buffer, start_byte, self.{segment.attributes.variable})\n")
+        self.write("start_byte += inserted_len\n")
 
     def gen_repeated_decode(self, attr):
         self.write("start_byte = self._static_size\n")
@@ -370,53 +477,111 @@ class PythonPGNGenerator:
         self.dec_indent()
         self.nl()
 
-    def gen_encode_value_set_segment(self, segment: DecodeSegment):
+    def gen_repeated_decode_variable(self, attr):
+        self.write(f"self.{attr.variable} = []\n")
+        self.write(f"for i in range(0, self.{attr.count_method}):\n")
+        self.inc_indent()
+        if attr.variable_size:
+            self.write(f"dec_obj, dec_obj_len = self.{attr.class_name}().decode_payload(payload, start_byte)\n")
+            self.write(f"self.{attr.variable}.append(dec_obj)\n")
+            self.write("start_byte += dec_obj_len\n")
+        else:
+            self.write(f"self.{attr.variable}.append(self.{attr.class_name}().decode_payload(payload, start_byte))\n")
+            self.write(f"start_byte += self.{attr.class_name}.size()\n")
+        self.dec_indent()
+        self.nl()
+
+    def gen_encode_value_set_segment(self, segment: DecodeSegment, variable_length=False):
+        '''
+        Generate encoding method for a segment with only numeric values
+        '''
         val_encode = []
         numvi = 0
+        val_var = ''
 
         # self.write_indent()
         # first need to convert in int if float
         for attr in segment.attributes:
             if issubclass(attr.__class__, ReservedAttribute):
-                vi = f"v{numvi}"
                 if isinstance(attr, ReservedBitFieldAttribute):
-                    if len(val_encode) - 1 < attr.field_index:
-                        # need to increase the index
-                        self.write(f"{vi} = 0x{attr.default_value:x} << {attr.bit_offset}\n")
-                        numvi += 1
+                    if attr.sub_field_index == 0:
+                        vi = f"v{numvi}"
                         val_encode.append(vi)
+                        numvi += 1
+                        if attr.nb_slots == 2:
+                            val_var = "word"
+                        else:
+                            val_var = vi
+                        # first sub-field so no OR
+                        self.write(f"{val_var} = 0x{attr.default_value:x} << {attr.bit_offset}\n")
                     else:
-                        # we stay on the same index
-                        self.write(f"{val_encode[attr.field_index]} |= 0x{attr.default_value:x} << {attr.bit_offset}\n")
+                        self.write(f"{val_var} |= 0x{attr.default_value:x} << {attr.bit_offset}\n")
+                        if attr.nb_slots == 2 and attr.last_sub_field:
+                            self.write(f"{val_encode[attr.field_index]} = {val_var} & 0xFFFF\n")
+                            vi = f"v{numvi}"
+                            numvi += 1
+                            val_encode.append(vi)
+                            self.write(f"{vi} = ({val_var} & 0xFF) >> 16\n")
                 else:
+                    vi = f"v{numvi}"
                     numvi += 1
                     val_encode.append(vi)
                     self.write(f"{vi} = 0x{attr.default_value:x}\n")
-            elif attr.field_type == "float":
-                vi = f"v{numvi}"
-                numvi += 1
-                val_encode.append(vi)
-                self.write(f"{vi} = int(")
-                if attr.offset is not None:
-                    self._of.write(f"(self.{attr.variable} - {attr.offset})")
-                else:
-                    self._of.write(f"self.{attr.variable}")
-                if attr.scale is not None:
-                    self._of.write(f" / {attr.scale}")
-                self._of.write(")\n")
-            elif isinstance(attr, BitFieldAttributeDef):
-                vi = f"v{numvi}"
-                if len(val_encode) - 1 < attr.field_index:
-                    # need to stay on the same index
-                    self.write(f"{vi} = (self.{attr.variable} & 0x{attr.mask:x}) << {attr.bit_offset}\n")
+            elif issubclass(attr.__class__, ScalarAttributeDef):
+                if attr.field_type == "float":
+                    vi = f"v{numvi}"
                     numvi += 1
                     val_encode.append(vi)
+                    vi_allocated = True
+                    self.write(f"{vi} = convert_to_int(self.{attr.variable}, 0x{attr.invalid_mask:x}, {attr.scale}")
+                    if attr.offset is None:
+                        self._of.write(")\n")
+                    else:
+                        self._of.write(f", {attr.offset})\n")
+                    val_var = vi
                 else:
-                    self.write(f"{val_encode[attr.field_index]} |= (self.{attr.variable} & 0x{attr.mask:x}) << {attr.bit_offset}\n")
+                    val_encode.append(f"self.{attr.variable}")
+                    vi_allocated = False
+                if attr.nb_slots == 2:
+                    assert (attr.byte_length == 3)  # only that case is implemented
+                    if not vi_allocated:
+                        vi = f"v{numvi}"
+                        numvi += 1
+                        val_encode.append(vi)
+                    self.write(f"{vi} = {val_var} & 0xffff\n")
+                    vi = f"v{numvi}"
+                    numvi += 1
+                    val_encode.append(vi)
+                    self.write(f"{vi} = ({val_var} >> 16) & 0xff\n")
+
+            elif isinstance(attr, BitFieldAttributeDef):
+                if attr.sub_field_index == 0:
+                    vi = f"v{numvi}"
+                    val_encode.append(vi)
+                    numvi += 1
+                    if attr.nb_slots == 2:
+                        val_var = "word"
+                    else:
+                        val_var = vi
+                    # first sub-field so no OR
+                    self.write(f"{val_var} = (self.{attr.variable} & 0x{attr.mask:x}) << {attr.bit_offset}\n")
+                else:
+                    self.write(f"{val_var} |= (self.{attr.variable} & 0x{attr.mask:x}) << {attr.bit_offset}\n")
+                    if attr.nb_slots == 2 and attr.last_sub_field:
+                        self.write(f"{val_encode[attr.field_index]} = {val_var} & 0xFFFF\n")
+                        vi = f"v{numvi}"
+                        numvi += 1
+                        val_encode.append(vi)
+                        self.write(f"{vi} = ({val_var} & 0xFF) >> 16\n")
             else:
                 val_encode.append(f"self.{attr.variable}")
 
-        self.write(f"self.{segment.variable}.pack_into(buffer, {segment.start_byte} + start_byte, ")
+        if variable_length:
+            encode_start = "start_byte"
+        else:
+            encode_start = f"{segment.start_byte} + start_byte"
+
+        self.write(f"self.{segment.variable}.pack_into(buffer, {encode_start}, ")
         last_attr = len(val_encode) - 1
         for val in val_encode[:last_attr]:
             self._of.write("%s, " % val)
@@ -428,7 +593,15 @@ class PythonPGNGenerator:
         self.write(f"repeat_field.encode_payload(buffer, start_byte)\n")
         self.write(f"start_byte += self.{field_set.class_name}.size()\n")
         self.dec_indent()
+        self.nl()
 
+    def gen_repeated_encode_variable(self, field_set: RepeatAttributeDef):
+        self.write(f"for repeat_field in self.{field_set.variable}:\n")
+        self.inc_indent()
+        self.write("encoded_len = repeat_field.encode_payload(buffer, start_byte)\n")
+        self.write("start_byte += encoded_len\n")
+        self.dec_indent()
+        self.nl()
 
     def gen_getter(self, method, var_type):
         self.write("@property\n")
@@ -460,12 +633,26 @@ class PythonPGNGenerator:
         self.dec_indent()
         self.nl()
         self.gen_accessors_methods(repeat_field.attributes, repeat_field.enums, read_only)
-        self.gen_decode_encode(repeat_field)
+        if repeat_field.variable_size:
+            self.gen_decode_encode_variable(repeat_field, read_only)
+        else:
+            self.gen_decode_encode(repeat_field, read_only)
         if protobuf_conv:
             self.gen_from_protobuf(repeat_field, outer_class)
 
         self.gen_str_conversion(repeat_field, f"({repeat_field.class_name})")
         self.dec_indent()
+
+    def gen_item_adder(self, field_def: RepeatAttributeDef):
+        self.write(f"def add_{field_def.class_name.removesuffix('Class')}(self, item: {field_def.class_name}):\n")
+        self.inc_indent()
+        self.write(f"if self.{field_def.variable} is None:\n")
+        self.inc_indent()
+        self.write(f"self.{field_def.variable} = []\n")
+        self.dec_indent()
+        self.write(f"self.{field_def.variable}.append(item)\n")
+        self.dec_indent()
+        self.nl()
 
     def gen_from_protobuf(self, pgn_def, base_class=None):
         if base_class is not None:

@@ -61,7 +61,7 @@ class N2KTracePublisher(Publisher):
         _logger.info("%s output option %s" % (self.name(), self._print_option))
         self._trace_fd = None
         filename = opts.get('file', str, None)
-        if filename is not None:
+        if filename is not None and self.is_active:
             trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')
             date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
             filename = "%s-N2K-%s.log" % (filename, date_stamp)
@@ -108,10 +108,10 @@ class N2KTracePublisher(Publisher):
         _logger.debug("Trace publisher msg:%s" % res)
         if res is not None:
             if self._print_option in ('ALL', 'PRINT'):
-                print("Message from SA:", msg.sa, ":", res)
+                print("Message:", res.as_json())
             if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
-                self._trace_fd.write("Message from SA:%d " % msg.sa)
-                self._trace_fd.write(str(res))
+                # self._trace_fd.write("Message from SA:%d " % msg.sa)
+                self._trace_fd.write(res.as_json())
                 self._trace_fd.write('\n')
         return True
 

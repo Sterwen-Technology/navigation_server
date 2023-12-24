@@ -197,6 +197,10 @@ class BitField:
         for bfdef in self._fields:
             yield bfdef
 
+    @property
+    def nb_sub_fields(self) -> int:
+        return len(self._fields)
+
 
 class DecodeSpecs:
 

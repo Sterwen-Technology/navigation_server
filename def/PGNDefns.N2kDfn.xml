@@ -1220,22 +1220,22 @@
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <ASCIIFixField Name="Product information" key="product_information">
+        <FixLengthStringField Name="Model ID" key="model_id">
           <BitOffset>32</BitOffset>
-          <BitLength>1024</BitLength>
-          <SubString Name="Model ID">
-            <ByteLength>32</ByteLength>
-          </SubString>
-          <SubString Name="Software Version Code">
-            <ByteLength>32</ByteLength>
-          </SubString>
-          <SubString Name="Model Version">
-            <ByteLength>32</ByteLength>
-          </SubString>
-          <SubString Name="Model Serial Code">
-            <ByteLength>32</ByteLength>
-          </SubString>
-        </ASCIIFixField>
+          <BitLength>256</BitLength>
+        </FixLengthStringField>
+        <FixLengthStringField Name="Software Version Code" key="software_version">
+          <BitOffset>288</BitOffset>
+          <BitLength>256</BitLength>
+        </FixLengthStringField>
+        <FixLengthStringField Name="Model Version" key="model_version">
+          <BitOffset>544</BitOffset>
+          <BitLength>256</BitLength>
+        </FixLengthStringField>
+        <FixLengthStringField Name="Model Serial Code" key="model_serial_code">
+          <BitOffset>800</BitOffset>
+          <BitLength>256</BitLength>
+        </FixLengthStringField>
         <UIntField Name="Certification Level" key="certification_level">
           <BitOffset>1056</BitOffset>
           <BitLength>8</BitLength>
@@ -1249,20 +1249,21 @@
     </PGNDefn>
     <PGNDefn PGN="126998">
       <Name>Configuration Information</Name>
+      <Scope>Generate</Scope>
       <ByteLength>0</ByteLength>
       <Fields>
-        <StringField Name="Installation Description #1">
+        <VarLengthStringField Name="Installation Description #1" key="installation_1">
           <BitOffset>0</BitOffset>
           <BitLength>-1</BitLength>
-        </StringField>
-        <StringField Name="Installation Description #2">
+        </VarLengthStringField>
+        <VarLengthStringField Name="Installation Description #2" key="installation_2">
           <BitOffset>0</BitOffset>
           <BitLength>-1</BitLength>
-        </StringField>
-        <StringField Name="Manufacturer">
+        </VarLengthStringField>
+        <VarLengthStringField Name="Manufacturer Info" key="manufacturer_info">
           <BitOffset>0</BitOffset>
           <BitLength>-1</BitLength>
-        </StringField>
+        </VarLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="127237">
@@ -1489,14 +1490,15 @@
     </PGNDefn>
     <PGNDefn PGN="127258">
       <Name>Magnetic Variation</Name>
+      <Scope>Generate</Scope>
       <ByteLength>6</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <EnumField Name="Source">
+        <EnumField Name="Source" key="source">
           <BitOffset>8</BitOffset>
           <BitLength>4</BitLength>
           <EnumValues>
@@ -1516,13 +1518,13 @@
           <BitOffset>12</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <UIntField Name="Age of service">
+        <UIntField Name="Age of service" key="age_of_service">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Date</FormatAs>
         </UIntField>
-        <DblField Name="Variation">
+        <DblField Name="Variation" key="variation">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
@@ -1569,12 +1571,12 @@
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
         </InstanceField>
-        <UIntField Name="Oil pressure" key="oil_pressure">
+        <UDblField Name="Oil pressure" key="oil_pressure">
           <Description>Pressure in Pa</Description>
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
           <Scale>100</Scale>
-        </UIntField>
+        </UDblField>
         <UDblField Name="Oil temperature" key="oil_temperature">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
@@ -2526,10 +2528,10 @@
           <FormatAs>Time</FormatAs>
           <Scale>0.0001</Scale>
         </UDblField>
-        <ASCIIField Name="Name">
+        <FixLengthStringField Name="Name">
           <BitOffset>200</BitOffset>
           <BitLength>2040</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129025">
@@ -3256,11 +3258,11 @@
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
         </DblField>
-        <ASCIIField Name="Name">
+        <FixLengthStringField Name="Name">
           <Description>0=unavailable</Description>
           <BitOffset>256</BitOffset>
           <BitLength>160</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
         <EnumField Name="DTE">
           <BitOffset>416</BitOffset>
           <BitLength>1</BitLength>
@@ -3295,11 +3297,11 @@
       <Name>Datum</Name>
       <ByteLength>20</ByteLength>
       <Fields>
-        <ASCIIField Name="Local Datum">
+        <FixLengthStringField Name="Local Datum">
           <Description>defined in IHO Publication S-60, Appendices B and C. First three chars are datum ID as per IHO tables. Fourth char is local datum subdivision code.</Description>
           <BitOffset>0</BitOffset>
           <BitLength>32</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
         <DblField Name="Delta Latitude">
           <BitOffset>32</BitOffset>
           <BitLength>32</BitLength>
@@ -3316,11 +3318,11 @@
           <BitOffset>96</BitOffset>
           <BitLength>32</BitLength>
         </DblField>
-        <ASCIIField Name="Reference Datum">
+        <FixLengthStringField Name="Reference Datum">
           <Description>defined in IHO Publication S-60, Appendices B and C. First three chars are datum ID as per IHO tables. Fourth char is local datum subdivision code.</Description>
           <BitOffset>128</BitOffset>
           <BitLength>32</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129045">
@@ -3376,18 +3378,19 @@
           <BitOffset>256</BitOffset>
           <BitLength>32</BitLength>
         </DblField>
-        <ASCIIField Name="Datum Name">
+        <FixLengthStringField Name="Datum Name">
           <Description>4 character code from IHO Publication S-60,Appendices B and C. First three chars are datum ID as per IHO tables. Fourth char is local datum subdivision code.</Description>
           <BitOffset>288</BitOffset>
           <BitLength>32</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129283">
       <Name>Cross Track Error</Name>
+      <Scope>Generate</Scope>
       <ByteLength>6</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -3397,7 +3400,7 @@
           <BitOffset>8</BitOffset>
           <BitLength>1</BitLength>
         </UIntField>
-        <EnumField Name="Navigation Terminated">
+        <EnumField Name="Navigation Terminated" key="navigation_terminated">
           <BitOffset>9</BitOffset>
           <BitLength>1</BitLength>
           <EnumValues>
@@ -3409,7 +3412,7 @@
           <BitOffset>10</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <EnumField Name="XTE mode">
+        <EnumField Name="XTE mode" key="XTE_mode">
           <BitOffset>12</BitOffset>
           <BitLength>4</BitLength>
           <EnumValues>
@@ -3420,7 +3423,7 @@
             <EnumPair Value="4" Name="Manual" />
           </EnumValues>
         </EnumField>
-        <DblField Name="XTE">
+        <DblField Name="XTE" key="XTE">
           <BitOffset>16</BitOffset>
           <BitLength>32</BitLength>
           <Scale>0.01</Scale>
@@ -3429,19 +3432,20 @@
     </PGNDefn>
     <PGNDefn PGN="129284">
       <Name>Navigation Data</Name>
+      <Scope>Generate</Scope>
       <ByteLength>34</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <UDblField Name="Distance to Waypoint">
+        <UDblField Name="Distance to Waypoint" key="distance_to_waypoint">
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
           <Scale>0.01</Scale>
         </UDblField>
-        <EnumField Name="Course/Bearing reference">
+        <EnumField Name="Course/Bearing reference" key="bearing_reference">
           <BitOffset>40</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -3449,7 +3453,7 @@
             <EnumPair Value="1" Name="Magnetic" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="Perpendicular Crossed">
+        <EnumField Name="Perpendicular Crossed" key="perpendicular_crossed">
           <BitOffset>42</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -3457,7 +3461,7 @@
             <EnumPair Value="1" Name="Yes" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="Arrival Circle Entered">
+        <EnumField Name="Arrival Circle Entered" key="arrival_circle_entered">
           <BitOffset>44</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -3465,7 +3469,7 @@
             <EnumPair Value="1" Name="Yes" />
           </EnumValues>
         </EnumField>
-        <EnumField Name="Calculation Type">
+        <EnumField Name="Calculation Type" key="calculation_type">
           <BitOffset>46</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -3473,52 +3477,52 @@
             <EnumPair Value="1" Name="Rhumb Line" />
           </EnumValues>
         </EnumField>
-        <UDblField Name="ETA Time">
+        <UDblField Name="ETA Time" key="ETA_time">
           <Description>Seconds since midnight</Description>
           <BitOffset>48</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Time</FormatAs>
           <Scale>0.0001</Scale>
         </UDblField>
-        <UIntField Name="ETA Date">
+        <UIntField Name="ETA Date" key="ETA_date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>80</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Date</FormatAs>
         </UIntField>
-        <UDblField Name="Bearing, Origin to Destination Waypoint">
+        <UDblField Name="Bearing, Origin to Destination Waypoint" key="bearing_origin_to_destination">
           <BitOffset>96</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
         </UDblField>
-        <UDblField Name="Bearing, Position to Destination Waypoint">
+        <UDblField Name="Bearing, Position to Destination Waypoint" key="bearing_position_to_destination">
           <BitOffset>112</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
         </UDblField>
-        <UIntField Name="Origin Waypoint Number">
+        <UIntField Name="Origin Waypoint Number" key="origin_waypoint">
           <BitOffset>128</BitOffset>
           <BitLength>32</BitLength>
         </UIntField>
-        <UIntField Name="Destination Waypoint Number">
+        <UIntField Name="Destination Waypoint Number" key="destination_waypoint">
           <BitOffset>160</BitOffset>
           <BitLength>32</BitLength>
         </UIntField>
-        <DblField Name="Destination Latitude">
+        <DblField Name="Destination Latitude" key="destination_latitude">
           <BitOffset>192</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Latitude</FormatAs>
           <Scale>1E-07</Scale>
         </DblField>
-        <DblField Name="Destination Longitude">
+        <DblField Name="Destination Longitude" key="destination_longitude">
           <BitOffset>224</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Longitude</FormatAs>
           <Scale>1E-07</Scale>
         </DblField>
-        <DblField Name="Waypoint Closing Velocity">
+        <DblField Name="Waypoint Closing Velocity" key="WCV">
           <BitOffset>256</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
@@ -3527,21 +3531,23 @@
     </PGNDefn>
     <PGNDefn PGN="129285">
       <Name>Navigation - Route/WP Information</Name>
+      <Scope>Generate</Scope>
+      <Flags>ReadWrite,AddItem</Flags>
       <ByteLength>530</ByteLength>
       <Fields>
-        <UIntField Name="Start RPS#">
+        <UIntField Name="Start RPS#" key="start_rps_nb">
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <UIntField Name="nItems">
+        <UIntField Name="nItems" key="nb_items">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <UIntField Name="Database ID">
+        <UIntField Name="Database ID" key="database_id">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <UIntField Name="Route ID">
+        <UIntField Name="Route ID" key="route_id">
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
@@ -3549,39 +3555,39 @@
           <BitOffset>64</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <UIntField Name="Supplementary Route/WP data available">
+        <UIntField Name="Supplementary Route/WP data available" key="supplementary_data">
           <BitOffset>66</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <UIntField Name="Navigation direction in route">
+        <UIntField Name="Navigation direction in route" key="navigation_direction">
           <BitOffset>68</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <ASCIIField Name="Route Name">
+        <VarLengthStringField Name="Route Name" key="route_name">
           <BitOffset>72</BitOffset>
           <BitLength>0</BitLength>
-        </ASCIIField>
+        </VarLengthStringField>
         <UIntField Name="Reserved">
           <Description>Reserved</Description>
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <RepeatedFieldSet Name="WP Definitions" Count="nItems">
-          <UIntField Name="WP ID">
+        <RepeatedFieldSet Name="WP Definitions" Count="nItems" key="WP_definitions">
+          <UIntField Name="WP ID" key="waypoint_id">
             <BitOffset>0</BitOffset>
             <BitLength>16</BitLength>
           </UIntField>
-          <ASCIIField Name="WP Name">
+          <VarLengthStringField Name="WP Name" key="waypoint_name">
             <BitOffset>2</BitOffset>
             <BitLength>0</BitLength>
-          </ASCIIField>
-          <DblField Name="WP Latitude">
+          </VarLengthStringField>
+          <DblField Name="WP Latitude" key="waypoint_latitude">
             <BitOffset>0</BitOffset>
             <BitLength>32</BitLength>
             <FormatAs>Latitude</FormatAs>
             <Scale>1E-07</Scale>
           </DblField>
-          <DblField Name="WP Longitude">
+          <DblField Name="WP Longitude" key="waypoint_longitude">
             <BitOffset>0</BitOffset>
             <BitLength>32</BitLength>
             <FormatAs>Longitude</FormatAs>
@@ -3791,14 +3797,15 @@
     </PGNDefn>
     <PGNDefn PGN="129539">
       <Name>GNSS DOPs</Name>
+      <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="system_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <EnumField Name="Desired Mode">
+        <EnumField Name="Desired Mode" key="desired_mode">
           <BitOffset>8</BitOffset>
           <BitLength>3</BitLength>
           <EnumValues>
@@ -3817,7 +3824,7 @@
           <BitOffset>11</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <EnumField Name="Actual Mode">
+        <EnumField Name="Actual Mode" key="actual_mode">
           <BitOffset>13</BitOffset>
           <BitLength>3</BitLength>
           <EnumValues>
@@ -3831,19 +3838,19 @@
             <EnumPair Value="7" Name="Unknown" />
           </EnumValues>
         </EnumField>
-        <DblField Name="HDOP">
+        <DblField Name="HDOP" key="HDOP">
           <Description>Horizontal dilution of precision</Description>
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <DblField Name="VDOP">
+        <DblField Name="VDOP" key="VDOP">
           <Description>Vertical dilution of precision</Description>
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <DblField Name="TDOP">
+        <DblField Name="TDOP" key="TDOP">
           <Description>Time dilution of precision</Description>
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
@@ -4451,10 +4458,23 @@
           <FormatAs>Time</FormatAs>
           <Scale>0.0001</Scale>
         </UDblField>
-        <CommunicationStatusField Name="AIS Transceiver information">
+        <UIntField Name="Communication State">
+          <Description>Information used by the TDMA slot allocation algorithm and synchronization information</Description>
           <BitOffset>144</BitOffset>
-          <BitLength>24</BitLength>
-        </CommunicationStatusField>
+          <BitLength>19</BitLength>
+        </UIntField>
+        <EnumField Name="AIS Transceiver information">
+          <BitOffset>163</BitOffset>
+          <BitLength>5</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="Channel A VDL reception" />
+            <EnumPair Value="1" Name="Channel B VDL reception" />
+            <EnumPair Value="2" Name="Channel A VDL transmission" />
+            <EnumPair Value="3" Name="Channel B VDL transmission" />
+            <EnumPair Value="4" Name="Own information not broadcast" />
+            <EnumPair Value="5" Name="Reserved" />
+          </EnumValues>
+        </EnumField>
         <UIntField Name="Position Date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>168</BitOffset>
@@ -4863,10 +4883,23 @@
           <FormatAs>Speed</FormatAs>
           <Scale>0.1</Scale>
         </UDblField>
-        <CommunicationStatusField Name="AIS Transceiver information">
+        <UIntField Name="Communication State">
+          <Description>Information used by the TDMA slot allocation algorithm and synchronization information</Description>
           <BitOffset>144</BitOffset>
-          <BitLength>24</BitLength>
-        </CommunicationStatusField>
+          <BitLength>19</BitLength>
+        </UIntField>
+        <EnumField Name="AIS Transceiver information">
+          <BitOffset>163</BitOffset>
+          <BitLength>5</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="Channel A VDL reception" />
+            <EnumPair Value="1" Name="Channel B VDL reception" />
+            <EnumPair Value="2" Name="Channel A VDL transmission" />
+            <EnumPair Value="3" Name="Channel B VDL transmission" />
+            <EnumPair Value="4" Name="Own information not broadcast" />
+            <EnumPair Value="5" Name="Reserved" />
+          </EnumValues>
+        </EnumField>
         <DblField Name="Altitude">
           <BitOffset>168</BitOffset>
           <BitLength>64</BitLength>
@@ -5038,10 +5071,10 @@
           <BitOffset>87</BitOffset>
           <BitLength>1</BitLength>
         </UIntField>
-        <ASCIIField Name="Safety Related Text">
+        <FixLengthStringField Name="Safety Related Text">
           <BitOffset>88</BitOffset>
           <BitLength>2040</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129802">
@@ -5727,10 +5760,10 @@
           <BitOffset>24</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <ASCIIField Name="Database Name">
+        <VarLengthStringField Name="Database Name">
           <BitOffset>32</BitOffset>
           <BitLength>64</BitLength>
-        </ASCIIField>
+        </VarLengthStringField>
         <UDblField Name="Database Timestamp">
           <Description>Seconds since midnight</Description>
           <BitOffset>96</BitOffset>
@@ -5791,10 +5824,10 @@
           <BitOffset>32</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <ASCIIField Name="Route Name">
+        <VarLengthStringField Name="Route Name">
           <BitOffset>40</BitOffset>
           <BitLength>64</BitLength>
-        </ASCIIField>
+        </VarLengthStringField>
         <UIntField Name="Reserved">
           <Description>reserved</Description>
           <BitOffset>104</BitOffset>
@@ -5822,10 +5855,10 @@
           <BitOffset>8</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <ASCIIField Name="Route/WP-List Name">
+        <VarLengthStringField Name="Route/WP-List Name">
           <BitOffset>16</BitOffset>
           <BitLength>64</BitLength>
-        </ASCIIField>
+        </VarLengthStringField>
         <UDblField Name="Route/WP-List Timestamp">
           <Description>Seconds since midnight</Description>
           <BitOffset>80</BitOffset>
@@ -5901,10 +5934,10 @@
           <BitOffset>48</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <ASCIIField Name="WP Name">
+        <VarLengthStringField Name="WP Name">
           <BitOffset>56</BitOffset>
           <BitLength>64</BitLength>
-        </ASCIIField>
+        </VarLengthStringField>
         <DblField Name="WP Latitude">
           <BitOffset>120</BitOffset>
           <BitLength>32</BitLength>
@@ -5947,10 +5980,10 @@
           <BitOffset>48</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <ASCIIField Name="WP Name">
+        <VarLengthStringField Name="WP Name">
           <BitOffset>56</BitOffset>
           <BitLength>64</BitLength>
-        </ASCIIField>
+        </VarLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130069">
@@ -6023,10 +6056,10 @@
           <BitOffset>48</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <ASCIIField Name="Comment">
+        <VarLengthStringField Name="Comment">
           <BitOffset>56</BitOffset>
           <BitLength>64</BitLength>
-        </ASCIIField>
+        </VarLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130071">
@@ -6053,10 +6086,10 @@
           <BitOffset>40</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <ASCIIField Name="Comment">
+        <VarLengthStringField Name="Comment">
           <BitOffset>48</BitOffset>
           <BitLength>64</BitLength>
-        </ASCIIField>
+        </VarLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130072">
@@ -6079,10 +6112,10 @@
           <BitOffset>32</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <ASCIIField Name="Comment">
+        <VarLengthStringField Name="Comment">
           <BitOffset>40</BitOffset>
           <BitLength>64</BitLength>
-        </ASCIIField>
+        </VarLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130073">
@@ -6149,10 +6182,10 @@
             <BitOffset>0</BitOffset>
             <BitLength>16</BitLength>
           </UIntField>
-          <ASCIIField Name="WP Name">
+          <VarLengthStringField Name="WP Name">
             <BitOffset>16</BitOffset>
             <BitLength>0</BitLength>
-          </ASCIIField>
+          </VarLengthStringField>
           <DblField Name="WP Latitude">
             <BitOffset>0</BitOffset>
             <BitLength>32</BitLength>
@@ -6867,10 +6900,10 @@
           <Offset>-273.15</Offset>
           <Scale>0.01</Scale>
         </UDblField>
-        <ASCIIField Name="Station ID">
+        <FixLengthStringField Name="Station ID">
           <BitOffset>272</BitOffset>
           <BitLength>64</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130576">
@@ -7042,10 +7075,10 @@
           <BitOffset>72</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <ASCIIField Name="Text">
+        <FixLengthStringField Name="Text">
           <BitOffset>80</BitOffset>
           <BitLength>256</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130817">
@@ -7072,10 +7105,10 @@
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
         </IntField>
-        <ASCIIField Name="Model">
+        <FixLengthStringField Name="Model">
           <BitOffset>32</BitOffset>
           <BitLength>256</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
         <UIntField Name="A">
           <BitOffset>288</BitOffset>
           <BitLength>8</BitLength>
@@ -7088,18 +7121,18 @@
           <BitOffset>304</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <ASCIIField Name="Firmware version">
+        <FixLengthStringField Name="Firmware version">
           <BitOffset>312</BitOffset>
           <BitLength>80</BitLength>
-        </ASCIIField>
-        <ASCIIField Name="Firmware date">
+        </FixLengthStringField>
+        <FixLengthStringField Name="Firmware date">
           <BitOffset>392</BitOffset>
           <BitLength>256</BitLength>
-        </ASCIIField>
-        <ASCIIField Name="Firmware time">
+        </FixLengthStringField>
+        <FixLengthStringField Name="Firmware time">
           <BitOffset>648</BitOffset>
           <BitLength>256</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130818">
@@ -8008,10 +8041,10 @@
           <BitOffset>40</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <ASCIIField Name="Text">
+        <FixLengthStringField Name="Text">
           <BitOffset>48</BitOffset>
           <BitLength>2040</BitLength>
-        </ASCIIField>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="130880">

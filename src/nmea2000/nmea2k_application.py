@@ -17,7 +17,8 @@ import threading
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_device import NMEA2000Device
 from nmea2000.nmea2k_name import NMEA2000Name
-from nmea2000.nmea2k_iso_messages import AddressClaim, ISORequest, ProductInformation
+from nmea2000.nmea2k_iso_messages import AddressClaim, ISORequest, ProductInformation, ConfigurationInformation
+# from nmea2000.nmea2k_active_controller import NMEA2KActiveController
 from utilities.network_utils import get_id_from_mac
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -81,35 +82,47 @@ class NMEA2000Application(NMEA2000Device):
 
         self._state = self.WAIT_FOR_BUS
         self._process_vector[60928] = self.address_claim_receipt
-        self._controller.add_subscriber(59904, self.iso_request)
+        self._process_vector[59904] = self.iso_request
+        # controller.add_subscriber(59904, self.iso_request)
+        # controller.add_subscriber(60928, self.remote_address_claim)
+        self._process_broadcast_vector = {
+            59904: self.iso_request,
+            60928: self.remote_address_claim
+        }
         self._product_information = ProductInformation()
         self._product_information.nmea2000_version = 2100
-        self._product_information.product_information = 150
+        self._product_information.product_code = 1226
         self._product_information.set_product_information('NMEA MESSAGE ROUTER', 'Version 1.4',
                                                           'ROUTER Sterwen Technology', '00001')
-        self._product_information.certification_level = 0
+        self._product_information.certification_level = 1
         self._product_information.load_equivalency = 1
+        self._configuration_information = ConfigurationInformation()
+        self._configuration_information.installation_1 = "Test1"
+        self._configuration_information.installation_2 = "Test2"
+        self._configuration_information.manufacturer_info = "Sterwen Technology SAS"
+        self._configuration_information.sa = self._address
 
     def send_address_claim(self):
         self.respond_address_claim()
         self._state = self.ADDRESS_CLAIM
-        self._claim_timer = threading.Timer(5.0, self.address_claim_delay)
+        self._claim_timer = threading.Timer(0.4, self.address_claim_delay)
         self._claim_timer.start()
 
     def respond_address_claim(self):
         claim_msg = AddressClaim(self._address, name=self._iso_name)
-        _logger.debug("Application address %d sending address claim" % self._address)
-        self._controller.CAN_interface.send(claim_msg.message())
+        _logger.debug("Application address %d sending address claim to %d" % (self._address, claim_msg.da))
+        self._controller.CAN_interface.send(claim_msg.message(), force_send=True)
 
     def address_claim_delay(self):
         # we consider that we are good to go
         _logger.debug("Address claim for %d delay exhausted" % self._address)
         self._state = self.ACTIVE
         self._controller.CAN_interface.allow_send()
-        request = ISORequest(self._address)
-        self._controller.CAN_interface.send(request.message())
-        t = threading.Timer(1.0, self.send_product_information)
-        t.start()
+        self.send_iso_request(255, 60928)
+        # request = ISORequest(self._address)
+        # self._controller.CAN_interface.send(request.message())
+        # t = threading.Timer(1.0, self.send_product_information)
+        # t.start()
 
     def wait_for_bus_ready(self):
         _logger.debug("Waiting for CAN Bus to be ready")
@@ -122,14 +135,15 @@ class NMEA2000Application(NMEA2000Device):
         t = threading.Thread(target=self.wait_for_bus_ready, daemon=True)
         t.start()
 
-    def address_claim_receipt(self, address_claim_obj):
+    def address_claim_receipt(self, msg: NMEA2000Msg):
         '''
         If we are here we have a address conflict
         By the book, we need to look at the name value
         '''
-        _logger.debug("Application [%d] receive address claim from address %d" % (self._address, address_claim_obj.sa))
+        _logger.debug("Application [%d] receive address claim from address %d da=%d" % (self._address, msg.sa, msg.da))
         if self._claim_timer is not None:
             self._claim_timer.cancel()
+        address_claim_obj = AddressClaim(message=msg)
         iso_name = address_claim_obj.name
         _logger.warning("Address claim with conflict on address %d received with name %8X. Our name: %8X" % (
                         self._address, iso_name.name_value, self._iso_name.name_value))
@@ -142,7 +156,7 @@ class NMEA2000Application(NMEA2000Device):
                 _logger.critical("Cannot obtain a CAN address => Going off line")
                 msg = AddressClaim(address, name=self._iso_name)
                 _logger.warning("Application address %d sending cannot claim address" % self._address)
-                self._controller.CAN_interface.send(msg.message())
+                self._controller.CAN_interface.send(msg.message(), force_send=True)
                 self._controller.stop()
                 return
             # now we need to swap addresses
@@ -154,25 +168,58 @@ class NMEA2000Application(NMEA2000Device):
             self.send_address_claim()
 
     def iso_request(self, msg):
+        _logger.debug("Received ISO request from %d da=%d" % (msg.sa, msg.da))
         if msg.da == self._address or msg.da == 255:
-            _logger.debug("Application ISO request received from %d" % msg.sa)
             request = ISORequest().from_message(msg)
+            _logger.debug("Application ISO request received from %d for pgn %d" % (msg.sa, request.request_pgn))
             if request.request_pgn == 60928:
                 self.respond_address_claim()
                 # self.send_product_information()
             elif request.request_pgn == 126996:
                 # ok we send back the ProductInformation
                 self.send_product_information()
+            elif request.request_pgn == 126998:
+                self.send_configuration_information()
             else:
                 _logger.error("ISO Request on PGN %d not supported" % request.request_pgn)
 
     def send_product_information(self):
         self._product_information.sa = self._address
         _logger.debug("Send product information %s" % self._product_information.message().format1())
-        self._controller.CAN_interface.send(self._product_information.message())
+        self._controller.CAN_interface.send(self._product_information.message(), force_send=True)
 
     def receive_data_msg(self, msg: NMEA2000Msg):
-        pass
+        raise NotImplementedError
+
+    def receive_iso_msg(self, msg: NMEA2000Msg):
+        '''
+        That method processed ISO messages that have a DA=255
+        '''
+        _logger.debug("Receive ISO message from address %d PGN %d" % (msg.sa, msg.pgn))
+        try:
+            self._process_broadcast_vector[msg.pgn](msg)
+        except KeyError:
+            _logger.info("No handler for device %d on PGN %d" % (self._address, msg.pgn))
+
+    def remote_address_claim(self, msg):
+        _logger.debug("Receive address claim from address %d" % msg.sa)
+        device = self._controller.get_device_by_address(msg.sa)
+        if device.product_information is None:
+            self.send_iso_request(msg.sa, 126996)
+            self.send_iso_request(msg.sa, 126998)
+
+    def send_iso_request(self, da: int, pgn: int):
+        _logger.debug("Sending ISO request for PGN %d to address %d" % (pgn, da))
+        request = ISORequest(self._address, da, pgn)
+        self._controller.CAN_interface.send(request.message(), force_send=True)
+
+    def send_configuration_information(self):
+        _logger.debug("Sending configuration information for address %d" % self._address)
+        self._controller.CAN_interface.send(self._configuration_information.message(), force_send=True)
+
+
+
+
 
 
 

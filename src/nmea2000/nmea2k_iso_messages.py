@@ -13,19 +13,22 @@ import logging
 
 from nmea2000.nmea2000_msg import NMEA2000Msg, NMEA2000Object
 from nmea2000.nmea2k_name import NMEA2000Name
-from generated.nmea2000_classes_gen import Pgn126996Class
+from generated.nmea2000_classes_gen import Pgn126996Class, Pgn126998Class
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class AddressClaim(NMEA2000Object):
 
-    def __init__(self, sa=0, name=None, da=255):
+    def __init__(self, sa=0, name=None, da=255, message=None):
         super().__init__(60928)
-        self._sa = sa
-        self._da = da
-        self._name = name
-        self._prio = 6
+        if message is None:
+            self._sa = sa
+            self._da = da
+            self._name = name
+            self._prio = 6
+        else:
+            self.from_message(message)
 
     def encode_payload(self) -> bytes:
         return self._name.bytes()
@@ -64,9 +67,10 @@ class ISORequest(NMEA2000Object):
 
 class ProductInformation(Pgn126996Class):
 
-    def __init__(self):
+    def __init__(self, message=None):
+        super().__init__(message=message)
         self._da = 255
-        self._priority = 7
+        self._priority = 6
 
     def set_product_information(self, model_id: str, software_version: str, model_version: str, serial_code: str):
         def build_fix_str(val):
@@ -75,9 +79,20 @@ class ProductInformation(Pgn126996Class):
                 raise ValueError
             return val + str(nb_space*' ')
 
-        self._product_information = build_fix_str(model_id)
-        self._product_information += build_fix_str(software_version)
-        self._product_information += build_fix_str(model_version)
-        self._product_information += build_fix_str(serial_code)
+        self._model_id = build_fix_str(model_id)
+        self._software_version = build_fix_str(software_version)
+        self._model_version = build_fix_str(model_version)
+        self._model_serial_code = build_fix_str(serial_code)
+
+
+class ConfigurationInformation(Pgn126998Class):
+
+    def __init__(self, message=None):
+        super().__init__(message=message)
+        self._da = 255
+        self._priority = 6
+
+
+
 
 

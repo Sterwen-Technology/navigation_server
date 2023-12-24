@@ -330,6 +330,10 @@ class NMEA2000Object:
         return self._sa
 
     @property
+    def da(self):
+        return self._da
+
+    @property
     def fields(self) -> dict:
         return self._fields
 

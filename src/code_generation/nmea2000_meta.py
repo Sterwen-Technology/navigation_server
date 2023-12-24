@@ -17,7 +17,7 @@ from nmea2000.nmea2k_pgn_definition import PGNDef
 from nmea2000.nmea2k_encode_decode import BitField, BitFieldDef
 from nmea2000.nmea2k_fielddefs import (FIXED_LENGTH_BYTES, FIXED_LENGTH_NUMBER, VARIABLE_LENGTH_BYTES, EnumField,
                                        REPEATED_FIELD_SET, Field)
-from utilities.global_variables import MessageServerGlobals, manufacturer_name
+from utilities.global_variables import MessageServerGlobals, manufacturer_name, find_pgn
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -97,10 +97,11 @@ class AttributeDef(AttributeGen):
 
 class BitFieldAttributeDef(AttributeDef):
 
-    def __init__(self, bitfield: BitField, field: Field, sub_field: BitFieldDef, decode_index: int):
+    def __init__(self, bitfield: BitField, field: Field, sub_field: BitFieldDef, sub_field_idx: int, decode_index: int):
         super().__init__(field, decode_index)
         self._bitfield = bitfield
         self._sub_field = sub_field
+        self._sub_field_idx = sub_field_idx
 
     @property
     def nb_slots(self) -> int:
@@ -113,14 +114,23 @@ class BitFieldAttributeDef(AttributeDef):
     @property
     def bit_offset(self) -> int:
         return self._sub_field.bit_offset
+
+    @property
+    def sub_field_index(self) -> int:
+        return self._sub_field_idx
+
+    @property
+    def last_sub_field(self) -> bool:
+        return self._sub_field_idx == self._bitfield.nb_sub_fields - 1
 
 
 class ReservedBitFieldAttribute(ReservedAttribute):
 
-    def __init__(self, bitfield: BitField, field: Field, sub_field: BitFieldDef, decode_index: int):
+    def __init__(self, bitfield: BitField, field: Field, sub_field: BitFieldDef, sub_field_idx: int, decode_index: int):
         super().__init__(field, decode_index)
         self._bitfield = bitfield
         self._sub_field = sub_field
+        self._sub_field_idx = sub_field_idx
 
     @property
     def nb_slots(self) -> int:
@@ -133,6 +143,14 @@ class ReservedBitFieldAttribute(ReservedAttribute):
     @property
     def bit_offset(self) -> int:
         return self._sub_field.bit_offset
+
+    @property
+    def sub_field_index(self) -> int:
+        return self._sub_field_idx
+
+    @property
+    def last_sub_field(self) -> bool:
+        return self._sub_field_idx == self._bitfield.nb_sub_fields - 1
 
 
 class ScalarAttributeDef(AttributeDef):
@@ -270,16 +288,20 @@ class FieldSetMeta:
         self._last_attr = self._nb_attributes - 1
 
     def analyze_attributes(self, field_list):
-        # we assume always starting with a ValueSet
-        segment = DecodeSegment(DecodeSegment.VALUE_SET, 0)
+
+        segment = None
         current_byte = 0
-        self._segments.append(segment)
+        # self._segments.append(segment)
 
         for field in field_list:
             # print("Field:", field.name)
             if field.decode_method == FIXED_LENGTH_NUMBER:
 
-                if segment.segment_type != DecodeSegment.VALUE_SET:
+                if segment is None:
+                    segment = DecodeSegment(DecodeSegment.VALUE_SET, current_byte)
+                    self._decode_index = 0
+                    self._segments.append(segment)
+                elif segment.segment_type != DecodeSegment.VALUE_SET:
                     # need to change segment type
                     current_byte += segment.length
                     segment = DecodeSegment(DecodeSegment.VALUE_SET, current_byte)
@@ -290,17 +312,21 @@ class FieldSetMeta:
                 current_attr = None
                 if isinstance(field, BitField):
                     # need to look in subfields
+                    sub_field_idx = 0
                     for sub_field in field.sub_fields():
                         a_field = sub_field.field()  # a_field is the one that appears in the PGN definition
                         if sub_field.field().keyword is not None:
-                            current_attr = BitFieldAttributeDef(field, a_field, sub_field, self._decode_index)
+                            current_attr = BitFieldAttributeDef(field, a_field, sub_field, sub_field_idx,
+                                                                self._decode_index)
                             self._attributes.append(current_attr)
                             self._attr_dict[current_attr.method] = current_attr
                             segment.add_attribute(current_attr)
                         else:
-                            attr = ReservedBitFieldAttribute(a_field, a_field, sub_field, self._decode_index)
+                            attr = ReservedBitFieldAttribute(a_field, a_field, sub_field, sub_field_idx,
+                                                             self._decode_index)
                             segment.add_attribute(attr)
                             self._reserved_attributes.append(attr)
+                        sub_field_idx += 1
 
                 elif field.keyword is not None:
                     # need to generate a local variable and access method
@@ -321,7 +347,8 @@ class FieldSetMeta:
                         self._enums.append(enum_def)
 
             elif field.decode_method == FIXED_LENGTH_BYTES:
-                current_byte += segment.length
+                if segment is not None:
+                    current_byte += segment.length
                 segment = DecodeSegment(DecodeSegment.FIX_LENGTH, current_byte)
                 self._segments.append(segment)
                 segment.set_length(field.length())
@@ -335,8 +362,10 @@ class FieldSetMeta:
                 segment.set_attribute(current_attr)
 
             elif field.decode_method == VARIABLE_LENGTH_BYTES:
-                current_byte += segment.length
+                if segment is not None:
+                    current_byte += segment.length
                 segment = DecodeSegment(DecodeSegment.VARIABLE_LENGTH, current_byte)
+                self._segments.append(segment)
                 if field.keyword is not None:
                     current_attr = AttributeDef(field)
                     self._attributes.append(current_attr)
@@ -470,14 +499,25 @@ class NMEA2000Meta(FieldSetMeta):
     @property
     def read_only(self) -> bool:
         return self.is_proprietary or self._read_only
+
     @property
     def force_write(self) -> bool:
         return self._force_write
 
+    def has_flag(self, flag: str) -> bool:
+        return self._pgn_def.has_flag(flag)
 
-def nmea2000_gen_meta():
+
+def nmea2000_gen_meta(pgn=None):
     class_def_list = []
-    for cls in MessageServerGlobals.pgn_definitions.generation_iter():
+    if pgn is None or pgn == 0:
+        for cls in MessageServerGlobals.pgn_definitions.generation_iter():
+            class_def_list.append(NMEA2000Meta(cls))
+    else:
+        try:
+            cls = find_pgn(pgn)
+        except KeyError:
+            return None
         class_def_list.append(NMEA2000Meta(cls))
     return class_def_list
 

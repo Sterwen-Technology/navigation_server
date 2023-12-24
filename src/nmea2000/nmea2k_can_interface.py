@@ -224,9 +224,9 @@ class SocketCANInterface(threading.Thread):
             self._trace.stop_trace()
         self._bus.shutdown()
 
-    def send(self, n2k_msg: NMEA2000Msg):
+    def send(self, n2k_msg: NMEA2000Msg, force_send=False):
 
-        if not self._allowed_send.is_set() and n2k_msg.pgn not in [59904, 60928]:
+        if not self._allowed_send.is_set() and not force_send:
             _logger.error("Trying to send messages on the BUS while no address claimed")
             return
 

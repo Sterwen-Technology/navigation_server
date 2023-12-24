@@ -16,6 +16,7 @@ import time
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_publisher import PgnRecord
 from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeException
+from nmea2000.nmea2k_iso_messages import AddressClaim, ConfigurationInformation, ProductInformation
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_factory import NMEA2000Factory
 from utilities.global_variables import MessageServerGlobals
@@ -35,10 +36,13 @@ class NMEA2000Device:
         self._lastmsg_ts = 0
         self._pgn_received = {}
         self._process_vector = {60928: self.p60928,
-                                126996: self.p126996
+                                126993: self.p126993,
+                                126996: self.p126996,
+                                126998: self.p126998
                                 }
         # self._fields_60928 = None
         self._obj_126996 = None
+        self._configuration_info = None
         self._iso_name = name
         self._changed = True
         if properties is None:
@@ -47,22 +51,17 @@ class NMEA2000Device:
             self._properties = properties
 
     def receive_msg(self, msg: NMEA2000Msg):
-        _logger.debug("New message PGN %d for device @%d" % (msg.pgn, self._address))
+        _logger.debug("NMEA2000 Device manager: New message PGN %d for device @%d" % (msg.pgn, self._address))
         self._lastmsg_ts = time.time()
         try:
             pgn_def = self.add_pgn_count(msg.pgn)
         except N2KUnknownPGN:
             return
         try:
-            process_function = self._process_vector[msg.pgn]
+            self._process_vector[msg.pgn](msg)
         except KeyError:
+            _logger.info("Device address %d => no process function for PGN %d" % (self._address, msg.pgn))
             return
-        try:
-            n2k_obj = NMEA2000Factory.build_n2k_object(msg)
-        except N2KDecodeException as e:
-            _logger.error("NMEA2000 Device - PGN %d decode error %s" % (msg.pgn, e))
-            return
-        process_function(n2k_obj)
 
     def set_property(self, source, property_name):
         try:
@@ -88,11 +87,13 @@ class NMEA2000Device:
             self._pgn_received[pgn] = pgn_def
         return pgn_def
 
-    def p60928(self, n2k_obj):
+    def p60928(self, msg: NMEA2000Msg):
 
         #   _logger.debug("PGN 60928 data= %s" % msg_data)
         if self._iso_name is None:
             self._changed = True
+            n2k_obj = AddressClaim()
+            n2k_obj.from_message(msg)
             self._iso_name = n2k_obj.name
             _logger.info("Processing ISO address claim for address %d name=%16X" %
                          (self._address, self._iso_name.name_value))
@@ -106,30 +107,30 @@ class NMEA2000Device:
             except KeyError:
                 self._properties['Manufacturer Name'] = "Manufacturer#%d" % mfg_code
 
-    def p126996(self, n2k_obj):
+    def p126993(self, msg: NMEA2000Msg):
+        _logger.info("Device %d heartbeat received" % msg.sa)
+
+    def p126996(self, msg: NMEA2000Msg):
 
         if self._obj_126996 is None:
             self._changed = True
+            n2k_obj = ProductInformation(message=msg)
             _logger.info("Processing Product information for address %d: %s" % (self._address, n2k_obj))
             self._obj_126996 = n2k_obj
             self._properties['NMEA 2000 Version'] = n2k_obj.nmea2000_version
             self._properties['Product Code'] = n2k_obj.product_code
             self._properties['Certification Level'] = n2k_obj.certification_level
             self._properties['Load Equivalency'] = n2k_obj.load_equivalency
-            try:
-                pi = n2k_obj.product_information
-            except AttributeError:
-                _logger.error("No Product Information in PGN 126996")
-                return
-            lpi = len(pi)
-            self._properties['Product name'] = pi[0:32].rstrip(' \x00')
-            if lpi >= 64:
-                self._properties['Product version'] = pi[32:64].rstrip(' \x00')
-                if lpi >= 96:
-                    self._properties['Description'] = pi[64:96].rstrip(' \x00')
-                    if lpi >= 128:
-                        self._properties['Firmware'] = pi[96:128].rstrip(' \x00')
+            self._properties['Product name'] = n2k_obj.model_id
+
+            self._properties['Product version'] = n2k_obj.model_version
+            self._properties['Description'] = n2k_obj.model_serial_code
+            self._properties['Firmware'] = n2k_obj.software_version
             # print(product_name,"|", product_version,"|", description, "|", firmware)
+
+    def p126998(self, msg: NMEA2000Msg):
+        self._configuration_info = ConfigurationInformation(message=msg)
+        _logger.info("Configuration info for address %d: %s" % (self._address, self._configuration_info))
 
     def asDict(self):
         return {'address:': self._address, 'properties': self._properties}
@@ -139,4 +140,8 @@ class NMEA2000Device:
 
     def clear_change_flag(self):
         self._changed = False
+
+    @property
+    def product_information(self) -> ProductInformation:
+        return self._obj_126996
 

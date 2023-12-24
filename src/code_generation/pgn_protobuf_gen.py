@@ -19,10 +19,12 @@ from utilities.global_variables import Typedef
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
-scalar_type_association = { Typedef.UINT: {1: 'uint32', 2: 'uint32', 4: 'uint32', 8: 'uint64'},
-                            Typedef.INT: {1: 'int32', 2: 'int32', 4: 'int32', 8: 'int64'},
-                            Typedef.FLOAT: {2: 'float', 4: 'float', 8: 'double'}
+scalar_type_association = { Typedef.UINT: {1: 'uint32', 2: 'uint32', 3: 'uint32', 4: 'uint32', 8: 'uint64'},
+                            Typedef.INT: {1: 'int32', 2: 'int32', 3: 'int32', 4: 'int32', 8: 'int64'},
+                            Typedef.FLOAT: {1: 'float', 2: 'float', 3: 'float', 4: 'float', 8: 'double'}
                             }
+
+other_type_association = {Typedef.STRING: 'string', Typedef.BYTES: 'bytes'}
 
 
 class ProtobufPGNGenerator:
@@ -47,7 +49,7 @@ class ProtobufPGNGenerator:
             self.gen_pgn_message(cls)
 
     def gen_pgn_message(self, class_def: NMEA2000Meta):
-        self._of.write(f'message {class_def.class_name}Pb'' {\n')
+        self._of.write(f'message {class_def.class_name}Pb'' {'f'  // {class_def.name}\n')
         if class_def.repeat_field_set is not None:
             self._of.write(f'\tmessage {class_def.repeat_field_set.class_name}Pb'' {\n')
             self.gen_attributes(class_def.repeat_field_set, '\t\t')
@@ -67,8 +69,16 @@ class ProtobufPGNGenerator:
                 except KeyError:
                     _logger.error(f"Wrong protobuf type for {attr.method} in PGN {class_def.class_name}")
                     continue
-                self._of.write(f'{tabs}{pb_type} {attr.method} = {field_number};\n')
-                field_number += 1
+            elif isinstance(attr, RepeatAttributeDef):
+                continue
+            else:
+                try:
+                    pb_type = other_type_association[attr.typedef]
+                except KeyError:
+                    _logger.error(f"Wrong protobuf type for {attr.method} in PGN {class_def.class_name}")
+                    continue
+            self._of.write(f'{tabs}{pb_type} {attr.method} = {field_number};\n')
+            field_number += 1
         return field_number
 
 

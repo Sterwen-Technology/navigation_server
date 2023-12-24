@@ -159,6 +159,10 @@ class Publisher(threading.Thread):
     def resolve_ref(name):
         return NavigationConfiguration.get_conf().get_object(name)
 
+    @property
+    def is_active(self) -> bool:
+        return self._active
+
 
 class LogPublisher(Publisher):
     def __init__(self, opts):

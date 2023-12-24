@@ -46,7 +46,7 @@ class PGNDef (BitFieldGenerator):
         PGNRange(0x1FF00, 0x1FFFF, PDU2, PROP_FAST_PACKET, 'Proprietary fast packet non-addressed')
     ]
 
-    pgn_service = [59392, 59904, 60928, 65240, 126208, 126464, 126993, 126996]
+    pgn_service = [59392, 59904, 60928, 65240, 126208, 126464, 126993, 126996, 126998]
 
     @staticmethod
     def set_trace(enum_error: bool, warning: bool):

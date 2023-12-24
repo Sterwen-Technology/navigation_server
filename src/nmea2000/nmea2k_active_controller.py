@@ -89,6 +89,7 @@ class NMEA2KActiveController(NMEA2KController):
             app.start_application()
 
     def process_msg(self, msg: NMEA2000Msg):
+        _logger.debug("CAN data received sa=%d PGN=%d da=%d" % (msg.sa, msg.pgn, msg.da))
         if msg.da != 255:
             # we have a da, so call the application
             try:
@@ -102,6 +103,9 @@ class NMEA2KActiveController(NMEA2KController):
         else:
             if msg.is_iso_protocol:
                 super().process_msg(msg)    # proxy treatment
+                # need also to process broadcast (DA=255) messages
+                for application in self._applications.values():
+                    application.receive_iso_msg(msg)
             else:
                 for application in self._applications.values():
                     application.receive_data_msg(msg)
