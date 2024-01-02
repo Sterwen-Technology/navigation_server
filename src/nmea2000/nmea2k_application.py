@@ -17,9 +17,11 @@ import threading
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_device import NMEA2000Device
 from nmea2000.nmea2k_name import NMEA2000Name
-from nmea2000.nmea2k_iso_messages import AddressClaim, ISORequest, ProductInformation, ConfigurationInformation
+from nmea2000.nmea2k_iso_messages import (AddressClaim, ISORequest, ProductInformation, ConfigurationInformation,
+                                         GroupFunction)
 # from nmea2000.nmea2k_active_controller import NMEA2KActiveController
 from utilities.network_utils import get_id_from_mac
+from utilities.global_variables import MessageServerGlobals
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -47,7 +49,8 @@ class NMEA2000ApplicationPool:
             iso_name = NMEA2000Name.create_name(
                 identity_number=self._unique_id_root | self._application_count,
                 manufacturer_code=self._mfg_code,
-                device_class=70,
+                device_class=25,
+                device_function=130,
                 industry_group=4,
                 arbitrary_address_capable=1
                 )
@@ -83,6 +86,7 @@ class NMEA2000Application(NMEA2000Device):
         self._state = self.WAIT_FOR_BUS
         self._process_vector[60928] = self.address_claim_receipt
         self._process_vector[59904] = self.iso_request
+        self._process_vector[126208] = self.group_function_handler
         # controller.add_subscriber(59904, self.iso_request)
         # controller.add_subscriber(60928, self.remote_address_claim)
         self._process_broadcast_vector = {
@@ -92,7 +96,8 @@ class NMEA2000Application(NMEA2000Device):
         self._product_information = ProductInformation()
         self._product_information.nmea2000_version = 2100
         self._product_information.product_code = 1226
-        self._product_information.set_product_information('NMEA MESSAGE ROUTER', 'Version 1.4',
+        self._product_information.set_product_information('NMEA MESSAGE ROUTER',
+                                                          f'Version {MessageServerGlobals.version}',
                                                           'ROUTER Sterwen Technology', '00001')
         self._product_information.certification_level = 1
         self._product_information.load_equivalency = 1
@@ -102,14 +107,14 @@ class NMEA2000Application(NMEA2000Device):
         self._configuration_information.manufacturer_info = "Sterwen Technology SAS"
         self._configuration_information.sa = self._address
 
-    def send_address_claim(self):
-        self.respond_address_claim()
+    def send_address_claim(self, da=255):
+        self.respond_address_claim(da)
         self._state = self.ADDRESS_CLAIM
         self._claim_timer = threading.Timer(0.4, self.address_claim_delay)
         self._claim_timer.start()
 
-    def respond_address_claim(self):
-        claim_msg = AddressClaim(self._address, name=self._iso_name)
+    def respond_address_claim(self, da):
+        claim_msg = AddressClaim(self._address, name=self._iso_name, da=da)
         _logger.debug("Application address %d sending address claim to %d" % (self._address, claim_msg.da))
         self._controller.CAN_interface.send(claim_msg.message(), force_send=True)
 
@@ -143,7 +148,7 @@ class NMEA2000Application(NMEA2000Device):
         _logger.debug("Application [%d] receive address claim from address %d da=%d" % (self._address, msg.sa, msg.da))
         if self._claim_timer is not None:
             self._claim_timer.cancel()
-        address_claim_obj = AddressClaim(message=msg)
+        address_claim_obj = AddressClaim(message=msg, da=msg.sa)
         iso_name = address_claim_obj.name
         _logger.warning("Address claim with conflict on address %d received with name %8X. Our name: %8X" % (
                         self._address, iso_name.name_value, self._iso_name.name_value))
@@ -154,7 +159,7 @@ class NMEA2000Application(NMEA2000Device):
             address = self._controller.app_pool.get_new_address()
             if address == 254:
                 _logger.critical("Cannot obtain a CAN address => Going off line")
-                msg = AddressClaim(address, name=self._iso_name)
+                msg = AddressClaim(address, name=self._iso_name, da=msg.sa)
                 _logger.warning("Application address %d sending cannot claim address" % self._address)
                 self._controller.CAN_interface.send(msg.message(), force_send=True)
                 self._controller.stop()
@@ -173,7 +178,7 @@ class NMEA2000Application(NMEA2000Device):
             request = ISORequest().from_message(msg)
             _logger.debug("Application ISO request received from %d for pgn %d" % (msg.sa, request.request_pgn))
             if request.request_pgn == 60928:
-                self.respond_address_claim()
+                self.respond_address_claim(msg.sa)
                 # self.send_product_information()
             elif request.request_pgn == 126996:
                 # ok we send back the ProductInformation
@@ -199,7 +204,7 @@ class NMEA2000Application(NMEA2000Device):
         try:
             self._process_broadcast_vector[msg.pgn](msg)
         except KeyError:
-            _logger.info("No handler for device %d on PGN %d" % (self._address, msg.pgn))
+            _logger.debug("Receive ISO message => No handler for device %d on PGN %d" % (self._address, msg.pgn))
 
     def remote_address_claim(self, msg):
         _logger.debug("Receive address claim from address %d" % msg.sa)
@@ -216,6 +221,16 @@ class NMEA2000Application(NMEA2000Device):
     def send_configuration_information(self):
         _logger.debug("Sending configuration information for address %d" % self._address)
         self._controller.CAN_interface.send(self._configuration_information.message(), force_send=True)
+
+    def group_function_handler(self, msg: NMEA2000Msg):
+        '''
+        Handle PGN 126408 Group Function handler
+        '''
+        group_function = GroupFunction(message=msg)
+        _logger.debug("Received Group Function for address %d function=%d on PGN %d" % (self._address,
+                                                                                        group_function.function,
+                                                                                        group_function.function_pgn))
+
 
 
 

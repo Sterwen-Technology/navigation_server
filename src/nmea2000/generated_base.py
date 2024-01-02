@@ -73,12 +73,21 @@ def insert_var_str(payload: bytearray, start_byte, string_to_insert) -> int:
 
 
 def insert_string(buffer, start, length, string_to_insert):
-    if len(string_to_insert) > length:
+    '''
+    Insert exactly length bytes in the buffer, padding with FF if needed
+    '''
+    delta_l = length - len(string_to_insert)
+    if delta_l < 0:
         bytes_to_insert = string_to_insert[:length].encode()
     else:
         bytes_to_insert = string_to_insert.encode()
     last_to_insert = start + len(bytes_to_insert)
     buffer[start: last_to_insert] = bytes_to_insert
+    if delta_l > 0:
+        # then we need to pad extra bytes 0xFF
+        for idx in range(last_to_insert, start + length):
+            buffer[idx] = 0xFF
+
 
 
 def check_convert_float(val: int, invalid_mask: int, scale: float, offset: float = 0.0) -> float:

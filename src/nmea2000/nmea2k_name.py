@@ -267,6 +267,21 @@ class NMEA2000Name:
             res += "%s = %d\n" % (f.description, f.extract_field(self._value))
         return res
 
+    def set_device_upper(self, value: int):
+        if value < 0 or value > 0x1f:
+            raise ValueError
+        self.__fields[3].set_field(self._value, value)
+
+    def set_device_lower(self, value: int):
+        if value < 0 or value > 7:
+            raise ValueError
+        self.__fields[2].set_field(self._value, value)
+
+    def set_system_instance(self, value: int):
+        if value < 0 or value > 15:
+            raise ValueError
+        self.__fields[6].set_field(self._value, value)
+
     @staticmethod
     def create_name(**kwargs):
         name = 0

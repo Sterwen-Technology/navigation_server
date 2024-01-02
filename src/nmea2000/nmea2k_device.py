@@ -16,7 +16,7 @@ import time
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_publisher import PgnRecord
 from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeException
-from nmea2000.nmea2k_iso_messages import AddressClaim, ConfigurationInformation, ProductInformation
+from nmea2000.nmea2k_iso_messages import AddressClaim, ConfigurationInformation, ProductInformation, Heartbeat
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_factory import NMEA2000Factory
 from utilities.global_variables import MessageServerGlobals
@@ -41,8 +41,9 @@ class NMEA2000Device:
                                 126998: self.p126998
                                 }
         # self._fields_60928 = None
-        self._obj_126996 = None
+        self._product_information = None
         self._configuration_info = None
+        self._heartbeat = None
         self._iso_name = name
         self._changed = True
         if properties is None:
@@ -108,15 +109,16 @@ class NMEA2000Device:
                 self._properties['Manufacturer Name'] = "Manufacturer#%d" % mfg_code
 
     def p126993(self, msg: NMEA2000Msg):
-        _logger.info("Device %d heartbeat received" % msg.sa)
+        self._heartbeat = Heartbeat(message=msg)
+        _logger.info("Device %d heartbeat received: %s" % (msg.sa, self._heartbeat))
 
     def p126996(self, msg: NMEA2000Msg):
 
-        if self._obj_126996 is None:
+        if self._product_information is None:
             self._changed = True
             n2k_obj = ProductInformation(message=msg)
             _logger.info("Processing Product information for address %d: %s" % (self._address, n2k_obj))
-            self._obj_126996 = n2k_obj
+            self._product_information = n2k_obj
             self._properties['NMEA 2000 Version'] = n2k_obj.nmea2000_version
             self._properties['Product Code'] = n2k_obj.product_code
             self._properties['Certification Level'] = n2k_obj.certification_level
@@ -143,5 +145,5 @@ class NMEA2000Device:
 
     @property
     def product_information(self) -> ProductInformation:
-        return self._obj_126996
+        return self._product_information
 

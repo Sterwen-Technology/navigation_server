@@ -1190,14 +1190,25 @@
           <BitLength>16</BitLength>
           <Scale>10</Scale>
         </UDblField>
-        <UIntField Name="Status" key="status">
+        <UIntField Name="Sequence" key="sequence">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="Reserved">
-          <Description>Reserved</Description>
+        <UIntField Name="Controller 1 state" key="ctrl1_state">
           <BitOffset>24</BitOffset>
-          <BitLength>8</BitLength>
+          <BitLength>2</BitLength>
+        </UIntField>
+        <UIntField Name="Controller 2 state" key="ctrl2_state">
+          <BitOffset>26</BitOffset>
+          <BitLength>2</BitLength>
+        </UIntField>
+        <UIntField Name="Equipment Status" key="equipment_status">
+           <BitOffset>28</BitOffset>
+           <BitLength>2</BitLength>
+        </UIntField>
+        <UIntField Name="Reserved">
+          <BitOffset>30</BitOffset>
+          <BitLength>2</BitLength>
         </UIntField>
         <UIntField Name="Reserved">
           <Description>Reserved</Description>

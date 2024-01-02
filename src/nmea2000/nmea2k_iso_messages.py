@@ -10,10 +10,11 @@
 # -------------------------------------------------------------------------------
 
 import logging
+import struct
 
 from nmea2000.nmea2000_msg import NMEA2000Msg, NMEA2000Object
 from nmea2000.nmea2k_name import NMEA2000Name
-from generated.nmea2000_classes_gen import Pgn126996Class, Pgn126998Class
+from generated.nmea2000_classes_gen import Pgn126996Class, Pgn126998Class, Pgn126993Class
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -79,10 +80,10 @@ class ProductInformation(Pgn126996Class):
                 raise ValueError
             return val + str(nb_space*' ')
 
-        self._model_id = build_fix_str(model_id)
-        self._software_version = build_fix_str(software_version)
-        self._model_version = build_fix_str(model_version)
-        self._model_serial_code = build_fix_str(serial_code)
+        self._model_id = model_id
+        self._software_version = software_version
+        self._model_version = model_version
+        self._model_serial_code = serial_code
 
 
 class ConfigurationInformation(Pgn126998Class):
@@ -91,6 +92,50 @@ class ConfigurationInformation(Pgn126998Class):
         super().__init__(message=message)
         self._da = 255
         self._priority = 6
+
+
+class Heartbeat(Pgn126993Class):
+
+    def __init__(self, message=None):
+        super().__init__(message=message)
+
+
+class GroupFunction(NMEA2000Object):
+    '''
+    That PGN need very specific handling as the content is highly variable
+    '''
+
+    function_str = struct.Struct("<BHB")
+
+    def __init__(self, message: NMEA2000Msg = None, function=0, pgn=0):
+
+        super().__init__(126208)
+        if message is not None:
+            self._sa = message.sa
+            v = self.function_str.unpack_from(message.payload, 0)
+            self._function = v[0]
+            self._function_pgn = v[1] + (v[2] << 16)
+            _logger.debug("Group Function [%d] on PGN %d" % (self._function, self._function_pgn))
+
+        elif pgn > 0:
+            _logger.debug("New Group Function command=%d for PGN %d" % (function, pgn))
+
+        else:
+            raise ValueError
+
+    @property
+    def function(self) -> int:
+        return self._function
+
+    @property
+    def function_pgn(self) -> int:
+        return self._function_pgn
+
+
+
+
+
+
 
 
 
