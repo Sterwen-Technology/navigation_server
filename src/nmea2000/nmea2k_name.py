@@ -267,6 +267,11 @@ class NMEA2000Name:
             res += "%s = %d\n" % (f.description, f.extract_field(self._value))
         return res
 
+    def __eq__(self, name):
+        if type(name) is not NMEA2000Name:
+            return False
+        return self._value == name.int_value
+
     def set_device_upper(self, value: int):
         if value < 0 or value > 0x1f:
             raise ValueError
@@ -281,6 +286,10 @@ class NMEA2000Name:
         if value < 0 or value > 15:
             raise ValueError
         self.__fields[6].set_field(self._value, value)
+
+    @property
+    def int_value(self) -> int:
+        return self._value
 
     @staticmethod
     def create_name(**kwargs):

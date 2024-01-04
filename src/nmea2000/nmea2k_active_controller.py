@@ -36,6 +36,7 @@ class NMEA2KActiveController(NMEA2KController):
         self._applications = {}
         self._apool = NMEA2000ApplicationPool(self, opts)
         self._application_names = opts.getlist('applications', str, None)
+        self._address_change_request = None
 
     def start(self):
         if self._application_names is not None:
@@ -73,10 +74,15 @@ class NMEA2KActiveController(NMEA2KController):
         self._applications[application.address] = application
         self._can.add_address(application.address)
 
-    def change_application_address(self, application, old_address):
+    def apply_change_application_address(self):
         # application must already be initialized with the target address
-        self.remove_application(old_address)
-        self.add_application(application)
+        self.remove_application(self._address_change_request[1])
+        self.add_application(self._address_change_request[0])
+        self._address_change_request = None
+
+    def change_application_address(self, application, old_address):
+        assert self._address_change_request is None
+        self._address_change_request = (application, old_address)
 
     def remove_application(self, old_address: int):
         self.delete_device(old_address)
@@ -106,6 +112,9 @@ class NMEA2KActiveController(NMEA2KController):
                 # need also to process broadcast (DA=255) messages
                 for application in self._applications.values():
                     application.receive_iso_msg(msg)
+                if self._address_change_request is not None:
+                    # address change cannot be applied on the fly
+                    self.apply_change_application_address()
             else:
                 for application in self._applications.values():
                     application.receive_data_msg(msg)

@@ -203,7 +203,7 @@ class FastPacketHandler:
         while counter < nb_frames:
             remaining_bytes = total_len - data_ptr
             frame_len = min(8, remaining_bytes + 1)
-            frame = bytearray(frame_len)
+            frame = bytearray(8)
             frame[0] = seq_en | counter
             ptr = 1
             if counter == 0:
@@ -213,6 +213,10 @@ class FastPacketHandler:
                 frame[ptr] = data[data_ptr]
                 data_ptr += 1
                 ptr += 1
+            if frame_len < 8:
+                while ptr < 8:
+                    frame[ptr] = 0xFF
+                    ptr += 1
             # print("frame #", counter, "remaining bytes", remaining_bytes, "DLC", len(frame))
             yield frame
             counter += 1

@@ -5,14 +5,21 @@
 # Author:      Laurent Carré
 #
 # Created:     12/09/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
+
+# update notes
+# 4/1/2024  => adding a first minimal version of ISO (J1939) Transport protocol - Only broadcast receipt
+
+
+
 import datetime
 import logging
 from can import Bus, Message, CanError
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
+from nmea2000.nmea2k_iso_transport import IsoTransportHandler, IsoTransportException
 from nmea2000.nmea2k_pgn_definition import PGNDef
 from log_replay.message_trace import NMEAMsgTrace, MessageTraceError
 from utilities.global_variables import find_pgn
@@ -70,6 +77,7 @@ class SocketCANInterface(threading.Thread):
         self._in_queue = queue.Queue(30)
         self._bus_queue = queue.Queue(50)
         self._fp_handler = FastPacketHandler(self)
+        self._iso_tp_handler = IsoTransportHandler()
         self._total_msg_in = 0
         # self._access_lock = threading.Lock()
         self._addresses = [255]
@@ -162,6 +170,23 @@ class SocketCANInterface(threading.Thread):
         if self._trace is not None:
             self.send_trace(NMEAMsgTrace.TRACE_IN, can_id, msg_recv.timestamp, data)
         self._total_msg_in += 1
+        # ISO TP handling
+        # only Broadcast messages are handled, others will raise an exception
+        if pgn == 60416:
+            self._iso_tp_handler.new_transaction(sa, prio, data)
+            return
+        elif pgn == 60160:
+            try:
+                n2k_msg = self._iso_tp_handler.incoming_packet(sa, data)
+            except IsoTransportException:
+                return
+            if n2k_msg is not None:
+                try:
+                    self._queue.put(n2k_msg, block=False)
+                except queue.Full:
+                    _logger.warning("CAN read queue full, message ignored")
+            return
+
         # Fast packet handling
         if self._fp_handler.is_pgn_active(pgn, sa, data):
             try:
@@ -203,6 +228,17 @@ class SocketCANInterface(threading.Thread):
             # _logger.error("%s unable to lock CAN interface" % self.name)
             # raise SocketCanReadInvalid
 
+    @staticmethod
+    def build_arbitration_id(n2k_msg: NMEA2000Msg) -> int:
+        can_id = n2k_msg.sa
+        pf = (n2k_msg.pgn >> 8) & 0xFF
+        if pf < 240:
+            can_id |= (n2k_msg.pgn + n2k_msg.da) << 8
+        else:
+            can_id |= n2k_msg.pgn << 8
+        can_id |= (n2k_msg.prio & 7) << 26
+        return can_id
+
     def run(self):
 
         #  Run loop
@@ -224,37 +260,47 @@ class SocketCANInterface(threading.Thread):
             self._trace.stop_trace()
         self._bus.shutdown()
 
+    def put_can_msg(self, can_id, data) -> bool:
+        msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.time(), data=data)
+        try:
+            self._in_queue.put(msg, timeout=5.0)
+        except queue.Full:
+            _logger.error("Socket CAN Write buffer full")
+            return False
+        return True
+
     def send(self, n2k_msg: NMEA2000Msg, force_send=False):
 
         if not self._allowed_send.is_set() and not force_send:
             _logger.error("Trying to send messages on the BUS while no address claimed")
             return
 
-        can_id = n2k_msg.sa
-        pf = (n2k_msg.pgn >> 8) & 0xFF
-        if pf < 240:
-            can_id |= (n2k_msg.pgn + n2k_msg.da) << 8
-        else:
-            can_id |= n2k_msg.pgn << 8
-        can_id |= (n2k_msg.prio & 7) << 26
+        can_id = self.build_arbitration_id(n2k_msg)
 
         _logger.debug("CAN interface send in queue message: %s" % n2k_msg.format1())
 
         # Fast packet processing
         if find_pgn(n2k_msg.pgn).fast_packet():
             for data in self._fp_handler.split_message(n2k_msg.pgn, n2k_msg.payload):
-                msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.time(), data=data)
-                try:
-                    self._in_queue.put(msg, timeout=5.0)
-                except queue.Full:
-                    _logger.error("Socket CAN Write buffer full")
+                if not self.put_can_msg(can_id, data):
                     return False
         else:
-            msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.time(), data=n2k_msg.payload)
-            try:
-                self._in_queue.put(msg, timeout=5.0)
-            except queue.Full:
-                _logger.error("Socket CAN Write buffer full")
+            return self.put_can_msg(can_id, n2k_msg.payload)
+        return True
+
+    def send_broadcast_with_iso_tp(self, msg: NMEA2000Msg):
+        '''
+        Send a PGN with the J1939/21 Transport protocol
+        '''
+        tp_transact, tpcm_msg = self._iso_tp_handler.new_output_transaction(msg)
+        can_id = self.build_arbitration_id(tpcm_msg)
+        # send the broadcast announcement
+        if not self.put_can_msg(can_id, tpcm_msg.payload):
+            return False
+        # now send the data
+        bam_tpdt_can_id = self.build_arbitration_id(NMEA2000Msg(60160, 7, msg.sa, 255))
+        for data in tp_transact.split_message():
+            if not self.put_can_msg(bam_tpdt_can_id, data):
                 return False
         return True
 
@@ -307,14 +353,14 @@ class SocketCANWriter(threading.Thread):
     def run(self):
         '''
         Wait for messages to be sent on the queue and then send them to the CAN BUS
-        Message pacing is implemented with a fixed timing of 50ms (to be improved)
+        Message pacing is implemented with a fixed timing of 5ms (to be improved)
         '''
 
         #  Run loop
         last_write_time = time.monotonic()
         while not self._stop_flag:
 
-            if time.monotonic() - last_write_time < 0.05:
+            if time.monotonic() - last_write_time < 0.005:
                 continue
 
             try:

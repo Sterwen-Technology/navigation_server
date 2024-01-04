@@ -663,6 +663,10 @@ class NameField(Field):
     def decode_method(self):
         return FIXED_LENGTH_NUMBER
 
+    @property
+    def decode_string(self) -> str:
+        return 'Q'
+
 
 class BytesField(Field):
 

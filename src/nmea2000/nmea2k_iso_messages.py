@@ -21,6 +21,8 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 class AddressClaim(NMEA2000Object):
 
+    parameter_table = []
+
     def __init__(self, sa=0, name=None, da=255, message=None):
         super().__init__(60928)
         if message is None:
@@ -100,9 +102,41 @@ class Heartbeat(Pgn126993Class):
         super().__init__(message=message)
 
 
+class CommandedAddress(NMEA2000Object):
+
+    def __init__(self, sa=0, da=0, name=None, commanded_address=0, message=None):
+        super().__init__(65240)
+        if message is None:
+            self._sa = sa
+            self._da = da
+            self._name = name
+            self._commanded_address = commanded_address
+        else:
+            self.from_message(message)
+
+    def update(self):
+        self._name = self._fields["System ISO Name"]
+        self._commanded_address = self._fields["New Source Address"]
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def commanded_address(self):
+        return self._commanded_address
+
+
+
+def create_group_function(message: NMEA2000Msg):
+    function = message.payload[0]
+    return group_function_table[function](message)
+
+
 class GroupFunction(NMEA2000Object):
     '''
     That PGN need very specific handling as the content is highly variable
+    This is the abstract superclass
     '''
 
     function_str = struct.Struct("<BHB")
@@ -111,6 +145,7 @@ class GroupFunction(NMEA2000Object):
 
         super().__init__(126208)
         if message is not None:
+            # the object is created from an incoming message
             self._sa = message.sa
             v = self.function_str.unpack_from(message.payload, 0)
             self._function = v[0]
@@ -118,8 +153,10 @@ class GroupFunction(NMEA2000Object):
             _logger.debug("Group Function [%d] on PGN %d" % (self._function, self._function_pgn))
 
         elif pgn > 0:
+            # the object is created internally
             _logger.debug("New Group Function command=%d for PGN %d" % (function, pgn))
-
+            self._pgn = pgn
+            self._function = function
         else:
             raise ValueError
 
@@ -132,6 +169,50 @@ class GroupFunction(NMEA2000Object):
         return self._function_pgn
 
 
+class CommandGroupFunction(GroupFunction):
+
+    header_struct = struct.Struct("<BB")
+
+    def __init__(self, message=None, pgn=0):
+
+        super().__init__(message, function=1, pgn=pgn)
+        if message is not None:
+            # decode the rest of the message
+            v = self.header_struct.unpack_from(message.payload, 4)
+            self._priority = (v[0] >> 4) & 0xf
+            self._nb_param = v[1]
+
+
+class RequestGroupFunction(GroupFunction):
+
+    def __init__(self,message=None, pgn=0):
+        super().__init__(message, function=0, pgn=pgn)
+
+
+class AcknowledgeGroupFunction(GroupFunction):
+
+    def __init__(self,message=None, pgn=0):
+        super().__init__(message, function=2, pgn=pgn)
+
+
+class ReadFieldsGroupFunction(GroupFunction):
+
+    def __init__(self, message):
+        super().__init__(message)
+
+class WriteFieldsGroupFunction(GroupFunction):
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
+group_function_table = {
+    0: RequestGroupFunction,
+    1: CommandGroupFunction,
+    2: AcknowledgeGroupFunction,
+    3: ReadFieldsGroupFunction,
+    5: WriteFieldsGroupFunction
+}
 
 
 

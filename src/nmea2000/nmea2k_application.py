@@ -7,7 +7,7 @@
 # Author:      Laurent Carré
 #
 # Created:     16/09/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_device import NMEA2000Device
 from nmea2000.nmea2k_name import NMEA2000Name
 from nmea2000.nmea2k_iso_messages import (AddressClaim, ISORequest, ProductInformation, ConfigurationInformation,
-                                         GroupFunction)
+                                         AcknowledgeGroupFunction, create_group_function, CommandedAddress)
 # from nmea2000.nmea2k_active_controller import NMEA2KActiveController
 from utilities.network_utils import get_id_from_mac
 from utilities.global_variables import MessageServerGlobals
@@ -84,16 +84,25 @@ class NMEA2000Application(NMEA2000Device):
         super().__init__(self._address, name=self._iso_name)
 
         self._state = self.WAIT_FOR_BUS
+        # vector for addressed messages
         self._process_vector[60928] = self.address_claim_receipt
         self._process_vector[59904] = self.iso_request
         self._process_vector[126208] = self.group_function_handler
-        # controller.add_subscriber(59904, self.iso_request)
-        # controller.add_subscriber(60928, self.remote_address_claim)
+        # vector for non-addressed ones
         self._process_broadcast_vector = {
             59904: self.iso_request,
-            60928: self.remote_address_claim
+            60928: self.remote_address_claim,
+            65240: self.commanded_address_request
         }
         self._product_information = ProductInformation()
+        self.init_product_information()
+        self._configuration_information = ConfigurationInformation()
+        self.init_configuration_information()
+
+    def init_product_information(self):
+        '''
+        This method is meant to be overloaded in subclasses to create specific product information
+        '''
         self._product_information.nmea2000_version = 2100
         self._product_information.product_code = 1226
         self._product_information.set_product_information('NMEA MESSAGE ROUTER',
@@ -101,11 +110,14 @@ class NMEA2000Application(NMEA2000Device):
                                                           'ROUTER Sterwen Technology', '00001')
         self._product_information.certification_level = 1
         self._product_information.load_equivalency = 1
-        self._configuration_information = ConfigurationInformation()
+
+    def init_configuration_information(self):
+        '''
+        This method is meant to be overloaded in subclasses to create specific configuration information
+        '''
         self._configuration_information.installation_1 = "Test1"
         self._configuration_information.installation_2 = "Test2"
         self._configuration_information.manufacturer_info = "Sterwen Technology SAS"
-        self._configuration_information.sa = self._address
 
     def send_address_claim(self, da=255):
         self.respond_address_claim(da)
@@ -142,7 +154,7 @@ class NMEA2000Application(NMEA2000Device):
 
     def address_claim_receipt(self, msg: NMEA2000Msg):
         '''
-        If we are here we have a address conflict
+        If we are here we have an address conflict
         By the book, we need to look at the name value
         '''
         _logger.debug("Application [%d] receive address claim from address %d da=%d" % (self._address, msg.sa, msg.da))
@@ -165,21 +177,23 @@ class NMEA2000Application(NMEA2000Device):
                 self._controller.stop()
                 return
             # now we need to swap addresses
-            _logger.info("Reassigning new address %d" % address)
-            old_address = self._address
-            self._address = address
-            self._controller.change_application_address(self, old_address)
-            # we go ahead for a new address claim
-            self.send_address_claim()
+            self.change_address(address)
+
+    def change_address(self, address):
+        _logger.info("Reassigning new address %d" % address)
+        old_address = self._address
+        self._address = address
+        self._controller.change_application_address(self, old_address)
+        # we go ahead for a new address claim
+        self.send_address_claim()
 
     def iso_request(self, msg):
-        _logger.debug("Received ISO request from %d da=%d" % (msg.sa, msg.da))
+        # _logger.debug("Received ISO request from %d da=%d" % (msg.sa, msg.da))
         if msg.da == self._address or msg.da == 255:
             request = ISORequest().from_message(msg)
             _logger.debug("Application ISO request received from %d for pgn %d" % (msg.sa, request.request_pgn))
             if request.request_pgn == 60928:
                 self.respond_address_claim(msg.sa)
-                # self.send_product_information()
             elif request.request_pgn == 126996:
                 # ok we send back the ProductInformation
                 self.send_product_information()
@@ -188,9 +202,19 @@ class NMEA2000Application(NMEA2000Device):
             else:
                 _logger.error("ISO Request on PGN %d not supported" % request.request_pgn)
 
+    def commanded_address_request(self, msg: NMEA2000Msg):
+        _logger.debug("Commanded address request for address %d" % self._address)
+        request = CommandedAddress(message=msg)
+        if request.name != self._iso_name:
+            _logger.error("Commanded request rejected => No matching names R(%016X) A(%016X)" %
+                          (request.name.int_value, self._iso_name.int_value))
+            return
+        _logger.info("Commanded address => success")
+        self.change_address(request.commanded_address)
+
     def send_product_information(self):
         self._product_information.sa = self._address
-        _logger.debug("Send product information %s" % self._product_information.message().format1())
+        _logger.debug("Send product information from address %d" % self._address)
         self._controller.CAN_interface.send(self._product_information.message(), force_send=True)
 
     def receive_data_msg(self, msg: NMEA2000Msg):
@@ -220,13 +244,14 @@ class NMEA2000Application(NMEA2000Device):
 
     def send_configuration_information(self):
         _logger.debug("Sending configuration information for address %d" % self._address)
+        self._configuration_information.sa = self._address
         self._controller.CAN_interface.send(self._configuration_information.message(), force_send=True)
 
     def group_function_handler(self, msg: NMEA2000Msg):
         '''
         Handle PGN 126408 Group Function handler
         '''
-        group_function = GroupFunction(message=msg)
+        group_function = create_group_function(message=msg)
         _logger.debug("Received Group Function for address %d function=%d on PGN %d" % (self._address,
                                                                                         group_function.function,
                                                                                         group_function.function_pgn))
