@@ -77,9 +77,11 @@ class NMEA2000Application(NMEA2000Device):
     def __init__(self, controller):
 
         self._controller = controller
+        self._application_type_name = "Generic NMEA2000 CA"
         # get address and create ISO Name
         self._address, self._iso_name = controller.app_pool.application_ids()
-        _logger.info("Application name=%08X address=%d" % (self._iso_name.name_value, self._address))
+        _logger.info("Controller Application ECU:%s ISO Name=%08X address=%d type:%s" %
+                     (controller.name(), self._iso_name.name_value, self._address, self._application_type_name))
         self._claim_timer = None
         super().__init__(self._address, name=self._iso_name)
 
@@ -118,6 +120,15 @@ class NMEA2000Application(NMEA2000Device):
         self._configuration_information.installation_1 = "Test1"
         self._configuration_information.installation_2 = "Test2"
         self._configuration_information.manufacturer_info = "Sterwen Technology SAS"
+
+    def build_group_function_vector(self):
+        '''
+        That method can be refined in subclasses
+        '''
+        self._group_function_vector = {
+            60928: {3: self._set_name_p3, 4: self.set_name_p4, 8: self._set_name_p8},
+            126998: {1: self._set_install1, 2:self._set_install2}
+        }
 
     def send_address_claim(self, da=255):
         self.respond_address_claim(da)

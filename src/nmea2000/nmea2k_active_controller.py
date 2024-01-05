@@ -43,6 +43,7 @@ class NMEA2KActiveController(NMEA2KController):
             for ap_name in self._application_names:
                 ap = self.resolve_direct_ref(ap_name)
                 if ap is not None:
+                    _logger.debug("CAN active controller adding application:%s" % ap_name)
                     if issubclass(ap.__class__, NMEA2000Application):
                         ap.set_controller(self)
                         self.add_application(ap)

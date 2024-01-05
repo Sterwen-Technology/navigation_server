@@ -21,7 +21,20 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 class AddressClaim(NMEA2000Object):
 
-    parameter_table = []
+    @staticmethod
+    def decode_parameter(param_number, buffer, index):
+        param_type, param_len = NMEA2000Name.get_field_property(param_number)
+        if param_len == 1:
+            value = buffer[index]
+        elif param_len == 2:
+            v = struct.unpack_from("<H", buffer, index)
+            value = v[0]
+        elif param_len == 3:
+            v = struct.unpack_from("<HB", buffer, index)
+            value = v[0] + (v[1] << 16)
+        else:
+            raise ValueError
+        return value, index + param_len
 
     def __init__(self, sa=0, name=None, da=255, message=None):
         super().__init__(60928)
@@ -199,6 +212,7 @@ class ReadFieldsGroupFunction(GroupFunction):
 
     def __init__(self, message):
         super().__init__(message)
+
 
 class WriteFieldsGroupFunction(GroupFunction):
 

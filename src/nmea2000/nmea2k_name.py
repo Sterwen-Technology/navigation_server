@@ -11,7 +11,7 @@
 
 import logging
 import struct
-
+from nmea2000.nmea2k_fielddefs import FIXED_LENGTH_BYTES
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -83,6 +83,9 @@ class NMEA2000Name:
             self._bit_size = bit_size
             self._mask = (2 ** bit_size) - 1
             self._bit_offset = bit_offset
+            self._byte_size = bit_size // 8
+            if bit_size % 8 != 0:
+                self._byte_size += 1
             # NMEA2000Name.fields[name] = self
 
         def extract_field(self, value):
@@ -99,6 +102,10 @@ class NMEA2000Name:
         @property
         def description(self):
             return self._description
+
+        @property
+        def byte_size(self):
+            return self._byte_size
 
     __fields = (
         NameField('identity_number', 'ISO Identity Number', 21, 0),
@@ -301,4 +308,15 @@ class NMEA2000Name:
         name_bytes = struct.pack("<Q", name)
         return NMEA2000Name(name_bytes)
 
+    @staticmethod
+    def get_field_property(field_num: int):
+        '''
+        Return the field definition for Group function decode
+        Start at 0
+        '''
+        if field_num < 1 or field_num > len(NMEA2000Name.__fields):
+            _logger.error("ISO Name parameter out of range: %d" % field_num)
+            raise IndexError
+        field_def = NMEA2000Name.__fields[field_num - 1]
+        return FIXED_LENGTH_BYTES, field_def.byte_size
 
