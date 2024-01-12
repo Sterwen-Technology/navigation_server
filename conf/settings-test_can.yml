@@ -21,7 +21,8 @@ log_module:
   nmea2000.nmea2k_application: DEBUG
   nmea2000.n2k_name: INFO
   nmea2000.nmea2k_can_interface: INFO
-  nmea2000.nmea2k_iso_transport: DEBUG
+  nmea2000.nmea2k_iso_transport: INFO
+  nmea2000.nmea2k_iso_messages: INFO
   nmea2000.nmea2k_can_coupler: DEBUG
 
 servers:
@@ -55,21 +56,6 @@ couplers:
 
 filters:
 
-- FastPacket:
-    class: NMEA2000Filter
-    pgn: [129029, 126996, 129540]
-    action: select
-
-- RaymarineProprietary:
-    class: NMEA2000Filter
-    pgn: [126720]
-    action: select
-
-- NMEASent:
-    class: NMEA2000Filter
-    pgn: [129025, 129026, 129283, 129284]
-    action: select
-
 data_sinks:
 
 - DataAnalyzer:
@@ -77,13 +63,6 @@ data_sinks:
 
 publishers:
 
-- TraceRaymarine:
-    class: N2KTracePublisher
-    filters: [RaymarineProprietary]
-    output: PRINT
 
-- TraceOutput:
-    class: N2KTracePublisher
-    filters: [NMEASent]
 
 

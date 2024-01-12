@@ -198,7 +198,8 @@ class SocketCANInterface(threading.Thread):
                 return None
         else:
             if PGNDef.fast_packet_check(pgn):
-                self._fp_handler.process_frame(pgn, sa, data)
+                data = self._fp_handler.process_frame(pgn, sa, data)
+            if data is None:
                 return None
         # end fast packet handling
         n2k_msg = NMEA2000Msg(pgn, prio, sa, da, data)
@@ -280,7 +281,8 @@ class SocketCANInterface(threading.Thread):
         _logger.debug("CAN interface send in queue message: %s" % n2k_msg.format1())
 
         # Fast packet processing
-        if find_pgn(n2k_msg.pgn).fast_packet():
+        if n2k_msg.fast_packet:
+            _logger.debug("CAN interface -> start split fast packet")
             for data in self._fp_handler.split_message(n2k_msg.pgn, n2k_msg.payload):
                 if not self.put_can_msg(can_id, data):
                     return False

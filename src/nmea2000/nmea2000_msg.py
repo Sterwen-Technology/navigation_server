@@ -40,7 +40,7 @@ class NMEA2000Msg:
 
     ts_format = "%H:%M:%S.%f"
 
-    def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytes = None, timestamp=0.0,
+    def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytearray = None, timestamp=0.0,
                  protobuf=None):
         self._pgn = pgn
         if protobuf is None:
@@ -53,45 +53,44 @@ class NMEA2000Msg:
                 self._ts = time.time()
             else:
                 self._ts = timestamp
-            if payload is not None:
-                self._payload = payload
-                if len(payload) <= 8:
-                    self._fast_packet = False
-                else:
-                    self._fast_packet = True
+            #  Corrected on Jan 12 2024 fast packet can have a payload < 8 Fast packet PGN must be transmitted in
+            #   Fast packet mode whatever is the length
+            if len(payload) > 8:
+                self._fast_packet = True
             else:
-                self._payload = None
+                self._fast_packet = PGNDef.fast_packet_check(pgn)
+            self._payload = payload
         else:
             self.from_protobuf(protobuf)
         # define if the PGN is part of ISO and base protocol (do not carry navigation data)
         self._is_iso = PGNDef.pgn_for_controller(pgn)
 
     @property
-    def pgn(self):
+    def pgn(self) -> int:
         return self._pgn
 
     @property
-    def prio(self):
+    def prio(self) -> int:
         return self._prio
 
     @property
-    def sa(self):
+    def sa(self) -> int:
         return self._sa
 
     @property
-    def da(self):
+    def da(self) -> int:
         return self._da
 
     @property
-    def payload(self):
+    def payload(self) -> bytearray:
         return self._payload
 
     @property
-    def fast_packet(self):
+    def fast_packet(self) -> bool:
         return self._fast_packet
 
     @property
-    def is_iso_protocol(self):
+    def is_iso_protocol(self) -> bool:
         return self._is_iso
 
     # The following 2 methods are for compatibility with NavGenericMsg
@@ -131,8 +130,9 @@ class NMEA2000Msg:
             payload = " "
         else:
             payload = self._payload.hex()
-        return "PGN %d|%04X|%s sa=%d da=%d time=%s data:%s" % (self._pgn, self._pgn, name, self._sa, self._da,
-                                                               format_timestamp(self._ts, self.ts_format), payload)
+        return "PGN %d|%04X|%s sa=%d da=%d time=%s fp=%s data:%s" % (self._pgn, self._pgn, name, self._sa, self._da,
+                                                                     format_timestamp(self._ts, self.ts_format),
+                                                                     self._fast_packet, self._payload.hex())
 
     def format2(self):
         '''
@@ -340,6 +340,10 @@ class NMEA2000Object:
     @sa.setter
     def sa(self, value):
         self._sa = value
+
+    @da.setter
+    def da(self, value):
+        self._da = value
 
 
 class NMEA2000Writer(threading.Thread):

@@ -136,7 +136,6 @@ class PGNDef (BitFieldGenerator):
         self._proprietary = self.is_pgn_proprietary(self._id)
         self._manufacturer_id = None
         self._fields = {}
-        self._fast_packet = False
 
         bl = pgnxml.find('ByteLength')
         if bl is not None:
@@ -145,12 +144,23 @@ class PGNDef (BitFieldGenerator):
                 self._variable_length = True
             else:
                 self._variable_length = False
-            if self._byte_length <= 0 or self._byte_length > 8:
-                self._fast_packet = True
         else:
             self._byte_length = 0
             self._variable_length = True
-            self._fast_packet = True
+
+        # determination of fast packet
+        if self._id <= PGNDef.pgn_range[4].to:
+            self._fast_packet = False
+        else:
+            r = PGNDef.find_range(self._id)
+            if r.value != PGNDef.STD_MIXED:
+                self._fast_packet = True
+            else:
+                # mixed bag
+                if self._variable_length or self._byte_length > 8:
+                    self._fast_packet = True
+                else:
+                    self._fast_packet = False
 
         fields = pgnxml.find('Fields')
         self._field_list = []

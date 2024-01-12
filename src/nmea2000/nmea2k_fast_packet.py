@@ -228,6 +228,7 @@ class FastPacketHandler:
             self._write_sequences[pgn] = 1
             return 1
         else:
+            _logger.critical("NMEA2000 Fast Packet => cannot allocate sequence for PGN %d already in use" % pgn)
             raise ValueError
 
     def free_seq(self, pgn, seq):

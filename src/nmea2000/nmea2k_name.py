@@ -11,7 +11,6 @@
 
 import logging
 import struct
-from nmea2000.nmea2k_fielddefs import FIXED_LENGTH_BYTES
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -107,12 +106,17 @@ class NMEA2000Name:
         def byte_size(self):
             return self._byte_size
 
+        @property
+        def max(self) -> int:
+            return self._mask
+
     __fields = (
         NameField('identity_number', 'ISO Identity Number', 21, 0),
         NameField('manufacturer_code', "Manufacturer Code", 11, 21),
         NameField('device_instance_lower', "Device Instance Lower", 3, 32),
         NameField('device_instance_upper', "Device Instance Upper", 5, 35),
         NameField('device_function', "Device Function", 8, 40),
+        NameField('reserved', "Reserved", 1, 48),
         NameField('device_class', "Device Class", 7, 49),
         NameField('system_instance', "System Instance", 4, 56),
         NameField('industry_group', "Industry Group", 3, 60),
@@ -257,6 +261,10 @@ class NMEA2000Name:
             for f in NMEA2000Name.__fields:
                 NMEA2000Name.fields[f.name] = f
 
+    @staticmethod
+    def max_fields() -> int:
+        return len(NMEA2000Name.__fields)
+
     def __getattr__(self, item):
         try:
             return self.fields[item].extract_field(self._value)
@@ -278,21 +286,6 @@ class NMEA2000Name:
         if type(name) is not NMEA2000Name:
             return False
         return self._value == name.int_value
-
-    def set_device_upper(self, value: int):
-        if value < 0 or value > 0x1f:
-            raise ValueError
-        self.__fields[3].set_field(self._value, value)
-
-    def set_device_lower(self, value: int):
-        if value < 0 or value > 7:
-            raise ValueError
-        self.__fields[2].set_field(self._value, value)
-
-    def set_system_instance(self, value: int):
-        if value < 0 or value > 15:
-            raise ValueError
-        self.__fields[6].set_field(self._value, value)
 
     @property
     def int_value(self) -> int:
@@ -318,5 +311,65 @@ class NMEA2000Name:
             _logger.error("ISO Name parameter out of range: %d" % field_num)
             raise IndexError
         field_def = NMEA2000Name.__fields[field_num - 1]
-        return FIXED_LENGTH_BYTES, field_def.byte_size
+        return field_def.byte_size, field_def.name
+
+
+class NMEA2000MutableName(NMEA2000Name):
+    '''
+    Variant of ISO J1939 Name but with fields that can be changed dynamically
+
+    '''
+
+    def __init__(self, **kwargs):
+        super().init_fields()
+        self._value = 0
+        self._value_dict = {}
+        for key, value in kwargs.items():
+            try:
+                field = NMEA2000Name.fields[key]
+            except KeyError:
+                _logger.error("ISO Name unknown field:%s" % key)
+                continue
+            self._value_dict[key] = value
+        self.build_value()
+
+    def build_value(self):
+        self._value = 0
+        for field in self.fields.values():
+            try:
+                value = self._value_dict[field.name]
+                self._value = field.set_field(self._value, value)
+            except KeyError:
+                continue
+        self._bytes = self._value.to_bytes(8, byteorder='little')
+
+    parameter_set_table = {3: 'device_instance_lower',
+                           4: 'device_instance_upper',
+                           8: 'system_instance'}
+
+    def modify_parameters(self, param_list):
+        result = []
+        change = False
+        for param in param_list:
+            try:
+                key = self.parameter_set_table[param[0]]
+            except KeyError:
+                _logger.error("ISO Name parameter %d not modifiable" % param[0])
+                result.append(1)
+                continue
+            field = self.fields[key]
+            if param[1] < 0 or param[1] > field.max:
+                _logger.error("ISO Name parameter %d value %d out of range" % param)
+                result.append(3)
+                continue
+            self._value_dict[key] = param[1]
+            change = True
+            result.append(0)
+        if change:
+            self.build_value()
+        return result
+
+
+
+
 

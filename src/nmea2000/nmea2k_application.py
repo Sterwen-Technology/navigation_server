@@ -16,9 +16,10 @@ import threading
 
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_device import NMEA2000Device
-from nmea2000.nmea2k_name import NMEA2000Name
+from nmea2000.nmea2k_name import NMEA2000MutableName
 from nmea2000.nmea2k_iso_messages import (AddressClaim, ISORequest, ProductInformation, ConfigurationInformation,
-                                         AcknowledgeGroupFunction, create_group_function, CommandedAddress)
+                                         AcknowledgeGroupFunction, create_group_function, CommandedAddress,
+                                          CommandGroupFunction, pgn_function_table)
 # from nmea2000.nmea2k_active_controller import NMEA2KActiveController
 from utilities.network_utils import get_id_from_mac
 from utilities.global_variables import MessageServerGlobals
@@ -46,7 +47,7 @@ class NMEA2000ApplicationPool:
             raise IndexError
         if self._application_count < self._max_application:
             # create the ISO NAME
-            iso_name = NMEA2000Name.create_name(
+            iso_name = NMEA2000MutableName(
                 identity_number=self._unique_id_root | self._application_count,
                 manufacturer_code=self._mfg_code,
                 device_class=25,
@@ -100,6 +101,7 @@ class NMEA2000Application(NMEA2000Device):
         self.init_product_information()
         self._configuration_information = ConfigurationInformation()
         self.init_configuration_information()
+        self.set_properties()
 
     def init_product_information(self):
         '''
@@ -121,13 +123,15 @@ class NMEA2000Application(NMEA2000Device):
         self._configuration_information.installation_2 = "Test2"
         self._configuration_information.manufacturer_info = "Sterwen Technology SAS"
 
-    def build_group_function_vector(self):
-        '''
-        That method can be refined in subclasses
-        '''
-        self._group_function_vector = {
-            60928: {3: self._set_name_p3, 4: self.set_name_p4, 8: self._set_name_p8},
-            126998: {1: self._set_install1, 2:self._set_install2}
+    def set_properties(self):
+        self._properties = {
+            'System ISO Name': self._iso_name.name_value,
+            'Manufacturer Code': self._iso_name.manufacturer_code,
+            'Manufacturer Name': MessageServerGlobals.manufacturers.by_code(self._iso_name.manufacturer_code).name,
+            'Product name': self._product_information.model_id,
+            'Product Code': self._product_information.product_code,
+            'Description': self._product_information.model_serial_code,
+            'Firmware': self._product_information.software_version
         }
 
     def send_address_claim(self, da=255):
@@ -266,6 +270,28 @@ class NMEA2000Application(NMEA2000Device):
         _logger.debug("Received Group Function for address %d function=%d on PGN %d" % (self._address,
                                                                                         group_function.function,
                                                                                         group_function.function_pgn))
+        if type(group_function) is CommandGroupFunction and group_function.pgn_class is not None:
+            # ok supported
+            acknowledge = AcknowledgeGroupFunction(pgn=group_function.function_pgn, pgn_error_code=0)
+            self.process_command_group_function(group_function, acknowledge)
+        else:
+            acknowledge = AcknowledgeGroupFunction(pgn=group_function.function_pgn, pgn_error_code=1)
+        acknowledge.sa = self._address
+        acknowledge.da = msg.sa
+        _logger.debug("Group Function sending acknowledgement => %s" % acknowledge.message())
+        self._controller.CAN_interface.send(acknowledge.message())
+
+    def process_command_group_function(self, group_function, acknowledge):
+        if group_function.function_pgn == 60928:
+            _logger.debug("Command Group Function on name %s" % self._iso_name)
+            group_function.pgn_class.execute_command_parameters(self._iso_name, group_function.parameters, acknowledge)
+            _logger.debug("Command Group Function new name %s" % self._iso_name)
+        elif group_function.function_pgn == 126998:
+            group_function.pgn_class.execute_command_parameters(self._configuration_information,
+                                                                group_function.parameters, acknowledge)
+        else:
+            _logger.error("Command Group Function PGN %d not supported" % group_function.function_pgn)
+
 
 
 
