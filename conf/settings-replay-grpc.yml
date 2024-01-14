@@ -1,0 +1,50 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/12/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+    nmea_routing.console: INFO
+    nmea2000.nmea2k_grpc_publisher: INFO
+
+servers:
+
+
+- Console:
+    class: Console
+    port: 4502
+
+
+couplers:
+
+- SNReplay:
+    class: NMEATCPReader
+    address: 192.168.1.21
+    port: 3555
+    autostart: true
+    protocol: nmea2000
+    trace_messages: false
+    trace_raw: false
+
+publishers:
+
+- SendNMEA2000:
+    class: N2KGrpcPublisher
+    active: true
+    protobuf: true
+    address: 192.168.1.44
+    port: 4509
+    couplers: [SNReplay]
+
+
+
+
+

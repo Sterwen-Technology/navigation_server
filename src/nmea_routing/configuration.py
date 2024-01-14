@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     08/01/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ import sys
 
 from utilities.global_exceptions import ObjectCreationError
 
-_logger = logging.getLogger("ShipDataServer"+"."+__name__)
+_logger = logging.getLogger("ShipDataServer."+__name__)
 
 
 class ConfigurationException(Exception):
@@ -167,6 +167,7 @@ class NavigationConfiguration:
         self._publishers = {}
         self._data_sink = {}
         self._filters = {}
+        self._applications = {}
         self._globals = {}
         try:
             fp = open(settings_file, 'r')
@@ -208,6 +209,13 @@ class NavigationConfiguration:
                 self._filters[nav_obj.name] = nav_obj
         except KeyError:
             _logger.info("No filters")
+        try:
+            for obj in self.object_descr_iter('applications'):
+                nav_obj = NavigationServerObject(obj)
+                self._obj_dict[nav_obj.name] = nav_obj
+                self._applications[nav_obj.name] = nav_obj
+        except KeyError:
+            _logger.info("No applications")
         NavigationConfiguration._instance = self
         _logger.info("Finished analyzing settings file:%s " % settings_file)
 
@@ -244,6 +252,9 @@ class NavigationConfiguration:
     def filters(self):
         return self._filters.values()
 
+    def applications(self):
+        return self._applications.values()
+
     def add_class(self, class_object):
         self._class_dict[class_object.__name__] = class_object
 
@@ -277,7 +288,7 @@ def main():
         for item in items:
             name = item[0]
             param = item[1]
-        print(name, param)
+            print(name, param)
 
 
 if __name__ == '__main__':

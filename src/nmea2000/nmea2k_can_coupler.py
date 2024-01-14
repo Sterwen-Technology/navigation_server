@@ -13,7 +13,7 @@ import logging
 import queue
 
 from nmea_routing.coupler import Coupler, CouplerTimeOut, CouplerWriteError
-from nmea2000.nmea2k_active_controller import NMEA2KActiveController
+# from nmea2000.nmea2k_active_controller import NMEA2KActiveController
 from nmea2000.nmea2k_application import NMEA2000Application
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG
@@ -29,7 +29,7 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
         super().__init__(opts)
         self._in_queue = queue.Queue(20)
 
-    def set_controller(self, controller: NMEA2KActiveController):
+    def set_controller(self, controller):
         _logger.debug("DirectCANCoupler initializing controller")
         NMEA2000Application.__init__(self, controller)
 

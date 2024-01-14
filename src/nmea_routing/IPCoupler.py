@@ -21,8 +21,7 @@ import time
 from nmea_routing.generic_msg import *
 from nmea_routing.coupler import Coupler, CouplerReadError, CouplerTimeOut, IncompleteMessage
 from nmea0183.nmea0183_msg import process_nmea0183_frame, NMEAInvalidFrame, NMEA0183Msg
-from nmea2000.nmea2000_msg import fromProprietaryNmea
-from nmea2000.nmea2k_fast_packet import FastPacketHandler
+
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -402,37 +401,6 @@ class TCPBufferedReader:
         return self._ref
 
 
-class NMEATCPReader(BufferedIPCoupler):
-    '''
-    This class is implementing a generic NMEA reader that adapt to all known NMEA0183 based protocols
-    NMEA2000 encapsulated in NMEA0183 are automatically converted to NMEA2000
-    '''
-
-    def __init__(self, opts):
-        super().__init__(opts)
-        self._direction = self.READ_ONLY  # no writing on generic reader
-        self._fast_packet_handler = FastPacketHandler(self)
-        self._separator = b'\r\n'
-        self._separator_len = 2
-        if self._mode != self.NMEA0183:
-            self.set_message_processing(msg_processing=self.process_msg)
-        else:
-            self.set_message_processing()
-
-    def process_msg(self, frame):
-
-        if frame[0] == 4:
-            return NavGenericMsg(NULL_MSG)
-        msg0183 = NMEA0183Msg(frame)
-        self._total_msg_raw += 1
-        if msg0183.proprietary():
-            return fromProprietaryNmea(msg0183)
-        elif msg0183.address() == b'MXPGN':
-            msg = self.mxpgn_decode(msg0183)
-            # print(msg.dump())
-            return msg
-        else:
-            return msg0183
 
 
 

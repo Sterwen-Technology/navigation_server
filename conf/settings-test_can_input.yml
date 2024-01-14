@@ -23,7 +23,7 @@ log_module:
   nmea2000.nmea2k_can_interface: INFO
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
-  nmea2000.nmea2k_can_coupler: DEBUG
+  nmea2000.grpc_input_application: INFO
 
 servers:
 

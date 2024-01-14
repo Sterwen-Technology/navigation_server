@@ -1,4 +1,3 @@
-<?xml version="1.0"?>
 <PGNDefnCollection xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="1.0">
   <Date>$Date: 2023-10-06$</Date>
   <Comment>Version for limited release - works with navigation data server version 1.5</Comment>
@@ -2419,27 +2418,28 @@
     </PGNDefn>
     <PGNDefn PGN="128275">
       <Name>Distance Log</Name>
+      <Scope>Generate</Scope>
       <ByteLength>14</ByteLength>
       <Fields>
-        <UIntField Name="Date">
+        <UIntField Name="Date" key="date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Date</FormatAs>
         </UIntField>
-        <UDblField Name="Time">
+        <UDblField Name="Time" key="time">
           <Description>Seconds since midnight</Description>
           <BitOffset>16</BitOffset>
           <BitLength>32</BitLength>
           <FormatAs>Time</FormatAs>
           <Scale>0.0001</Scale>
         </UDblField>
-        <UIntField Name="Log">
+        <UIntField Name="Log" key="total_log">
           <Description>Total cumulative distance</Description>
           <BitOffset>48</BitOffset>
           <BitLength>32</BitLength>
         </UIntField>
-        <UIntField Name="Trip Log">
+        <UIntField Name="Trip Log" key="trip_log">
           <Description>Distance since last reset</Description>
           <BitOffset>80</BitOffset>
           <BitLength>32</BitLength>

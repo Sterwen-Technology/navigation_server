@@ -81,6 +81,7 @@ class NMEA2000Application(NMEA2000Device):
         self._application_type_name = "Generic NMEA2000 CA"
         # get address and create ISO Name
         self._address, self._iso_name = controller.app_pool.application_ids()
+
         _logger.info("Controller Application ECU:%s ISO Name=%08X address=%d type:%s" %
                      (controller.name(), self._iso_name.name_value, self._address, self._application_type_name))
         self._claim_timer = None

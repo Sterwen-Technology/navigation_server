@@ -50,7 +50,10 @@ class ReservedAttribute(AttributeGen):
 
     def __init__(self, field, decode_index):
         super().__init__(field, decode_index)
-        self._default_value = 2**field.bit_length - 1
+        if field.signed:
+            self._default_value = 2 ** (field.bit_length - 1) - 1
+        else:
+            self._default_value = 2**field.bit_length - 1
 
     @property
     def default_value(self) -> int:
@@ -378,6 +381,7 @@ class FieldSetMeta:
 
             elif field.decode_method == REPEATED_FIELD_SET:
                 # first let's generate the sub_class
+                self._variable_size = True
                 self._repeat_field_set = RepeatAttributeDef(self, field, self._decode_index)
                 self._attributes.append(self._repeat_field_set)
                 self._attr_dict[self._repeat_field_set.method] = self._repeat_field_set
@@ -498,7 +502,8 @@ class NMEA2000Meta(FieldSetMeta):
 
     @property
     def read_only(self) -> bool:
-        return self.is_proprietary or self._read_only
+        # being proprietary is NOT a reason for not being encoded
+        return self._read_only
 
     @property
     def force_write(self) -> bool:

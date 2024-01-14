@@ -155,7 +155,6 @@ class PythonPGNGenerator:
             # lets generate an item adder
             self.gen_item_adder(pgn_def.repeat_field_set)
 
-
         if pgn_def.variable_size:
             self.gen_decode_encode_variable(pgn_def, read_only)
         else:
@@ -274,6 +273,8 @@ class PythonPGNGenerator:
         self.dec_indent()
         self.nl()
         if read_only:
+            print(f"PGN {pgn_def.pgn} no encode generated")
+            self.write("#  Read Only no encode_payload\n")
             return
         #
         # encode method
@@ -300,7 +301,10 @@ class PythonPGNGenerator:
             elif segment.segment_type == DecodeSegment.FIX_LENGTH:
                 self.gen_encode_fix_length(segment)
 
-        if not isinstance(pgn_def, RepeatAttributeDef):
+        if isinstance(pgn_def, RepeatAttributeDef):
+            # need to return the length of encoded portion
+            self.write(f"return self._static_size\n")
+        else:
             if pgn_def.repeat_field_set is not None:
                 self.gen_repeated_encode(pgn_def.repeat_field_set)
             self.write("return buffer\n")
@@ -337,7 +341,9 @@ class PythonPGNGenerator:
         self.write("return self, start_byte\n")
         self.dec_indent()
         self.nl()
+
         if read_only:
+
             return
         #
         # encode method
@@ -397,7 +403,7 @@ class PythonPGNGenerator:
                 else:
                     source_var = f"val[{attr.field_index}]"
                 if attr.need_check:
-                    self.write(f"self.{attr.variable} = check_valid({source_var}, {attr.invalid_mask}, {attr.default})")
+                    self.write(f"self.{attr.variable} = check_valid({source_var}, {attr.invalid_value}, {attr.default})")
                 else:
                     self.write(f"self.{attr.variable} = ")
                     if attr.scale is not None:
@@ -533,12 +539,17 @@ class PythonPGNGenerator:
                     numvi += 1
                     val_encode.append(vi)
                     vi_allocated = True
-                    self.write(f"{vi} = convert_to_int(self.{attr.variable}, 0x{attr.invalid_mask:x}, {attr.scale}")
+                    if attr.nb_slots == 2:
+                        # need to create an intermediate variable
+                        i_res = 'word'
+                    else:
+                        i_res = vi
+                    self.write(f"{i_res} = convert_to_int(self.{attr.variable}, 0x{attr.invalid_value:x}, {attr.scale}")
                     if attr.offset is None:
                         self._of.write(")\n")
                     else:
                         self._of.write(f", {attr.offset})\n")
-                    val_var = vi
+                    val_var = i_res
                 else:
                     val_encode.append(f"self.{attr.variable}")
                     vi_allocated = False

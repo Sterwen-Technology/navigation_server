@@ -12,6 +12,7 @@
 
 import logging
 import time
+import math
 from google.protobuf.json_format import MessageToJson
 
 from nmea2000.nmea2000_msg import NMEA2000Msg
@@ -89,7 +90,6 @@ def insert_string(buffer, start, length, string_to_insert):
             buffer[idx] = 0xFF
 
 
-
 def check_convert_float(val: int, invalid_mask: int, scale: float, offset: float = 0.0) -> float:
     if val == -1 or val == invalid_mask:
         return float('nan')
@@ -98,10 +98,9 @@ def check_convert_float(val: int, invalid_mask: int, scale: float, offset: float
 
 
 def convert_to_int(value: float, invalid_mask: int, scale: float, offset: float = 0.0) -> int:
-    if value == float('nan'):
+    if math.isnan(value):
         return invalid_mask
     return int((value - offset) / scale)
-
 
 
 class NMEA2000DecodedMsg:
@@ -121,6 +120,7 @@ class NMEA2000DecodedMsg:
             self.decode_payload(message.payload)
         elif protobuf is not None:
             self._sa = protobuf.sa
+            self._da = protobuf.da
             self._timestamp = protobuf.timestamp
             self._priority = protobuf.priority
             self.unpack_protobuf(protobuf)
@@ -137,6 +137,7 @@ class NMEA2000DecodedMsg:
         message = nmea2000_decoded_pb()
         message.pgn = self.pgn  # implemented in specific subclasses
         message.sa = self._sa
+        message.da = self._da
         message.timestamp = self._timestamp
         message.priority = self._priority
         _logger.debug("Protobuf encoding for PGN%d" % self.pgn)

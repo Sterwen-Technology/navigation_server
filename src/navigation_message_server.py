@@ -31,7 +31,7 @@ from nmea_routing.internal_gps import InternalGps
 from nmea2000.nmea2k_publisher import N2KTracePublisher, N2KStatisticPublisher
 # from simulator_input import *
 from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
-from nmea_routing.IPCoupler import NMEATCPReader
+from nmea_routing.nmea_tcp_coupler import NMEATCPReader
 from nmea_routing.ikonvert import iKonvert
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea2000.nmea2k_manufacturers import Manufacturers
@@ -45,6 +45,8 @@ from nmea_data.data_client import NMEAGrpcDataClient
 from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter, NMEA2000TimeFilter
 from log_replay.raw_log_coupler import RawLogCoupler
 from nmea_routing.grpc_nmea_coupler import GrpcNmeaCoupler
+from nmea2000.nmea2k_grpc_publisher import N2KGrpcPublisher
+from nmea2000.grpc_input_application import GrpcInputApplication
 
 from utilities.log_utilities import NavigationLogSystem
 from utilities.global_exceptions import ObjectCreationError
@@ -60,7 +62,7 @@ def _parser():
     return p
 
 
-MessageServerGlobals.version = "V1.60"
+MessageServerGlobals.version = "V1.70"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -90,6 +92,7 @@ class NavigationMainServer:
         self._couplers = {}
         self._publishers = []
         self._data_client = []
+        self._applications = []
         self._filters = []
         self._sigint_count = 0
         self._is_running = False
@@ -132,10 +135,11 @@ class NavigationMainServer:
             for coupler in self._couplers:
                 coupler.register(pub)
             pub.start()
+            changed in version 1.7 => can run with no couplers - can be only a CAN application
             '''
-        if len(self._couplers) == 0:
-            _logger.critical("No couplers defined -server will stop")
-            return False
+        #if len(self._couplers) == 0:
+            # _logger.critical("No couplers defined -server will stop")
+            # return False
         for publisher in self._publishers:
             publisher.start()
         for server in self._servers:
@@ -267,6 +271,7 @@ def main():
     config.add_class(iKonvert)
     config.add_class(N2KTracePublisher)
     config.add_class(N2KStatisticPublisher)
+    config.add_class(N2KGrpcPublisher)
     config.add_class(InternalGps)
     config.add_class(MPPT_Coupler)
     config.add_class(YDCoupler)
@@ -283,6 +288,7 @@ def main():
     config.add_class(GrpcNmeaCoupler)
     if include_can:
         config.add_class(DirectCANCoupler)
+        config.add_class(GrpcInputApplication)
 
     NavigationLogSystem.finalize_log(config)
 
@@ -302,6 +308,9 @@ def main():
     for inst_descr in config.filters():
         inst_descr.build_object()
     _logger.debug("Filter created")
+    for inst_descr in config.applications():
+        inst_descr.build_object()
+    _logger.debug("Applications created")
     # create the servers
     for server_descr in config.servers():
         try:
