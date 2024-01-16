@@ -1,0 +1,41 @@
+[
+{
+  "pgn": 129285,
+  "data": {
+    "start_rps_nb": 1,
+    "nb_items": 3,
+    "database_id": 1,
+    "route_id": 1,
+    "supplementary_data": 1,
+    "navigation_direction": 0,
+    "route_name": "test_route 1",
+    "WP_definitions": [
+      {
+        "waypoint_id": 1,
+        "waypoint_name": "Crouesty-2",
+        "waypoint_latitude": 47.5435667,
+        "waypoint_longitude": -2.89431667
+      },
+      {
+        "waypoint_id": 2,
+        "waypoint_name": "Crouesty-1",
+        "waypoint_latitude": 47.53608333,
+        "waypoint_longitude": -2.91345
+      },
+      {
+        "waypoint_id": 3,
+        "waypoint_name": "Er-Yoch",
+        "waypoint_latitude": 47.3881167,
+        "waypoint_longitude": -2.93493333
+      }
+    ]
+  }
+},
+{
+  "pgn": 127488,
+  "data": {
+    "engine_instance": 0,
+    "engine_speed": 2000
+  }
+}
+  ]

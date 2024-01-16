@@ -64,6 +64,7 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
             try:
                 n2k_object = get_n2k_object_from_protobuf(request)
             except Exception as e:
+                _logger.error("Input server - error converting protobuf:%s" % e)
                 resp.reportCode = 1
                 resp.status = str(e)
                 return resp

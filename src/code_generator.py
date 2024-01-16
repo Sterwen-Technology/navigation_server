@@ -70,7 +70,11 @@ def main():
 
     MessageServerGlobals.manufacturers = Manufacturers('./def/Manufacturers.N2kDfn.xml')
     MessageServerGlobals.pgn_definitions = PGNDefinitions('./def/PGNDefns.N2kDfn.xml')
-    output_file_base = "nmea2000_classes_gen"
+    if opts.pgn != 0:
+        output_file_base = f"nmea2000_{opts.pgn}class_gen"
+        _logger.setLevel(logging.DEBUG)
+    else:
+        output_file_base = "nmea2000_classes_gen"
     _logger.info("Generating NMEA2000 meta model")
     class_list = nmea2000_gen_meta(opts.pgn)
     _logger.info(f"Generated meta model for {len(class_list)} PGN")
@@ -84,6 +88,7 @@ def main():
         protobuf_gen = ProtobufPGNGenerator(output_file)
         protobuf_gen.gen_messages(class_list)
         protobuf_gen.close()
+
 
 if __name__ == '__main__':
     main()

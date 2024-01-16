@@ -3562,17 +3562,17 @@
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <UIntField Name="Reserved">
+        <UIntField Name="Navigation direction in route" key="navigation_direction">
           <BitOffset>64</BitOffset>
-          <BitLength>2</BitLength>
+          <BitLength>3</BitLength>
         </UIntField>
         <UIntField Name="Supplementary Route/WP data available" key="supplementary_data">
-          <BitOffset>66</BitOffset>
+          <BitOffset>67</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <UIntField Name="Navigation direction in route" key="navigation_direction">
-          <BitOffset>68</BitOffset>
-          <BitLength>4</BitLength>
+        <UIntField Name="Reserved">
+          <BitOffset>69</BitOffset>
+          <BitLength>3</BitLength>
         </UIntField>
         <VarLengthStringField Name="Route Name" key="route_name">
           <BitOffset>72</BitOffset>

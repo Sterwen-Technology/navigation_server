@@ -129,6 +129,16 @@ class PythonPGNGenerator:
         self.write(f"_proprietary = {pgn_def.is_proprietary}\n")
         if pgn_def.is_proprietary:
             self.write(f"_manufacturer_id = {pgn_def.manufacturer}\n")
+        if protobuf_conv:
+            # generate accessor for protobuf class
+            self.nl()
+            self.write("@staticmethod\n")
+            self.write("def protobuf_class():\n")
+            self.inc_indent()
+            self.write(f'return {pgn_def.class_name}Pb\n')
+            self.dec_indent()
+            self.nl()
+
         self.gen_class_variables(pgn_def, pgn_def.attributes, pgn_def.last_attr)
         # self.nl()
         self.gen_enums_definition(pgn_def.enums)
@@ -609,8 +619,7 @@ class PythonPGNGenerator:
     def gen_repeated_encode_variable(self, field_set: RepeatAttributeDef):
         self.write(f"for repeat_field in self.{field_set.variable}:\n")
         self.inc_indent()
-        self.write("encoded_len = repeat_field.encode_payload(buffer, start_byte)\n")
-        self.write("start_byte += encoded_len\n")
+        self.write("start_byte = repeat_field.encode_payload(buffer, start_byte)\n")
         self.dec_indent()
         self.nl()
 
@@ -660,8 +669,10 @@ class PythonPGNGenerator:
         self.write(f"if self.{field_def.variable} is None:\n")
         self.inc_indent()
         self.write(f"self.{field_def.variable} = []\n")
+        self.write(f"self.{field_def.count_method} = 0\n")
         self.dec_indent()
         self.write(f"self.{field_def.variable}.append(item)\n")
+        self.write(f"self.{field_def.count_method} += 1\n")
         self.dec_indent()
         self.nl()
 
@@ -679,6 +690,7 @@ class PythonPGNGenerator:
                 self.inc_indent()
                 self.write(f'self.{attr.variable}.append(self.{attr.class_name}(protobuf=sub_set))\n')
                 self.dec_indent()
+                self.write(f'self.{attr.count_method} = len(self.{attr.variable})\n')
             else:
                 self.write(f'self.{attr.variable} = message.{attr.method}\n')
         self.dec_indent()
@@ -694,6 +706,7 @@ class PythonPGNGenerator:
                 self.inc_indent()
                 self.write(f'message.{attr.method}.append(sub_set.as_protobuf())\n')
                 self.dec_indent()
+                self.write(f'self.{attr.count_method} = len(self.{attr.variable})\n')
             else:
                 self._of.write(f'message.{attr.method} = self.{attr.variable}\n')
         self.write('return message\n')

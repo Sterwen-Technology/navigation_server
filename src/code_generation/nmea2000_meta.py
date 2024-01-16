@@ -297,7 +297,7 @@ class FieldSetMeta:
         # self._segments.append(segment)
 
         for field in field_list:
-            # print("Field:", field.name)
+            _logger.debug("Start analyzing field %s" % field.name)
             if field.decode_method == FIXED_LENGTH_NUMBER:
 
                 if segment is None:
@@ -314,11 +314,13 @@ class FieldSetMeta:
                 segment.add_decode_field(field.decode_string)
                 current_attr = None
                 if isinstance(field, BitField):
+                    _logger.debug("Field is a bitfield")
                     # need to look in subfields
                     sub_field_idx = 0
                     for sub_field in field.sub_fields():
                         a_field = sub_field.field()  # a_field is the one that appears in the PGN definition
-                        if sub_field.field().keyword is not None:
+                        _logger.debug("Subfield in bitfield %s key:%s" % (a_field.name, a_field.keyword))
+                        if a_field.keyword is not None:
                             current_attr = BitFieldAttributeDef(field, a_field, sub_field, sub_field_idx,
                                                                 self._decode_index)
                             self._attributes.append(current_attr)
