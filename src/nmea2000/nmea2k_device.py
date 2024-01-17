@@ -61,7 +61,7 @@ class NMEA2000Device:
         try:
             self._process_vector[msg.pgn](msg)
         except KeyError:
-            _logger.info("Device address %d => no process function for PGN %d" % (self._address, msg.pgn))
+            _logger.debug("Device address %d => no process function for PGN %d" % (self._address, msg.pgn))
             return
 
     def set_property(self, source, property_name):

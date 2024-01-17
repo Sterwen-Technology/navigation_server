@@ -30,6 +30,7 @@ class GrpcNmeaCoupler(Coupler):
         self._direction = self.READ_ONLY  # that is a mono directional coupler
         self._server_running = False
 
+
     def open(self):
         if not self._server_running:
             self._server.start()
@@ -59,7 +60,7 @@ class GrpcNmeaCoupler(Coupler):
         try:
             self._queue.put(msg, block=False)
         except queue.Full:
-            _logger.error("GrpcServer %s input queue full - message lost" % self.name())
+            _logger.error("GrpcServer %s input queue full - message lost" % self.object_name())
 
     def _read(self):
         try:

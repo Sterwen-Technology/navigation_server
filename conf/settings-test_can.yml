@@ -18,7 +18,7 @@ log_module:
   nmea2000.nmea2k_controller: INFO
   nmea2000.nmea2k_active_controller: INFO
   nmea2000.nmea2k_device: INFO
-  nmea2000.nmea2k_application: DEBUG
+  nmea2000.nmea2k_application: INFO
   nmea2000.n2k_name: INFO
   nmea2000.nmea2k_can_interface: INFO
   nmea2000.nmea2k_iso_transport: INFO
@@ -27,18 +27,17 @@ log_module:
 
 servers:
 
-
-- Console:
-      class: Console
-      port: 4502
-
 - NMEANetwork:
       class: NMEA2KActiveController
-      trace: true
+      trace: false
       channel: can0
-      applications: [DecodedInput]
+      applications: [CANCoupler]
 
 couplers:
+
+- CANCoupler:
+    class: DirectCANCoupler
+
 
 filters:
 
@@ -47,11 +46,6 @@ data_sinks:
 publishers:
 
 applications:
-
-- DecodedInput:
-    class: GrpcInputApplication
-    port: 4509
-
 
 
 

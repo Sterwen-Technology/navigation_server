@@ -67,9 +67,10 @@ publishers:
 
 - TraceOutput:
     class: N2KTracePublisher
-    filters: [NMEASent]
+    # filters: [NMEASent]
     couplers: [iKonvertCoupler]
     active: false
+    flexible_decode: false
 
 
 

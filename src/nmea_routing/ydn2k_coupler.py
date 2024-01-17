@@ -106,8 +106,9 @@ class YDCoupler(BufferedIPCoupler):
             if data is None:
                 raise IncompleteMessage  # no error but just to escape
         elif check_pgn():
-            coupler.fast_packet_handler.process_frame(pgn, sa, data)
-            raise IncompleteMessage  # no error but just to escape
+            data = coupler.fast_packet_handler.process_frame(pgn, sa, data)
+            if data is None:
+                raise IncompleteMessage  # no error but just to escape
 
         msg = NMEA2000Msg(pgn, prio, sa, 0, data)
         gmsg = NavGenericMsg(N2K_MSG, raw=frame, msg=msg)

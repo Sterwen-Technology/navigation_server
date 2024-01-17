@@ -210,7 +210,7 @@ class iKonvert(Coupler):
         if self._ikstate != self.IKCONNECTED:
             return False
         else:
-            _logger.info("%s coupler ready" % self.name())
+            _logger.info("%s coupler ready" % self.object_name())
             return True
 
     def process_nmea(self, msg):

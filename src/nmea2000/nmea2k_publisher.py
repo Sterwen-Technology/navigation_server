@@ -54,11 +54,11 @@ class N2KTracePublisher(Publisher):
         filter_names = opts.getlist('filters', str)
         self._flexible = opts.get('flexible_decode', bool, True)
         if filter_names is not None and len(filter_names) > 0:
-            _logger.info("Publisher:%s filter set:%s" % (self.name(), filter_names))
+            _logger.info("Publisher:%s filter set:%s" % (self.object_name(), filter_names))
             self._filters = FilterSet(filter_names)
             self._filter_select = True
         self._print_option = opts.get('output', str, 'ALL')
-        _logger.info("%s output option %s" % (self.name(), self._print_option))
+        _logger.info("%s output option %s" % (self.object_name(), self._print_option))
         self._trace_fd = None
         filename = opts.get('file', str, None)
         if filename is not None and self.is_active:
@@ -107,11 +107,15 @@ class N2KTracePublisher(Publisher):
 
         _logger.debug("Trace publisher msg:%s" % res)
         if res is not None:
+            if type(res) is dict:
+                print_result = res
+            else:
+                print_result = res.as_json()
             if self._print_option in ('ALL', 'PRINT'):
-                print("Message:", res.as_json())
+                print("Message:", print_result)
             if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
                 # self._trace_fd.write("Message from SA:%d " % msg.sa)
-                self._trace_fd.write(res.as_json())
+                self._trace_fd.write(print_result)
                 self._trace_fd.write('\n')
         return True
 

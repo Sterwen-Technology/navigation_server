@@ -13,6 +13,7 @@ import sys
 import os
 from argparse import ArgumentParser
 import signal
+import threading
 
 try:
     from nmea2000.nmea2k_can_coupler import DirectCANCoupler
@@ -58,11 +59,12 @@ def _parser():
 
     p.add_argument('-s', '--settings', action='store', type=str, default='./conf/settings.yml')
     p.add_argument('-d', '--working_dir', action='store', type=str)
+    p.add_argument("-t", "--timer", action='store', type=float, default=None)
 
     return p
 
 
-MessageServerGlobals.version = "V1.70"
+MessageServerGlobals.version = "V1.71"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
@@ -99,6 +101,8 @@ class NavigationMainServer:
         self._logfile = None
         self._start_time = 0
         self._start_time_s = "Not started"
+        self._analyse_timer = None
+        self._analyse_interval = 0
 
         signal.signal(signal.SIGINT, self.stop_handler)
 
@@ -106,6 +110,7 @@ class NavigationMainServer:
     def couplers(self):
         return self._couplers.values()
 
+    @property
     def name(self):
         return self._name
 
@@ -159,12 +164,14 @@ class NavigationMainServer:
     def wait(self):
         for server in self._servers:
             server.join()
-            _logger.info("%s threads joined" % server.name())
+            _logger.info("%s threads joined" % server.name)
         for inst in self._couplers.values():
             if inst.is_alive():
                 inst.join()
-            _logger.info("Coupler %s thread joined" % inst.name())
+            _logger.info("Coupler %s thread joined" % inst.object_name())
         _logger.info("Message server all servers and instruments threads stopped")
+        if self._analyse_timer is not None:
+            self._analyse_timer.cancel()
         print_threads()
         self._is_running = False
 
@@ -196,7 +203,7 @@ class NavigationMainServer:
         self.stop_server()
 
     def add_coupler(self, coupler):
-        self._couplers[coupler.name()] = coupler
+        self._couplers[coupler.object_name()] = coupler
         for server in self._servers:
             server.add_coupler(coupler)
             # _logger.debug("add coupler %s to %s" % (coupler.name(), server.name()))
@@ -235,9 +242,20 @@ class NavigationMainServer:
             coupler.request_start()
         return "Start request OK"
 
+    def start_analyser(self, interval):
+        self._analyse_interval = interval
+        self._analyse_timer = threading.Timer(interval, self.timer_lapse)
+        self._analyse_timer.start()
+
+    def timer_lapse(self):
+        print_threads()
+        self._analyse_timer = threading.Timer(self._analyse_interval, self.timer_lapse)
+        self._analyse_timer.start()
+
 
 def print_threads():
     _logger.info("Number of remaining active threads: %d" % threading.active_count())
+    _logger.info("Active thread %s" % threading.current_thread().name)
     thl = threading.enumerate()
     for t in thl:
         _logger.info("Thread:%s" % t.name)
@@ -340,6 +358,8 @@ def main():
     _logger.debug("Data sinks created")
     _logger.debug("Starting the main server")
     if main_server.start():
+        if opts.timer is not None:
+            main_server.start_analyser(opts.timer)
     # print_threads()
         main_server.wait()
 

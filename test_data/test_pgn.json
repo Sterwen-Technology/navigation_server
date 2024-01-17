@@ -3,7 +3,6 @@
   "pgn": 129285,
   "data": {
     "start_rps_nb": 1,
-    "nb_items": 3,
     "database_id": 1,
     "route_id": 1,
     "supplementary_data": 1,
@@ -35,7 +34,7 @@
   "pgn": 127488,
   "data": {
     "engine_instance": 0,
-    "engine_speed": 2000
+    "engine_speed": 1700
   }
 }
   ]

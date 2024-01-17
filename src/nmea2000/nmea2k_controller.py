@@ -24,7 +24,7 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 class NMEA2KController(NavigationServer, threading.Thread):
 
     def __init__(self, opts):
-        super().__init__(opts)
+        NavigationServer.__init__(self, opts)
         threading.Thread.__init__(self, name=self._name)
         self._devices = {}
         queue_size = opts.get('queue_size', int, 20)

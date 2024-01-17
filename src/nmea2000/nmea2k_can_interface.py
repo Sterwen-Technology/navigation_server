@@ -334,7 +334,7 @@ class SocketCANWriter(threading.Thread):
 
     def __init__(self, in_queue, can_interface, trace):
 
-        super().__init__(daemon=True)
+        super().__init__(name="CAN-Writer", daemon=True)
         self._can_interface = can_interface
         self._in_queue = in_queue
         self._bus = None

@@ -41,8 +41,9 @@ class Publisher(threading.Thread):
             self._max_lost = 10
             self._active = True
             daemon = True
+            object_name = "Internal Publisher %s" % name
         else:
-            name = opts['name']
+            object_name = opts['name']
             self._opts = opts
             self._queue_size = opts.get('queue_size', int, 20)
             self._max_lost = opts.get('max_lost', int, 5)
@@ -55,7 +56,8 @@ class Publisher(threading.Thread):
 
         self._queue_tpass = False
         super().__init__(name=name, daemon=daemon)
-        self._name = name
+        self._object_name = object_name
+        self.name = object_name
         # moving registration to start
         self._queue = queue.Queue(self._queue_size)
         self._stopflag = False
@@ -149,11 +151,11 @@ class Publisher(threading.Thread):
         _logger.critical("No message processing handler in publisher")
         return False
 
-    def name(self):
-        return self._name
+    def object_name(self):
+        return self._object_name
 
     def descr(self):
-        return "Publisher %s" % self._name
+        return "Publisher %s" % self._object_name
 
     @staticmethod
     def resolve_ref(name):
@@ -212,7 +214,7 @@ class Injector(Publisher):
         return self._target.send_msg_gen(msg)
 
     def descr(self):
-        return "Injector %s" % self._name
+        return "Injector %s" % self._object_name
 
 
 class SendPublisher(Publisher):

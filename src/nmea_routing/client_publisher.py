@@ -29,7 +29,7 @@ class NMEAPublisher(Publisher):
         self._client = client
 
         client.add_publisher(self)
-        _logger.info("NMEA Publisher %s created" % self.name())
+        _logger.info("NMEA Publisher %s created" % self.object_name())
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.raw is None:

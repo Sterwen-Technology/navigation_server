@@ -30,6 +30,7 @@ class AsynchLogReader(threading.Thread):
 
     def __init__(self, out_queue, process_message):
         super().__init__(daemon=True)
+        self.name = "AsynchLogReader"
         self._logfile = None
         self._out_queue = out_queue
         self._stop_flag = False
@@ -100,7 +101,7 @@ class RawLogCoupler(Coupler):
             self._pgn_white_list = None
 
     def open(self):
-        _logger.info("LogCoupler %s opening log file %s" % (self.name(), self._filename))
+        _logger.info("LogCoupler %s opening log file %s" % (self.object_name(), self._filename))
         if self._logfile is not None:
             # we can't reopen a file
             raise CouplerOpenRefused
@@ -126,7 +127,7 @@ class RawLogCoupler(Coupler):
         self._logfile.prepare_read()
         self._reader.start()
         self._state = self.CONNECTED
-        _logger.info("LogCoupler %s ready" % self.name())
+        _logger.info("LogCoupler %s ready" % self.object_name())
         return True
 
     def close(self):

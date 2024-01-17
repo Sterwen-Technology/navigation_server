@@ -29,6 +29,7 @@ class NavigationServer:
         self._port = opts.get('port', int, 0)
         self._options = opts
 
+    @property
     def name(self):
         return self._name
 

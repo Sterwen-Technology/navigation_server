@@ -76,7 +76,7 @@ class GrpcSender:
         self._stub = NMEAInputServerStub(self._channel)
 
     def send(self, pgn_obj):
-        print(pgn_obj.sa, pgn_obj.da)
+
         msg = pgn_obj.protobuf_message()
         # print(msg)
         try:
@@ -99,7 +99,6 @@ class GrpcSender:
                 _logger.error("GRPC Server %s not accessible" % self._address)
             return False
         if resp.status == "SERVER_OK":
-            print(resp.status)
             return True
         else:
             return False
@@ -136,11 +135,11 @@ def main():
         protobuf_class = pgn_class.protobuf_class()
         pb_obj = protobuf_class()
         google.protobuf.json_format.ParseDict(pgn_data, pb_obj)
-        print(pb_obj)
         pgn_obj = pgn_class()
         pgn_obj.from_protobuf(pb_obj)
         # print(pgn_obj)
         if sender.check_status():
+            _logger.debug("Sending object to CAN CA=%s" % pb_obj)
             sender.send(pgn_obj)
 
 

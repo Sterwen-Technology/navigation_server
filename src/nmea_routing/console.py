@@ -101,7 +101,7 @@ class ConsoleServicer(NavigationConsoleServicer):
         _logger.debug("Console server status ")
         resp = NavigationServerMsg(id=request.id)
         server = self._console.main_server()
-        resp.name = server.name()
+        resp.name = server.name
         resp.version = server.version()
         resp.start_time = server.start_time_str()
         resp.state = State.RUNNING
@@ -200,8 +200,8 @@ class Console(NavigationGrpcServer):
         add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self._grpc_server)
 
     def add_server(self, server):
-        record = ServerRecord(server, server.name(), server.class_name())
-        self._servers[server.name()] = record
+        record = ServerRecord(server, server.name, server.class_name())
+        self._servers[server.name] = record
 
     def get_servers(self) -> ServerRecord:
         for sr in self._servers.values():
@@ -219,7 +219,7 @@ class Console(NavigationGrpcServer):
         return self._servers[name].server
 
     def add_coupler(self, coupler):
-        self._couplers[coupler.name()] = coupler
+        self._couplers[coupler.object_name()] = coupler
 
     def couplers(self):
         return self._couplers.values()

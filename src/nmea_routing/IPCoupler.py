@@ -62,9 +62,9 @@ class IPCoupler(Coupler):
 
     def send(self, msg: NavGenericMsg):
 
-        _logger.debug("%s Sending %s" % (self.name(), msg.printable()))
+        _logger.debug("%s Sending %s" % (self.object_name(), msg.printable()))
         if self._state == self.NOT_READY:
-            _logger.error("Write attempt on non ready transport: %s" % self.name())
+            _logger.error("Write attempt on non ready transport: %s" % self.object_name())
             return False
         if self._trace_msg:
             self.trace(self.TRACE_OUT, msg)
@@ -184,11 +184,11 @@ class IPAsynchReader(threading.Thread):
     '''
 
     def __init__(self, coupler, out_queue, separator, msg_processing):
-        super().__init__()
+        super().__init__(name="IPAsynchReader", daemon=True)
         if isinstance(coupler, IPCoupler):
             self._transport = coupler.transport()
             self._coupler = coupler
-            self._cname = "Coupler %s" % coupler.name()
+            self._cname = "Coupler %s" % coupler.object_name()
         else:
             self._transport = coupler
             self._coupler = None
@@ -389,7 +389,7 @@ class TCPBufferedReader:
             _logger.info("TCPBufferedReader - Timeout error on TCP socket duration %f" % (time.monotonic() - start_time))
             raise CouplerTimeOut()
         except socket.error as e:
-            _logger.error("TCPBufferedReader - Error receiving from TCP socket %s: %s" % (self.name(), e))
+            _logger.error("TCPBufferedReader - Error receiving from TCP socket %s: %s" % (self.object_name(), e))
             raise CouplerReadError()
         # _logger.info("TCPBufferedReader - read OK %d" % len(msg))
         return msg

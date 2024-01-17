@@ -27,7 +27,7 @@ class NMEASerialPort(Coupler):
         self._separator_len = 2
         self._device = opts.get('device', str, None)
         if self._device is None:
-            _logger.error("SerialPort %s no device specified" % self.name())
+            _logger.error("SerialPort %s no device specified" % self.object_name())
             raise ValueError
         self._baudrate = opts.get('baudrate', int, 4800)
         self._tty = None
@@ -37,7 +37,7 @@ class NMEASerialPort(Coupler):
         try:
             self._tty = serial.Serial(self._device, baudrate=self._baudrate, timeout=self._timeout)
         except serial.serialutil.SerialException as e:
-            _logger.error("Serial Port %s cannot open TTY:%s" % (self.name(), e))
+            _logger.error("Serial Port %s cannot open TTY:%s" % (self.object_name(), e))
             return False
         self._state = self.CONNECTED
         return True
@@ -51,7 +51,7 @@ class NMEASerialPort(Coupler):
                 data = self._tty.readline()
             except serial.serialutil.SerialException as e:
                 if not self._stop_flag:
-                    _logger.error("Serial Port %s error reading %s" % (self.name(), e))
+                    _logger.error("Serial Port %s error reading %s" % (self.object_name(), e))
                     raise CouplerReadError("Serial Port error")
             if len(data) == 0:
                 raise CouplerTimeOut
@@ -69,7 +69,7 @@ class NMEASerialPort(Coupler):
         try:
             self._tty.write(msg.raw)
         except serial.serialutil.SerialException as e:
-            _logger.error("Serial Port %s error writing %s" % (self.name(), e))
+            _logger.error("Serial Port %s error writing %s" % (self.object_name(), e))
             raise CouplerReadError("Serial Port error")
         return True
 

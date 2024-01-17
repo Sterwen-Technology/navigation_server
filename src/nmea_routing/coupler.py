@@ -67,9 +67,10 @@ class Coupler(threading.Thread):
     protocol_dict = {'nmea0183': NMEA0183, 'nmea2000': NMEA2000, 'nmea_mix': NMEA_MIX}
 
     def __init__(self, opts):
-        name = opts['name']
-        super().__init__(name=name)
-        self._name = name
+        object_name = opts['name']
+        super().__init__(name=object_name)
+        self.name = object_name
+        self._name = object_name
         self._opts = opts
         self._publishers = []
         self._configmode = False
@@ -90,7 +91,7 @@ class Coupler(threading.Thread):
         if self._talker is not None:
             self._talker = self._talker.upper().encode()
         direction = opts.get('direction', str, 'bidirectional')
-        # print(self.name(), ":", direction)
+        # print(self.object_name(), ":", direction)
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
         self._mode_str = opts.get('protocol', str, 'nmea0183').lower()
         self._mode = self.protocol_dict[self._mode_str]
@@ -108,7 +109,7 @@ class Coupler(threading.Thread):
         # self._trace_msg = self._trace_msg or self._trace_raw
         if self._trace_msg or self._trace_raw:
             try:
-                self._tracer = NMEAMsgTrace(name, self.__class__.__name__)
+                self._tracer = NMEAMsgTrace(object_name, self.__class__.__name__)
             except MessageTraceError:
                 self._trace_msg = False
                 self._trace_raw = False
@@ -150,7 +151,7 @@ class Coupler(threading.Thread):
 
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)
-        self._timer.name = self._name + "timer"
+        self._timer.name = self._name + "-timer"
         _logger.debug("%s start lapse time %4.2f" % (self._timer.name, self._report_timer))
         self._timer.start()
 
@@ -171,7 +172,7 @@ class Coupler(threading.Thread):
         self._last_msg_count_s = self._total_msg_s
         self._count_stamp = t
         _logger.info("Coupler %s NMEA message received(process:%d rate:%6.2f; raw:%d rate:%6.2f sent:%d rate:%6.2f" %
-                     (self.name(), self._total_msg, self._rate, self.total_msg_raw(), self._rate_raw,
+                     (self.object_name(), self._total_msg, self._rate, self.total_msg_raw(), self._rate_raw,
                       self._total_msg_s, self._rate_s))
         if not self._stopflag:
             self.start_timer()
@@ -218,7 +219,7 @@ class Coupler(threading.Thread):
             if self._state == self.NOT_READY:
                 if nb_attempts >= self._max_attempt:
                     _logger.error("Failed to open %s after %d attempts => coupler stops" % (
-                        self.name(), self._max_attempt
+                        self.object_name(), self._max_attempt
                     ))
                     break
                 try:
@@ -249,7 +250,7 @@ class Coupler(threading.Thread):
                     self.close()
                     continue
                 else:
-                    _logger.debug("%s push:%s" % (self.name(), msg))
+                    _logger.debug("%s push:%s" % (self.object_name(), msg))
             except CouplerTimeOut:
                 continue
             except (socket.timeout, CouplerReadError):
@@ -292,7 +293,7 @@ class Coupler(threading.Thread):
             try:
                 p.publish(msg)
             except PublisherOverflow:
-                _logger.error("Publisher %s in overflow, removing..." % p.name())
+                _logger.error("Publisher %s in overflow, removing..." % p.object_name())
                 if not fault:
                     faulty_pub = []
                     fault = True
@@ -307,7 +308,7 @@ class Coupler(threading.Thread):
     def send_msg_gen(self, msg: NavGenericMsg):
         if not self._configmode:
             if self._direction == self.READ_ONLY:
-                _logger.error("Coupler %s attempt to write on a READ ONLY coupler" % self.name())
+                _logger.error("Coupler %s attempt to write on a READ ONLY coupler" % self.object_name())
                 return False
             self._total_msg_s += 1
             if msg.type == N2K_MSG:
@@ -334,7 +335,7 @@ class Coupler(threading.Thread):
     def total_output_msg(self):
         return self._total_msg_s
 
-    def name(self):
+    def object_name(self):
         return self._name
 
     def state(self):
@@ -372,7 +373,7 @@ class Coupler(threading.Thread):
         if self.is_alive():
             self._suspend()
             self._suspend_flag = True
-            _logger.info("Coupler %s suspended" % self.name())
+            _logger.info("Coupler %s suspended" % self.object_name())
 
     def _suspend(self):
         # implement specific actions on suspend to be overloaded
@@ -382,7 +383,7 @@ class Coupler(threading.Thread):
         if self._suspend_flag:
             self._resume()
             self._suspend_flag = False
-            _logger.info("Coupler %s resume" % self.name())
+            _logger.info("Coupler %s resume" % self.object_name())
 
     def _resume(self):
         # implement specific actions on resume - to be overloaded
@@ -436,10 +437,10 @@ class Coupler(threading.Thread):
             return None
         try:
             ref = NavigationConfiguration.get_conf().get_object(name)
-            _logger.info("%s attached %s %s" % (self.name(), descr, name))
+            _logger.info("%s attached %s %s" % (self.object_name(), descr, name))
             return ref
         except KeyError:
-            _logger.error("%s Wrong reference for %s: %s" % (self.name(), name, descr))
+            _logger.error("%s Wrong reference for %s: %s" % (self.object_name(), name, descr))
             return None
 
     def trace(self, direction, msg: NavGenericMsg):
@@ -463,9 +464,9 @@ class Coupler(threading.Thread):
         if self._tracer is not None:
             _logger.error("Coupler %s attempt to start traces while already active")
             return
-        _logger.info("Starting traces on raw input on %s" % self.name())
+        _logger.info("Starting traces on raw input on %s" % self.object_name())
         try:
-            self._tracer = NMEAMsgTrace(self.name(), self.__class__.__name__)
+            self._tracer = NMEAMsgTrace(self.object_name(), self.__class__.__name__)
             self._trace_raw = True
         except MessageTraceError:
             pass
