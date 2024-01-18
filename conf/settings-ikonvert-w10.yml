@@ -1,0 +1,78 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     16/10/2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+
+
+servers:
+
+- NMEAServer:
+    class: NMEAServer
+    port: 4500
+    nmea2000: dyfmt
+
+- NMEASender:
+    class: NMEASenderServer
+    port: 4503
+    coupler: iKonvertCoupler
+    max_silent: 10
+
+- Console:
+    class: Console
+    port: 4502
+
+- NMEANetwork:
+    class: NMEA2KController
+
+couplers:
+
+- iKonvertCoupler:
+    class: iKonvert
+    device: COM4
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
+    msg_queue_size: 20
+    trace_messages: false
+    trace_raw: false
+
+filters:
+
+- FastPacket:
+    class: NMEA2000Filter
+    pgn: [129029, 126996, 129540]
+    action: select
+
+- RaymarineProprietary:
+    class: NMEA2000Filter
+    pgn: [126720]
+    action: select
+
+- NMEASent:
+    class: NMEA2000Filter
+    pgn: [129025, 129026, 129283, 129284]
+    action: select
+
+
+publishers:
+
+- TraceOutput:
+    class: N2KTracePublisher
+    # filters: [NMEASent]
+    couplers: [iKonvertCoupler]
+    active: false
+    flexible_decode: false
+
+
+
+
+
