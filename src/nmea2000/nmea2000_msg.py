@@ -293,7 +293,7 @@ class NMEA2000Object:
             _logger.error("NMEA2000Object creation with unknown PGN %d" % pgn)
             raise
         self._sa = 0
-        self._da = 0
+        self._da = 255
         self._fields = None
         self._message = None
         self._prio = 7
