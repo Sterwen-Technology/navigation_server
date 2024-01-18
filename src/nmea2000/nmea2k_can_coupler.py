@@ -50,7 +50,7 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
         try:
             self._in_queue.put(msg, block=False)
         except queue.Full:
-            _logger.error("CAN %s queue full - discarding message" % self.name())
+            _logger.error("CAN %s queue full - discarding message" % self.object_name())
 
     def read(self) -> NavGenericMsg:
         '''
@@ -61,7 +61,7 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
             msg = self._in_queue.get(timeout=1.0)
         except queue.Empty:
             raise CouplerTimeOut
-
+        _logger.debug("Direct CAN read %s" % msg.format1())
         msg = NavGenericMsg(N2K_MSG, msg=msg)
         self.trace(self.TRACE_IN, msg)
         # _logger.debug("Read:%s", msg)
@@ -77,7 +77,7 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
             raise CouplerWriteError("CAN coupler only accepts NMEA2000 messages")
 
         if self._direction == self.READ_ONLY:
-            _logger.error("Coupler %s attempt to write on a READ ONLY coupler" % self.name())
+            _logger.error("Coupler %s attempt to write on a READ ONLY coupler" % self.object_name())
             return False
         self._total_msg_s += 1
         return self.send(msg.msg)

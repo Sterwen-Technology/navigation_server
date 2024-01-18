@@ -117,6 +117,7 @@ class NMEA2KActiveController(NMEA2KController):
                     # address change cannot be applied on the fly
                     self.apply_change_application_address()
             else:
+                _logger.debug("Active controller message dispatch sa=%d pgn =%d" % (msg.sa, msg.pgn))
                 for application in self._applications.values():
                     application.receive_data_msg(msg)
 

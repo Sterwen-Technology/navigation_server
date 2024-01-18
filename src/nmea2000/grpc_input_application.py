@@ -14,6 +14,7 @@ import logging
 from nmea2000.nmea2k_application import NMEA2000Application
 from nmea_routing.grpc_nmea_input_server import GrpcDataServer
 from nmea2000.generated_base import NMEA2000DecodedMsg
+from nmea2000.nmea2000_msg import NMEA2000Msg
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -45,6 +46,10 @@ class GrpcInputApplication(GrpcDataServer, NMEA2000Application):
             _logger.error("Error coding CAN message for PGN %d: %s" % (msg.pgn, err))
             raise
         self._controller.CAN_interface.send(can_message)
+
+    def receive_data_msg(self, msg: NMEA2000Msg):
+        # to be implemented for bi-directional applications
+        pass
 
 
 

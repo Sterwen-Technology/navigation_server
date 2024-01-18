@@ -31,7 +31,7 @@ class ConsoleServicer(NavigationConsoleServicer):
     @staticmethod
     def coupler_resp(i):
         resp = CouplerMsg()
-        resp.name = i.name()
+        resp.name = i.object_name()
         resp.coupler_class = type(i).__name__
         if i.is_alive():
             if i.is_suspended():
@@ -61,10 +61,10 @@ class ConsoleServicer(NavigationConsoleServicer):
         return resp
 
     def GetCouplers(self, request, context):
-        _logger.debug("Console GetCouplers")
+        _logger.debug("Console GetCouplers (nb=%d)" % len(self._console.couplers()))
         for i in self._console.couplers():
             resp = self.coupler_resp(i)
-            _logger.debug("Console GetCouplers sending coupler %s" % i.name())
+            _logger.debug("Console GetCouplers sending coupler %s" % i.object_name())
             yield resp
         return
 
@@ -219,6 +219,7 @@ class Console(NavigationGrpcServer):
         return self._servers[name].server
 
     def add_coupler(self, coupler):
+        # print("Console add coupler:", coupler.object_name())
         self._couplers[coupler.object_name()] = coupler
 
     def couplers(self):
