@@ -234,7 +234,8 @@ class NMEA2000Application(NMEA2000Device):
         self._controller.CAN_interface.send(self._product_information.message(), force_send=True)
 
     def receive_data_msg(self, msg: NMEA2000Msg):
-        raise NotImplementedError
+        _logger.critical("Missing receive_data_msg in class %s" % self.__class__.__name__)
+        raise NotImplementedError("Missing receive_data_msg")
 
     def receive_iso_msg(self, msg: NMEA2000Msg):
         '''
