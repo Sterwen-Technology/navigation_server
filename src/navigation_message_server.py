@@ -16,11 +16,13 @@ import signal
 import threading
 
 try:
-    from nmea2000.nmea2k_can_coupler import DirectCANCoupler
+    from nmea2000.nmea2k_active_controller import NMEA2KActiveController
+
 except ModuleNotFoundError as e:
     print("Error in python-can import", e)
     include_can = False
 else:
+    print("CAN interface included")
     include_can = True
 from nmea0183 import nmea0183_msg
 from nmea_routing.message_server import NMEAServer, NMEASenderServer
@@ -38,7 +40,7 @@ from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_controller import NMEA2KController
 if include_can:
-    from nmea2000.nmea2k_active_controller import NMEA2KActiveController
+    from nmea2000.nmea2k_can_coupler import DirectCANCoupler
 from victron_mppt.mppt_coupler import MPPT_Coupler
 from nmea_routing.ydn2k_coupler import YDCoupler
 from nmea_routing.serial_nmeaport import NMEASerialPort
