@@ -12,6 +12,8 @@
 syntax = "proto3";
 
 import "arguments.proto";
+import "iso_name.proto";
+import "nmea2000_classes_iso_gen.proto";
 
 enum State {
      STOPPED=0;
@@ -74,13 +76,11 @@ message NavigationServerMsg {
 
 message N2KDeviceMsg {
   uint32 address=1;
-  uint32 manufacturer_code=2;
-  string manufacturer_name=3;
-  uint32 product_code=4;
-  string product_name=5;
-  string description=6;
-  bool changed=7;
-  uint64 iso_name=8;
+  bool changed=2;
+  float last_time_seen=3;
+  ISOName iso_name=4;
+  Pgn126996ClassPb product_information=5;
+  Pgn126998ClassPb configuration_information=6;
 }
 
 message Request {

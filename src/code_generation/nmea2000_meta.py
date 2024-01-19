@@ -515,11 +515,21 @@ class NMEA2000Meta(FieldSetMeta):
         return self._pgn_def.has_flag(flag)
 
 
-def nmea2000_gen_meta(pgn=None):
+def nmea2000_gen_meta(category: str, pgn=None):
     class_def_list = []
     if pgn is None or pgn == 0:
         for cls in MessageServerGlobals.pgn_definitions.generation_iter():
-            class_def_list.append(NMEA2000Meta(cls))
+            include = False
+            if category == 'all':
+                include = True
+            elif category == 'iso':
+                if PGNDef.pgn_for_controller(cls.id):
+                    include = True
+            elif category == 'data':
+                if not PGNDef.pgn_for_controller(cls.id):
+                    include = True
+            if include:
+                class_def_list.append(NMEA2000Meta(cls))
     else:
         try:
             cls = find_pgn(pgn)

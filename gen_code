@@ -1,7 +1,9 @@
 #!/bin/bash
 # first generate the protobuf
-python src/code_generator.py -pb
+python src/code_generator.py -pb -c iso -o nmea2000_classes_iso_gen
+python src/code_generator.py -pb -c data -o nmea2000_classes_gen
 # now generate the protobuf python
 ./gen_proto
 # en finally generate the NMEA2000 python
-python src/code_generator.py -py -cv $*
+python src/code_generator.py -py -cv -c iso -o nmea2000_classes_iso_gen
+python src/code_generator.py -py -cv -c data -o nmea2000_classes_gen

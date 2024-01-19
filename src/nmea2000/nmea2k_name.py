@@ -12,6 +12,8 @@
 import logging
 import struct
 
+from generated.iso_name_pb2 import ISOName
+
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
@@ -312,6 +314,17 @@ class NMEA2000Name:
             raise IndexError
         field_def = NMEA2000Name.__fields[field_num - 1]
         return field_def.byte_size, field_def.name
+
+    def set_protobuf(self, res: ISOName):
+        res.identity_number = self.identity_number
+        res.manufacturer_code = self.manufacturer_code
+        res.device_instance_lower = self.device_instance_lower
+        res.device_instance_upper = self.device_instance_upper
+        res.device_function = self.device_function
+        res.device_class = self.device_class
+        res.system_instance = self.system_instance
+        res.industry_group = self.industry_group
+        res.arbitrary_address_capable = bool(self.arbitrary_address_capable)
 
 
 class NMEA2000MutableName(NMEA2000Name):

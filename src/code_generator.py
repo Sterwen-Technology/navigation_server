@@ -37,6 +37,9 @@ def _parser():
     p.add_argument('-cv', '--protobuf_conv', action="store_true")
     p.add_argument('-ro', '--read_only', action="store_true")
     p.add_argument("-pgn", "--pgn", action="store", type=int, default=0)
+    p.add_argument('-c', '--category', action='store', type=str, choices=['iso', 'data', 'all'],
+                   default='all')
+    p.add_argument('-o', '--output', action='store', type=str, default=None)
 
     return p
 
@@ -74,14 +77,19 @@ def main():
         output_file_base = f"nmea2000_{opts.pgn}class_gen"
         _logger.setLevel(logging.DEBUG)
     else:
-        output_file_base = "nmea2000_classes_gen"
+        if opts.output is None:
+            _logger.warning("No output file name specified =use default")
+            output_file_base = "nmea2000_classes_gen"
+        else:
+            output_file_base = opts.output
+
     _logger.info("Generating NMEA2000 meta model")
-    class_list = nmea2000_gen_meta(opts.pgn)
+    class_list = nmea2000_gen_meta(opts.category, pgn=opts.pgn)
     _logger.info(f"Generated meta model for {len(class_list)} PGN")
     if opts.python:
         output_file = os.path.join(opts.python_dir, output_file_base + ".py")
         python_gen = PythonPGNGenerator(output_file, opts.read_only)
-        python_gen.gen_classes(class_list, opts.protobuf_conv)
+        python_gen.gen_classes(class_list, opts.protobuf_conv, output_file_base)
         python_gen.close()
     if opts.protobuf:
         output_file = os.path.join(opts.protobuf_dir, output_file_base + ".proto")

@@ -1,0 +1,25 @@
+//-------------------------------------------------------------------------------
+// Name:        iso_name.proto
+// Purpose:     protobuf for
+//
+// Author:      Laurent Carré
+//
+// Created:     19/01/2024
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax="proto3";
+
+message ISOName {
+  uint32 identity_number = 1;
+  uint32 manufacturer_code = 2;
+  uint32 device_instance_lower = 3;
+  uint32 device_instance_upper = 4;
+  uint32 device_function = 5;
+  uint32 device_class = 6;
+  uint32 system_instance = 7;
+  uint32 industry_group = 8;
+  bool arbitrary_address_capable = 9;
+  optional string manufacturer_name = 10;
+}

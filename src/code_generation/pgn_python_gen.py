@@ -72,10 +72,10 @@ class PythonPGNGenerator:
     def set_level(self, level):
         self._level = level
 
-    def gen_classes(self, class_def_list: list, protobuf_conv):
+    def gen_classes(self, class_def_list: list, protobuf_conv: bool, base_name: str):
         # add protobuf import
         if protobuf_conv:
-            self._of.write("from generated.nmea2000_classes_gen_pb2 import *\n\n")
+            self._of.write(f"from generated.{base_name}_pb2 import *\n\n")
         # generate all classes
         for cls in class_def_list:
             try:
@@ -696,20 +696,30 @@ class PythonPGNGenerator:
         self.dec_indent()
         self._of.write('\n')
         # now generate the conversion to protobuf
+
+        def gen_protobuf_attr():
+            for attr in pgn_def.attributes:
+                self.write_indent()
+                if isinstance(attr, RepeatAttributeDef):
+                    self._of.write(f'for sub_set in self.{attr.variable}:\n')
+                    self.inc_indent()
+                    self.write(f'message.{attr.method}.append(sub_set.as_protobuf())\n')
+                    self.dec_indent()
+                    self.write(f'self.{attr.count_method} = len(self.{attr.variable})\n')
+                else:
+                    self._of.write(f'message.{attr.method} = self.{attr.variable}\n')
+
         self.write(f'def as_protobuf(self) -> {class_name}:\n')
         self.inc_indent()
         self.write(f'message = {class_name}()\n')
-        for attr in pgn_def.attributes:
-            self.write_indent()
-            if isinstance(attr, RepeatAttributeDef):
-                self._of.write(f'for sub_set in self.{attr.variable}:\n')
-                self.inc_indent()
-                self.write(f'message.{attr.method}.append(sub_set.as_protobuf())\n')
-                self.dec_indent()
-                self.write(f'self.{attr.count_method} = len(self.{attr.variable})\n')
-            else:
-                self._of.write(f'message.{attr.method} = self.{attr.variable}\n')
+        gen_protobuf_attr()
         self.write('return message\n')
+        self.dec_indent()
+        self.nl()
+        # now insert the data in a existing message
+        self.write(f'def set_protobuf(self, message: {class_name}):\n')
+        self.inc_indent()
+        gen_protobuf_attr()
         self.dec_indent()
         self.nl()
         if base_class is None:

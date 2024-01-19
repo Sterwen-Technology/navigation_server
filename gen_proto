@@ -33,9 +33,11 @@ gen_protobuf nmea_server
 gen_protobuf agent
 gen_protobuf arguments
 gen_protobuf ecu
+gen_protobuf nmea2000_classes_iso_gen
 gen_protobuf nmea2000_classes_gen
+gen_protobuf iso_name
 adjust_protobuf input_server nmea_messages
 adjust_protobuf nmea_messages nmea0183 nmea2000
 adjust_protobuf nmea_server nmea_messages
-adjust_protobuf console arguments
+adjust_protobuf console arguments iso_name nmea2000_classes_iso_gen
 adjust_protobuf ecu nmea2000

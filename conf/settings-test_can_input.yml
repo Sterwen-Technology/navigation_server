@@ -14,7 +14,7 @@ trace_dir: /mnt/meaban/Bateau/tests
 # log_file: test_fast_packet
 log_module:
   nmea_routing.coupler: INFO
-  nmea_routing.console: INFO
+  nmea_routing.console: DEBUG
   nmea2000.nmea2000_msg: INFO
   nmea2000.nmea2k_controller: INFO
   nmea2000.nmea2k_active_controller: INFO

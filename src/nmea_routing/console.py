@@ -176,12 +176,13 @@ class ConsoleServicer(NavigationConsoleServicer):
             resp.changed = device.changed()
             device.clear_change_flag()
             _logger.debug("Console sending NMEA2000 Device address %d info" % device.address)
-            for prop, attr in self.dev_attr_table:
-                try:
-                    val = device.property_value(prop)
-                except KeyError:
-                    continue
-                object.__setattr__(resp, attr, val)
+            device.iso_name.set_protobuf(resp.iso_name)
+            resp.iso_name.manufacturer_name = device.manufacturer_name
+            resp.last_time_seen = device.last_time_seen
+            if device.product_information is not None:
+                device.produc_information.set_protobuf(resp.product_information)
+            if device.configuration_information is not None:
+                device.configuration_information.set_protobuf(resp.configuration_information)
             yield resp
         return
 
