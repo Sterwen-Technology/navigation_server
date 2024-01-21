@@ -149,6 +149,8 @@ class PythonPGNGenerator:
         self.write("def __init__(self, message=None, protobuf=None):\n")
         self.inc_indent()
         self.write("super().__init__(message, protobuf)\n")
+        if pgn_def.repeat_field_set is not None:
+            self.write(f'self.{pgn_def.repeat_field_set.variable} = []\n')
         self.nl()
         # properties methods
         self.dec_indent()
@@ -518,6 +520,7 @@ class PythonPGNGenerator:
         # self.write_indent()
         # first need to convert in int if float
         for attr in segment.attributes:
+            # print(attr.field.name, attr.__class__.__name__)
             if issubclass(attr.__class__, ReservedAttribute):
                 if isinstance(attr, ReservedBitFieldAttribute):
                     if attr.sub_field_index == 0:

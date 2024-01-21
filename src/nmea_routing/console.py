@@ -180,7 +180,7 @@ class ConsoleServicer(NavigationConsoleServicer):
             resp.iso_name.manufacturer_name = device.manufacturer_name
             resp.last_time_seen = device.last_time_seen
             if device.product_information is not None:
-                device.produc_information.set_protobuf(resp.product_information)
+                device.product_information.set_protobuf(resp.product_information)
             if device.configuration_information is not None:
                 device.configuration_information.set_protobuf(resp.configuration_information)
             yield resp

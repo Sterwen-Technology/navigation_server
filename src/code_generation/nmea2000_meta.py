@@ -102,6 +102,8 @@ class BitFieldAttributeDef(AttributeDef):
 
     def __init__(self, bitfield: BitField, field: Field, sub_field: BitFieldDef, sub_field_idx: int, decode_index: int):
         super().__init__(field, decode_index)
+        # print("Bitfield:", field.name, bitfield.name, sub_field.field_name(), sub_field_idx)
+        assert issubclass(bitfield.__class__, BitField)
         self._bitfield = bitfield
         self._sub_field = sub_field
         self._sub_field_idx = sub_field_idx
@@ -131,6 +133,8 @@ class ReservedBitFieldAttribute(ReservedAttribute):
 
     def __init__(self, bitfield: BitField, field: Field, sub_field: BitFieldDef, sub_field_idx: int, decode_index: int):
         super().__init__(field, decode_index)
+        # print("Reserved bitfield:", field.name, bitfield.name, sub_field.field_name(), sub_field_idx)
+        assert issubclass(bitfield.__class__, BitField)
         self._bitfield = bitfield
         self._sub_field = sub_field
         self._sub_field_idx = sub_field_idx
@@ -314,7 +318,7 @@ class FieldSetMeta:
                 segment.add_decode_field(field.decode_string)
                 current_attr = None
                 if isinstance(field, BitField):
-                    _logger.debug("Field is a bitfield")
+                    _logger.debug("Field %s is a bitfield" % field.name)
                     # need to look in subfields
                     sub_field_idx = 0
                     for sub_field in field.sub_fields():
@@ -327,7 +331,7 @@ class FieldSetMeta:
                             self._attr_dict[current_attr.method] = current_attr
                             segment.add_attribute(current_attr)
                         else:
-                            attr = ReservedBitFieldAttribute(a_field, a_field, sub_field, sub_field_idx,
+                            attr = ReservedBitFieldAttribute(field, a_field, sub_field, sub_field_idx,
                                                              self._decode_index)
                             segment.add_attribute(attr)
                             self._reserved_attributes.append(attr)

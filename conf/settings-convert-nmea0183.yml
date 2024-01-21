@@ -38,12 +38,11 @@ couplers:
 publishers:
 
 - SendNMEA2000:
-    class: N2KGrpcPublisher
+    class: N2KTracePublisher
     active: true
     protobuf: true
     convert_nmea0183: true
-    address: 192.168.1.44
-    port: 4509
+    output: PRINT
     couplers: [SNReplay]
 
 - Stats:

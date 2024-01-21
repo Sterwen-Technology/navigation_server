@@ -56,7 +56,7 @@ class Publisher(threading.Thread):
 
         self._queue_tpass = False
         super().__init__(name=name, daemon=daemon)
-        self._object_name = object_name
+        self._name = object_name
         self.name = object_name
         # moving registration to start
         self._queue = queue.Queue(self._queue_size)
@@ -152,10 +152,10 @@ class Publisher(threading.Thread):
         return False
 
     def object_name(self):
-        return self._object_name
+        return self._name
 
     def descr(self):
-        return "Publisher %s" % self._object_name
+        return "Publisher %s" % self._name
 
     @staticmethod
     def resolve_ref(name):
@@ -191,7 +191,7 @@ class LogPublisher(Publisher):
                 msg_str = msg.serialize()
                 self._fd.write(msg_str)
             except Exception as e:
-                print("message error",e,msg)
+                print("message error", e, msg)
                 pass
         self._fd.write('\n')
         self._fd.flush()
@@ -214,7 +214,7 @@ class Injector(Publisher):
         return self._target.send_msg_gen(msg)
 
     def descr(self):
-        return "Injector %s" % self._object_name
+        return "Injector %s" % self._name
 
 
 class SendPublisher(Publisher):

@@ -98,7 +98,7 @@ class NMEA0183Msg(NavGenericMsg):
         self._raw[1:3] = talker[:2]
         self._address[0:2] = talker[:2]
 
-    def fields(self):
+    def fields(self) -> list:
         return self._raw[self._datafields_s:self._datalen_s].split(b',')
 
     def as_protobuf(self, r: nmea0183pb, set_raw=False) -> nmea0183pb:

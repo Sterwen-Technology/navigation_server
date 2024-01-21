@@ -481,7 +481,7 @@
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </UIntField>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
@@ -533,7 +533,7 @@
           <BitOffset>0</BitOffset>
           <BitLength>11</BitLength>
         </UIntField>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
@@ -1142,7 +1142,7 @@
       <ByteLength>8</ByteLength>
       <Scope>Generate</Scope>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -1417,7 +1417,7 @@
       <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -1503,7 +1503,7 @@
       <Scope>Generate</Scope>
       <ByteLength>6</ByteLength>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -2086,7 +2086,7 @@
           <Offset>-273.15</Offset>
           <Scale>0.01</Scale>
         </UDblField>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>56</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -2353,7 +2353,7 @@
       <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -2363,7 +2363,7 @@
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
         </DblField>
-        <DblField Name="Speed Ground Referenced" key="speed_over_ground_ref">
+        <DblField Name="Speed Ground Referenced" key="speed_over_ground">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.01</Scale>
@@ -2390,7 +2390,7 @@
       <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -2408,12 +2408,12 @@
           <BitLength>16</BitLength>
           <Scale>0.001</Scale>
         </DblField>
-        <DblField Name="Offset" key="range">
+        <UDblField Name="Range" key="range">
           <Description>Measurement range</Description>
           <BitOffset>56</BitOffset>
           <BitLength>8</BitLength>
           <Scale>10</Scale>
-        </DblField>
+        </UDblField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="128275">
@@ -2569,7 +2569,7 @@
       <ByteLength>8</ByteLength>
       <Scope>Generate</Scope>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -2672,7 +2672,7 @@
       <ByteLength>43</ByteLength>
       <Scope>Generate</Scope>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -2707,8 +2707,12 @@
           <BitLength>64</BitLength>
           <Scale>1E-6</Scale>
         </DblField>
-        <EnumField Name="Method" key="method">
+        <EnumField Name="GNSS type" Definition="GNSS type" key="GNSS_type">
           <BitOffset>248</BitOffset>
+          <BitLength>4</BitLength>
+        </EnumField>
+        <EnumField Name="Method" key="method">
+          <BitOffset>252</BitOffset>
           <BitLength>4</BitLength>
           <EnumValues>
             <EnumPair Value="0" Name="no GNSS" />
@@ -2721,10 +2725,6 @@
             <EnumPair Value="7" Name="Manual Input" />
             <EnumPair Value="8" Name="Simulate mode" />
           </EnumValues>
-        </EnumField>
-        <EnumField Name="GNSS type" Definition="GNSS type" key="GNSS_type">
-          <BitOffset>252</BitOffset>
-          <BitLength>4</BitLength>
         </EnumField>
         <EnumField Name="Integrity" key="integrity">
           <BitOffset>256</BitOffset>
@@ -3401,7 +3401,7 @@
       <Scope>Generate</Scope>
       <ByteLength>6</ByteLength>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -3446,7 +3446,7 @@
       <Scope>Generate</Scope>
       <ByteLength>34</ByteLength>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -3811,7 +3811,7 @@
       <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -3874,7 +3874,7 @@
       <ByteLength>219</ByteLength>
       <Scope>Generate</Scope>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -6217,7 +6217,7 @@
       <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -6233,13 +6233,8 @@
           <FormatAs>Heading</FormatAs>
           <Scale>0.0057295779513082332</Scale>
         </UDblField>
-        <UIntField Name="Reserved">
-          <Description>Reserved</Description>
-          <BitOffset>40</BitOffset>
-          <BitLength>5</BitLength>
-        </UIntField>
         <EnumField Name="Reference" key="reference">
-          <BitOffset>45</BitOffset>
+          <BitOffset>40</BitOffset>
           <BitLength>3</BitLength>
           <EnumValues>
             <EnumPair Value="0" Name="True (referenced to North)" />
@@ -6253,8 +6248,8 @@
         </EnumField>
         <UIntField Name="Reserved">
           <Description>Reserved</Description>
-          <BitOffset>48</BitOffset>
-          <BitLength>16</BitLength>
+          <BitOffset>43</BitOffset>
+          <BitLength>21</BitLength>
         </UIntField>
       </Fields>
     </PGNDefn>
@@ -6263,7 +6258,7 @@
       <Scope>Generate</Scope>
       <ByteLength>7</ByteLength>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -6298,7 +6293,7 @@
       <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -6346,7 +6341,7 @@
       <ByteLength>8</ByteLength>
       <Scope>Generate</Scope>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -6415,7 +6410,7 @@
       <ByteLength>8</ByteLength>
       <Scope>Generate</Scope>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -6485,7 +6480,7 @@
       <Scope>Generate</Scope>
       <ByteLength>8</ByteLength>
       <Fields>
-        <UIntField Name="SID" key="system_id">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>

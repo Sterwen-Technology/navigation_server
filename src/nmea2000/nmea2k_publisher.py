@@ -20,6 +20,7 @@ from nmea2000.nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDe
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
 
 from nmea_routing.generic_msg import *
+from nmea0183.nmea0183_to_nmea2k import default_converter, Nmea0183InvalidMessage
 from nmea_routing.configuration import NavigationConfiguration
 from utilities.global_variables import find_pgn
 
@@ -53,6 +54,7 @@ class N2KTracePublisher(Publisher):
         super().__init__(opts)
         filter_names = opts.getlist('filters', str)
         self._flexible = opts.get('flexible_decode', bool, True)
+        self._convert_nmea183 = opts.get('convert_nmea0183', bool, False)
         if filter_names is not None and len(filter_names) > 0:
             _logger.info("Publisher:%s filter set:%s" % (self.object_name(), filter_names))
             self._filters = FilterSet(filter_names)
@@ -76,9 +78,13 @@ class N2KTracePublisher(Publisher):
 
     def process_msg(self, gen_msg):
         if gen_msg.type != N2K_MSG:
-            return True
+            if self._convert_nmea183:
+                self.process_nmea183(gen_msg)
+                return True
+            else:
+                return True
         msg = gen_msg.msg
-        _logger.debug("Trace publisher input msg %s" % msg.format2())
+        _logger.debug("Trace publisher N2K input msg %s" % msg.format2())
         if self._print_option == 'NONE':
             return True
         '''
@@ -118,6 +124,30 @@ class N2KTracePublisher(Publisher):
                 self._trace_fd.write(print_result)
                 self._trace_fd.write('\n')
         return True
+
+    def process_nmea183(self, msg: NavGenericMsg):
+        _logger.debug("Grpc Publisher NMEA0183 input: %s" % msg)
+        if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
+            self._trace_fd.write(str(msg))
+            self._trace_fd.write('\n')
+
+        try:
+            messages = default_converter.convert(msg)
+        except Nmea0183InvalidMessage:
+            return
+        except Exception as e:
+            _logger.error("NMEA0183 decing error:%s" % e)
+            return
+        for res in messages:
+            print_result = res.as_json()
+            if self._print_option in ('ALL', 'PRINT'):
+                print("Message:", print_result)
+            if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
+                # self._trace_fd.write("Message from SA:%d " % msg.sa)
+                self._trace_fd.write(print_result)
+                self._trace_fd.write('\n')
+
+
 
     def stop(self):
         print("List of missing decode for PGN")
