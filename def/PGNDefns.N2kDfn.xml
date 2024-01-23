@@ -3406,25 +3406,8 @@
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <UIntField Name="Reserved">
-          <Description>reserved</Description>
-          <BitOffset>8</BitOffset>
-          <BitLength>1</BitLength>
-        </UIntField>
-        <EnumField Name="Navigation Terminated" key="navigation_terminated">
-          <BitOffset>9</BitOffset>
-          <BitLength>1</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="No" />
-            <EnumPair Value="1" Name="Yes" />
-          </EnumValues>
-        </EnumField>
-        <UIntField Name="Reserved">
-          <BitOffset>10</BitOffset>
-          <BitLength>2</BitLength>
-        </UIntField>
         <EnumField Name="XTE mode" key="XTE_mode">
-          <BitOffset>12</BitOffset>
+          <BitOffset>8</BitOffset>
           <BitLength>4</BitLength>
           <EnumValues>
             <EnumPair Value="0" Name="Autonomous" />
@@ -3432,6 +3415,18 @@
             <EnumPair Value="2" Name="Estimated" />
             <EnumPair Value="3" Name="Simulator" />
             <EnumPair Value="4" Name="Manual" />
+          </EnumValues>
+        </EnumField>
+        <UIntField Name="Reserved">
+          <BitOffset>12</BitOffset>
+          <BitLength>2</BitLength>
+        </UIntField>
+        <EnumField Name="Navigation Terminated" key="navigation_terminated">
+          <BitOffset>14</BitOffset>
+          <BitLength>2</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="No" />
+            <EnumPair Value="1" Name="Yes" />
           </EnumValues>
         </EnumField>
         <DblField Name="XTE" key="XTE">

@@ -34,11 +34,21 @@ def check_valid(value: int, mask: int, default: int) -> int:
 
 
 def clean_string(bytes_to_clean: bytearray) -> str:
+    '''
+    This function converts fixed length string (as bytes) to Python string
+    Cleaning from padding / null chars and superfluous blanks
+    '''
     null_start = bytes_to_clean.find(0xFF)
     if null_start > 0:
         bytes_to_clean = bytes_to_clean[:null_start]
     elif null_start == 0:
         return ''
+        # try to find if we have a 0x00 as well to end the string
+    null_end = bytes_to_clean.find(0x00)
+    if null_end == 0:
+        return ''
+    elif null_end > 0:
+        bytes_to_clean = bytes_to_clean[:null_end]
     if len(bytes_to_clean) == 0:
         return ''
     try:

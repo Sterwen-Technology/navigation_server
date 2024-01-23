@@ -14,6 +14,8 @@ from collections import namedtuple
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
 from socket import gethostname
+from google.protobuf.json_format import MessageToJson
+
 
 from nmea_routing.configuration import NavigationConfiguration
 from nmea_routing.server_common import NavigationServer, NavigationGrpcServer
@@ -184,6 +186,7 @@ class ConsoleServicer(NavigationConsoleServicer):
             if device.configuration_information is not None:
                 device.configuration_information.set_protobuf(resp.configuration_information)
             yield resp
+        _logger.debug("Get NMEA Devices END")
         return
 
 

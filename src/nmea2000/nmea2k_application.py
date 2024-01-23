@@ -102,7 +102,7 @@ class NMEA2000Application(NMEA2000Device):
         self.init_product_information()
         self._configuration_information = ConfigurationInformation()
         self.init_configuration_information()
-        self.set_properties()
+        self._manufacturer_name = MessageServerGlobals.manufacturers.by_code(self._iso_name.manufacturer_code).name
 
     def init_product_information(self):
         '''
@@ -123,17 +123,6 @@ class NMEA2000Application(NMEA2000Device):
         self._configuration_information.installation_1 = "Test1"
         self._configuration_information.installation_2 = "Test2"
         self._configuration_information.manufacturer_info = "Sterwen Technology SAS"
-
-    def set_properties(self):
-        self._properties = {
-            'System ISO Name': self._iso_name.name_value,
-            'Manufacturer Code': self._iso_name.manufacturer_code,
-            'Manufacturer Name': MessageServerGlobals.manufacturers.by_code(self._iso_name.manufacturer_code).name,
-            'Product name': self._product_information.model_id,
-            'Product Code': self._product_information.product_code,
-            'Description': self._product_information.model_serial_code,
-            'Firmware': self._product_information.software_version
-        }
 
     def send_address_claim(self, da=255):
         self.respond_address_claim(da)

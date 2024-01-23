@@ -110,7 +110,6 @@ class N2KTracePublisher(Publisher):
             except Exception as e:
                 _logger.error("Error decoding PGN: %s message:%s" % (e, msg.format1()))
                 return True
-
         _logger.debug("Trace publisher msg:%s" % res)
         if res is not None:
             if type(res) is dict:

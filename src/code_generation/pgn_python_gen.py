@@ -142,15 +142,16 @@ class PythonPGNGenerator:
         self.gen_class_variables(pgn_def, pgn_def.attributes, pgn_def.last_attr)
         # self.nl()
         self.gen_enums_definition(pgn_def.enums)
-        self.nl()
 
         #  __init__ method
         # self.inc_indent()
         self.write("def __init__(self, message=None, protobuf=None):\n")
         self.inc_indent()
-        self.write("super().__init__(message, protobuf)\n")
+
         if pgn_def.repeat_field_set is not None:
+            self.write(f'self._{pgn_def.repeat_field_set.count_method} = 0\n')
             self.write(f'self.{pgn_def.repeat_field_set.variable} = []\n')
+        self.write("super().__init__(message, protobuf)\n")
         self.nl()
         # properties methods
         self.dec_indent()
@@ -272,8 +273,10 @@ class PythonPGNGenerator:
             # print("Start segment", segment.segment_type, segment.start_byte, segment.length)
             if segment.segment_type == DecodeSegment.VALUE_SET:
                 self.gen_decode_value_set_segment(segment)
+                self.write(f"start_byte += {segment.length}\n")
             elif segment.segment_type == DecodeSegment.FIX_LENGTH:
                 self.gen_decode_fix_length_segment(segment)
+                self.write(f"start_byte += {segment.length}\n")
             else:
                 _logger.error("PGN %d Variable length segment is not supported" % pgn_def.pgn)
                 raise N2KDecodeException
@@ -397,12 +400,7 @@ class PythonPGNGenerator:
 
     def gen_decode_value_set_segment(self, segment: DecodeSegment, variable_length=False):
 
-        if variable_length:
-            decode_start = "start_byte"
-        else:
-            decode_start = f"{segment.start_byte} + start_byte"
-
-        self.write(f"val = self.{segment.variable}.unpack_from(payload, {decode_start})\n")
+        self.write(f"val = self.{segment.variable}.unpack_from(payload, start_byte)\n")
         for attr in segment.attributes:
             if issubclass(attr.__class__, ReservedAttribute):
                 continue
@@ -452,12 +450,8 @@ class PythonPGNGenerator:
             self.nl()
 
     def gen_decode_fix_length_segment(self, segment: DecodeSegment, variable_length=False):
-        if variable_length:
-            decode_start = "start_byte"
-            decode_end = f"start_byte + {segment.length}"
-        else:
-            decode_start = f"{segment.start_byte} + start_byte"
-            decode_end = f"{segment.start_byte+segment.length} + start_byte"
+        decode_start = "start_byte"
+        decode_end = f"start_byte + {segment.length}"
         self.write(f"self.{segment.attributes.variable} = ")
         if segment.attributes.typedef == Typedef.STRING:
             self._of.write("clean_string(")
@@ -496,13 +490,11 @@ class PythonPGNGenerator:
         self.nl()
 
     def gen_repeated_decode_variable(self, attr):
-        self.write(f"self.{attr.variable} = []\n")
         self.write(f"for i in range(0, self.{attr.count_method}):\n")
         self.inc_indent()
         if attr.variable_size:
-            self.write(f"dec_obj, dec_obj_len = self.{attr.class_name}().decode_payload(payload, start_byte)\n")
+            self.write(f"dec_obj, start_byte = self.{attr.class_name}().decode_payload(payload, start_byte)\n")
             self.write(f"self.{attr.variable}.append(dec_obj)\n")
-            self.write("start_byte += dec_obj_len\n")
         else:
             self.write(f"self.{attr.variable}.append(self.{attr.class_name}().decode_payload(payload, start_byte))\n")
             self.write(f"start_byte += self.{attr.class_name}.size()\n")
@@ -688,7 +680,7 @@ class PythonPGNGenerator:
         self.inc_indent()
         for attr in pgn_def.attributes:
             if isinstance(attr, RepeatAttributeDef):
-                self.write(f'self.{attr.variable} = []\n')
+                #  self.write(f'self.{attr.variable} = []\n')
                 self.write(f'for sub_set in message.{attr.method}:\n')
                 self.inc_indent()
                 self.write(f'self.{attr.variable}.append(self.{attr.class_name}(protobuf=sub_set))\n')

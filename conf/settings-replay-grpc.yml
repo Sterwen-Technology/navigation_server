@@ -44,6 +44,7 @@ publishers:
     convert_nmea0183: true
     address: 192.168.1.44
     port: 4509
+    max_retry: 0
     couplers: [SNReplay]
 
 - Stats:
