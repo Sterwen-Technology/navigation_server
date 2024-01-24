@@ -66,7 +66,7 @@ def _parser():
     return p
 
 
-MessageServerGlobals.version = "V1.71"
+MessageServerGlobals.version = "V1.72"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
