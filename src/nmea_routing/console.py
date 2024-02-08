@@ -18,7 +18,8 @@ from google.protobuf.json_format import MessageToJson
 
 
 from nmea_routing.configuration import NavigationConfiguration
-from nmea_routing.server_common import NavigationServer, NavigationGrpcServer
+from nmea_routing.server_common import NavigationServer
+from nmea_routing.grpc_server_service import GrpcService
 # from nmea2000.nmea2k_controller import NMEA2000Device
 from utilities.protob_arguments import *
 
@@ -178,8 +179,11 @@ class ConsoleServicer(NavigationConsoleServicer):
             resp.changed = device.changed()
             device.clear_change_flag()
             _logger.debug("Console sending NMEA2000 Device address %d info" % device.address)
-            device.iso_name.set_protobuf(resp.iso_name)
-            resp.iso_name.manufacturer_name = device.manufacturer_name
+            if device.iso_name is not None:
+                device.iso_name.set_protobuf(resp.iso_name)
+                resp.iso_name.manufacturer_name = device.manufacturer_name
+            else:
+                _logger.debug("Device address %d partial info only" % device.address)
             resp.last_time_seen = device.last_time_seen
             if device.product_information is not None:
                 device.product_information.set_protobuf(resp.product_information)
@@ -193,7 +197,7 @@ class ConsoleServicer(NavigationConsoleServicer):
 ServerRecord = namedtuple('ServerRecord', ['server', 'name', 'class_name'])
 
 
-class Console(NavigationGrpcServer):
+class Console(GrpcService):
 
     def __init__(self, options):
         super().__init__(options)
@@ -201,7 +205,9 @@ class Console(NavigationGrpcServer):
         self._couplers = {}
         self._injectors = {}
 
-        add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self._grpc_server)
+    def finalize(self):
+        super().finalize()
+        add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self.grpc_server)
 
     def add_server(self, server):
         record = ServerRecord(server, server.name, server.class_name())

@@ -14,7 +14,8 @@ import queue
 import time
 
 from log_replay.raw_log_reader import RawLogFile, LogReadError
-from nmea_routing.coupler import Coupler, CouplerOpenRefused, IncompleteMessage
+from nmea_routing.coupler import Coupler, CouplerOpenRefused
+from utilities.global_exceptions import IncompleteMessage
 from nmea0183.nmea0183_msg import NMEA0183Msg, NMEAInvalidFrame
 from nmea2000.nmea2000_msg import fromProprietaryNmea, NMEA2000Msg
 from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException

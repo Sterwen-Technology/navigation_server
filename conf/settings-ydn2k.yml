@@ -20,9 +20,15 @@ servers:
     class: NMEA_server
     port: 4500
 
+- gRPCMain:
+    class: GrpcServer
+    port: 4502
+
+services:
+
 - Console:
     class: Console
-    port: 4502
+    server: gRPCMain
 
 
 couplers:

@@ -17,7 +17,7 @@ from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
 from nmea2000.nmea2k_pgndefs import N2KUnknownPGN
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG
-from nmea_routing.coupler import IncompleteMessage
+from utilities.global_exceptions import IncompleteMessage
 from utilities.global_variables import find_pgn
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)

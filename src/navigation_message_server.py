@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -14,6 +14,8 @@ import os
 from argparse import ArgumentParser
 import signal
 import threading
+import logging
+import datetime
 
 try:
     from nmea2000.nmea2k_active_controller import NMEA2KActiveController
@@ -26,10 +28,11 @@ else:
     include_can = True
 from nmea0183 import nmea0183_msg
 from nmea_routing.message_server import NMEAServer, NMEASenderServer
-from nmea_routing.shipmodul_if import *
+from nmea_routing.grpc_server_service import GrpcServer
+from nmea_routing.shipmodul_if import ShipModulInterface, ShipModulConfig
 from nmea_routing.console import Console
-from nmea_routing.publisher import *
-from nmea_routing.client_publisher import *
+from nmea_routing.publisher import Publisher, Injector, PrintPublisher
+# from nmea_routing.client_publisher import *
 from nmea_routing.internal_gps import InternalGps
 from nmea2000.nmea2k_publisher import N2KTracePublisher, N2KStatisticPublisher
 # from simulator_input import *
@@ -44,15 +47,15 @@ if include_can:
 from victron_mppt.mppt_coupler import MPPT_Coupler
 from nmea_routing.ydn2k_coupler import YDCoupler
 from nmea_routing.serial_nmeaport import NMEASerialPort
-from nmea_data.data_client import NMEAGrpcDataClient
+# from nmea_data.data_client import NMEAGrpcDataClient
 from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter, NMEA2000TimeFilter
 from log_replay.raw_log_coupler import RawLogCoupler
 from nmea_routing.grpc_nmea_coupler import GrpcNmeaCoupler
-from nmea2000.nmea2k_grpc_publisher import N2KGrpcPublisher
+from nmea2000.nmea2k_grpc_publisher import GrpcPublisher
 from nmea2000.grpc_input_application import GrpcInputApplication
 
 from utilities.log_utilities import NavigationLogSystem
-from utilities.global_exceptions import ObjectCreationError
+from utilities.global_exceptions import ObjectCreationError, ObjectFatalError
 from utilities.global_variables import MessageServerGlobals
 
 
@@ -66,10 +69,10 @@ def _parser():
     return p
 
 
-MessageServerGlobals.version = "V1.72"
+MessageServerGlobals.version = "V1.80"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 parser = _parser()
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer.main")
 
 
 class Options(object):
@@ -95,7 +98,7 @@ class NavigationMainServer:
         self._servers = []
         self._couplers = {}
         self._publishers = []
-        self._data_client = []
+        self._services = []
         self._applications = []
         self._filters = []
         self._sigint_count = 0
@@ -116,6 +119,14 @@ class NavigationMainServer:
     def name(self):
         return self._name
 
+    @property
+    def console_present(self) -> bool:
+        return self._console is not None
+
+    @property
+    def console(self):
+        return self._console
+
     def class_name(self):
         return self.__class__.__name__
 
@@ -124,16 +135,6 @@ class NavigationMainServer:
         return MessageServerGlobals.version
 
     def add_server(self, server):
-        if type(server) == Console:
-            if self._console is not None:
-                _logger.error("Only one Console can be set")
-                raise ValueError
-            self._console = server
-            for s in self._servers:
-                self._console.add_server(s)
-            self._console.add_server(self)
-        elif self._console is not None:
-            self._console.add_server(server)
         self._servers.append(server)
 
     def start(self) -> bool:
@@ -144,15 +145,14 @@ class NavigationMainServer:
             pub.start()
             changed in version 1.7 => can run with no couplers - can be only a CAN application
             '''
-        #if len(self._couplers) == 0:
-            # _logger.critical("No couplers defined -server will stop")
-            # return False
+
+        for service in self._services:
+            service.finalize()
         for publisher in self._publishers:
             publisher.start()
         for server in self._servers:
+            _logger.debug("starting server %s class:%s" % (server.name, server.__class__.__name__))
             server.start()
-        for client in self._data_client:
-            client.start()
         for inst in self._couplers.values():
             inst.request_start()
         self._is_running = True
@@ -182,8 +182,6 @@ class NavigationMainServer:
             server.stop()
         for inst in self._couplers.values():
             inst.stop()
-        for client in self._data_client:
-            client.stop()
         for pub in self._publishers:
             pub.stop()
         # self._console.close()
@@ -217,11 +215,16 @@ class NavigationMainServer:
         self._publishers.append(publisher)
         # publisher.start()
 
-    def add_data_client(self, client):
-        self._data_client.append(client)
-        # add all previous added couplers
-        for coupler in self._couplers.values():
-            client.add_coupler(coupler)
+    def add_service(self, service):
+        if type(service) is Console:
+            if self._console is not None:
+                _logger.error("Only one Console can be set")
+                raise ValueError
+            self._console = service
+            for s in self._servers:
+                self._console.add_server(s)
+            self._console.add_server(self)
+        self._services.append(service)
 
     def start_coupler(self, name: str):
         try:
@@ -275,23 +278,24 @@ def main():
             os.chdir(default_base_dir)
     # print("Current directory", os.getcwd())
     # set log for the configuration phase
-    NavigationLogSystem.create_log("Starting Navigation server version %s - copyright Sterwen Technology 2021-2023" %
+    NavigationLogSystem.create_log("Starting Navigation server version %s - copyright Sterwen Technology 2021-2024" %
                                    MessageServerGlobals.version)
 
     # build the configuration from the file
     config = NavigationConfiguration(opts.settings)
     config.add_class(NMEAServer)
     config.add_class(NMEASenderServer)
+    config.add_class(GrpcServer)
     config.add_class(Console)
     config.add_class(ShipModulConfig)
     config.add_class(ShipModulInterface)
     config.add_class(NMEATCPReader)
-    config.add_class(LogPublisher)
+    config.add_class(PrintPublisher)
     config.add_class(Injector)
     config.add_class(iKonvert)
     config.add_class(N2KTracePublisher)
     config.add_class(N2KStatisticPublisher)
-    config.add_class(N2KGrpcPublisher)
+    config.add_class(GrpcPublisher)
     config.add_class(InternalGps)
     config.add_class(MPPT_Coupler)
     config.add_class(YDCoupler)
@@ -299,7 +303,7 @@ def main():
     config.add_class(NMEA2KController)
     if include_can:
         config.add_class(NMEA2KActiveController)
-    config.add_class(NMEAGrpcDataClient)
+    #  config.add_class(NMEAGrpcDataClient)
     config.add_class(NMEA0183Filter)
     config.add_class(NMEA2000Filter)
     config.add_class(NMEA2000TimeFilter)
@@ -311,7 +315,7 @@ def main():
         config.add_class(GrpcInputApplication)
 
     NavigationLogSystem.finalize_log(config)
-
+    print(__name__)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     nmea0183_msg.NMEA0183Sentences.init(config.get_option('talker', 'ST'))
     MessageServerGlobals.manufacturers = Manufacturers(config.get_option('manufacturer_xml',
@@ -335,29 +339,39 @@ def main():
     for server_descr in config.servers():
         try:
             server = server_descr.build_object()
-        except (ConfigurationException, ObjectCreationError) as e:
+        except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
             _logger.error("Error building server %s" % e)
             continue
         main_server.add_server(server)
     _logger.debug("Servers created")
+    # create the services and notably the Console
+    for data_s in config.services():
+        try:
+            service = data_s.build_object()
+        except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+            _logger.error("Error building service:%s" % e)
+            continue
+        main_server.add_service(service)
+    if not main_server.console_present:
+        _logger.warning("No console defined")
+    _logger.debug("Services created")
     # create the couplers
     for inst_descr in config.couplers():
         try:
             coupler = inst_descr.build_object()
-        except (ConfigurationException, ObjectCreationError) as e:
+        except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
             _logger.error("Error building Coupler:%s" % str(e))
             continue
         main_server.add_coupler(coupler)
+        if main_server.console_present:
+            main_server.console.add_coupler(coupler)
     _logger.debug("Couplers created")
     # create the publishers
     for pub_descr in config.publishers():
         publisher = pub_descr.build_object()
         main_server.add_publisher(publisher)
     _logger.debug("Publishers created")
-    for data_s in config.data_sinks():
-        client = data_s.build_object()
-        main_server.add_data_client(client)
-    _logger.debug("Data sinks created")
+
     _logger.debug("Starting the main server")
     if main_server.start():
         if opts.timer is not None:

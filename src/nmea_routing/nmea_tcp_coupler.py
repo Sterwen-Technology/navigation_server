@@ -15,7 +15,7 @@ import logging
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG
 from nmea0183.nmea0183_msg import NMEA0183Msg
 from nmea2000.nmea2000_msg import fromProprietaryNmea
-from nmea_routing.coupler import IncompleteMessage
+from utilities.global_exceptions import IncompleteMessage
 from nmea_routing.ikonvert import iKonvertMsg
 from nmea_routing.shipmodul_if import ShipModulInterface
 from nmea_routing.IPCoupler import BufferedIPCoupler

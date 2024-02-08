@@ -39,16 +39,19 @@ class NMEA2KActiveController(NMEA2KController):
         self._address_change_request = None
 
     def start(self):
+        _logger.info("CAN active controller start")
         if self._application_names is not None:
             for ap_name in self._application_names:
                 ap = self.resolve_direct_ref(ap_name)
                 if ap is not None:
-                    _logger.debug("CAN active controller adding application:%s" % ap_name)
+                    _logger.info("CAN active controller adding application:%s" % ap_name)
                     if issubclass(ap.__class__, NMEA2000Application):
                         ap.set_controller(self)
                         self.add_application(ap)
                     else:
                         _logger.error("Invalid application for CAN Controller (ECU) => ignored")
+                else:
+                    _logger.error("CAN active controller cannot find application %s" % ap_name)
 
         if len(self._applications) == 0:
             _logger.info("Creating default application")

@@ -5,29 +5,51 @@
 # Author:      Laurent Carré
 #
 # Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 #
 trace: DEBUG
 trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+  nmea_routing.coupler: INFO
+  nmea0183.nmea0183_to_nmea2k: INFO
 
 servers:
+
 - NMEAServer:
     class: NMEA_server
     port: 4500
 
-- Console:
-    class: Console
+- gRPCMain:
+    class: GrpcServer
     port: 4502
 
 couplers:
 
 - GPS:
     class: InternalGps
-    trace_messages: true
+    trace_messages: false
+    trace_raw: true
+    autostart: true
+    nmea0183_convert: true
+    # protocol: nmea2000
+
 
 publishers:
+
+- GpsN2K:
+      class: N2KTracePublisher
+      couplers: [GPS]
+      active: true
+      flexible_decode: false
+
+services:
+
+- Console:
+    class: Console
+    server: gRPCMain
+
 
 
 

@@ -4,22 +4,32 @@
 #
 # Author:      Laurent Carré
 #
-# Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Created:     16/10/2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
-trace: INFO
+log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+    nmea_routing.console: DEBUG
+
 
 servers:
 
 - NMEAServer:
-    class: NMEA_server
+    class: NMEAServer
     port: 4500
+    nmea2000: dyfmt
 
-- Console:
-    class: Console
+- NMEASender:
+    class: NMEASenderServer
+    port: 4503
+    coupler: MiniPlex3
+    max_silent: 10
+
+- gRPCMain:
+    class: GrpcServer
     port: 4502
 
 - ShipModulConfig:
@@ -27,28 +37,34 @@ servers:
     port: 4501
     coupler: MiniPlex3
 
+- NMEANetwork:
+    class: NMEA2KController
+
 couplers:
 
 - MiniPlex3:
     class: ShipModulInterface
     address: 172.16.2.100
     port: 10110
-    transport: TCP
-    nmea2000: true
-    server: NMEAServer
-    trace_messages: false
-    max_attempt: 30
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
+
+services:
+
+- Console:
+    class: Console
+    server: gRPCMain
+
+filters:
+
+- RaymarineProprietary:
+    class: NMEA2000Filter
+    pgn: [126720]
+    action: discard
+
 
 publishers:
 
-#- Trace:
-    # class: N2KTracePublisher
-    # instruments: [MiniPlex3]
-
-#    - MainLog:
-#       class: LogPublisher
-#        file: /data/solidsense/log/navigation.log
-#        instruments: [MiniPlex3]
 
 
 

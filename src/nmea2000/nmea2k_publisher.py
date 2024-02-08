@@ -13,16 +13,14 @@ import logging
 import datetime
 import time
 import os
-from nmea_routing.publisher import Publisher
-from nmea2000.nmea2k_pgndefs import *
-from nmea_routing.filters import FilterSet
+from nmea_routing.publisher import ExternalPublisher
 from nmea2000.nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
-
 from nmea_routing.generic_msg import *
-from nmea0183.nmea0183_to_nmea2k import default_converter, Nmea0183InvalidMessage
+from nmea0183.nmea0183_to_nmea2k import Nmea0183InvalidMessage, NMEA0183ToNMEA2000Converter
 from nmea_routing.configuration import NavigationConfiguration
 from utilities.global_variables import find_pgn
+from utilities.global_exceptions import N2KDecodeException
 
 
 _logger = logging.getLogger("ShipDataServer" + "." + __name__)
@@ -48,17 +46,14 @@ class PgnRecord:
         self._count += 1
 
 
-class N2KTracePublisher(Publisher):
+class N2KTracePublisher(ExternalPublisher):
 
     def __init__(self, opts):
         super().__init__(opts)
-        filter_names = opts.getlist('filters', str)
         self._flexible = opts.get('flexible_decode', bool, True)
         self._convert_nmea183 = opts.get('convert_nmea0183', bool, False)
-        if filter_names is not None and len(filter_names) > 0:
-            _logger.info("Publisher:%s filter set:%s" % (self.object_name(), filter_names))
-            self._filters = FilterSet(filter_names)
-            self._filter_select = True
+        if self._convert_nmea183:
+            self._converter = NMEA0183ToNMEA2000Converter()
         self._print_option = opts.get('output', str, 'ALL')
         _logger.info("%s output option %s" % (self.object_name(), self._print_option))
         self._trace_fd = None
@@ -87,11 +82,7 @@ class N2KTracePublisher(Publisher):
         _logger.debug("Trace publisher N2K input msg %s" % msg.format2())
         if self._print_option == 'NONE':
             return True
-        '''
-        if self._filters is not None:
-            if not self._filters.process_filter(msg, execute_action=False):
-                return True
-        '''
+
         # print("decoding %s", msg.format1())
         if self._flexible:
             try:
@@ -129,24 +120,20 @@ class N2KTracePublisher(Publisher):
         if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
             self._trace_fd.write(str(msg))
             self._trace_fd.write('\n')
-
         try:
-            messages = default_converter.convert(msg)
+            for res in self._converter.convert(msg):
+                print_result = res.as_json()
+                if self._print_option in ('ALL', 'PRINT'):
+                    print("Message:", print_result)
+                if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
+                    # self._trace_fd.write("Message from SA:%d " % msg.sa)
+                    self._trace_fd.write(print_result)
+                    self._trace_fd.write('\n')
         except Nmea0183InvalidMessage:
             return
         except Exception as e:
             _logger.error("NMEA0183 decing error:%s" % e)
             return
-        for res in messages:
-            print_result = res.as_json()
-            if self._print_option in ('ALL', 'PRINT'):
-                print("Message:", print_result)
-            if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
-                # self._trace_fd.write("Message from SA:%d " % msg.sa)
-                self._trace_fd.write(print_result)
-                self._trace_fd.write('\n')
-
-
 
     def stop(self):
         print("List of missing decode for PGN")
@@ -156,7 +143,7 @@ class N2KTracePublisher(Publisher):
         super().stop()
 
 
-class N2KStatisticPublisher(Publisher):
+class N2KStatisticPublisher(ExternalPublisher):
 
     def __init__(self, opts):
         super().__init__(opts)

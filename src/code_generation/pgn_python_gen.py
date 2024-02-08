@@ -318,7 +318,7 @@ class PythonPGNGenerator:
 
         if isinstance(pgn_def, RepeatAttributeDef):
             # need to return the length of encoded portion
-            self.write(f"return self._static_size\n")
+            self.write(f"return self._static_size + start_byte\n")
         else:
             if pgn_def.repeat_field_set is not None:
                 self.gen_repeated_encode(pgn_def.repeat_field_set)

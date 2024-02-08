@@ -16,8 +16,7 @@ from nmea2000.nmea2k_pgn_definition import PGNDef
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from utilities.global_variables import find_pgn
 
-
-_logger = logging.getLogger("Data_analyser")
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class NMEA183StatEntry:

@@ -109,7 +109,7 @@ class NMEAMsgTrace:
                     return err.end
 
             if strip_suffix is not None:
-                msg = msg.removesuffix(strip_suffix)
+                msg = msg.rstrip(strip_suffix)
 
             try:
                 self._trace_fd.write(fc)

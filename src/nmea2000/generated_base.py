@@ -113,11 +113,14 @@ def convert_to_int(value: float, invalid_mask: int, scale: float, offset: float 
     return int((value - offset) / scale)
 
 
+N2K_DECODED = 201
+
+
 class NMEA2000DecodedMsg:
 
     __slots__ = ('_sa', '_da', '_timestamp', '_priority')
 
-    DEFAULT_BUFFER_SIZE = 1024
+    DEFAULT_BUFFER_SIZE = (31*7)+6   # max Fast packet
 
     def __init__(self, message: NMEA2000Msg = None, protobuf: nmea2000_decoded_pb = None):
 
@@ -197,6 +200,10 @@ class NMEA2000DecodedMsg:
 
     def set_timestamp(self):
         self._timestamp = time.time()
+
+    @property
+    def type(self):
+        return N2K_DECODED
 
 
 

@@ -12,7 +12,7 @@
 import logging
 import queue
 
-from nmea_routing.grpc_nmea_input_server import GrpcDataServer
+from nmea_routing.grpc_nmea_input_service import GrpcDataService
 from nmea_routing.coupler import Coupler, CouplerTimeOut
 from nmea0183.nmea0183_msg import NMEA0183Msg, N2K_MSG, N0183_MSG, N0183D_MSG, NavGenericMsg
 
@@ -25,25 +25,24 @@ class GrpcNmeaCoupler(Coupler):
 
         super().__init__(opts)
         # create the server
-        self._server = GrpcDataServer(opts, self.n2k_msg_in, self.nmea0183_msg_in)
+        self._decode_n2k = opts.get('decoded_nmea2000', bool, False)
+        if self._decode_n2k:
+            self._service = GrpcDataService(opts, self.n2k_msg_in, self.nmea0183_msg_in, self.decoded_nmea_in)
+        else:
+            self._service = GrpcDataService(opts, self.n2k_msg_in, self.nmea0183_msg_in)
         self._queue = queue.Queue(20)
         self._direction = self.READ_ONLY  # that is a mono directional coupler
-        self._server_running = False
-
 
     def open(self):
-        if not self._server_running:
-            self._server.start()
-            self._server_running = True
+        self._service.finalize()
+        self._service.open()
         return True
 
     def stop_communication(self):
-        self._server.stop()
-        self._server.join()
-        self._server_running = False
+        self._service.close()
 
     def close(self):
-        pass
+        self._service.close()
 
     def nmea0183_msg_in(self, msg):
 
@@ -56,11 +55,14 @@ class GrpcNmeaCoupler(Coupler):
     def n2k_msg_in(self, msg):
         self.push_message(NavGenericMsg(N2K_MSG, msg=msg))
 
+    def decoded_nmea_in(self, msg):
+        self.push_message(msg)
+
     def push_message(self, msg):
         try:
             self._queue.put(msg, block=False)
         except queue.Full:
-            _logger.error("GrpcServer %s input queue full - message lost" % self.object_name())
+            _logger.error("GrpcCoupler %s input queue full - message lost" % self.object_name())
 
     def _read(self):
         try:
