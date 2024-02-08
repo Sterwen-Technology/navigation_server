@@ -14,7 +14,8 @@ import logging
 
 from nmea_routing.server_common import NavTCPServer, ConnectionRecord
 from nmea_routing.publisher import Publisher
-from nmea_routing.coupler import Coupler, IncompleteMessage
+from utilities.global_exceptions import IncompleteMessage
+from nmea_routing.coupler import Coupler
 from nmea_routing.IPCoupler import BufferedIPCoupler
 from nmea_routing.generic_msg import *
 from nmea0183.nmea0183_msg import NMEA0183Msg, NMEA0183Sentences
@@ -238,6 +239,9 @@ class ConfigPublisher(Publisher):
         self._server = server
 
     def process_msg(self, msg):
+        if msg.raw is None:
+            _logger.error("Wrong message on Shipmodul config:%s" % msg.printable())
+            return True
         _logger.debug("Shipmodul publisher sending:%s" % msg.raw)
         try:
             self._socket.sendall(msg.raw)
@@ -316,7 +320,7 @@ class ShipModulConfig(NavTCPServer):
         _logger.debug("ShipModulConfig check couplers")
         self._reader = self.resolve_ref('coupler')
         if self._reader is None:
-            _logger.error("%s no coupler associated => stop" % self.name())
+            _logger.error("%s no coupler associated => stop" % self.name)
 
     def nb_connections(self):
         if self._connection is not None:

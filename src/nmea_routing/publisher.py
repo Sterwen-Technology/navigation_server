@@ -15,6 +15,7 @@ import logging
 import datetime
 
 from nmea_routing.configuration import NavigationConfiguration
+from nmea_routing.filters import FilterSet
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -166,45 +167,22 @@ class Publisher(threading.Thread):
         return self._active
 
 
-class LogPublisher(Publisher):
+class ExternalPublisher(Publisher):
+    '''
+    Abstract class for all Publishers that are created via the Yaml configuration file
+    It add the management of filters
+    '''
+
     def __init__(self, opts):
         super().__init__(opts)
-        self._filename = opts['file']
-        try:
-            self._fd = open(self._filename, "w")
-        except IOError as e:
-            _logger.error("Error opening logfile %s: %s" % (self._filename, str(e)))
-            raise
-        self._start = time.time()
-        self._fd.write("NMEA LOG START TIME:%9.3f\n" % self._start)
-        self._fd.flush()
-
-    def process_msg(self, msg):
-        delta_t = time.time() - self._start
-        self._fd.write("%9.3f|" % delta_t)
-        if type(msg) == bytes:
-            self._fd.write(msg.decode())
-
-        else:
-            # need to serialize first
-            try:
-                msg_str = msg.serialize()
-                self._fd.write(msg_str)
-            except Exception as e:
-                print("message error", e, msg)
-                pass
-        self._fd.write('\n')
-        self._fd.flush()
-        return True
-
-    def last_action(self):
-        self._fd.close()
-
-    def descr(self):
-        return "Log File "+self._filename
+        filter_names = opts.getlist('filters', str)
+        if filter_names is not None and len(filter_names) > 0:
+            _logger.info("Publisher:%s filter set:%s" % (self.object_name(), filter_names))
+            self._filters = FilterSet(filter_names)
+            self._filter_select = True
 
 
-class Injector(Publisher):
+class Injector(ExternalPublisher):
 
     def __init__(self, opts):
         super().__init__(opts)
@@ -217,36 +195,11 @@ class Injector(Publisher):
         return "Injector %s" % self._name
 
 
-class SendPublisher(Publisher):
+class PrintPublisher(ExternalPublisher):
 
     def __init__(self, opts):
         super().__init__(opts)
-        self._sender = self.resolve_ref(opts['sender'])
-        self._filename = opts['filename']
-        self._sender.add_publisher(self)
-        try:
-            self._fd = open(self._filename, "w")
-        except IOError as e:
-            _logger.error("Error opening logfile %s: %s" % (self._filename, str(e)))
-            raise
-        self._start = time.time()
-        self._fd.write("NMEA LOG START TIME:%9.3f\n" % self._start)
-        self._fd.flush()
 
     def process_msg(self, msg):
-        time_str = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f|")
-        self._fd.write(time_str)
-        if type(msg) == bytes:
-            self._fd.write(msg.decode())
-        else:
-            # need to serialize first
-            self._fd.write(msg.serialize())
-            self._fd.write('\n')
-        self._fd.flush()
+        print(msg)
         return True
-
-    def last_action(self):
-        self._fd.close()
-
-    def descr(self):
-        return "Log File "+self._filename

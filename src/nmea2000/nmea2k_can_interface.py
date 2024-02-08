@@ -22,7 +22,7 @@ from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
 from nmea2000.nmea2k_iso_transport import IsoTransportHandler, IsoTransportException
 from nmea2000.nmea2k_pgn_definition import PGNDef
 from log_replay.message_trace import NMEAMsgTrace, MessageTraceError
-from utilities.global_variables import find_pgn
+from utilities.global_exceptions import ObjectFatalError
 import threading
 import queue
 import time
@@ -63,7 +63,13 @@ class SocketCANInterface(threading.Thread):
 
     def __init__(self, channel, out_queue, trace=False):
 
-        check_can_device(channel)
+        try:
+            check_can_device(channel)
+        except SocketCanError as err:
+            err_str = "CAN bus not available"
+            _logger.critical("%s: %s" % (err_str, err))
+            raise ObjectFatalError(err_str)
+
         super().__init__(name="CAN-if-%s" % channel)
         self._channel = channel
         self._bus = None

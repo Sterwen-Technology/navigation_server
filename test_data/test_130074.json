@@ -1,0 +1,30 @@
+[
+{
+  "pgn": 130074,
+  "data": {
+    "start_wp_id": 1,
+    "database_id": 0,
+    "nb_valid_wp": 3,
+    "WP_definitions": [
+      {
+        "waypoint_id": 1,
+        "waypoint_name": "Crouesty-2",
+        "waypoint_latitude": 47.5435667,
+        "waypoint_longitude": -2.89431667
+      },
+      {
+        "waypoint_id": 2,
+        "waypoint_name": "Crouesty-1",
+        "waypoint_latitude": 47.53608333,
+        "waypoint_longitude": -2.91345
+      },
+      {
+        "waypoint_id": 3,
+        "waypoint_name": "Er-Yoch",
+        "waypoint_latitude": 47.3881167,
+        "waypoint_longitude": -2.93493333
+      }
+    ]
+  }
+}
+]

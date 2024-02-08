@@ -29,8 +29,8 @@ servers:
     nmea2000: dyfmt
     filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K, Barometer]
 
-- Console:
-    class: Console
+- gRPCMain:
+    class: GrpcServer
     port: 4502
 
 - NMEANetwork:
@@ -64,10 +64,11 @@ publishers:
       # file: trace129026
 
 
-data_clients:
+services:
 
-- DataAnalyser:
-      class: NMEADataClient
+- Console:
+    class: Console
+    server: gRPCMain
 
 filters:
 

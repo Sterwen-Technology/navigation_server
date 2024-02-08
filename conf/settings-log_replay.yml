@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 #
@@ -30,8 +30,8 @@ servers:
       port: 4500
       nmea2000: dyfmt
 
-- Console:
-      class: Console
+- gRPCMain:
+      class: GrpcServer
       port: 4502
 
 - NMEANetwork:
@@ -51,7 +51,6 @@ couplers:
     protocol: nmea2000
     direction: read_only
     # pgn_white_list: [129025, 129026]
-    # data_sink: DataAnalyzer
     # pgn_white_list: [130842]
 
 filters:
@@ -67,13 +66,11 @@ filters:
     action: select
 
 
-data_clients:
+services:
 
-- DataSender:
-      class: NMEAGrpcDataClient
-      address: 127.0.0.1
-      decoded_n2k: true
-      port: 4504
+- Console:
+      class: Console
+      server: gRPCMain
 
 publishers:
 
@@ -89,5 +86,13 @@ publishers:
     class: N2KStatisticPublisher
     couplers: [LogReader]
     active: true
+
+- DataSender:
+      class: GrpcPublisher
+      address: 127.0.0.1
+      decode_nmea2000: true
+      port: 4504
+      active: true
+      couplers: [LogReader]
 
 

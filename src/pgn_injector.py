@@ -16,6 +16,7 @@ import logging
 import json
 import google.protobuf
 import grpc
+import hexdump
 
 
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
@@ -41,13 +42,14 @@ def _parser():
                    default="INFO",
                    help="Level of traces, default INFO")
     p.add_argument('-p', '--print', action='store', type=str,
-                   default='None')
+                   default=None)
     p.add_argument("-l", "--log", action="store", type=str,
                    help="Logfile for all incoming NMEA sentences")
     p.add_argument("-t", "--trace", action="store", type=str)
     p.add_argument('-f', '--filter', action='store', type=str)
     p.add_argument('-s', '--server', action='store', type=str)
     p.add_argument('-c', '--count', action='store', type=int, default=0)
+    p.add_argument('-b', '--binary', action="store_true", default=False)
     return p
 
 
@@ -116,7 +118,13 @@ def main():
     MessageServerGlobals.pgn_definitions = PGNDefinitions('../def/PGNDefns.N2kDfn.xml')
 
     # create stub
-    sender = GrpcSender(opts.server)
+    if opts.server is not None:
+        sender = GrpcSender(opts.server)
+        print("PGN to be sent to", opts.server)
+    else:
+        sender = None
+
+    binary = opts.binary
 
     try:
         fp = open(opts.input, 'r')
@@ -138,7 +146,13 @@ def main():
         pgn_obj = pgn_class()
         pgn_obj.from_protobuf(pb_obj)
         # print(pgn_obj)
-        if sender.check_status():
+        if binary:
+            n2k_obj = pgn_obj.message()
+            print(n2k_obj)
+            print(hexdump.hexdump(n2k_obj.payload))
+
+        if sender is not None and sender.check_status():
+            print("Sending PGN", pgn_obj.pgn)
             _logger.debug("Sending object to CAN CA=%s" % pb_obj)
             sender.send(pgn_obj)
 

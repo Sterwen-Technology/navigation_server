@@ -11,12 +11,14 @@
 import logging
 import threading
 import grpc
-from nmea_routing.publisher import Publisher
+from nmea_routing.publisher import ExternalPublisher
 from nmea_routing.filters import FilterSet
 from nmea2000.nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
 from nmea_routing.generic_msg import *
-from nmea2000.generated_base import NMEA2000DecodedMsg
-from nmea0183.nmea0183_to_nmea2k import default_converter, Nmea0183InvalidMessage
+from nmea2000.generated_base import NMEA2000DecodedMsg, N2K_DECODED
+from nmea0183.nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter, Nmea0183InvalidMessage
+from nmea0183.nmea0183_msg import NMEA0183Msg
+from nmea2000.nmea2000_msg import NMEA2000Msg
 
 from generated.nmea_messages_pb2 import nmea_msg, server_cmd
 from generated.input_server_pb2_grpc import NMEAInputServerStub
@@ -24,21 +26,20 @@ from generated.input_server_pb2_grpc import NMEAInputServerStub
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-class N2KGrpcPublisher(Publisher):
+class GrpcPublisher(ExternalPublisher):
 
     def __init__(self, opts):
         super().__init__(opts)
-        filter_names = opts.getlist('filters', str)
-        self._protobuf = opts.get('protobuf', bool, True)
-        self._convert_nmea183 = opts.get('convert_nmea0183', bool, False)
+        self._decoded_n2k = opts.get('decode_nmea2000', bool, True)
+        self._nmea183 = opts.get_choice('nmea0183', ['convert_strict', 'pass_thru', 'convert_pass' ], 'pass_thru')
+        if self._nmea183 in ('convert_strict', 'convert_pass'):
+            self._converter = NMEA0183ToNMEA2000Converter()
+        else:
+            self._converter = None
         self._max_retry = opts.get('max_retry', int, 20)
         self._retry_interval = opts.get('retry_interval', float, 10.0)
         self._trace_missing_pgn = opts.get('trace_missing_pgn', bool, False)
-        if filter_names is not None and len(filter_names) > 0:
-            _logger.info("Publisher:%s filter set:%s" % (self.object_name(), filter_names))
-            self._filters = FilterSet(filter_names)
-            self._filter_select = True
-        self._address = "%s:%d" % (opts.get('address', str, '127.0.0.1'), opts.get('port', int, 4504))
+        self._address = "%s:%d" % (opts.get('address', str, '127.0.0.1'), opts.get('port', int, 4502))
         _logger.info("Creating client for data server at %s" % self._address)
         self._channel = grpc.insecure_channel(self._address)
         self._channel.subscribe(self.channel_callback)
@@ -50,17 +51,19 @@ class N2KGrpcPublisher(Publisher):
     def process_msg(self, gen_msg):
         if not self._ready:
             return True
-        if gen_msg.type != N2K_MSG:
-            if self._convert_nmea183:
-                self.process_nmea183(gen_msg)
-                return True
-            else:
-                return True
-        n2k_msg = gen_msg.msg
-        _logger.debug("Trace publisher N2K input msg %s" % n2k_msg.format2())
+        if gen_msg.type == N0183_MSG:
+            self.process_nmea183(gen_msg)
+        elif gen_msg.type == N2K_MSG:
+            self.process_n2k_raw(gen_msg.msg)
+        elif gen_msg.type == N2K_DECODED:
+            self.send_decoded_n2k(gen_msg)
+        return True
 
-        # print("decoding %s", msg.format1())
-        if self._protobuf:
+    def process_n2k_raw(self, n2k_msg: NMEA2000Msg):
+
+        _logger.debug("gRPC publisher N2K input msg %s" % n2k_msg.format2())
+
+        if self._decoded_n2k:
             try:
                 decoded_msg = get_n2k_decoded_object(n2k_msg)
                 self.send_pb_message(decoded_msg.protobuf_message())
@@ -68,29 +71,43 @@ class N2KGrpcPublisher(Publisher):
                 if self._trace_missing_pgn:
                     _logger.info("Missing PGN %d decode/encode class" % n2k_msg.pgn)
         else:
-            msg = n2k_msg.protobuf_message()
-            self.send_message(msg)
-
+            self.send_n2k_raw(n2k_msg)
         return True
 
     def process_nmea183(self, msg: NavGenericMsg):
         # convert the NMEA0183 messages and send the NMEA2000 messages
-        _logger.debug("Grpc Publisher NMEA0183 input: %s" % msg)
-        try:
-            messages = default_converter.convert(msg)
-        except Nmea0183InvalidMessage:
-            return
-        except Exception as e:
-            _logger.error("NMEA0183 decing error:%s" % e)
-            return
+        _logger.debug("gRPC Publisher NMEA0183 input: %s" % msg)
+        messages = None
+        if self._nmea183 in ('convert_strict', 'convert_pass'):
+            try:
+                for n2k_msg in self._converter.convert(msg):
+                    self.send_decoded_n2k(n2k_msg)
+            except Nmea0183InvalidMessage:
+                if self._nmea183 != 'convert_strict':
+                    self.send_nmea0183(msg.msg)
+            except Exception as e:
+                _logger.error("NMEA0183 decoding error:%s" % e)
+        else:
+            # pass_thru case
+            self.send_nmea0183(msg.msg)
 
-        if messages is not None:
-            for msg in messages:
-                if self._protobuf:
-                    self.send_pb_message(msg.protobuf_message())
-                else:
-                    n2k_msg = msg.message()
-                    self.send_message(n2k_msg.protobuf_message())
+    def send_decoded_n2k(self, msg: NMEA2000DecodedMsg):
+        if self._decoded_n2k:
+            self.send_pb_message(msg.protobuf_message())
+        else:
+            # then we need to reencode
+            n2k_msg = msg.message()
+            self.send_n2k_raw(n2k_msg)
+
+    def send_nmea0183(self, msg: NMEA0183Msg):
+        msgpb = nmea_msg()
+        msg.as_protobuf(msgpb.N0183_msg, set_raw=True)
+        self.send_message(msgpb)
+
+    def send_n2k_raw(self, msg: NMEA2000Msg):
+        msgpb = nmea_msg()
+        msg.as_protobuf(msgpb.N2K_msg)
+        self.send_message(msgpb)
 
     def stop(self):
         self._channel.close()
@@ -99,6 +116,7 @@ class N2KGrpcPublisher(Publisher):
             self._timer.cancel()
 
     def send_pb_message(self, msg):
+        _logger.debug("gRPC Publisher send message: %s" % msg)
         try:
             resp = self._stub.pushDecodedNMEA2K(msg)
         except grpc.RpcError as err:
@@ -174,7 +192,7 @@ class N2KGrpcPublisher(Publisher):
             self._ready = True
         elif connectivity == grpc.ChannelConnectivity.IDLE:
             _logger.info("GRPC Channel IDLE")
-            self._ready = False
+            # self._ready = False
         elif connectivity == grpc.ChannelConnectivity.CONNECTING:
             _logger.info("GRPC Channel Connecting")
         elif connectivity == grpc.ChannelConnectivity.SHUTDOWN:

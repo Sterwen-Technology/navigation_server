@@ -27,8 +27,8 @@ servers:
     coupler: MiniPlex3
     max_silent: 10
 
-- Console:
-    class: Console
+- gRPCMain:
+    class: GrpcServer
     port: 4502
 
 - ShipModulConfig:
@@ -59,6 +59,12 @@ couplers:
     server: NMEAServer
 
 publishers:
+
+services:
+
+- Console:
+    class: Console
+    server: gRPCMain
 
 #- Trace:
 #    class: N2KTracePublisher

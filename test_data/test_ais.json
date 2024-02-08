@@ -1,0 +1,51 @@
+[
+  {
+    "pgn": 129794,
+    "data": {
+          "message_id": 5,
+      "mmsi": 227926000,
+      "IMO_number": 8225826,
+      "callsign": "FUKR",
+      "ship_name": "F/V ARMOR II",
+      "type_of_ship": 30,
+      "length": "NaN",
+      "beam": "NaN",
+      "position_from_starboard": "NaN",
+      "position_from_bow": "NaN",
+      "ETA_date": 19691,
+      "ETA_time": 90000.0,
+      "destination": "WHF 16\\77",
+      "AIS_version": 1,
+      "GNSS_type": 1,
+      "AIS_transceiver_info": 1,
+      "repeat_indicator": 0,
+      "draft": 0.0,
+      "DTE": 0
+      }
+  },
+  {
+    "pgn": 129810,
+    "data": {
+      "message_id": 24,
+      "mmsi": 228026240,
+      "type_of_ship": 36,
+      "vendor_id": "AMC",
+      "call_sign": "FAH5058",
+      "length": "NaN",
+      "beam": "NaN",
+      "position_from_starboard": "NaN",
+      "position_from_bow": "NaN",
+      "repeat_indicator": 0,
+      "mothership_mmsi": 0
+    }
+  },
+  {
+    "pgn": 129809,
+    "data":{
+       "message_id": 24,
+      "mmsi": 228026240,
+      "ship_name": "HOUBA",
+      "repeat_indicator": 0
+    }
+  }
+]

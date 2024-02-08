@@ -6,7 +6,7 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ from generated.nmea0183_pb2 import nmea0183pb
 from utilities.object_utilities import copy_attribute
 
 
-_logger = logging.getLogger("ShipDataServer"+"."+__name__)
+_logger = logging.getLogger("ShipDataServer."+__name__)
 
 
 class NMEAInvalidFrame(Exception):

@@ -27,8 +27,8 @@ servers:
     coupler: MiniPlex3
     max_silent: 10
 
-- Console:
-    class: Console
+- gRPCMain:
+    class: GrpcServer
     port: 4502
 
 - ShipModulConfig:
@@ -41,11 +41,18 @@ servers:
 
 couplers:
 
-- iKonvertCoupler:
-    class: iKonvert
-    device: /dev/ttyUSB1
+- MiniPlex3:
+    class: Shipmodul
+    address: 192.168.1.31
+    port: 10110
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
+
+services:
+
+- Console:
+    class: Console
+    server: gRPCMain
 
 filters:
 

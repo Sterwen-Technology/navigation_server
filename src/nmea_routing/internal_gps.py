@@ -17,7 +17,7 @@ import time
 import threading
 
 sys.path.insert(0, "/opt/SolidSense/modem_gps")
-_logger = logging.getLogger("ShipDataServer"+"."+__name__)
+_logger = logging.getLogger("ShipDataServer."+__name__)
 
 try:
     from QuectelAT_Service import *
@@ -75,7 +75,7 @@ class InternalGps(Coupler):
         self._state = self.CONNECTED
         return True
 
-    def read(self):
+    def _read(self):
         self._fix_event.wait()
         if self._stopflag:
             return None
@@ -93,7 +93,7 @@ class InternalGps(Coupler):
                 _logger.error("GPS read invalid frame:%s" % data)
                 raise CouplerReadError("Frame error")
 
-            self.trace(self.TRACE_IN, msg)
+            self.trace_raw(self.TRACE_IN, data, '\r\n')
             if self._talker is not None:
                 msg.replace_talker(self._talker)
             return msg

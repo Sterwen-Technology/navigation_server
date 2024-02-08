@@ -14,6 +14,7 @@ trace_dir: /mnt/meaban/Bateau/tests
 # log_file: test_fast_packet
 log_module:
   nmea_routing.coupler: INFO
+  nmea_routing.console: DEBUG
   nmea2000.nmea2000_msg: INFO
   nmea2000.nmea2k_controller: INFO
   nmea2000.nmea2k_active_controller: INFO
@@ -21,29 +22,46 @@ log_module:
   nmea2000.nmea2k_application: INFO
   nmea2000.n2k_name: INFO
   nmea2000.nmea2k_can_interface: INFO
+  nmea2000.nmea2k_can_coupler: DEBUG
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
-  nmea2000.nmea2k_can_coupler: DEBUG
+  nmea2000.grpc_input_application: INFO
+  nmea2000.nmea2k_fast_packet: INFO
+  nmea2000.nmea2k_publisher: INFO
 
 servers:
 
-- NMEANetwork:
-      class: NMEA2KActiveController
-      trace: false
-      channel: can0
-      applications: [CANCoupler]
+- gRPCMainServer:
+      class: GrpcServer
+      port: 4503
 
 couplers:
 
-- CANCoupler:
-    class: DirectCANCoupler
-
+- InputCoupler:
+    class: GrpcNmeaCoupler
+    decoded_nmea2000: false
+    server: gRPCMainServer
 
 filters:
 
+services:
+
+- Console:
+    class: Console
+    server: gRPCMainServer
+
 publishers:
 
+- TraceOutput:
+    class: PrintPublisher
+    # filters: [NMEASent]
+    couplers: [InputCoupler]
+    active: true
+    flexible_decode: false
+
 applications:
+
+
 
 
 

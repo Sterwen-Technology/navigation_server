@@ -18,11 +18,15 @@ log_module:
 
 servers:
 
+- gRPCMainServer:
+      class: GrpcServer
+      port: 4502
+
+services:
 
 - Console:
     class: Console
-    port: 4502
-
+    server: gRPCMainServer
 
 couplers:
 
@@ -32,25 +36,39 @@ couplers:
     port: 3555
     autostart: true
     protocol: nmea2000
+    convert_nmea0183: true
     trace_messages: false
     trace_raw: false
 
 publishers:
 
 - SendNMEA2000:
-    class: N2KGrpcPublisher
+    class: GrpcPublisher
     active: true
-    protobuf: true
-    convert_nmea0183: true
+    decode_nmea2000: false
+    # nmea0183: convert_strict
     address: 192.168.1.44
-    port: 4509
+    port: 4502
     max_retry: 0
     couplers: [SNReplay]
 
-- Stats:
-    class: N2KStatisticPublisher
+- TraceOutput:
+    class: N2KTracePublisher
+    filters: [AISStatic]
     couplers: [SNReplay]
-    active: true
+    active: false
+    flexible_decode: false
+    output: ALL
+    file: test_ais
+
+filters:
+
+- AISStatic:
+      class: NMEA2000Filter
+      pgn: [ 129794, 129809, 129810 ]
+      action: select
+
+
 
 
 

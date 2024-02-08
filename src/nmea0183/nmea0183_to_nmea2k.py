@@ -15,10 +15,11 @@ import time
 import math
 import collections
 
-from nmea0183.nmea0183_msg import NMEA0183Msg, NavGenericMsg
+from nmea0183.nmea0183_msg import NMEA0183Msg, NavGenericMsg, N2K_MSG
 from generated.nmea2000_classes_gen import (Pgn129025Class, Pgn129026Class, Pgn129029Class, Pgn130306Class,
                                             Pgn128267Class, Pgn128259Class, Pgn127250Class, Pgn129539Class,
                                             Pgn129540Class)
+from utilities.global_exceptions import IncompleteMessage
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -67,10 +68,12 @@ class Nmea0183InvalidMessage(Exception):
 SatellitesData = collections.namedtuple('SatellitesData',
                                          ['ts', 'nb_sats', 'sats_list', 'hdop', 'pdop', 'vdop'])
 
+SatInView = collections.namedtuple('SatInView', ['prn', 'elevation', 'azimuth', 'snr', 'status'])
+
 
 class NMEA0183ToNMEA2000Converter:
 
-    def __init__(self):
+    def __init__(self, default_source=251):
 
         self._convert_vector = {
             'RMC': self.convertRMC,
@@ -78,28 +81,44 @@ class NMEA0183ToNMEA2000Converter:
             'MWV': self.convertMWV,
             'DPT': self.convertDPT,
             'GSA': self.convertGSA,
+            'GSV': self.convertGSV,
             'GGA': self.convertGGA,
             'VBW': self.convertVBW,
             'HDG': self.convertHDG
         }
 
-        self._sequences = {'GPS': 0, 'Wind': 0, 'Depth': 0, 'Speed': 0, 'Heading': 0, 'GPSDOP': 0}
-        self._current_sats_data = None
+        self._sequences = {'GPS': 0, 'Wind': 0, 'Depth': 0, 'Speed': 0, 'Heading': 0, 'GPSDOP': 0, 'GPSGSV': 0}
+        self._current_sat_gsv_data = None
+        self._current_sat_gsa_data = None
+        self._current_gsv_nb_sat = 0
+        self._current_gsv_nb_seq = 0
+        self._current_gsv_seq = None
+        self._current_gsv_sat_count = 0
+
+
         self._time_fix = 0.0
         self._date = 0
+        self._default_source = default_source
+        self._message_stack = []
 
     def convert(self, msg: NMEA0183Msg):
         _logger.debug("NMEA0183 Converter input message:%s" % msg)
+        formatter = msg.formatter().decode()
         try:
-            formatter = msg.formatter().decode()
             result = self._convert_vector[formatter](msg.fields())
-            if _logger.level == logging.DEBUG:
-                for msg in result:
-                    _logger.debug("NMEA Converter output: %s" % msg)
-            return result
+            for msg in result:
+                _logger.debug("NMEA Converter output: %s" % msg)
+                yield msg
         except KeyError:
             _logger.debug("No converter for formatter %s:" % formatter)
             raise Nmea0183InvalidMessage
+
+    def convert_to_n2kmsg(self, msg: NMEA0183Msg):
+        for conv_msg in self.convert(msg):
+            ret_msg = conv_msg.message()
+            ret_msg.sa = self._default_source
+            _logger.debug("NMEA0183 to NMEA2000 Resulting encoded message:%s" % ret_msg.format2())
+            yield NavGenericMsg(N2K_MSG, msg=ret_msg)
 
     def get_next_sequence(self, seq: str) -> int:
         try:
@@ -127,7 +146,7 @@ class NMEA0183ToNMEA2000Converter:
         pgn129026.COG = float(fields[7])
         self._time_fix = convert_time(fields[0])
         self._date = convert_date(fields[8])
-        return pgn129025, pgn129026
+        return [pgn129025, pgn129026]
 
     def convertVTG(self, fields: list):
         pgn129026 = Pgn129026Class()
@@ -186,7 +205,7 @@ class NMEA0183ToNMEA2000Converter:
         pdop = float(fields[14])
         hdop = float(fields[15])
         vdop = float(fields[16])
-        self._current_sats_data = SatellitesData(time.time(), nb_sats, sats_list, hdop, pdop, vdop)
+        self._current_sat_gsa_data = SatellitesData(time.time(), nb_sats, sats_list, hdop, pdop, vdop)
         pgn129539 = Pgn129539Class()
         pgn129539.sequence_id = self.get_next_sequence('GPSDOP')
         if fields[0] == b'A':
@@ -200,8 +219,76 @@ class NMEA0183ToNMEA2000Converter:
         return [pgn129539]
 
     def convertGSV(self, fields: list):
-        pass
-        # to be continued (no actual data for test)
+        if self._current_sat_gsv_data is None:
+            # no on-going sequence
+            if fields[1] != b'1':
+                raise IncompleteMessage
+            else:
+                # start a new sequence
+                self._current_sat_gsv_data = []
+                self._current_gsv_nb_seq = int(fields[0])
+                self._current_gsv_seq = [False for n in range(self._current_gsv_nb_seq)]
+                self._current_gsv_nb_sat = int(fields[2])
+                self._current_gsv_sat_count = 0
+
+        # now we go over the list
+        seq_num = int(fields[1])
+        self._current_gsv_seq[seq_num - 1] = True
+        field_idx = 3
+        for count in range(4):
+            prn = int(fields[field_idx])
+            field_idx += 1
+            if len(fields[field_idx]) > 0:
+                elevation = float(fields[field_idx])
+            else:
+                elevation = float('nan')
+            field_idx += 1
+            if len(fields[field_idx]) > 0:
+                azimuth = float(fields[field_idx])
+            else:
+                azimuth = float('nan')
+            field_idx += 1
+            if len(fields[field_idx]) > 0:
+                snr = float(fields[field_idx])
+            else:
+                snr = float('nan')
+            field_idx += 1
+            # now the satellite usage
+            status = 0xf
+            if self._current_sat_gsa_data is not None:
+                if prn in self._current_sat_gsa_data.sats_list:
+                    status = 2
+            if status != 2:
+                if math.isnan(elevation):
+                    status = 0
+                else:
+                    status = 1
+            self._current_sat_gsv_data.append(
+                SatInView(prn, elevation, azimuth, snr, status)
+            )
+            self._current_gsv_sat_count += 1
+            if self._current_gsv_sat_count >= self._current_gsv_nb_sat:
+                break
+        # do we have all the sentences
+        if False in self._current_gsv_seq:
+            raise IncompleteMessage
+        # ok we have all the sentences let's build the NMEA2000 object
+        pgn129540 = Pgn129540Class()
+        pgn129540.sequence_id = self.get_next_sequence('GPSGSV')
+        pgn129540.mode = 0
+        pgn129540.sats_in_view = self._current_gsv_nb_sat
+        for sat in self._current_sat_gsv_data:
+            sat_obj = Pgn129540Class.Satellites_DataClass()
+            sat_obj.satellite_number = sat.prn
+            sat_obj.elevation = sat.elevation
+            sat_obj.azimuth = sat.azimuth
+            sat_obj.signal_noise_ratio = sat.snr
+            sat_obj.range_residuals = 0x7fffffff
+            sat_obj.status = sat.status
+            pgn129540.satellites_data.append(sat_obj)
+        # ok done => let's clear the data
+        self._current_sat_gsv_data = None
+        return [pgn129540]
 
     def convertGGA(self, fields: list):
         if fields[5] == b'0':
@@ -223,8 +310,8 @@ class NMEA0183ToNMEA2000Converter:
         pgn129029.integrity = 0
         pgn129029.HDOP = float(fields[7])
         pgn129029.geoidal_separation = float(fields[8])
-        if self._current_sats_data is not None:
-            pgn129029.PDOP = self._current_sats_data.pdop
+        if self._current_sat_gsa_data is not None:
+            pgn129029.PDOP = self._current_sat_gsa_data.pdop
         else:
             pgn129029.PDOP = float('nan')
         pgn129029.nb_ref_stations = 0
@@ -247,15 +334,3 @@ class NMEA0183ToNMEA2000Converter:
         pgn127250.variation = float('nan')
         return [pgn127250]
 
-
-
-
-
-
-
-
-
-
-
-
-default_converter = NMEA0183ToNMEA2000Converter()

@@ -4,67 +4,107 @@
 #
 # Author:      Laurent Carré
 #
-# Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
-# Licence:     <your licence>
+# Created:     01/02/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-202#
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
+#  Settings file for the test configuration involving
+#  A NMEA0183 Log replay program (ScannavReplay) running a machine sending a mix NMEA2000 (PDGY) and NMEA0183 messages
+#  message server running on a RPi with a direct connection to a NMEA2000 bus
+#
+# The message server is performing the following operations
+#  read NMEA0183 messages from the replay server using the NMEATCPReader 'SNReplay'
+#  conversion of NMEA0183 sentences in NMEA2000
+#  injecting the messages (via the Injector 'CanFeed') on the CAN NMEA2000 bus through the DirectCANCoupler 'InputCoupler'
+#  remark: 'DecodedInput' application is not used in this case as it takes decoded NMEA2000 in Protobuf format as input
+
+
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
-# log_file: test_fast_packet
+
 log_module:
-  nmea_routing.coupler: INFO
-  nmea_routing.console: DEBUG
+  main: DEBUG
+  nmea_routing.console: INFO
+  nmea_routing.grpc_nmea_input_service: INFO
   nmea2000.nmea2000_msg: INFO
-  nmea2000.nmea2k_controller: INFO
+  nmea2000.nmea2k_controller: WARNING
   nmea2000.nmea2k_active_controller: INFO
-  nmea2000.nmea2k_device: INFO
-  nmea2000.nmea2k_application: INFO
+  nmea2000.nmea2k_device: WARNING
+  nmea2000.nmea2k_application: WARNING
   nmea2000.n2k_name: INFO
   nmea2000.nmea2k_can_interface: INFO
-  nmea2000.nmea2k_can_coupler: DEBUG
+  nmea2000.nmea2k_can_coupler: INFO
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
-  nmea2000.grpc_input_application: INFO
+  nmea2000.grpc_input_application: DEBUG
   nmea2000.nmea2k_fast_packet: INFO
   nmea2000.nmea2k_publisher: INFO
 
 servers:
 
-- Console:
-      class: Console
+- gRPCMainServer:
+      class: GrpcServer
       port: 4502
 
 - NMEANetwork:
       class: NMEA2KActiveController
-      trace: true
+      trace: false
       channel: can0
-      applications: [DecodedInput, CANCoupler]
+      applications: [InputCoupler, DecodedInput]
 
 couplers:
 
-- CANCoupler:
+- InputCoupler:
     class: DirectCANCoupler
 
+- SNReplay:
+    class: NMEATCPReader
+    address: 192.168.1.21
+    port: 3555
+    autostart: true
+    protocol: nmea2000
+    nmea0183_convert: true
+    trace_messages: false
+    trace_raw: false
 
 filters:
 
-data_sinks:
+- NMEAOutput:
+    class: NMEA2000Filter
+    pgn: [129283, 129284, 129285, 126992, 130074]
+    action: select
+
+- AIS:
+    class: NMEA2000Filter
+    pgn: [129794, 129810, 129809]
+
+services:
+
+- Console:
+    class: Console
+    server: gRPCMainServer
 
 publishers:
 
 - TraceOutput:
     class: N2KTracePublisher
-    # filters: [NMEASent]
-    couplers: [CANCoupler]
+    couplers: [InputCoupler]
+    filters: [NMEAOutput, AIS]
     active: true
     flexible_decode: false
+
+- CanFeed:
+    class: Injector
+    target: InputCoupler
+    couplers: [SNReplay]
+    active: true
 
 applications:
 
 - DecodedInput:
     class: GrpcInputApplication
-    port: 4509
+    server: gRPCMainServer
 
 
 

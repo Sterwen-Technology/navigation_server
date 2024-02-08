@@ -3541,7 +3541,7 @@
       <Flags>ReadWrite,AddItem</Flags>
       <ByteLength>530</ByteLength>
       <Fields>
-        <UIntField Name="Start RPS#" key="start_rps_nb">
+        <UIntField Name="Start RPS#" key="start_waypoint_id">
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
@@ -3902,19 +3902,19 @@
             <Units>degrees</Units>
             <Scale>0.0057295779513082332</Scale>
           </DblField>
-          <DblField Name="Azimuth" key="azimuth">
+          <UDblField Name="Azimuth" key="azimuth">
             <BitOffset>24</BitOffset>
             <BitLength>16</BitLength>
             <FormatAs>Heading</FormatAs>
             <Units>degrees</Units>
             <Scale>0.0057295779513082332</Scale>
-          </DblField>
-          <DblField Name="SNR" key="signal_noise_ratio">
+          </UDblField>
+          <UDblField Name="SNR" key="signal_noise_ratio">
             <BitOffset>40</BitOffset>
             <BitLength>16</BitLength>
             <Units>dB</Units>
             <Scale>0.01</Scale>
-          </DblField>
+          </UDblField>
           <UIntField Name="Range residuals" key="range_residuals">
             <BitOffset>56</BitOffset>
             <BitLength>32</BitLength>
@@ -4544,26 +4544,26 @@
           <BitOffset>288</BitOffset>
           <BitLength>8</BitLength>
         </EnumField>
-        <DblField Name="Length" key="length">
+        <UDblField Name="Length" key="length">
           <BitOffset>296</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
-        </DblField>
-        <DblField Name="Beam" key="beam">
+        </UDblField>
+        <UDblField Name="Beam" key="beam">
           <BitOffset>312</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
-        </DblField>
-        <DblField Name="Position reference from Starboard" key="position_from_starboard">
+        </UDblField>
+        <UDblField Name="Position reference from Starboard" key="position_from_starboard">
           <BitOffset>328</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
-        </DblField>
-        <DblField Name="Position reference from Bow" key="position_from_bow">
+        </UDblField>
+        <UDblField Name="Position reference from Bow" key="position_from_bow">
           <BitOffset>344</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
-        </DblField>
+        </UDblField>
         <UIntField Name="ETA Date" key="ETA_date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>360</BitOffset>
@@ -5709,26 +5709,26 @@
           <BitOffset>104</BitOffset>
           <BitLength>56</BitLength>
         </FixLengthStringField>
-        <DblField Name="Length" key="length">
+        <UDblField Name="Length" key="length">
           <BitOffset>160</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
-        </DblField>
-        <DblField Name="Beam" key="beam">
+        </UDblField>
+        <UDblField Name="Beam" key="beam">
           <BitOffset>176</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
-        </DblField>
-        <DblField Name="Position reference from Starboard" key="position_from_starboard">
+        </UDblField>
+        <UDblField Name="Position reference from Starboard" key="position_from_starboard">
           <BitOffset>192</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
-        </DblField>
-        <DblField Name="Position reference from Bow" key="position_from_bow">
+        </UDblField>
+        <UDblField Name="Position reference from Bow" key="position_from_bow">
           <BitOffset>208</BitOffset>
           <BitLength>16</BitLength>
           <Scale>0.1</Scale>
-        </DblField>
+        </UDblField>
         <IntField Name="Mothership User ID" key="mothership_mmsi">
           <Description>MMSI of mother ship sent by daughter vessels</Description>
           <BitOffset>224</BitOffset>
@@ -6160,46 +6160,48 @@
     </PGNDefn>
     <PGNDefn PGN="130074">
       <Name>Route and WP Service - WP List - WP Name &amp; Position</Name>
+      <Scope>Generate</Scope>
+      <Comment>Reverse engineered from Miniplex3 output</Comment>
       <ByteLength>23</ByteLength>
       <Fields>
-        <UIntField Name="Start WP ID">
+        <UIntField Name="Start WP ID" key="start_wp_id">
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <UIntField Name="nItems">
+        <UIntField Name="nItems" key="nb_items">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <UIntField Name="Number of valid WPs in the WP-List">
+        <UIntField Name="Number of valid WPs in the WP-List" key="nb_valid_wp">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <UIntField Name="Database ID">
+        <UIntField Name="Database ID" key="database_id">
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
         <UIntField Name="Reserved">
           <Description>reserved</Description>
-          <BitOffset>64</BitOffset>
+          <BitOffset>56</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
-        <RepeatedFieldSet Name="Waypoint definitions" Count="nItems">
-          <UIntField Name="WP ID">
+        <RepeatedFieldSet Name="Waypoint definitions" Count="nItems" key="WP_definitions">
+          <UIntField Name="WP ID" key="waypoint_id">
             <BitOffset>0</BitOffset>
             <BitLength>16</BitLength>
           </UIntField>
-          <VarLengthStringField Name="WP Name">
+          <VarLengthStringField Name="WP Name" key="waypoint_name">
             <BitOffset>16</BitOffset>
             <BitLength>0</BitLength>
           </VarLengthStringField>
-          <DblField Name="WP Latitude">
-            <BitOffset>0</BitOffset>
+          <DblField Name="WP Latitude" key="waypoint_latitude">
+            <BitOffset>16</BitOffset>
             <BitLength>32</BitLength>
             <FormatAs>Latitude</FormatAs>
             <Scale>1E-07</Scale>
           </DblField>
-          <DblField Name="WP Longitude">
-            <BitOffset>0</BitOffset>
+          <DblField Name="WP Longitude" key="waypoint_longitude">
+            <BitOffset>48</BitOffset>
             <BitLength>32</BitLength>
             <FormatAs>Longitude</FormatAs>
             <Scale>1E-07</Scale>

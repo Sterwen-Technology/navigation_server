@@ -14,6 +14,10 @@ class ObjectCreationError(Exception):
     pass
 
 
+class ObjectFatalError(Exception):
+    pass
+
+
 class N2KDecodeException(Exception):
     pass
 
@@ -35,4 +39,8 @@ class N2KDefinitionError(Exception):
 
 
 class N2KEncodeException(Exception):
+    pass
+
+
+class IncompleteMessage(Exception):
     pass

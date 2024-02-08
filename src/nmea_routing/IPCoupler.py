@@ -19,7 +19,8 @@ import threading
 import time
 
 from nmea_routing.generic_msg import *
-from nmea_routing.coupler import Coupler, CouplerReadError, CouplerTimeOut, IncompleteMessage
+from utilities.global_exceptions import IncompleteMessage
+from nmea_routing.coupler import Coupler, CouplerReadError, CouplerTimeOut
 from nmea0183.nmea0183_msg import process_nmea0183_frame, NMEAInvalidFrame, NMEA0183Msg
 
 
@@ -389,7 +390,7 @@ class TCPBufferedReader:
             _logger.info("TCPBufferedReader - Timeout error on TCP socket duration %f" % (time.monotonic() - start_time))
             raise CouplerTimeOut()
         except socket.error as e:
-            _logger.error("TCPBufferedReader - Error receiving from TCP socket %s: %s" % (self.object_name(), e))
+            _logger.error("TCPBufferedReader - Error receiving from TCP socket %s: %s" % (self.name(), e))
             raise CouplerReadError()
         # _logger.info("TCPBufferedReader - read OK %d" % len(msg))
         return msg

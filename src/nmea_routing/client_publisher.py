@@ -81,7 +81,7 @@ class NMEASender(threading.Thread):
                       'dyfmt': fromPGDY, 'stfmt': fromPGNST}
 
     def __init__(self, connection: socket, address, coupler: Coupler, nmea2000_mode, buffer_size, timeout):
-        super().__init__(name="Sender-" + "%s:%d" % address)
+        super().__init__(name="Sender-" + "%s:%d" % address, daemon=True)
         self._connection = connection
         self._address = address
         self._coupler = coupler

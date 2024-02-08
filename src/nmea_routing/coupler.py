@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     29/11/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 import socket
@@ -21,6 +21,8 @@ from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
 from nmea2000.nmea2000_msg import NMEA2000Msg, NMEA2000Writer
 from nmea2000.nmea2k_pgndefs import PGNDef
 from log_replay.message_trace import NMEAMsgTrace, MessageTraceError
+from nmea0183.nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter, Nmea0183InvalidMessage
+from utilities.global_exceptions import IncompleteMessage
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -43,10 +45,6 @@ class CouplerNotPresent(Exception):
 
 
 class CouplerOpenRefused(Exception):
-    pass
-
-
-class IncompleteMessage(Exception):
     pass
 
 
@@ -95,7 +93,7 @@ class Coupler(threading.Thread):
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
         self._mode_str = opts.get('protocol', str, 'nmea0183').lower()
         self._mode = self.protocol_dict[self._mode_str]
-        _logger.info("Coupler %s mode %d direction %d" % (self._name, self._mode ,self._direction))
+        _logger.info("Coupler %s mode %d direction %d" % (self._name, self._mode, self._direction))
         if self._mode == self.NMEA2000 and self._direction != self.READ_ONLY:
             self._n2k_writer = self.define_n2k_writer()
         else:
@@ -125,6 +123,17 @@ class Coupler(threading.Thread):
         self._rate = 0.0
         self._rate_s = 0.0
         self._rate_raw = 0.0
+        #  NMEA0183 Conversion
+        #
+        self._nmea183_convert = opts.get('nmea0183_convert', bool, False)
+        if self._nmea183_convert:
+            source = opts.get('source', int, 251)
+            if source < 0 or source > 253:
+                _logger.error("%s incorrect SA for converted messages" % self.name)
+                source = 251
+            self._converter = NMEA0183ToNMEA2000Converter(source)
+        else:
+            self._converter = None
         #
         #  message automatic processing
         #
@@ -156,24 +165,25 @@ class Coupler(threading.Thread):
         self._timer.start()
 
     def timer_lapse(self):
-        _logger.debug("Timer lapse => total number of messages:%g" % self._total_msg)
-        if self._total_msg-self._last_msg_count == 0 and self._direction != self.WRITE_ONLY:
-            # no message received
-            _logger.warning("Coupler %s:No NMEA messages received in the last %4.1f sec" %
-                            (self._name, self._timeout))
-            self.check_connection()
+        if self._state != self.NOT_READY:
+            _logger.debug("Timer lapse => total number of messages:%g" % self._total_msg)
+            if self._total_msg-self._last_msg_count == 0 and self._direction != self.WRITE_ONLY:
+                # no message received
+                _logger.warning("Coupler %s:No NMEA messages received in the last %4.1f sec" %
+                                (self._name, self._timeout))
+                self.check_connection()
 
-        t = time.monotonic()
-        self._rate = (self._total_msg - self._last_msg_count) / (t - self._count_stamp)
-        self._rate_raw = (self.total_msg_raw() - self._last_msg_count_r) / (t - self._count_stamp)
-        self._rate_s = (self._total_msg_s - self._last_msg_count_s) / (t - self._count_stamp)
-        self._last_msg_count = self._total_msg
-        self._last_msg_count_r = self.total_msg_raw()
-        self._last_msg_count_s = self._total_msg_s
-        self._count_stamp = t
-        _logger.info("Coupler %s NMEA message received(process:%d rate:%6.2f; raw:%d rate:%6.2f sent:%d rate:%6.2f" %
-                     (self.object_name(), self._total_msg, self._rate, self.total_msg_raw(), self._rate_raw,
-                      self._total_msg_s, self._rate_s))
+            t = time.monotonic()
+            self._rate = (self._total_msg - self._last_msg_count) / (t - self._count_stamp)
+            self._rate_raw = (self.total_msg_raw() - self._last_msg_count_r) / (t - self._count_stamp)
+            self._rate_s = (self._total_msg_s - self._last_msg_count_s) / (t - self._count_stamp)
+            self._last_msg_count = self._total_msg
+            self._last_msg_count_r = self.total_msg_raw()
+            self._last_msg_count_s = self._total_msg_s
+            self._count_stamp = t
+            _logger.info("Coupler %s NMEA message received(process:%d rate:%6.2f; raw:%d rate:%6.2f sent:%d rate:%6.2f" %
+                         (self.object_name(), self._total_msg, self._rate, self.total_msg_raw(), self._rate_raw,
+                          self._total_msg_s, self._rate_s))
         if not self._stopflag:
             self.start_timer()
 
@@ -242,18 +252,22 @@ class Coupler(threading.Thread):
 
             #
             #  read section
-            #
+            #  read sends a generator from version 1.8
             try:
-                msg = self.read()
-                if msg.type == NULL_MSG:
-                    _logger.warning("End of data from %s => close connection" % self._name)
-                    self.close()
-                    continue
-                else:
-                    _logger.debug("%s push:%s" % (self.object_name(), msg))
+                for msg in self.read():
+                    if msg.type == NULL_MSG:
+                        _logger.warning("End of data from %s => close connection" % self._name)
+                        self.close()
+                        continue
+                    else:
+                        _logger.debug("%s push:%s" % (self.object_name(), msg))
+                        # good data received - filter and publish
+                        self._total_msg += 1
+                        self._state = self.ACTIVE
+                        self.publish(msg)
             except CouplerTimeOut:
                 continue
-            except (socket.timeout, CouplerReadError):
+            except (socket.timeout, CouplerReadError, IncompleteMessage):
                 if self._stopflag:
                     break
                 else:
@@ -263,10 +277,7 @@ class Coupler(threading.Thread):
                 _logger.error("Un-caught exception during coupler %s read: %s" % (self._name, e))
                 self.close()
                 continue
-            # good data received - filter and publish
-            self._total_msg += 1
-            self._state = self.ACTIVE
-            self.publish(msg)
+
             # end of run loop
 
         _logger.debug("%s coupler -> end of reading loop" % self._name)
@@ -392,15 +403,12 @@ class Coupler(threading.Thread):
     def is_suspended(self) -> bool:
         return self._suspend_flag
 
-    def read(self) -> NavGenericMsg:
+    def read(self):
         fetch_next = True
         while fetch_next:
             msg = self._read()
             self.trace(NMEAMsgTrace.TRACE_IN, msg)
-            # _logger.debug("Read primary:%s", msg)
-            # if self._data_sink is not None:
-                # self._data_sink.send_msg(msg)
-            # print(msg.printable())
+            _logger.debug("Read primary:%s", msg)
             if msg.type == N2K_MSG:
                 if self._n2k_controller is not None and msg.msg.is_iso_protocol:
                     fetch_next = True
@@ -409,8 +417,18 @@ class Coupler(threading.Thread):
                     fetch_next = False
             else:
                 fetch_next = False
+                if self._nmea183_convert:
+                    try:
+                        for n2k_msg in self._converter.convert_to_n2kmsg(msg):
+                            _logger.debug("Read valid N2K:%s", n2k_msg)
+                            yield n2k_msg
+                        return
+                    except Nmea0183InvalidMessage:
+                        if self._mode == self.NMEA2000:
+                            fetch_next = True
+
         # _logger.debug("Read valid data:%s", msg)
-        return msg
+        yield msg
 
     def _read(self) -> NavGenericMsg:
         '''

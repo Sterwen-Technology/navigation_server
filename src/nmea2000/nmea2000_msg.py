@@ -77,6 +77,10 @@ class NMEA2000Msg:
     def sa(self) -> int:
         return self._sa
 
+    @sa.setter
+    def sa(self, address):
+        self._sa = address
+
     @property
     def da(self) -> int:
         return self._da

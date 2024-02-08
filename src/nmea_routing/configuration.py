@@ -165,7 +165,7 @@ class NavigationConfiguration:
         self._servers = {}
         self._couplers = {}
         self._publishers = {}
-        self._data_sink = {}
+        self._services = {}
         self._filters = {}
         self._applications = {}
         self._globals = {}
@@ -196,10 +196,10 @@ class NavigationConfiguration:
         except KeyError:
             _logger.info("No publishers")
         try:
-            for obj in self.object_descr_iter('data_clients'):
+            for obj in self.object_descr_iter('services'):
                 nav_obj = NavigationServerObject(obj)
                 self._obj_dict[nav_obj.name] = nav_obj
-                self._data_sink[nav_obj.name] = nav_obj
+                self._services[nav_obj.name] = nav_obj
         except KeyError:
             _logger.info("No data clients")
         try:
@@ -246,8 +246,8 @@ class NavigationConfiguration:
     def publishers(self):
         return self._publishers.values()
 
-    def data_sinks(self):
-        return self._data_sink.values()
+    def services(self):
+        return self._services.values()
 
     def filters(self):
         return self._filters.values()
