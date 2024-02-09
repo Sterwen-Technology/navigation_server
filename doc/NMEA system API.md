@@ -146,7 +146,23 @@ The *status* method is used mainly to test the connection from the client standp
 
 #### gRPC NmeaServer service
 
-This service allows to pull NMEA messages from the server
+This service allows to pull NMEA messages from the server. This is in the plan but not yet implemented. One of the hurdle is the lack of external client for test.
+
+### Console
+
+The console is also a service running on the gRPC server, but its function is different from the others services and servers.
+The console allow to monitor and perform some control on **nmea_message_server** objects. It has a comprehensive Protobuf interface to interact with.
+
+The full details for each object can be found in the **console.proto** file.
+
+#### Nmea_message_server status
+
+The rpc call **server_status** return the high level status of the nmea_message_server process and the list of servers running inside.
+
+
+#### Server objects
+
+
 
 
 
