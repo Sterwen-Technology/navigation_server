@@ -12,7 +12,7 @@
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    nmea_routing.console: DEBUG
+    nmea_routing.console: INFO
 
 
 servers:

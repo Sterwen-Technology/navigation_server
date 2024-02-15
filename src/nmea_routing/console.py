@@ -145,14 +145,6 @@ class ConsoleServicer(NavigationConsoleServicer):
         _logger.debug("ServerCmd response %s" % resp.status)
         return resp
 
-    dev_attr_table = (('Manufacturer Code', 'manufacturer_code'),
-                      ('Manufacturer Name', 'manufacturer_name'),
-                      ('Product Code', 'product_code'),
-                      ('Product name', 'product_name'),
-                      ('Description', 'description'),
-                      ('System ISO Name', 'iso_name')
-                      )
-
     def GetServerDetails(self, request, context):
         '''
         Warning not yet implemented

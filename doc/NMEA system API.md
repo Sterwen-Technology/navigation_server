@@ -90,13 +90,13 @@ With each flavor of NMEA being:
 
 Or:
 
-    `message nmea2000pb {  / That is the full NMEA2000 PDU
+    `message nmea2000pb {  // That is the full NMEA2000 PDU above the transport layer
         uint32 pgn=1;
         uint32 priority=2;
         uint32 sa=3; // source address
         uint32 da =4; // destination address
         float timestamp = 5; // seconds from the epoch
-        bytes payload = 6; // fast packets concatenated
+        bytes payload = 6; // Full payload data above transport layer
         }
 
 #### Fully decoded NMEA messages
@@ -104,7 +104,7 @@ Or:
 The systems offers also the possibility to exchange fully decoded NMEA2000 PDU, each PDU field is represented by a Protobuf field.
 That is avoiding further decoding or encoding process and allows a simple integration of NMEA2000 data processing in the system.
 
-The top message is generic for all PGN.
+The top message is generic for all PGN and includes the header section of the NMEA2000 PDU.
 
     'message nmea2000_decoded_pb {
         uint32 pgn=1;
@@ -155,12 +155,83 @@ The console allow to monitor and perform some control on **nmea_message_server**
 
 The full details for each object can be found in the **console.proto** file.
 
+An example application using the full console interface is available. It is written in Python and uses a very basic GUI library.
+
 #### Nmea_message_server status
 
-The rpc call **server_status** return the high level status of the nmea_message_server process and the list of servers running inside.
+The rpc call **ServerStatus** return the high level status of the nmea_message_server process and the list of servers running inside.
+
+If the connection succeeds to the server, the following information is retrieved:
+    - Name (IP + port) and hostname
+    - Software version
+    - Uptime
+    - list of the servers created in the process (but necessarily running)
+
+A few commands can be sent to the main (root) server using the **ServerCmd** rpc call
+
+| command       | target         | result                                |
+|---------------|----------------|---------------------------------------|
+| stop          | None           | stop the message_server               |
+| start_coupler | <coupler name> | start (or restart) the target coupler |
 
 
 #### Server objects
+
+The server objects have the following information but no command is today possible on them
+
+    'message Server {
+        string server_class=1;
+        string name=2;
+        string server_type=3;
+        bool running=4;
+        uint32 nb_connections=5; // only for TCP severs
+        uint32 port=6;          // only for TCP and gRPC servers
+        string protocol=8;      // only for NMEA TCP servers
+        repeated Connection connections=7;  // only for TCP servers
+        }
+
+#### Coupler objects
+
+Protobuf definition:
+
+    'message CouplerMsg {
+        string  name=1;
+        string coupler_class=2;
+        State state=3;
+        enum Device_state {
+            NOT_READY=0;
+            OPEN=1;
+            CONNECTED=2;
+            ACTIVE=3;
+        }
+        Device_state dev_state=4;
+        string protocol=5;      // nmea0183/nmea2000/nmea_mix
+        uint32 msg_in=6;        // Total number messages received at application layer
+        uint32 msg_raw=13;      // Total number messages received at tranport layer
+        uint32 msg_out=7;       // Total number messages sent at application layer
+        string status=8;        // Coupler device depndent
+        uint32 error=9;
+        float input_rate=10;  //  all rates in messages / sec
+        float input_rate_raw=12;
+        float output_rate=11;
+    }
+
+On the coupler objects several commands can be sent with some valid only for some couplers. Some commands may have arguments and return values.
+Commands arguments and replied values are based on the ArgumentList Protobuf massage that is a list of (key, value) pairs.
+
+| command                  | target         | coupler class | arguments        | effect                                        |
+|--------------------------|----------------|---------------|------------------|-----------------------------------------------|
+| stop                     | <coupler name> | All           | None             | stop the coupler thread and release resources |
+| suspend                  |                | All           | None             | Stop reading the inputs                       |
+| resume                   |                | All           | None             | Resume reading                                |
+| current_date             | <coupler_name> | LogReplay     | None             | Reply with the current replay date & time     |
+| log_file_characteristics |                | LogReplay     | None             | Replay with the current file characteristics  |
+| move_to_date             |                | LogReplay     | target timestamp | Move the replay index to the target           |
+| restart                  |                | LogReplay     | None             | Restart the log replay at the beginning       |
+
+
+
+
 
 
 

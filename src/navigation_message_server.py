@@ -302,6 +302,7 @@ def main():
     config.add_class(NMEASerialPort)
     config.add_class(NMEA2KController)
     if include_can:
+        _logger.info("Python-can under GNU Lesser General Public License v3.0")
         config.add_class(NMEA2KActiveController)
     #  config.add_class(NMEAGrpcDataClient)
     config.add_class(NMEA0183Filter)
@@ -315,7 +316,6 @@ def main():
         config.add_class(GrpcInputApplication)
 
     NavigationLogSystem.finalize_log(config)
-    print(__name__)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     nmea0183_msg.NMEA0183Sentences.init(config.get_option('talker', 'ST'))
     MessageServerGlobals.manufacturers = Manufacturers(config.get_option('manufacturer_xml',

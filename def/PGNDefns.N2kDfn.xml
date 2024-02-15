@@ -1,7 +1,7 @@
 <PGNDefnCollection xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="1.0">
-  <Date>$Date: 2023-10-06$</Date>
-  <Comment>Version for limited release - works with navigation data server version 1.5</Comment>
-  <CreatorCode>Sterwen Technology from Keversoft NMEA2000 Analyzer</CreatorCode>
+  <Date>$Date: 2024-02-12$</Date>
+  <Comment>Version for limited release - works with navigation data server version 1.8</Comment>
+  <CreatorCode>Sterwen Technology derived from Keversoft NMEA2000 Analyzer</CreatorCode>
   <GlobalEnums>
     <Comment>Definitions of Enums that can be used in several PGN</Comment>
     <Enum Name="Device Class">
@@ -161,6 +161,7 @@
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="61184">
+      <Scope>Ignored</Scope>
       <Name>ISO: Manu. Proprietary single-frame addressed</Name>
     </PGNDefn>
     <PGNDefn PGN="65240">
@@ -180,6 +181,7 @@
     </PGNDefn>
     <PGNDefn PGN="65280">
       <Name>ISO: Manu. Proprietary single-frame non-addressed</Name>
+      <Scope>Ignored</Scope>
     </PGNDefn>
     <PGNDefn PGN="65285">
       <Name>Airmar: Boot State Acknowledgment</Name>
@@ -651,6 +653,8 @@
     </PGNDefn>
     <PGNDefn PGN="126208">
       <Name>NMEA - Request group function</Name>
+      <Scope>Ignored</Scope>
+      <Comment>This is fully handled by a specific class</Comment>
       <ByteLength>9</ByteLength>
       <Fields>
         <IntField Name="Function Code">
@@ -690,6 +694,8 @@
     </PGNDefn>
     <PGNDefn PGN="126208">
       <Name>NMEA - Command group function</Name>
+      <Scope>Ignored</Scope>
+      <Comment>This is fully handled by a specific class</Comment>
       <ByteLength>9</ByteLength>
       <Fields>
         <IntField Name="Function Code">
@@ -730,6 +736,8 @@
     </PGNDefn>
     <PGNDefn PGN="126208">
       <Name>NMEA - Acknowledge group function</Name>
+      <Scope>Ignored</Scope>
+      <Comment>This is fully handled by a specific class</Comment>
       <ByteLength>7</ByteLength>
       <Fields>
         <IntField Name="Function Code">
@@ -2587,7 +2595,7 @@
           <BitOffset>10</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <UDblField Name="COG" key="COG">
+        <UDblField Name="COG" key="COG" dataset="">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
@@ -5085,7 +5093,7 @@
     </PGNDefn>
     <PGNDefn PGN="129802">
       <Name>AIS Safety Related Broadcast Message</Name>
-      <ByteLength>42</ByteLength>
+      <ByteLength>168</ByteLength>
       <Fields>
         <UIntField Name="Message ID">
           <BitOffset>0</BitOffset>
@@ -5127,10 +5135,10 @@
           <BitOffset>45</BitOffset>
           <BitLength>3</BitLength>
         </UIntField>
-        <StringField Name="Safety Related Text">
-          <BitOffset>0</BitOffset>
-          <BitLength>-1</BitLength>
-        </StringField>
+        <FixLengthStringField Name="Safety Related Text">
+          <BitOffset>48</BitOffset>
+          <BitLength>1296</BitLength>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129803">

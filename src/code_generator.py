@@ -32,14 +32,14 @@ def _parser():
                    default="./src/generated")
     p.add_argument('-po', '--protobuf_dir', action='store', type=str, help="Protobuf output directory",
                    default="./src/protobuf")
-    p.add_argument('-pb', '--protobuf', action="store_true")
-    p.add_argument('-py', '--python', action="store_true")
-    p.add_argument('-cv', '--protobuf_conv', action="store_true")
-    p.add_argument('-ro', '--read_only', action="store_true")
-    p.add_argument("-pgn", "--pgn", action="store", type=int, default=0)
+    p.add_argument('-pb', '--protobuf', action="store_true", help="generate protobuf definitions")
+    p.add_argument('-py', '--python', action="store_true", help="generate Python code")
+    p.add_argument('-cv', '--protobuf_conv', action="store_true", help="generate Python <-> Protobuf conversion")
+    p.add_argument('-ro', '--read_only', action="store_true", help="generate all classes read only")
+    p.add_argument("-pgn", "--pgn", action="store", type=int, default=0, help="generate a specific PGN only")
     p.add_argument('-c', '--category', action='store', type=str, choices=['iso', 'data', 'all'],
-                   default='all')
-    p.add_argument('-o', '--output', action='store', type=str, default=None)
+                   default='all', help="generate a specific category (iso/data/all)")
+    p.add_argument('-o', '--output', action='store', type=str, default=None, help="output file name without extension")
 
     return p
 

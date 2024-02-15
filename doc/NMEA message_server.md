@@ -123,7 +123,7 @@ This server is to be used if the access to the NMEA2000 bus is done via an adapt
 | queue_size | int    | 20      | input message queue size                         |
 | save_file  | string | None    | Name of the file for saving the NMEA2000 devices |
 
-#### NMEA2KActiveController(NMEA2KController) server
+#### (NMEA2KController) server
 
 This class extends the NMEA2KController feature by adding the capability to claim an address on the CAN bus and therefore send messages. Therefore, it only works when the server has a direct connection to the NMEA2000 (CAN) bus.
 By adding this class, the server becomes a full NMEA2000 device and no adapter is needed.
@@ -219,7 +219,7 @@ In nmea2000 (or nmea_mixed) $MXPGN from the Miniplex sentences are transformed i
 The format of transmission to the server shall be either 'dyfmt' or 'stfmt'. Transparent mode will not work as the messages are transformed.
 
 
-#### Shipmodul (IPCoupler)
+#### ShipmodulInterface (IPCoupler)
 Instantiable class to manage Ethernet or Wi-Fi interface for Shipmodul Miniplex3. For USB interface, the NMEASerialPort can be used.
 
 The class instance has 2 possible behavior depending on the protocol selected.
