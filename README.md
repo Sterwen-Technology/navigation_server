@@ -60,6 +60,16 @@ All servers can be started from the command line, they don't require specific pe
 
 For production the system should be run through *systemd*. Services that can be used as sample are provided in the application.
 
+## Documentation
+
+The documentation is located in the *doc* directory.
+
+[message_server documentation](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/NMEA%20message_server.md)
+
+[System API](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/NMEA%20system%20API.md)
+
+[NMEA2000 support](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/NMEA2000.md)
+
 
 ## Usage
 
