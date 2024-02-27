@@ -5,194 +5,97 @@
 # Author:      Laurent Carré
 #
 # Created:     30/05/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-import sys
-import logging
 import os
+import logging
 import time
-from argparse import ArgumentParser
-import subprocess
-import shlex
-import threading
 import signal
 
-from generated.agent_pb2 import *
-from generated.agent_pb2_grpc import *
-
-from nmea_routing.server_common import NavigationGrpcServer
-
-
-def _parser():
-    p = ArgumentParser(description=sys.argv[0])
-
-    p.add_argument('-p', '--port', action='store', type=int, default=4506)
-    p.add_argument('-n', '--name', type=str, default='NavigationAgentServer')
-    p.add_argument('-d', '--working_dir', action='store', type=str)
-    p.add_argument('-t', '--trace', action='store', type=str, default='INFO')
-
-    return p
+from nmea_routing.grpc_server_service import GrpcServer
+from agent.agent_service import AgentService
+from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
+from utilities.log_utilities import NavigationLogSystem
+from utilities.global_exceptions import ObjectCreationError, ObjectFatalError
+from utilities.global_variables import MessageServerGlobals
+from utilities.arguments import init_options
 
 
-parser = _parser()
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer.agent")
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 version = "1.0"
 
 
-class Options(object):
-    def __init__(self, p):
-        self.parser = p
-        self.options = None
+class AgentMainServer:
 
-    def __getattr__(self, name):
-        if self.options is None:
-            self.options = self.parser.parse_args()
-        try:
-            return getattr(self.options, name)
-        except AttributeError:
-            raise AttributeError(name)
+    def __init__(self):
+        self._servers = []
+        self._services = []
+        self._sigint_count = 0
+        signal.signal(signal.SIGINT, self.stop_handler)
 
-    def __getitem__(self, item):
-        return self.__getattr__(item)
+    def add_server(self, server):
+        self._servers.append(server)
 
-    def get(self, attr, type, default):
-        return self.__getattr__(attr)
+    def add_service(self, service):
+        self._services.append(service)
 
+    def start(self):
+        for service in self._services:
+            service.finalize()
+        for server in self._servers:
+            server.start()
 
-def run_cmd(cmd: str):
-    args = shlex.split(cmd)
-    try:
-        r = subprocess.run(args, capture_output=True, encoding='utf-8')
-    except Exception as e:
-        _logger.error('SendCmd %s error %s' % (args[0], e))
-        return -1, str(e)
-    if r.returncode != 0:
-        _logger.error("Agent error for command:%s" % args[0])
-        return r.returncode, 'Process return code %s' % r.returncode
-    lines = r.stdout.split('\n')
-    return 0, lines
+    def stop_server(self):
+        for server in self._servers:
+            server.stop()
 
+    def wait(self):
+        for server in self._servers:
+            server.join()
 
-def run_systemd(cmd: str, service: str):
-    if cmd not in ('start', 'stop', 'restart', 'status'):
-        raise ValueError
-    args = ['systemctl', cmd, service]
-    try:
-        r = subprocess.run(args, capture_output=True, encoding='utf-8')
-    except Exception as e:
-        _logger.error("systemctl execution error: %s" % e)
-        return -1
-    _logger.debug("systemctl return code:%d" % r.returncode)
-    lines = r.stdout.split('\n')
-    _logger.debug("stdout=%s" % lines)
-    return r.returncode, lines
-
-
-class AgentExecutor(threading.Thread):
-
-    def __init__(self, cmd: str):
-        self._cmd = cmd
-        super().__init__()
-
-    def run(self):
-        time.sleep(3.0)
-        run_cmd(self._cmd)
-
-
-class AgentServicerImpl(AgentServicer):
-
-    def SendCmdMultipleResp(self, request, context):
-        cmd = request.cmd
-        _logger.info("Agent send cmd multiple responses:%s" % cmd)
-        return_code, lines = run_cmd(cmd)
-        if return_code != 0:
-            resp = AgentResponse()
-            resp.err_code = return_code
-            resp.resp = lines
-            yield resp
-            return
-        first_resp = True
-        for l_resp in lines:
-            resp = AgentResponse()
-            if first_resp:
-                resp.err_code = 0
-                first_resp = False
-            resp.resp = l_resp
-            _logger.debug("Resp:%s" % l_resp)
-            yield resp
-        return
-
-    def SendCmdSingleResp(self, request, context):
-        cmd = request.cmd
-        _logger.info("Agent send cmd simple responses:%s" % cmd)
-        return_code, lines = run_cmd(cmd)
-        if isinstance(lines, list):
-            line = lines[0]
+    def stop_handler(self, signum, frame):
+        self._sigint_count += 1
+        if self._sigint_count == 1:
+            _logger.info("SIGINT received => stopping the system")
+            self.stop_server()
         else:
-            line = lines
-        resp = AgentResponse()
-        resp.err_code = return_code
-        resp.resp = line
-        return resp
-
-    def SendCmdNoResp(self, request, context):
-        cmd = request.cmd
-        _logger.info("Agent send cmd no responses:%s" % cmd)
-        executor = AgentExecutor(cmd)
-        resp = AgentResponse()
-        resp.err_code = 0
-        executor.start()
-        return resp
-
-    def SystemdCmd(self, request, context):
-        cmd = request.cmd
-        service = request.service
-        _logger.info("Agent systemctl %s %s" % (cmd, service))
-        return_code, lines = run_systemd(cmd, service)
-        resp = AgentResponseML()
-        resp.err_code = return_code
-        if len(lines) > 1:
-            resp.lines.extend(lines)
-        else:
-            resp.lines.extend(["%s %s return code:%d" % (cmd, service, return_code)])
-        return resp
-
-
-class AgentServer(NavigationGrpcServer):
-
-    def __init__(self, options):
-
-        super().__init__(options)
-        add_AgentServicer_to_server(AgentServicerImpl(), self._grpc_server)
+            if self._sigint_count > 2:
+                os._exit(1)
 
 
 def main():
-    opts = Options(parser)
-    if opts.working_dir is not None:
-        os.chdir(opts.working_dir)
-    else:
-        if os.getcwd() != default_base_dir:
-            os.chdir(default_base_dir)
-    # print("Current directory", os.getcwd())
-    # set log for the configuration phase
-    loghandler = logging.StreamHandler()
-    logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
-    loghandler.setFormatter(logformat)
-    _logger.addHandler(loghandler)
-    _logger.setLevel(opts.trace)
-    _logger.info("Starting Navigation local agent %s - copyright Sterwen Technology 2021-2023" % version)
 
-    server = AgentServer(opts)
-    server.start()
-    try:
-        while True:
-            time.sleep(10)
-    except KeyboardInterrupt:
-        server.stop()
-    server.join()
+    opts = init_options(default_base_dir)
+    NavigationLogSystem.create_log("Starting Navigation local agent %s - copyright Sterwen Technology 2021-2024" % version)
+
+    # build the configuration from the file
+    config = NavigationConfiguration(opts.settings)
+    config.add_class(GrpcServer)
+    config.add_class(AgentService)
+    NavigationLogSystem.finalize_log(config)
+    _logger.info("Navigation agent working directory:%s" % os.getcwd())
+    main_server = AgentMainServer()
+    for server_descr in config.servers():
+        try:
+            server = server_descr.build_object()
+        except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+            _logger.error("Error building server %s" % e)
+            continue
+        main_server.add_server(server)
+    _logger.debug("Servers created")
+    # create the services and notably the Console
+    for data_s in config.services():
+        try:
+            service = data_s.build_object()
+        except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+            _logger.error("Error building service:%s" % e)
+            continue
+        main_server.add_service(service)
+    main_server.start()
+    main_server.wait()
 
 
 if __name__ == '__main__':

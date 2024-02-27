@@ -16,7 +16,7 @@
 
 import datetime
 import logging
-from can import Bus, Message, CanError
+from can import Bus, Message, CanError, ThreadSafeBus
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
 from nmea2000.nmea2k_iso_transport import IsoTransportHandler, IsoTransportException
@@ -105,7 +105,7 @@ class SocketCANInterface(threading.Thread):
     def start(self):
         # connect to the CAN bus
         try:
-            self._bus = Bus(channel=self._channel, interface="socketcan", bitrate=250000)
+            self._bus = ThreadSafeBus(channel=self._channel, interface="socketcan", bitrate=250000)
         except CanError as e:
             _logger.error("Error initializing CAN Channel %s: %s" % (self._channel, e))
             raise SocketCanError

@@ -13,6 +13,7 @@
 import grpc
 from concurrent import futures
 
+import threading
 import logging
 
 from nmea_routing.server_common import NavigationServer
@@ -42,6 +43,7 @@ class GrpcServer(NavigationServer):
         if self._port == 0:
             raise ValueError
         self._end_event = None
+        self._wait_lock = threading.Semaphore(0)
         nb_threads = options.get('nb_thread', int, 5)
         address = "0.0.0.0:%d" % self._port
         self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=nb_threads))
@@ -60,11 +62,15 @@ class GrpcServer(NavigationServer):
     def stop(self):
         _logger.info("Stopping %s GRPC Server" % self._name)
         self._end_event = self._grpc_server.stop(0.1)
+        self._wait_lock.release()
         self._running = False
 
     def join(self):
+        self._wait_lock.acquire()
         if self._end_event is not None:
             self._end_event.wait()
+        else:
+            self._grpc_server.wait_for_termination()
 
     @property
     def grpc_server(self):

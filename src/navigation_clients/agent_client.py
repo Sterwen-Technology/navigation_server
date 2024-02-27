@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     31/05/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ from generated.agent_pb2 import *
 from generated.agent_pb2_grpc import *
 from utilities.protobuf_utilities import GrpcAccessException
 
-_logger = logging.getLogger("ShipDataClient")
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class AgentClient:

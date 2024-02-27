@@ -184,10 +184,13 @@ class NavigationConfiguration:
             nav_obj = NavigationServerObject(obj)
             self._obj_dict[nav_obj.name] = nav_obj
             self._servers[nav_obj.name] = nav_obj
-        for obj in self.object_descr_iter('couplers'):
-            nav_obj = NavigationServerObject(obj)
-            self._obj_dict[nav_obj.name] = nav_obj
-            self._couplers[nav_obj.name] = nav_obj
+        try:
+            for obj in self.object_descr_iter('couplers'):
+                nav_obj = NavigationServerObject(obj)
+                self._obj_dict[nav_obj.name] = nav_obj
+                self._couplers[nav_obj.name] = nav_obj
+        except KeyError:
+            _logger.info("No couplers")
         try:
             for obj in self.object_descr_iter('publishers'):
                 nav_obj = NavigationServerObject(obj)

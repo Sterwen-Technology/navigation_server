@@ -18,9 +18,9 @@ log_module:
   nmea2000.nmea2k_controller: INFO
   nmea2000.nmea2k_active_controller: INFO
   nmea2000.nmea2k_device: INFO
-  nmea2000.nmea2k_application: INFO
+  nmea2000.nmea2k_application: DEBUG
   nmea2000.n2k_name: INFO
-  nmea2000.nmea2k_can_interface: INFO
+  nmea2000.nmea2k_can_interface: DEBUG
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
   nmea2000.nmea2k_can_coupler: DEBUG
@@ -42,6 +42,13 @@ couplers:
 filters:
 
 publishers:
+
+- TraceOutput:
+    class: N2KTracePublisher
+    couplers: [CANCoupler]
+    # filters: [NMEAOutput, AIS]
+    active: true
+    flexible_decode: false
 
 applications:
 

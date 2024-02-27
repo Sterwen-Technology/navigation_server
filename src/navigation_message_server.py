@@ -11,7 +11,6 @@
 
 import sys
 import os
-from argparse import ArgumentParser
 import signal
 import threading
 import logging
@@ -19,7 +18,6 @@ import datetime
 
 try:
     from nmea2000.nmea2k_active_controller import NMEA2KActiveController
-
 except ModuleNotFoundError as e:
     print("Error in python-can import", e)
     include_can = False
@@ -57,36 +55,12 @@ from nmea2000.grpc_input_application import GrpcInputApplication
 from utilities.log_utilities import NavigationLogSystem
 from utilities.global_exceptions import ObjectCreationError, ObjectFatalError
 from utilities.global_variables import MessageServerGlobals
+from utilities.arguments import init_options
 
 
-def _parser():
-    p = ArgumentParser(description=sys.argv[0])
-
-    p.add_argument('-s', '--settings', action='store', type=str, default='./conf/settings.yml')
-    p.add_argument('-d', '--working_dir', action='store', type=str)
-    p.add_argument("-t", "--timer", action='store', type=float, default=None)
-
-    return p
-
-
-MessageServerGlobals.version = "V1.80"
+MessageServerGlobals.version = "V1.81"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
-parser = _parser()
 _logger = logging.getLogger("ShipDataServer.main")
-
-
-class Options(object):
-    def __init__(self, p):
-        self.parser = p
-        self.options = None
-
-    def __getattr__(self, name):
-        if self.options is None:
-            self.options = self.parser.parse_args()
-        try:
-            return getattr(self.options, name)
-        except AttributeError:
-            raise AttributeError(name)
 
 
 class NavigationMainServer:
@@ -269,13 +243,9 @@ def print_threads():
 def main():
     # global global_configuration
 
-    opts = parser.parse_args()
+    opts = init_options(default_base_dir)
     # global parameters
-    if opts.working_dir is not None:
-        os.chdir(opts.working_dir)
-    else:
-        if os.getcwd() != default_base_dir:
-            os.chdir(default_base_dir)
+
     # print("Current directory", os.getcwd())
     # set log for the configuration phase
     NavigationLogSystem.create_log("Starting Navigation server version %s - copyright Sterwen Technology 2021-2024" %
