@@ -9,7 +9,6 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-import sys
 import os
 import signal
 import threading
@@ -27,28 +26,28 @@ else:
 from nmea0183 import nmea0183_msg
 from nmea_routing.message_server import NMEAServer, NMEASenderServer
 from nmea_routing.grpc_server_service import GrpcServer
-from nmea_routing.shipmodul_if import ShipModulInterface, ShipModulConfig
+from couplers.shipmodul_if import ShipModulInterface, ShipModulConfig
 from nmea_routing.console import Console
 from nmea_routing.publisher import Publisher, Injector, PrintPublisher
 # from nmea_routing.client_publisher import *
-from nmea_routing.internal_gps import InternalGps
+from couplers.internal_gps import InternalGps
 from nmea2000.nmea2k_publisher import N2KTracePublisher, N2KStatisticPublisher
 # from simulator_input import *
 from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
 from nmea_routing.nmea_tcp_coupler import NMEATCPReader
-from nmea_routing.ikonvert import iKonvert
+from couplers.ikonvert import iKonvert
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from nmea2000.nmea2k_controller import NMEA2KController
 if include_can:
     from nmea2000.nmea2k_can_coupler import DirectCANCoupler
 from victron_mppt.mppt_coupler import MPPT_Coupler
-from nmea_routing.ydn2k_coupler import YDCoupler
-from nmea_routing.serial_nmeaport import NMEASerialPort
+from couplers.ydn2k_coupler import YDCoupler
+from couplers.serial_nmeaport import NMEASerialPort
 # from nmea_data.data_client import NMEAGrpcDataClient
 from nmea_routing.filters import NMEA0183Filter, NMEA2000Filter, NMEA2000TimeFilter
 from log_replay.raw_log_coupler import RawLogCoupler
-from nmea_routing.grpc_nmea_coupler import GrpcNmeaCoupler
+from couplers.grpc_nmea_coupler import GrpcNmeaCoupler
 from nmea2000.nmea2k_grpc_publisher import GrpcPublisher
 from nmea2000.grpc_input_application import GrpcInputApplication
 

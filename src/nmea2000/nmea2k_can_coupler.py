@@ -14,8 +14,8 @@ import queue
 
 from nmea_routing.coupler import Coupler, CouplerTimeOut, CouplerWriteError
 # from nmea2000.nmea2k_active_controller import NMEA2KActiveController
-from nmea2000.nmea2k_application import NMEA2000Application
-from nmea2000.nmea2000_msg import NMEA2000Msg
+from .nmea2k_application import NMEA2000Application
+from .nmea2000_msg import NMEA2000Msg
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG
 from utilities.global_exceptions import ObjectCreationError
 

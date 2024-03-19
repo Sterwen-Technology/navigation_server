@@ -21,8 +21,8 @@ from nmea2000.nmea2000_msg import fromProprietaryNmea, NMEA2000Msg
 from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
 from nmea2000.nmea2k_pgndefs import PGNDef
 from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
-from nmea_routing.shipmodul_if import ShipModulInterface
-from nmea_routing.ydn2k_coupler import YDCoupler
+from couplers.shipmodul_if import ShipModulInterface
+from couplers.ydn2k_coupler import YDCoupler
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 

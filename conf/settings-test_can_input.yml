@@ -90,8 +90,8 @@ publishers:
 - TraceOutput:
     class: N2KTracePublisher
     couplers: [InputCoupler]
-    filters: [NMEAOutput, AIS]
-    active: false
+    filters: [NMEAOutput]
+    active: true
     flexible_decode: false
 
 - CanFeed:

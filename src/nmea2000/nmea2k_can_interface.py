@@ -12,17 +12,15 @@
 # update notes
 # 4/1/2024  => adding a first minimal version of ISO (J1939) Transport protocol - Only broadcast receipt
 
-
-
 import datetime
 import logging
 from can import Bus, Message, CanError, ThreadSafeBus
-from nmea2000.nmea2000_msg import NMEA2000Msg
-from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
-from nmea2000.nmea2k_iso_transport import IsoTransportHandler, IsoTransportException
-from nmea2000.nmea2k_pgn_definition import PGNDef
-from log_replay.message_trace import NMEAMsgTrace, MessageTraceError
-from utilities.global_exceptions import ObjectFatalError
+from .nmea2000_msg import NMEA2000Msg
+from .nmea2k_fast_packet import FastPacketHandler, FastPacketException
+from .nmea2k_iso_transport import IsoTransportHandler, IsoTransportException
+from .nmea2k_pgn_definition import PGNDef
+from log_replay import NMEAMsgTrace, MessageTraceError
+from utilities import ObjectFatalError
 import threading
 import queue
 import time
