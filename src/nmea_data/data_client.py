@@ -13,11 +13,11 @@ import logging
 
 import grpc
 
-from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG, N0183_MSG
-from nmea2000.nmea2000_msg import NMEA2000Msg
+from router_common.generic_msg import NavGenericMsg, N2K_MSG, N0183_MSG
+from router_core.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
-from nmea_routing.filters import FilterSet
-from nmea_routing.publisher import Publisher
+from router_core.filters import FilterSet
+from router_core.publisher import Publisher
 
 from generated.nmea_messages_pb2 import nmea_msg, server_cmd
 from generated.input_server_pb2_grpc import NMEAInputServerStub

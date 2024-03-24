@@ -18,7 +18,7 @@ import time
 
 from generated.agent_pb2 import *
 from generated.agent_pb2_grpc import *
-from nmea_routing.grpc_server_service import GrpcService
+from router_core.grpc_server_service import GrpcService
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 

@@ -18,7 +18,7 @@ import time
 import threading
 
 
-from nmea2000.nmea2000_msg import NMEA2000Msg
+from router_core.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_pgn_definition import PGNDef
 
 _logger = logging.getLogger("ShipDataServer." + __name__)

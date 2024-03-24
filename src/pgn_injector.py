@@ -20,7 +20,7 @@ import hexdump
 
 
 from nmea2000.nmea2k_pgndefs import PGNDefinitions
-from utilities.global_variables import MessageServerGlobals
+from router_common.global_variables import MessageServerGlobals
 from nmea2000.nmea2k_manufacturers import Manufacturers
 from generated.nmea2000_classes_gen import nmea2k_generated_classes
 from generated.input_server_pb2_grpc import NMEAInputServerStub

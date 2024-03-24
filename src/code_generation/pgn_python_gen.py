@@ -16,8 +16,8 @@ import datetime
 
 from code_generation.nmea2000_meta import (BitFieldAttributeDef, RepeatAttributeDef, ScalarAttributeDef, NMEA2000Meta,
                                            FieldSetMeta, DecodeSegment, ReservedAttribute, ReservedBitFieldAttribute)
-from utilities.global_variables import Typedef
-from utilities.global_exceptions import N2KDecodeException
+from router_common.global_variables import Typedef
+from router_common.global_exceptions import N2KDecodeException
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -47,7 +47,7 @@ class PythonPGNGenerator:
         self.write(f"\nfrom nmea2000.generated_base import *\n")
         self.write("from generated.nmea2000_pb2 import nmea2000_decoded_pb\n")
         # self.write("from nmea2000.nmea2000_msg import NMEA2000Msg\n")
-        # self._of.write("from utilities.global_variables import MessageServerGlobals\n")
+        # self._of.write("from router_common.global_variables import MessageServerGlobals\n")
         self.write('\n')
 
     def close(self):

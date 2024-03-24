@@ -10,6 +10,5 @@
 #-------------------------------------------------------------------------------
 
 
-from .message_trace import MessageTraceError, NMEAMsgTrace
 from .raw_log_reader import RawLogFile
 from .raw_log_coupler import RawLogCoupler

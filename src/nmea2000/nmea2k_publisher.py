@@ -9,18 +9,17 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-import logging
 import datetime
 import time
 import os
-from nmea_routing.publisher import ExternalPublisher
-from nmea2000.nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
+from router_core import ExternalPublisher, NMEAInvalidFrame
+from .nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
-from nmea_routing.generic_msg import *
-from nmea0183.nmea0183_to_nmea2k import Nmea0183InvalidMessage, NMEA0183ToNMEA2000Converter
-from nmea_routing.configuration import NavigationConfiguration
-from utilities.global_variables import find_pgn
-from utilities.global_exceptions import N2KDecodeException
+from router_common.generic_msg import *
+from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter
+from router_common.configuration import NavigationConfiguration
+from router_common.global_variables import find_pgn
+from router_common.global_exceptions import N2KDecodeException
 
 
 _logger = logging.getLogger("ShipDataServer" + "." + __name__)
@@ -129,7 +128,7 @@ class N2KTracePublisher(ExternalPublisher):
                     # self._trace_fd.write("Message from SA:%d " % msg.sa)
                     self._trace_fd.write(print_result)
                     self._trace_fd.write('\n')
-        except Nmea0183InvalidMessage:
+        except NMEAInvalidFrame:
             return
         except Exception as e:
             _logger.error("NMEA0183 decing error:%s" % e)

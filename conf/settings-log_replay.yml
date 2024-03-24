@@ -13,17 +13,26 @@ log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 # log_file: test_fast_packet
 log_module:
-  nmea_routing.IPCoupler: INFO
-  nmea_routing.coupler: INFO
+  router_core.IPCoupler: INFO
+  router_core.coupler: INFO
   nmea2000.nmea2000_msg: INFO
-  nmea_routing.ydn2k_coupler: INFO
+  couplers.ydn2k_coupler: INFO
   nmea2000.nmea2k_controller: INFO
   nmea2000.n2k_name: INFO
   nmea2000.nmea2k_pgndefs: INFO
   nmea2000.nmea2k_encode_decode: INFO
   nmea2000.generated_base: INFO
 
+features:
+  - router_core
+  - nmea2000
+  - log_replay
+
+
 servers:
+
+- Main:
+    class: NavigationMainServer
 
 - NMEAServer:
       class: NMEAServer

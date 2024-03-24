@@ -11,16 +11,14 @@
 
 import os
 import logging
-import time
 import signal
 
-from nmea_routing.grpc_server_service import GrpcServer
+from router_core.grpc_server_service import GrpcServer
 from agent.agent_service import AgentService
-from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
-from utilities.log_utilities import NavigationLogSystem
-from utilities.global_exceptions import ObjectCreationError, ObjectFatalError
-from utilities.global_variables import MessageServerGlobals
-from utilities.arguments import init_options
+from router_common.configuration import NavigationConfiguration, ConfigurationException
+from router_common.log_utilities import NavigationLogSystem
+from router_common.global_exceptions import ObjectCreationError, ObjectFatalError
+from router_common.arguments import init_options
 
 
 _logger = logging.getLogger("ShipDataServer.agent")

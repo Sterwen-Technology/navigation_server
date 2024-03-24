@@ -13,11 +13,11 @@ import logging
 import time
 
 
-from nmea2000.nmea2000_msg import NMEA2000Msg
+from router_core.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_publisher import PgnRecord
-from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeException
+from nmea2000.nmea2k_pgndefs import N2KUnknownPGN
 from nmea2000.nmea2k_iso_messages import AddressClaim, ConfigurationInformation, ProductInformation, Heartbeat
-from utilities.global_variables import MessageServerGlobals
+from router_common.global_variables import MessageServerGlobals
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)

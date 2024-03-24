@@ -13,7 +13,7 @@ import logging
 
 from generated.agent_pb2 import *
 from generated.agent_pb2_grpc import *
-from utilities.protobuf_utilities import GrpcAccessException
+from router_common.protobuf_utilities import GrpcAccessException
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 

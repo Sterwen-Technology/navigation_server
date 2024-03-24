@@ -15,8 +15,8 @@ import time
 import math
 from google.protobuf.json_format import MessageToJson
 
-from nmea2000.nmea2000_msg import NMEA2000Msg
-from utilities.global_variables import MessageServerGlobals
+from router_core import NMEA2000Msg
+from router_common import MessageServerGlobals
 from generated.nmea2000_pb2 import nmea2000_decoded_pb
 
 _logger = logging.getLogger("ShipDataServer." + __name__)

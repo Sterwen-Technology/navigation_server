@@ -11,7 +11,7 @@
 
 import logging
 
-from utilities.xml_utilities import XMLDefinitionFile, XMLDecodeError
+from router_common.xml_utilities import XMLDefinitionFile, XMLDecodeError
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 

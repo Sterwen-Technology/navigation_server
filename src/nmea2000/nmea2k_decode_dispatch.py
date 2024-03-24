@@ -13,7 +13,7 @@ import logging
 from generated.nmea2000_classes_gen import nmea2k_generated_classes
 from generated.nmea2000_pb2 import nmea2000_decoded_pb
 from nmea2000.nmea2k_pgn_definition import PGNDef
-from nmea2000.nmea2000_msg import NMEA2000Msg
+from router_core.nmea2000_msg import NMEA2000Msg
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 

@@ -17,7 +17,7 @@ import threading
 
 from argparse import ArgumentParser
 
-from nmea_routing.server_common import NavTCPServer
+from router_core.server_common import NavTCPServer
 
 
 def _parser():

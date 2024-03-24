@@ -12,9 +12,9 @@
 import logging
 import queue
 
-from nmea_routing.grpc_nmea_input_service import GrpcDataService
-from nmea_routing.coupler import Coupler, CouplerTimeOut
-from nmea0183.nmea0183_msg import NMEA0183Msg, N2K_MSG, N0183_MSG, N0183D_MSG, NavGenericMsg
+from nmea2000.grpc_nmea_input_service import GrpcDataService
+from router_core.coupler import Coupler, CouplerTimeOut
+from router_core.nmea0183_msg import NMEA0183Msg, N2K_MSG, N0183D_MSG, NavGenericMsg
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 

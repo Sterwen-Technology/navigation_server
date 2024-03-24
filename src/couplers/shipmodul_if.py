@@ -10,16 +10,15 @@
 #-------------------------------------------------------------------------------
 
 import socket
-import logging
 
-from nmea_routing.server_common import NavTCPServer, ConnectionRecord
-from nmea_routing.publisher import Publisher
-from utilities.global_exceptions import IncompleteMessage
-from nmea_routing.coupler import Coupler
-from nmea_routing.IPCoupler import BufferedIPCoupler
-from nmea_routing.generic_msg import *
-from nmea0183.nmea0183_msg import NMEA0183Msg, NMEA0183Sentences
-from nmea2000.nmea2000_msg import NMEA2000Msg
+from router_core.server_common import NavTCPServer, ConnectionRecord
+from router_core.publisher import Publisher
+from router_common.global_exceptions import IncompleteMessage
+from router_core.coupler import Coupler
+from router_core.IPCoupler import BufferedIPCoupler
+from router_common.generic_msg import *
+from router_core.nmea0183_msg import NMEA0183Msg, NMEA0183Sentences
+from router_core.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
 from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, PGNDef
 

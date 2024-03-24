@@ -13,7 +13,7 @@ import logging
 import struct
 from collections import namedtuple
 
-from nmea2000.nmea2000_msg import NMEA2000Msg, NMEA2000Object
+from router_core.nmea2000_msg import NMEA2000Msg, NMEA2000Object
 from nmea2000.nmea2k_name import NMEA2000Name
 from nmea2000.generated_base import extract_var_str
 from generated.nmea2000_classes_iso_gen import Pgn126996Class, Pgn126998Class, Pgn126993Class

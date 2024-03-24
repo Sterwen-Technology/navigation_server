@@ -26,8 +26,8 @@ except ImportError as e:
     _logger.error(str(e))
     gps_present = False
 
-from nmea_routing.coupler import Coupler, CouplerReadError, CouplerNotPresent
-from nmea0183.nmea0183_msg import NMEA0183Msg, NMEAInvalidFrame
+from router_core.coupler import Coupler, CouplerReadError, CouplerNotPresent
+from router_core.nmea0183_msg import NMEA0183Msg, NMEAInvalidFrame
 
 
 class InternalGps(Coupler):

@@ -12,12 +12,12 @@
 import logging
 
 
-from utilities.xml_utilities import XMLDefinitionFile, XMLDecodeError
-from utilities.global_variables import MessageServerGlobals
-from utilities.global_exceptions import *
+from router_common import XMLDefinitionFile
+from router_common import MessageServerGlobals
+from router_common import N2KUnknownPGN, N2KDefinitionError
 
-from nmea2000.nmea2k_enumsdefs import EnumSet
-from nmea2000.nmea2k_pgn_definition import PGNDef
+from .nmea2k_enumsdefs import EnumSet
+from .nmea2k_pgn_definition import PGNDef
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)

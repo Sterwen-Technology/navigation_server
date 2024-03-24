@@ -14,10 +14,10 @@ import threading
 import queue
 import base64
 
-from nmea_routing.coupler import Coupler
-from nmea2000.nmea2000_msg import NMEA2000Msg
-from nmea_routing.generic_msg import *
-from log_replay.message_trace import NMEAMsgTrace
+from router_core.coupler import Coupler
+from router_core.nmea2000_msg import NMEA2000Msg
+from router_common.generic_msg import *
+from router_common.message_trace import NMEAMsgTrace
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
