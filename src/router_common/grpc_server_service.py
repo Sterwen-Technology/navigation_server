@@ -71,6 +71,7 @@ class GrpcServer(NavigationServer):
             self._end_event.wait()
         else:
             self._grpc_server.wait_for_termination()
+        print("Grpc End join")
 
     @property
     def grpc_server(self):

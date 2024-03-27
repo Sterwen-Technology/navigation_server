@@ -8,14 +8,15 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
-import inspect
 
+import inspect
 import yaml
 import logging
 import sys
 import importlib
 
-from router_common import ObjectCreationError, MessageServerGlobals
+from router_common import ObjectCreationError, MessageServerGlobals, ObjectFatalError
+from .grpc_server_service import GrpcServer
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -103,6 +104,35 @@ class Parameters:
         return value
 
 
+class Feature:
+
+    def __init__(self, name,  package, configuration, package_items):
+        self._name = name
+        self._package = package
+        self._configuration = configuration
+        self._classes = {}
+        self._init_function = None
+        for obj_name, obj in inspect.getmembers(package):
+            # print("\t", obj_name)
+            if inspect.isclass(obj):
+                if package_items is not None:
+                    # check if we need it
+                    if obj_name not in package_items:
+                        continue
+                # we are good
+                _logger.info(f"Adding class:{obj_name}")
+                self._configuration.add_class(obj)
+                self._classes[obj_name] = obj
+            elif inspect.isfunction(obj):
+                if obj_name == 'initialize_feature':
+                    # we got it !
+                    self._init_function = obj
+
+    def initialize(self, options):
+        if self._init_function is not None:
+            self._init_function(options)
+
+
 class NavigationServerObject:
 
     def __init__(self, class_descr):
@@ -171,7 +201,9 @@ class NavigationConfiguration:
         self._filters = {}
         self._applications = {}
         self._globals = {}
+        self._features = {}
         self._main = None
+        self._main_server = None
         NavigationConfiguration._instance = self
         MessageServerGlobals.configuration = self
 
@@ -188,6 +220,8 @@ class NavigationConfiguration:
             _logger.error("Settings file decoding error %s" % str(e))
             fp.close()
             raise
+        # create entries for allways included classes
+        self.import_internal()
         for feature in self.object_descr_iter('features'):
             # import the required package from the configuration file
             self.import_feature(feature)
@@ -274,8 +308,8 @@ class NavigationConfiguration:
         return self._applications.values()
 
     @property
-    def main(self):
-        return self._main
+    def main_server(self):
+        return self._main_server
 
     def add_class(self, class_object):
         self._class_dict[class_object.__name__] = class_object
@@ -299,6 +333,10 @@ class NavigationConfiguration:
         except KeyError:
             _logger.error("Global reference %s non existent" % key)
 
+    def import_internal(self):
+
+        self.add_class(GrpcServer)
+
     def import_feature(self, feature):
         if type(feature) is str:
             package_name = feature
@@ -306,23 +344,72 @@ class NavigationConfiguration:
         else:
             package_name, package_items = feature.popitem()
 
-        print(f"Include feature {package_name} with objects:")
+        _logger.info(f"Include feature {package_name} with objects:")
         try:
             package = importlib.import_module(package_name)
         except ImportError as err:
             _logger.error("Error importing package %s: %s" % (package_name, str(err)))
             return
+        self._features[package_name] = Feature(package_name, package, self, package_items)
 
-        for obj_name, obj in inspect.getmembers(package):
-            print("\t", obj_name)
-            if inspect.isclass(obj):
-                if package_items is not None:
-                    # check if we need it
-                    if obj_name not in package_items:
-                        continue
-                # we are good
-                print(f"Adding class:{obj_name}")
-                self.add_class(obj)
+    def initialize_features(self, options):
+        for feature in self._features.values():
+            feature.initialize(options)
+
+    def build_objects(self):
+
+        self._main_server = self._main.build_object()
+        # create the filters upfront
+        for inst_descr in self._filters.values():
+            try:
+                inst_descr.build_object()
+            except ConfigurationException as e:
+                _logger.error(str(e))
+                continue
+        _logger.debug("Filter created")
+        for inst_descr in self._applications.values():
+            inst_descr.build_object()
+        _logger.debug("Applications created")
+        # create the servers
+        for server_descr in self._servers.values():
+            try:
+                server = server_descr.build_object()
+            except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+                _logger.error("Error building server %s" % e)
+                continue
+            self._main_server.add_server(server)
+        _logger.debug("Servers created")
+        # create the services and notably the Console
+        for data_s in self._services.values():
+            try:
+                service = data_s.build_object()
+            except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+                _logger.error("Error building service:%s" % e)
+                continue
+            self._main_server.add_service(service)
+        if not self._main_server.console_present:
+            _logger.warning("No console defined")
+        _logger.debug("Services created")
+        # create the couplers
+        for inst_descr in self._couplers.values():
+            try:
+                coupler = inst_descr.build_object()
+            except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+                _logger.error("Error building Coupler:%s" % str(e))
+                continue
+            self._main_server.add_coupler(coupler)
+            if self._main_server.console_present:
+                self._main_server.console.add_coupler(coupler)
+        _logger.debug("Couplers created")
+        # create the publishers
+        for pub_descr in self._publishers.values():
+            try:
+                publisher = pub_descr.build_object()
+                self._main_server.add_publisher(publisher)
+            except ConfigurationException as e:
+                _logger.error(str(e))
+                continue
+        _logger.debug("Publishers created")
 
 
 def main():

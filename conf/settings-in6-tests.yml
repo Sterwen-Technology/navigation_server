@@ -12,10 +12,20 @@
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    nmea_routing.console: INFO
+    router_core.console: DEBUG
+
+features:
+    - router_core
+    - nmea2000
+    - couplers:
+          - ShipModulConfig
+          - ShipModulInterface
 
 
 servers:
+
+- Main:
+      class: NavigationMainServer
 
 - NMEAServer:
     class: NMEAServer

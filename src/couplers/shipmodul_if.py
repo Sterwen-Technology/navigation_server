@@ -10,17 +10,14 @@
 #-------------------------------------------------------------------------------
 
 import socket
+import logging
 
-from router_core.server_common import NavTCPServer, ConnectionRecord
-from router_core.publisher import Publisher
-from router_common.global_exceptions import IncompleteMessage
-from router_core.coupler import Coupler
-from router_core.IPCoupler import BufferedIPCoupler
-from router_common.generic_msg import *
-from router_core.nmea0183_msg import NMEA0183Msg, NMEA0183Sentences
-from router_core.nmea2000_msg import NMEA2000Msg
-from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
-from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, PGNDef
+from router_core import NavTCPServer, ConnectionRecord, Publisher, Coupler, BufferedIPCoupler
+from router_common import IncompleteMessage, N2KUnknownPGN
+from router_common import NavGenericMsg, TRANSPARENT_MSG, N2K_MSG, NULL_MSG
+from router_core import NMEA0183Msg, NMEA0183Sentences, NMEA2000Msg
+from nmea2000 import FastPacketHandler, FastPacketException, PGNDef
+
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 

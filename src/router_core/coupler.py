@@ -137,6 +137,7 @@ class Coupler(threading.Thread):
             except KeyError:
                 _logger.error("NMEA0183 to NMEA2000 converter not found")
                 self._converter = None
+                self._nmea183_convert = False
         else:
             self._converter = None
         #
@@ -220,7 +221,11 @@ class Coupler(threading.Thread):
     def run(self):
         self._has_run = True
         # now resolve internal references
-        self._n2k_controller = resolve_ref(self._n2k_ctlr_name, 'NMEA2000 controller')
+        if self._n2k_ctlr_name is not None:
+            try:
+                self._n2k_controller = resolve_ref(self._n2k_ctlr_name)
+            except KeyError:
+                pass
         # self._data_sink = self.resolve_ref(self._data_sink_name, "Data sink")
 
         self._startTS = time.time()

@@ -14,7 +14,7 @@ import logging
 import threading
 import socket
 
-from .server_common import NavTCPServer, ConnectionRecord
+from .tcp_server import NavTCPServer, ConnectionRecord
 from .client_publisher import ClientConnection, NMEAPublisher, NMEA2000DYPublisher, NMEA2000STPublisher, NMEASender
 from .nmea0183_msg import ZDA
 
@@ -142,11 +142,11 @@ class NMEAServer(NavTCPServer):
     #   self._sender = None
 
     def remove_coupler(self, coupler):
-        _logger.info("Server %s removing coupler %s" % (self.name, coupler.name()))
+        _logger.info("Server %s removing coupler %s" % (self.name, coupler.object_name()))
         try:
             self._couplers.remove(coupler)
         except ValueError:
-            _logger.error("Server %s removing coupler %s failed" % (self.name, coupler.name()))
+            _logger.error("Server %s removing coupler %s failed" % (self.name, coupler.object_name()))
 
     def heartbeat(self):
         _logger.info("%s heartbeat number of connections: %d"

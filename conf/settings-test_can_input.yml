@@ -37,11 +37,22 @@ log_module:
   nmea2000.nmea2k_can_coupler: INFO
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
-  nmea2000.grpc_input_application: DEBUG
+  nmea2000.grpc_input_application: INFO
   nmea2000.nmea2k_fast_packet: INFO
   nmea2000.nmea2k_publisher: INFO
 
+features:
+  - router_core
+  - nmea2000
+  - can_interface
+  - couplers:
+      - NMEATCPReader
+
+
 servers:
+
+- Main:
+    class: NavigationMainServer
 
 - gRPCMainServer:
       class: GrpcServer

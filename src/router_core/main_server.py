@@ -180,6 +180,9 @@ class NavigationMainServer:
         else:
             coupler.force_start()
             coupler.request_start()
+        # update the console
+        if self.console_present:
+            self._console.add_coupler(new_coupler)
         return "Start request OK"
 
     def start_analyser(self, interval):

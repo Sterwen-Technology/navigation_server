@@ -16,8 +16,7 @@ from socket import gethostname
 import logging
 
 from router_common import MessageServerGlobals
-from .server_common import NavigationServer
-from .grpc_server_service import GrpcService
+from router_common import GrpcService
 # from nmea2000.nmea2k_controller import NMEA2000Device
 from router_common import protob_to_dict, dict_to_protob
 
@@ -85,13 +84,19 @@ class ConsoleServicer(NavigationConsoleServicer):
         except AttributeError:
             resp.status = "Command %s not found" % cmd
             return resp
-        if request.HasField('kwargs'):
-            _logger.debug("Command %s sent with arguments" % cmd)
-            args = protob_to_dict(request.kwargs.arguments)
-            result = func(args)
-        else:
-            result = func()
-        if type(result) == dict and len(result) > 0:
+        try:
+            if request.HasField('kwargs'):
+                _logger.debug("Command %s sent with arguments" % cmd)
+                args = protob_to_dict(request.kwargs.arguments)
+                result = func(args)
+            else:
+                result = func()
+        except Exception as e:
+            _logger.error(f"Console execution error on coupler {coupler.object_name()}.{cmd} :{e}")
+            result = str(e)
+            resp.response_values = result
+
+        if type(result) is dict and len(result) > 0:
             _logger.debug("Command %s with result dict %s" % (cmd, result))
             dict_to_protob(result, resp.response_values)
 
@@ -208,7 +213,7 @@ class Console(GrpcService):
             if sr.class_name not in ('Console', 'NavigationMainServer'):
                 yield sr
 
-    def get_server_by_type(self, server_type: str) -> NavigationServer:
+    def get_server_by_type(self, server_type: str):
         server_class = MessageServerGlobals.configuration.get_class(server_type)
         for sr in self._servers.values():
             if issubclass(sr.server.__class__, server_class):
