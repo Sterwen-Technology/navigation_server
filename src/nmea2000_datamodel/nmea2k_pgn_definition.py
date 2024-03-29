@@ -15,7 +15,7 @@ from collections import namedtuple
 from router_common import N2KDecodeException, N2KDefinitionError, N2KDecodeEOLException, N2KMissingEnumKeyException
 from router_common import MessageServerGlobals, build_subclass_dict
 from .nmea2k_fielddefs import RepeatedFieldSet, Field
-from .nmea2k_encode_decode import BitField, BitFieldSplitException
+from .nmea2k_encode_decode import BitField
 from .nmea2k_bitfield_generator import BitFieldGenerator
 
 _logger = logging.getLogger("ShipDataServer." + __name__)

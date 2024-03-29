@@ -16,8 +16,8 @@ import datetime
 
 from code_generation.nmea2000_meta import (BitFieldAttributeDef, RepeatAttributeDef, ScalarAttributeDef, NMEA2000Meta,
                                            FieldSetMeta, DecodeSegment, ReservedAttribute, ReservedBitFieldAttribute)
-from router_common.global_variables import Typedef
-from router_common.global_exceptions import N2KDecodeException
+from router_common import Typedef
+from router_common import N2KDecodeException
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 

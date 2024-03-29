@@ -15,7 +15,7 @@ from .filters import NMEAFilter, FilterSet, TimeFilter
 from .IPCoupler import BufferedIPCoupler, TCPBufferedReader
 from .message_server import NMEAServer, NMEASenderServer
 from .publisher import Publisher, PublisherOverflow, ExternalPublisher, Injector, PrintPublisher
-from .nmea0183_msg import NMEA0183Msg, NMEAInvalidFrame, NMEA0183Sentences
+from .nmea0183_msg import NMEA0183Msg, NMEAInvalidFrame, NMEA0183Sentences, nmea0183msg_from_protobuf
 from .nmea2000_msg import (NMEA2000Msg, NMEA2000Writer, N2KRawDecodeError, N2KEncodeError,
                            fromProprietaryNmea)
 from .console import Console

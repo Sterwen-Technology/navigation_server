@@ -15,7 +15,7 @@ import queue
 from router_core.IPCoupler import BufferedIPCoupler
 from router_core.nmea2000_msg import NMEA2000Msg
 from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
-from nmea2000.nmea2k_pgndefs import N2KUnknownPGN
+from nmea2000_datamodel.nmea2k_pgndefs import N2KUnknownPGN
 from router_common.generic_msg import NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG
 from router_common.global_exceptions import IncompleteMessage
 from router_common.global_variables import find_pgn

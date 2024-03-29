@@ -10,8 +10,8 @@
 #-------------------------------------------------------------------------------
 
 
-from .nmea2k_manufacturers import Manufacturers
-from .nmea2k_pgndefs import PGNDefinitions
+from nmea2000_datamodel import Manufacturers
+from nmea2000_datamodel import PGNDefinitions
 from router_common import MessageServerGlobals
 
 

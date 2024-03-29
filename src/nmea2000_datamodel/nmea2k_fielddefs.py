@@ -12,12 +12,12 @@
 
 import logging
 
-from nmea2000.nmea2k_name import NMEA2000Name
-from nmea2000.nmea2k_encode_decode import (DecodeSpecs, N2KDecodeResult, DecodeDefinitions, FIXED_LENGTH_NUMBER,
-                                           FIXED_LENGTH_BYTES, VARIABLE_LENGTH_BYTES, REPEATED_FIELD_SET)
-from nmea2000.nmea2k_bitfield_generator import BitFieldGenerator
-from router_common.global_variables import MessageServerGlobals, Typedef
-from router_common.global_exceptions import *
+from .nmea2k_name import NMEA2000Name
+from .nmea2k_encode_decode import (DecodeSpecs, N2KDecodeResult, DecodeDefinitions, FIXED_LENGTH_NUMBER,
+                                                     FIXED_LENGTH_BYTES, VARIABLE_LENGTH_BYTES, REPEATED_FIELD_SET)
+from .nmea2k_bitfield_generator import BitFieldGenerator
+from router_common import MessageServerGlobals, Typedef
+from router_common import N2KDecodeException, N2KDecodeEOLException
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 

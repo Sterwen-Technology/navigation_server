@@ -14,8 +14,8 @@ import logging
 
 from generated.input_server_pb2_grpc import NMEAInputServerServicer, add_NMEAInputServerServicer_to_server
 from generated.nmea_messages_pb2 import server_resp
-from router_core.nmea2000_msg import NMEA2000Msg
-from router_core.nmea0183_msg import nmea0183msg_from_protobuf
+from router_core import NMEA2000Msg
+from router_core import nmea0183msg_from_protobuf
 from router_common.grpc_server_service import GrpcService, GrpcServerError
 from .nmea2k_decode_dispatch import get_n2k_object_from_protobuf
 

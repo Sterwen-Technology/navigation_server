@@ -10,7 +10,7 @@
 
 import logging
 
-from nmea2000.nmea2k_encode_decode import BitField, BitFieldSplitException
+from .nmea2k_encode_decode import BitField, BitFieldSplitException
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 

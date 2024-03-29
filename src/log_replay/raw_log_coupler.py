@@ -19,7 +19,7 @@ from router_common import IncompleteMessage
 from router_core import NMEA0183Msg, NMEAInvalidFrame
 from router_core import fromProprietaryNmea, NMEA2000Msg
 from nmea2000 import FastPacketHandler, FastPacketException
-from nmea2000.nmea2k_pgndefs import PGNDef
+from nmea2000_datamodel import PGNDef
 from router_common import NavGenericMsg, NULL_MSG, N2K_MSG
 from couplers import ShipModulInterface
 from couplers import YDCoupler

@@ -24,7 +24,7 @@ from can import Message, CanError, ThreadSafeBus
 from router_core.nmea2000_msg import NMEA2000Msg
 from nmea2000 import FastPacketHandler, FastPacketException
 from nmea2000 import IsoTransportHandler, IsoTransportException
-from nmea2000 import PGNDef
+from nmea2000_datamodel import PGNDef
 from router_common import NMEAMsgTrace, MessageTraceError
 from router_common import ObjectFatalError
 

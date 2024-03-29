@@ -16,7 +16,8 @@ from router_core import NavTCPServer, ConnectionRecord, Publisher, Coupler, Buff
 from router_common import IncompleteMessage, N2KUnknownPGN
 from router_common import NavGenericMsg, TRANSPARENT_MSG, N2K_MSG, NULL_MSG
 from router_core import NMEA0183Msg, NMEA0183Sentences, NMEA2000Msg
-from nmea2000 import FastPacketHandler, FastPacketException, PGNDef
+from nmea2000 import FastPacketHandler, FastPacketException
+from nmea2000_datamodel import PGNDef
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)

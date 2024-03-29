@@ -11,8 +11,8 @@
 
 import logging
 import csv
-from nmea2000.nmea2k_pgndefs import N2KUnknownPGN
-from nmea2000.nmea2k_pgn_definition import PGNDef
+from nmea2000_datamodel.nmea2k_pgndefs import N2KUnknownPGN
+from nmea2000_datamodel.nmea2k_pgn_definition import PGNDef
 from router_common.global_variables import find_pgn
 
 _logger = logging.getLogger("ShipDataServer." + __name__)

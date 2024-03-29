@@ -12,14 +12,14 @@
 import datetime
 import time
 import os
+import logging
+
 from router_core import ExternalPublisher, NMEAInvalidFrame
 from .nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
-from router_common.generic_msg import *
+# from router_common import *
 from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter
-from router_common.configuration import NavigationConfiguration
-from router_common.global_variables import find_pgn
-from router_common.global_exceptions import N2KDecodeException
+from router_common import NavigationConfiguration, NavGenericMsg, N2K_MSG, find_pgn, N2KDecodeException, N0183_MSG
 
 
 _logger = logging.getLogger("ShipDataServer" + "." + __name__)

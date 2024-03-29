@@ -14,8 +14,8 @@ import os
 import logging
 from argparse import ArgumentParser
 
-from nmea2000.nmea2k_manufacturers import Manufacturers
-from nmea2000.nmea2k_pgndefs import PGNDefinitions
+from nmea2000_datamodel import Manufacturers
+from nmea2000_datamodel import PGNDefinitions
 from router_common.global_variables import MessageServerGlobals
 from code_generation import nmea2000_gen_meta, ProtobufPGNGenerator, PythonPGNGenerator
 # from code_generation.pgn_python_gen import PythonPGNGenerator

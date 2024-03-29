@@ -16,7 +16,7 @@ import threading
 
 from router_core import NMEA2000Msg
 from nmea2000 import NMEA2000Device
-from nmea2000 import NMEA2000MutableName
+from nmea2000_datamodel import NMEA2000MutableName
 from nmea2000.nmea2k_iso_messages import (AddressClaim, ISORequest, ProductInformation, ConfigurationInformation,
                                           AcknowledgeGroupFunction, create_group_function, CommandedAddress,
                                           CommandGroupFunction)

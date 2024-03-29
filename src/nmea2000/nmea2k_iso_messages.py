@@ -15,9 +15,9 @@ from collections import namedtuple
 
 from router_common import N2KUnknownPGN, find_pgn
 from router_core import NMEA2000Msg
-from .nmea2k_name import NMEA2000Name
+from nmea2000_datamodel import NMEA2000Name
 from .generated_base import extract_var_str
-from .nmea2k_pgn_definition import PGNDef
+from nmea2000_datamodel import PGNDef
 from generated.nmea2000_classes_iso_gen import Pgn126996Class, Pgn126998Class, Pgn126993Class
 
 _logger = logging.getLogger("ShipDataServer." + __name__)

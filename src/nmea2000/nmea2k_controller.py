@@ -13,10 +13,10 @@ import logging
 import threading
 import queue
 
-from nmea2000.nmea2k_device import NMEA2000Device
-from router_common.server_common import NavigationServer
-from router_core.nmea2000_msg import NMEA2000Msg
-from router_common.configuration import NavigationConfiguration
+from .nmea2k_device import NMEA2000Device
+from router_common import NavigationServer
+from router_core import NMEA2000Msg
+from router_common import NavigationConfiguration
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 

@@ -4,7 +4,7 @@ import nmea2000
 import can_interface
 import importlib
 import sys
-# import log_replay
+import log_replay
 
 
 def main():
