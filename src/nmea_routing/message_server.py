@@ -137,11 +137,11 @@ class NMEAServer(NavTCPServer):
     #   self._sender = None
 
     def remove_coupler(self, coupler):
-        _logger.info("Server %s removing coupler %s" % (self.name, coupler.name()))
+        _logger.info("Server %s removing coupler %s" % (self.name, coupler.object_name()))
         try:
             self._couplers.remove(coupler)
         except ValueError:
-            _logger.error("Server %s removing coupler %s failed" % (self.name, coupler.name()))
+            _logger.error("Server %s removing coupler %s failed" % (self.name, coupler.object_name()))
 
     def heartbeat(self):
         _logger.info("%s heartbeat number of connections: %d"
