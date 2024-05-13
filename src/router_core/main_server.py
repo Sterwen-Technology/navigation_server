@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name:        navigation_message_server.py
+# Name:        server_main.py
 # Purpose:     top module for the navigation server
 #
 # Author:      Laurent Carré
@@ -169,10 +169,12 @@ class NavigationMainServer:
         if coupler.is_alive():
             return "Coupler running"
 
+        new_coupler = None
         if coupler.has_run():
             # now we need to clean up all references
             for server in self._servers:
                 server.remove_coupler(coupler)
+            # then we create a new coupler instance
             inst_descr = MessageServerGlobals.configuration.coupler(name)
             new_coupler = inst_descr.build_object()
             new_coupler.force_start()
@@ -181,7 +183,7 @@ class NavigationMainServer:
             coupler.force_start()
             coupler.request_start()
         # update the console
-        if self.console_present:
+        if self.console_present and new_coupler is not None:
             self._console.add_coupler(new_coupler)
         return "Start request OK"
 

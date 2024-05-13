@@ -1,6 +1,7 @@
 #-------------------------------------------------------------------------------
 # Name:        settings.yml
 # Purpose:     Settings file for the navigation server
+# Compatibility: Version 2.0
 #
 # Author:      Laurent Carré
 #
@@ -24,22 +25,7 @@ log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 
 log_module:
-  main: DEBUG
-  nmea_routing.console: INFO
-  nmea_routing.grpc_nmea_input_service: INFO
-  nmea2000.nmea2000_msg: INFO
-  nmea2000.nmea2k_controller: WARNING
-  nmea2000.nmea2k_active_controller: INFO
-  nmea2000.nmea2k_device: WARNING
-  nmea2000.nmea2k_application: WARNING
-  nmea2000.n2k_name: INFO
-  nmea2000.nmea2k_can_interface: INFO
-  nmea2000.nmea2k_can_coupler: INFO
-  nmea2000.nmea2k_iso_transport: INFO
-  nmea2000.nmea2k_iso_messages: INFO
-  nmea2000.grpc_input_application: INFO
-  nmea2000.nmea2k_fast_packet: INFO
-  nmea2000.nmea2k_publisher: INFO
+
 
 features:
   - router_core

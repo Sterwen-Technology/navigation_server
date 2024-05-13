@@ -4,6 +4,9 @@ version = "2.0.0"
 description = ""
 authors = ["laurent <laurent.carre@sterwen-technology.eu>"]
 readme = "README.md"
+packages = [
+    {include = "src"}
+]
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -13,6 +16,9 @@ grpcio = "^1.62.1"
 pyyaml = "^6.0.1"
 python-can = "^4.0"
 
+[tool.poetry.scripts]
+navigation_server = "navigation-server.server_main:main"
+code_generator = "navigation-server.code_generator:main"
 
 [build-system]
 requires = ["poetry-core"]
