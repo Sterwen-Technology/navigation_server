@@ -24,11 +24,11 @@ def _parser():
     return p
 
 
-def init_options(default_base_dir: str):
+def init_options(default_base_dir: str, parser_def=_parser):
     '''
     This functions init the options versus the command line and adjust working directory
     '''
-    parser = _parser()
+    parser = parser_def()
     opts = parser.parse_args()
     if opts.working_dir is not None:
         os.chdir(opts.working_dir)

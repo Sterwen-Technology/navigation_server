@@ -17,7 +17,7 @@ from nmea_routing.coupler import Coupler, CouplerTimeOut, CouplerWriteError
 from nmea2000.nmea2k_application import NMEA2000Application
 from nmea2000.nmea2000_msg import NMEA2000Msg
 from nmea_routing.generic_msg import NavGenericMsg, N2K_MSG
-from utilities.global_exceptions import ObjectCreationError
+from utilities.global_variables import get_global_var, set_global_var
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -36,10 +36,19 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
         _logger.debug("DirectCANCoupler initializing controller")
         NMEA2000Application.__init__(self, controller)
         self._controller_set = True
+        set_global_var(f'{self.object_name()}.controller', controller)
+
+    def restart(self):
+        _logger.debug("DirectCANCoupler restart")
+        controller = get_global_var(f'{self.object_name()}.controller')
+        if controller is not None:
+            self.set_controller(controller)
 
     def open(self):
+        _logger.debug("DirectCANCoupler %s open" % self.object_name())
         if self._controller_set:
-            self._controller.CAN_iterface.wait_for_bus_ready()
+            self._controller.CAN_interface.wait_for_bus_ready()
+            _logger.debug("DirectCANCoupler CAN bus ready")
             return True
         else:
             _logger.error("Coupler %s CAN controller not ready" % self.object_name())

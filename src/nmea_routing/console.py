@@ -43,6 +43,10 @@ class ConsoleServicer(NavigationConsoleServicer):
                 resp.state = State.RUNNING
         else:
             resp.state = State.STOPPED
+        state = i.state()
+        if 0 < state > 3:
+            _logger.error("Coupler %s wrong device state %d must in range 0-3" % (resp.name, state))
+            raise ValueError
         resp.dev_state = i.state()
         resp.protocol = i.protocol()
         resp.msg_in = i.total_input_msg()
