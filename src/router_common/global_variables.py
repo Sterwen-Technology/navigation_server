@@ -9,6 +9,9 @@
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
+import logging
+
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 class MessageServerGlobals:
 
@@ -36,6 +39,29 @@ def resolve_ref(name: str):
 
 def resolve_class(name: str):
     return MessageServerGlobals.configuration.get_class(name)
+
+
+def set_global_var(key, value):
+    MessageServerGlobals.configuration.set_global(key, value)
+
+
+def get_global_var(key):
+    return MessageServerGlobals.configuration.get_global(key)
+
+
+def set_hook(key, hook):
+    _logger.debug("Setting hook for key:%s" % key)
+    MessageServerGlobals.configuration.store_hook(key, hook)
+
+
+def test_exec_hook(key, target):
+    _logger.debug("Resolving hook for %s" % key)
+    try:
+        hook_func = MessageServerGlobals.configuration.get_hook(key)
+    except KeyError:
+        _logger.info("No hook for key %s" % key)
+        return
+    hook_func(target)
 
 
 class Typedef:

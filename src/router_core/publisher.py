@@ -36,7 +36,9 @@ class Publisher(threading.Thread):
     def __init__(self, opts, internal=False, couplers=None, name=None, filters=None):
         if internal:
             self._opts = None
-            self._couplers = couplers
+            self._couplers = {}
+            for c in couplers:
+                self._couplers[c.object_name()] = c
             self._queue_size = 40
             self._max_lost = 10
             self._active = True
@@ -49,9 +51,10 @@ class Publisher(threading.Thread):
             self._max_lost = opts.get('max_lost', int, 5)
             inst_list = opts.getlist('couplers', str, [])
             self._active = opts.get('active', bool, True)
-            self._couplers = []
+            self._couplers = {}
             for inst_name in inst_list:
-                self._couplers.append(resolve_ref(inst_name))
+                self._couplers[inst_name] = self.resolve_ref(inst_name)
+                set_hook(inst_name, self.add_instrument)
             daemon = False
 
         self._queue_tpass = False
@@ -68,7 +71,7 @@ class Publisher(threading.Thread):
     def start(self):
         _logger.debug("Publisher %s start flag %s" % (self._name, self._active))
         if self._active:
-            for inst in self._couplers:
+            for inst in self._couplers.values():
                 # print("Registering %s on %s" % (self._name, inst.name()))
                 inst.register(self)
             super().start()
@@ -113,12 +116,12 @@ class Publisher(threading.Thread):
                 self._queue_tpass = False
 
     def deregister(self):
-        for inst in self._couplers:
+        for inst in self._couplers.values():
             inst.deregister(self)
 
-    def add_instrument(self, instrument):
-        self._couplers.append(instrument)
-        instrument.register(self)
+    def add_instrument(self, coupler):
+        self._couplers[coupler.object_name()] = coupler
+        coupler.register(self)
 
     def stop(self):
         _logger.info("Stop received for %s" % self._name)
@@ -182,12 +185,16 @@ class Injector(ExternalPublisher):
     def __init__(self, opts):
         super().__init__(opts)
         self._target = resolve_ref(opts['target'])
+        set_hook(self._target.object_name(), self.refresh_target)
 
     def process_msg(self, msg):
         return self._target.send_msg_gen(msg)
 
     def descr(self):
         return "Injector %s" % self._name
+
+    def refresh_target(self, target):
+        self._target = target
 
 
 class PrintPublisher(ExternalPublisher):

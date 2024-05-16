@@ -87,7 +87,7 @@ class NMEA2000Application(NMEA2000Device):
         self._claim_timer = None
         super().__init__(self._address, name=self._iso_name)
 
-        self._state = self.WAIT_FOR_BUS
+        self._app_state = self.WAIT_FOR_BUS
         # vector for addressed messages
         self._process_vector[60928] = self.address_claim_receipt
         self._process_vector[59904] = self.iso_request
@@ -126,7 +126,7 @@ class NMEA2000Application(NMEA2000Device):
 
     def send_address_claim(self, da=255):
         self.respond_address_claim(da)
-        self._state = self.ADDRESS_CLAIM
+        self._app_state = self.ADDRESS_CLAIM
         self._claim_timer = threading.Timer(0.4, self.address_claim_delay)
         self._claim_timer.start()
 
@@ -138,7 +138,7 @@ class NMEA2000Application(NMEA2000Device):
     def address_claim_delay(self):
         # we consider that we are good to go
         _logger.debug("Address claim for %d delay exhausted" % self._address)
-        self._state = self.ACTIVE
+        self._app_state = self.ACTIVE
         self._controller.CAN_interface.allow_send()
         self.send_iso_request(255, 60928)
         # request = ISORequest(self._address)

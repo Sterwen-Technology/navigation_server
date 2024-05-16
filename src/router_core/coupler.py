@@ -118,7 +118,6 @@ class Coupler(threading.Thread):
         self._separator = None
         self._separator_len = 0
         self._has_run = False
-        self._status = None
         self._count_stamp = 0
         self._rate = 0.0
         self._rate_s = 0.0
@@ -204,6 +203,13 @@ class Coupler(threading.Thread):
     def force_start(self):
         self._autostart = True
 
+    def restart(self):
+        '''
+        To be redefined in subclasses that need to perform actions when the coupler is re-created and restarted
+        Otherwise do nothing
+        '''
+        pass
+
     def define_n2k_writer(self):
         '''
         To be redefined in subclasses when the standard writer does not fit
@@ -237,6 +243,7 @@ class Coupler(threading.Thread):
             #   Open communication section
             #
             if self._state == self.NOT_READY:
+                _logger.debug("Coupler %s start open sequence" % self.object_name())
                 if nb_attempts >= self._max_attempt:
                     _logger.error("Failed to open %s after %d attempts => coupler stops" % (
                         self.object_name(), self._max_attempt
@@ -248,6 +255,8 @@ class Coupler(threading.Thread):
                         time.sleep(self._open_delay)
                         continue
                     else:
+                        self._state = self.OPEN
+                        _logger.debug("Coupler %s open OK" % self.object_name())
                         nb_attempts = 0
                 except CouplerOpenRefused:
                     _logger.critical("Fatal exception on coupler %s" % self._name)
@@ -264,6 +273,7 @@ class Coupler(threading.Thread):
             #  read section
             #  read sends a generator from version 1.8
             try:
+                _logger.debug("Coupler %s start reading status %d" % (self.object_name(), self._state))
                 for msg in self.read():
                     if msg.type == NULL_MSG:
                         _logger.warning("End of data from %s => close connection" % self._name)
@@ -385,6 +395,7 @@ class Coupler(threading.Thread):
                 self._timer = None
             self.stop_writer()
             self._stopflag = True
+            self._state = self.NOT_READY
 
     def stop_communication(self):
         # to be implemented in subclasses when specific action is to be taken
@@ -519,5 +530,3 @@ class Coupler(threading.Thread):
                 self._n2k_controller.send_message(n2kmsg)
                 return True
         return False
-
-
