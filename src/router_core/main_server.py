@@ -15,7 +15,7 @@ import threading
 import datetime
 import os
 
-from router_common import MessageServerGlobals
+from router_common import MessageServerGlobals, test_exec_hook
 # from router_common import NavigationConfiguration
 from .console import Console
 from .publisher import Publisher
@@ -177,7 +177,9 @@ class NavigationMainServer:
             # then we create a new coupler instance
             inst_descr = MessageServerGlobals.configuration.coupler(name)
             new_coupler = inst_descr.build_object()
+            new_coupler.restart()
             new_coupler.force_start()
+            test_exec_hook(name, new_coupler)
             self.add_coupler(new_coupler)
         else:
             coupler.force_start()

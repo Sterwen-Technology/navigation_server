@@ -14,7 +14,7 @@ import queue
 import logging
 
 from .filters import FilterSet
-from router_common import resolve_ref
+from router_common import resolve_ref, set_hook
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -53,7 +53,7 @@ class Publisher(threading.Thread):
             self._active = opts.get('active', bool, True)
             self._couplers = {}
             for inst_name in inst_list:
-                self._couplers[inst_name] = self.resolve_ref(inst_name)
+                self._couplers[inst_name] = resolve_ref(inst_name)
                 set_hook(inst_name, self.add_instrument)
             daemon = False
 
