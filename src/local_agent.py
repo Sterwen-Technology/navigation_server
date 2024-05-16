@@ -25,7 +25,7 @@ from utilities.arguments import init_options
 
 _logger = logging.getLogger("ShipDataServer.agent")
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
-version = "1.0"
+version = "1.1"
 
 
 class AgentMainServer:
@@ -72,6 +72,7 @@ def main():
     NavigationLogSystem.create_log("Starting Navigation local agent %s - copyright Sterwen Technology 2021-2024" % version)
 
     # build the configuration from the file
+    _logger.warning("settings=%s" % opts.settings)
     config = NavigationConfiguration(opts.settings)
     config.add_class(GrpcServer)
     config.add_class(AgentService)
