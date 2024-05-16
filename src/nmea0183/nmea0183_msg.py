@@ -207,8 +207,9 @@ class NMEA0183Sentences:
 
     @staticmethod
     def init(sender_id):
-        if type(sender_id) == str:
-            sender_id = sender_id.encode()
+        # if type(sender_id) is str:
+        #    sender_id = sender_id.encode()
+        # to avoid mixing str and bytes, all internal processing is kept in str
         NMEA0183Sentences._sender_id = sender_id
         NMEA0183Sentences._local_hours = time.timezone / 3600
         NMEA0183Sentences._local_minutes = time.timezone % 3600

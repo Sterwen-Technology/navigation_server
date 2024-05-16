@@ -16,7 +16,7 @@ from grpc import StatusCode, insecure_channel, RpcError
 from nmea_routing.coupler import *
 from nmea0183.nmea0183_msg import XDR, NMEA0183SentenceMsg
 
-_logger = logging.getLogger("ShipDataServer"+"."+__name__)
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class MPPT_Coupler(Coupler):
