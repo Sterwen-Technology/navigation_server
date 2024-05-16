@@ -54,11 +54,11 @@ from nmea2000.grpc_input_application import GrpcInputApplication
 
 from utilities.log_utilities import NavigationLogSystem
 from utilities.global_exceptions import ObjectCreationError, ObjectFatalError
-from utilities.global_variables import MessageServerGlobals
+from utilities.global_variables import MessageServerGlobals, test_exec_hook
 from utilities.arguments import init_options
 
 
-MessageServerGlobals.version = "V1.81"
+MessageServerGlobals.version = "V1.82"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -214,8 +214,12 @@ class NavigationMainServer:
                 server.remove_coupler(coupler)
             inst_descr = NavigationConfiguration.get_conf().coupler(name)
             new_coupler = inst_descr.build_object()
+            new_coupler.restart()
             new_coupler.force_start()
+            test_exec_hook(name, new_coupler)
             self.add_coupler(new_coupler)
+            if self.console_present:
+                self._console.add_coupler(new_coupler)
         else:
             coupler.force_start()
             coupler.request_start()

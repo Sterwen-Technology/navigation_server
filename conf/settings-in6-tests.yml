@@ -44,7 +44,7 @@ couplers:
 
 - MiniPlex3:
     class: ShipModulInterface
-    address: 172.16.2.100
+    address: 192.168.1.22
     port: 10110
     nmea2000_controller: NMEANetwork
     protocol: nmea2000

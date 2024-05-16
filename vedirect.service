@@ -5,7 +5,7 @@ Requires=network.target
 [Service]
 Type=simple
 User=solidsense
-ExecStart=/usr/bin/python3  /data/solidsense/navigation/src/victron_mppt/mppt_reader.py -i /dev/ttyUSB0
+ExecStart=/usr/bin/python3  /data/solidsense/navigation/src/energy_mgmt_svr.py -i /dev/ttyUSB0 -d /data/solidsense/navigation/
 Restart=on-failure
 RestartSec=6
 

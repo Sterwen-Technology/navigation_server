@@ -14,6 +14,7 @@ import logging
 import sys
 
 from utilities.global_exceptions import ObjectCreationError
+from utilities.global_variables import MessageServerGlobals
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -37,18 +38,18 @@ class Parameters:
         elif p_type == bytes:
             return bytes(str(value).encode())
         elif p_type == bool:
-            if type(value) == bool:
+            if type(value) is bool:
                 return value
             else:
                 raise ValueError
         elif p_type == int:
-            if type(value) == int:
+            if type(value) is int:
                 return value
             else:
                 _logger.warning("Parameter %s expected int" % p_name)
                 raise ValueError
         elif p_type == float:
-            if type(value) == float:
+            if type(value) is float:
                 return value
             else:
                 try:
@@ -57,7 +58,7 @@ class Parameters:
                     _logger.warning("Parameter %s expected float" % p_name)
                     raise
         else:
-            _logger.error("Not supported type %s for parameter %s" % (str(p_type), p_name) )
+            _logger.error("Not supported type %s for parameter %s" % (str(p_type), p_name))
             raise ValueError
 
     def getv(self, p_name):
@@ -169,6 +170,8 @@ class NavigationConfiguration:
         self._filters = {}
         self._applications = {}
         self._globals = {}
+        self._hooks = {}
+        MessageServerGlobals.global_variables = self
         try:
             fp = open(settings_file, 'r')
         except IOError as e:
@@ -279,6 +282,12 @@ class NavigationConfiguration:
             return self._globals[key]
         except KeyError:
             _logger.error("Global reference %s non existent" % key)
+
+    def store_hook(self, key, hook):
+        self._hooks[key] = hook
+
+    def get_hook(self, key):
+        return self._hooks[key]
 
 
 def main():
