@@ -58,7 +58,7 @@ from utilities.global_variables import MessageServerGlobals, test_exec_hook
 from utilities.arguments import init_options
 
 
-MessageServerGlobals.version = "V1.82"
+MessageServerGlobals.version = "V1.82a"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 _logger = logging.getLogger("ShipDataServer.main")
 

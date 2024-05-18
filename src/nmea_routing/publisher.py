@@ -56,7 +56,7 @@ class Publisher(threading.Thread):
             self._couplers = {}
             for inst_name in inst_list:
                 self._couplers[inst_name] = self.resolve_ref(inst_name)
-                set_hook(inst_name, self.add_instrument)
+                set_hook(inst_name, self.add_coupler)
             daemon = False
 
         self._queue_tpass = False
@@ -121,7 +121,7 @@ class Publisher(threading.Thread):
         for inst in self._couplers.values():
             inst.deregister(self)
 
-    def add_instrument(self, coupler):
+    def add_coupler(self, coupler):
         self._couplers[coupler.object_name()] = coupler
         coupler.register(self)
 

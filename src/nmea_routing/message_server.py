@@ -112,8 +112,8 @@ class NMEAServer(NavTCPServer):
         _logger.info("Server %s adding coupler %s" % (self.name, coupler.object_name()))
         # now if we had some active connections we need to create the publishers
         for client in self._connections.values():
-            pub = NMEAPublisher(client, coupler)
-            pub.start()
+            #  Correction on 2024/05/18 => modify the existing publisher
+            client.publisher.add_coupler(coupler)
 
     def remove_client(self, address) -> None:
         '''
