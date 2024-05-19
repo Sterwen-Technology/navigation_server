@@ -148,7 +148,13 @@ class ConsoleServicer(NavigationConsoleServicer):
             resp.status = "stop requested"
         elif request.cmd == "start_coupler":
             i_name = request.target
-            resp.status = server.start_coupler(i_name)
+            try:
+                resp.status = server.start_coupler(i_name)
+            except Exception as err:
+                _logger.error("ServerCmd start_coupler execution error:%s" % err)
+                resp.status = f'ServerCmd execution error:{err}'
+        else:
+            resp.status = f'unknown command {request.cmd}'
         _logger.debug("ServerCmd response %s" % resp.status)
         return resp
 

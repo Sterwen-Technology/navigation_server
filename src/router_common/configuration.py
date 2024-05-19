@@ -60,7 +60,7 @@ class Parameters:
                     _logger.warning("Parameter %s expected float" % p_name)
                     raise
         else:
-            _logger.error("Not supported type %s for parameter %s" % (str(p_type), p_name))
+            _logger.error("Not supported type %s for parameter %s" % (str(p_type), p_name) )
             raise ValueError
 
     def getv(self, p_name):
@@ -202,6 +202,7 @@ class NavigationConfiguration:
         self._applications = {}
         self._globals = {}
         self._features = {}
+        self._hooks = {}
         self._main = None
         self._main_server = None
         NavigationConfiguration._instance = self
@@ -209,7 +210,7 @@ class NavigationConfiguration:
 
     def build_configuration(self, settings_file):
 
-        self._hooks = {}
+
         MessageServerGlobals.global_variables = self
         try:
             fp = open(settings_file, 'r')

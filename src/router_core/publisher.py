@@ -53,8 +53,8 @@ class Publisher(threading.Thread):
             self._active = opts.get('active', bool, True)
             self._couplers = {}
             for inst_name in inst_list:
+                set_hook(inst_name, self.add_coupler)
                 self._couplers[inst_name] = resolve_ref(inst_name)
-                set_hook(inst_name, self.add_instrument)
             daemon = False
 
         self._queue_tpass = False
@@ -119,7 +119,7 @@ class Publisher(threading.Thread):
         for inst in self._couplers.values():
             inst.deregister(self)
 
-    def add_instrument(self, coupler):
+    def add_coupler(self, coupler):
         self._couplers[coupler.object_name()] = coupler
         coupler.register(self)
 
@@ -192,9 +192,6 @@ class Injector(ExternalPublisher):
 
     def descr(self):
         return "Injector %s" % self._name
-
-    def refresh_target(self, target):
-        self._target = target
 
 
 class PrintPublisher(ExternalPublisher):

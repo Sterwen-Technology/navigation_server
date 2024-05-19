@@ -15,11 +15,11 @@ import logging
 from .publisher import Publisher
 from router_common import NavGenericMsg, N2K_MSG, NULL_MSG
 from .IPCoupler import TCPBufferedReader
-from .coupler import Coupler
+from .coupler import Coupler, CouplerWriteError
 from .nmea0183_msg import process_nmea0183_frame
 from .nmea2000_msg import fromPGDY, fromPGNST, N2KEncodeError
 
-_logger = logging.getLogger("ShipDataServer"+"."+__name__)
+_logger = logging.getLogger("ShipDataServer."+__name__)
 
 
 class NMEAPublisher(Publisher):
@@ -29,7 +29,7 @@ class NMEAPublisher(Publisher):
         super().__init__(None, internal=True, couplers=couplers, name=client.descr(), filters=filters)
         self._client = client
 
-        client.add_publisher(self)
+        client.set_publisher(self)
         _logger.info("NMEA Publisher %s created" % self.object_name())
 
     def process_msg(self, msg: NavGenericMsg):
@@ -106,7 +106,12 @@ class NMEASender(threading.Thread):
             if msg.type == NULL_MSG:
                 break
             self._msgcount += 1
-            self._coupler.send_msg_gen(msg)
+            # check that we can write and stop otherwise 24/05/18
+            try:
+                self._coupler.send_msg_gen(msg)
+            except CouplerWriteError as err:
+                _logger.error("NMEASEnter write error %s" % err)
+                break
             if self._publisher is not None:
                 self._publisher.publish(msg)
         _logger.info("Stopping %s" % self.name)
@@ -149,7 +154,8 @@ class ClientConnection:
         self._total_recmsg = 0
         self._periodmsg = 0
         self._silent_count = 0
-        self._pubs = []
+        # a single publisher is enough (24/05/18)
+        self._publisher = None
         self._sender = None
 
     def send(self, msg):
@@ -188,9 +194,9 @@ class ClientConnection:
         if self._sender is not None:
             self._sender.stop()
             # self._server.remove_sender()
-        for p in self._pubs:
-            p.deregister()
-            p.stop()
+
+        self._publisher.deregister()
+        self._publisher.stop()
         self._socket.close()
 
     def reset_period(self):
@@ -217,8 +223,12 @@ class ClientConnection:
     def clear_silent_count(self):
         self._silent_count = 0
 
-    def add_publisher(self, pub):
-        self._pubs.append(pub)
+    def set_publisher(self, pub):
+        self._publisher = pub
+
+    @property
+    def publisher(self):
+        return self._publisher
 
     def descr(self):
         return "Connection %s:%d" % self._address

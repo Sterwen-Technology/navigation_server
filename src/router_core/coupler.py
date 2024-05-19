@@ -163,6 +163,10 @@ class Coupler(threading.Thread):
     def mode(self):
         return self._mode
 
+    @property
+    def publishers(self):
+        return self._publishers
+
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)
         self._timer.name = self._name + "-timer"
@@ -337,6 +341,14 @@ class Coupler(threading.Thread):
                 _logger.error("Coupler %s as no publisher" % self._name)
 
     def send_msg_gen(self, msg: NavGenericMsg):
+        # first need to check if the coupler is ready to send a message 24-05-18
+        if self._state < self.OPEN:
+            # ok not ready
+            if not self.is_alive() or self._stopflag:
+                # the coupler is down or shutting down
+                raise CouplerWriteError(f"Coupler {self.object_name()} is shutting down")
+            _logger.error("Coupler %s not ready" % self.object_name())
+            return False
         if not self._configmode:
             if self._direction == self.READ_ONLY:
                 _logger.error("Coupler %s attempt to write on a READ ONLY coupler" % self.object_name())

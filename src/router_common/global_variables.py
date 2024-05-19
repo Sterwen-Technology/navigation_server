@@ -20,6 +20,7 @@ class MessageServerGlobals:
     enums = None
     version = None
     configuration = None
+    global_variables = None
 
 
 def find_pgn(pgn: int, mfg_id: int = 0):
