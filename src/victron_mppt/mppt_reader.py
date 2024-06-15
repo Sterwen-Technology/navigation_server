@@ -1,6 +1,7 @@
 #-------------------------------------------------------------------------------
 # Name:        mppt_reader
-# Purpose:     server connected to Victron MPPT via VEDirect (RS485/USB)
+# Purpose:     server connected to Victron devices via VEDirect (serial 19200baud)
+#   Both HEX protocol and Text protocol are handled
 #
 # Author:      Laurent Carré
 #
@@ -32,7 +33,7 @@ class Vedirect(threading.Thread):
 
     (HEX, WAIT_HEADER, IN_KEY, IN_VALUE, IN_CHECKSUM) = range(5)
 
-    def __init__(self, serialport, timeout, emulator):
+    def __init__(self, serialport, timeout, emulator=None):
         super().__init__(name="Vedirect")
         self.serialport = serialport
         try:
@@ -57,6 +58,8 @@ class Vedirect(threading.Thread):
         self._lock = threading.Lock()
         self._buffer = bytearray(512)
         self._buflen = 0
+        self._hex_send_buffer = bytearray(32)
+        self._hex_send_buffer[0] = ord(':')
         # self._ts = 0
 
     def lock_data(self):
@@ -123,7 +126,11 @@ class Vedirect(threading.Thread):
         elif self.state == self.HEX:
             self.bytes_sum = 0
             if byte == self.header2:
+                message = self._buffer[:self._buflen]
+                self.receive_hex_resp(message)
                 self.state = self.WAIT_HEADER
+                self._buflen = 0
+                return None
         else:
             raise AssertionError()
 
@@ -149,6 +156,49 @@ class Vedirect(threading.Thread):
     def lock_get_data(self):
         self.lock_data()
         return self._data_dict
+
+    def send_hex_cmd(self, cmd: int, parameters=None):
+        #
+        # send a VEDirect HEX command
+        #
+        if 0 < cmd < 10:
+            hex_cmd = 0x30 + cmd
+        elif cmd < 17:
+            hex_cmd = 0x31 + cmd
+        else:
+            raise VEDirectException("Illegal HEX command")
+        # inster the cmd in buffer
+        self._hex_send_buffer[1] = hex_cmd
+        cmd_size = 2
+        # compute initial checksum
+        checksum = 0x55 - cmd
+
+        if parameters is not None:
+            for length, value in parameters.items():
+                bytes_val = value.to_bytes(length, 'big')
+                nb_nibble_count = 0
+                start = 0
+                while nb_nibble_count < length:
+                    checksum -= (bytes_val[start] * 16) + bytes_val[start + 1]
+                    start += 2
+                encoded_val = bytes_val.hex().upper().encode()
+                self._hex_send_buffer[cmd_size:] = encoded_val
+                cmd_size += length * 2
+        # add checksum in buffer
+        hex_checksum = checksum.to_bytes(2, 'big').hex().upper().encode()
+        self._hex_send_buffer[cmd_size:] = hex_cmd
+        cmd_size += 2
+        self._hex_send_buffer[cmd_size] = 0x10
+        try:
+            self.ser.write(memoryview(self._hex_send_buffer[:cmd_size + 1]))
+        except (serial.SerialException, BrokenPipeError) as e:
+            _logger.error(f"Error writing HEX command {e} on tty {self.serialport}")
+            raise VEDirectException
+
+
+
+
+
 
 
 class MPPT_Servicer(solar_mpptServicer):
