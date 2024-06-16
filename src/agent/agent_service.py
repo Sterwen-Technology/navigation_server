@@ -62,6 +62,11 @@ class AgentExecutor(threading.Thread):
         run_cmd(self._cmd)
 
 
+network_sequences = {
+    'reset_device': ('ifdown {0}', 'ifup {0}')
+}
+
+
 class AgentServicerImpl(AgentServicer):
 
     def SendCmdMultipleResp(self, request, context):
@@ -118,6 +123,27 @@ class AgentServicerImpl(AgentServicer):
             resp.lines.extend(lines)
         else:
             resp.lines.extend(["%s %s return code:%d" % (cmd, service, return_code)])
+        return resp
+
+    def NetworkCmd(self, request, context):
+        cmd = request.cmd
+        target = request.interface
+        _logger.info("Network command %s on %s" % (cmd, target))
+        resp = AgentResponse()
+        try:
+            exec_sequence = network_sequences[cmd]
+        except KeyError:
+            _logger.error(f"Unknown command {cmd}")
+            resp.error_code = 101
+            return resp
+        for seq in exec_sequence:
+            run_str = seq.format(target)
+            return_code, lines = run_cmd(run_str)
+            if return_code != 0:
+                resp.lines.extend(lines)
+                resp.error_code = return_code
+                return resp
+        resp.error_code = 0
         return resp
 
 
