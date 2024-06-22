@@ -15,6 +15,7 @@ import threading
 import logging
 import time
 from concurrent import futures
+from collections import namedtuple
 # sys.path.insert(0, "/data/solidsense/navigation/src")
 import grpc
 from generated.vedirect_pb2 import solar_output, request, MPPT_device
@@ -27,6 +28,9 @@ _logger = logging.getLogger("Energy_Server." + __name__)
 
 class VEDirectException(Exception):
     pass
+
+
+HexCommandContext = namedtuple('HexCommandContext', ['command', 'field', 'callback'])
 
 
 class Vedirect(threading.Thread):
@@ -60,6 +64,7 @@ class Vedirect(threading.Thread):
         self._buflen = 0
         self._hex_send_buffer = bytearray(32)
         self._hex_send_buffer[0] = ord(':')
+        self._hex_cmd_context = None
         # self._ts = 0
 
     def lock_data(self):
@@ -186,14 +191,23 @@ class Vedirect(threading.Thread):
                 cmd_size += length * 2
         # add checksum in buffer
         hex_checksum = checksum.to_bytes(2, 'big').hex().upper().encode()
-        self._hex_send_buffer[cmd_size:] = hex_cmd
+        self._hex_send_buffer[cmd_size:] = hex_checksum
         cmd_size += 2
         self._hex_send_buffer[cmd_size] = 0x10
+        _logger.debug("VE.Direct send HEX message:%s" % self._hex_send_buffer[:cmd_size + 1])
         try:
             self.ser.write(memoryview(self._hex_send_buffer[:cmd_size + 1]))
         except (serial.SerialException, BrokenPipeError) as e:
-            _logger.error(f"Error writing HEX command {e} on tty {self.serialport}")
+            _logger.error(f"VE Direct: Error writing HEX command {e} on tty {self.serialport}")
             raise VEDirectException
+
+    def receive_hex_resp(self, message: bytearray):
+        _logger.debug("VE.direct receive HEX response:%s" % message.hex())
+        response_id = message[0]
+
+
+
+
 
 
 

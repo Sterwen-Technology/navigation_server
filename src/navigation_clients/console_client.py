@@ -117,6 +117,10 @@ class ConsoleClient:
         self._req_id = 0
         _logger.info("Console on navigation server %s" % address)
 
+    @property
+    def address(self):
+        return self._address
+
     def get_couplers(self):
         couplers = []
         req = Request(id=self._req_id)
