@@ -11,60 +11,91 @@
 import logging
 import sys
 import os
+import signal
 from argparse import ArgumentParser
-from concurrent import futures
-# sys.path.insert(0, "/data/solidsense/navigation/src")
 
-from victron_mppt.mppt_reader import VEdirect_simulator, Vedirect, GrpcServer, VEDirectException
+from victron_mppt.mppt_reader import MPPTService
 from utilities.arguments import init_options
+from utilities.log_utilities import NavigationLogSystem
+from nmea_routing.configuration import NavigationConfiguration, ConfigurationException
+from nmea_routing.grpc_server_service import GrpcServer
+from utilities.global_exceptions import ObjectCreationError, ObjectFatalError
 
-_version = "V1.01"
-
-
-def _parser():
-    p = ArgumentParser(description=sys.argv[0])
-
-    p.add_argument('-i', '--interface', action='store', type=str, default='/dev/ttyUSB4')
-    p.add_argument('-p', '--port', action="store", type=int, default=4505)
-    p.add_argument('-d', '--working_dir', action='store', type=str)
-    # p.add_argument('-s', '--serial_port', action="store", default=4507)
-    p.add_argument('-sim', '--simulator', action="store")
-
-    return p
+_version = "V1.10"
 
 
-_logger = logging.getLogger("Energy_Server")
+_logger = logging.getLogger("ShipDataServer.energy_main")
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 
+
+class EnergyMainServer:
+
+    def __init__(self):
+        self._servers = []
+        self._services = []
+        self._sigint_count = 0
+        signal.signal(signal.SIGINT, self.stop_handler)
+
+    def add_server(self, server):
+        self._servers.append(server)
+
+    def add_service(self, service):
+        self._services.append(service)
+
+    def start(self):
+        for service in self._services:
+            service.finalize()
+        for server in self._servers:
+            server.start()
+
+    def stop_server(self):
+        for server in self._servers:
+            server.stop()
+
+    def wait(self):
+        for server in self._servers:
+            server.join()
+
+    def stop_handler(self, signum, frame):
+        self._sigint_count += 1
+        if self._sigint_count == 1:
+            _logger.info("SIGINT received => stopping the system")
+            self.stop_server()
+        else:
+            if self._sigint_count > 2:
+                os._exit(1)
+
+
 def main():
-    opts = init_options(default_base_dir, _parser)
-    loghandler = logging.StreamHandler()
-    logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
-    loghandler.setFormatter(logformat)
-    _logger.addHandler(loghandler)
-    _logger.setLevel(logging.INFO)
+    opts = init_options(default_base_dir)
+    NavigationLogSystem.create_log(
+        "Starting Navigation Energy manager %s - copyright Sterwen Technology 2021-2024" % _version)
 
-    _logger.info("Victron MPPT VEdirect reader version %s" % _version)
-    ser_emu = None
-    if opts.simulator is not None:
-        reader = VEdirect_simulator(opts.simulator, ser_emu)
-    else:
+    config = NavigationConfiguration(opts.settings)
+    config.add_class(GrpcServer)
+    config.add_class(MPPTService)
+    NavigationLogSystem.finalize_log(config)
+    _logger.info("Navigation Energy management working directory:%s" % os.getcwd())
+    main_server = EnergyMainServer()
+
+    for server_descr in config.servers():
         try:
-            reader = Vedirect(opts.interface, 10.0, ser_emu)
-        except (VEDirectException, IOError, BrokenPipeError):
-            _logger.critical("Unrecoverable error => stopping the service")
-            os._exit(0)
-
-    server = GrpcServer(opts, reader)
-    if ser_emu is not None:
-        ser_emu.start()
-    reader.start()
-    server.start()
-
-    if opts.simulator is not None:
-        server.wait()
-    else:
-        reader.join()
+            server = server_descr.build_object()
+        except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+            _logger.error("Error building server %s" % e)
+            continue
+        main_server.add_server(server)
+    _logger.debug("Servers created")
+    # create the services and notably the Console
+    for data_s in config.services():
+        try:
+            service = data_s.build_object()
+        except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+            _logger.error("Error building service:%s" % e)
+            continue
+        main_server.add_service(service)
+    main_server.start()
+    main_server.wait()
 
 
 if __name__ == '__main__':

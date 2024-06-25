@@ -14,6 +14,8 @@ import serial
 import threading
 import logging
 import time
+import datetime
+import os
 from concurrent import futures
 from collections import namedtuple
 # sys.path.insert(0, "/data/solidsense/navigation/src")
@@ -21,9 +23,9 @@ import grpc
 from generated.vedirect_pb2 import solar_output, request, MPPT_device
 from generated.vedirect_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
 from utilities.protobuf_utilities import set_protobuf_data
+from nmea_routing.grpc_server_service import GrpcService
 
-
-_logger = logging.getLogger("Energy_Server." + __name__)
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class VEDirectException(Exception):
@@ -37,7 +39,7 @@ class Vedirect(threading.Thread):
 
     (HEX, WAIT_HEADER, IN_KEY, IN_VALUE, IN_CHECKSUM) = range(5)
 
-    def __init__(self, serialport, timeout, emulator=None):
+    def __init__(self, serialport, timeout, trace_input=False):
         super().__init__(name="Vedirect")
         self.serialport = serialport
         try:
@@ -46,7 +48,6 @@ class Vedirect(threading.Thread):
             _logger.error("Cannot open VEdirect serial interface %s" % str(e))
             raise VEDirectException
 
-        self._emulator = emulator
         self.header1 = ord('\r')
         self.header2 = ord('\n')
         self.hexmarker = ord(':')
@@ -66,6 +67,17 @@ class Vedirect(threading.Thread):
         self._hex_send_buffer[0] = ord(':')
         self._hex_cmd_context = None
         # self._ts = 0
+        self._trace_fd = None
+        if trace_input:
+            trace_dir = '/var/log'
+            date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
+            filename = "TRACE-%s-%s.log" % ('VEDirect', date_stamp)
+            filepath = os.path.join(trace_dir, filename)
+            _logger.info("Opening trace file %s" % filepath)
+            try:
+                self._trace_fd = open(filepath, "w")
+            except IOError as e:
+                _logger.error("Trace file error %s" % e)
 
     def lock_data(self):
         # _logger.info("Locking data lock=%s" % self._lock.locked())
@@ -146,6 +158,17 @@ class Vedirect(threading.Thread):
                 packet = self.input(byte)
                 if packet is not None:
                     # ok we have a good packet
+                    if self._trace_fd is not None:
+                        try:
+                            trace = '%s\n' % self._buffer[:self._buflen].hex()
+                            self._trace_fd.write(trace)
+                        except IOError as e:
+                            _logger.error("Error writing VEdirect trace file %s" % e)
+                            self._trace_fd.close()
+                            self._trace_fd = None
+                        except UnicodeDecodeError as e:
+                            _logger.error("VEdirect Unicode error %s in buffer %s" % (e, self._buffer[:self._buflen]))
+
                     self.lock_data()
                     self.dict['timestamp'] = time.monotonic()
                     # swap the dict.
@@ -153,8 +176,6 @@ class Vedirect(threading.Thread):
                     self._active = not self._active
                     self.dict = self._results[self._active]
                     self.unlock_data()
-                    if self._emulator is not None:
-                        self._emulator.send(self._buffer[:self._buflen])
                     # _logger.debug(self._buffer[:self._buflen])
                     self._buflen = 0
 
@@ -206,13 +227,10 @@ class Vedirect(threading.Thread):
         response_id = message[0]
 
 
+class VictronMPPT(Vedirect):
 
-
-
-
-
-
-
+    def __init__(self, opts):
+        super().__init__(opts.get('device', str, None), opts.get('timeout', float, 10.), opts.get('trace', bool, False))
 
 
 class MPPT_Servicer(solar_mpptServicer):
@@ -256,23 +274,6 @@ class MPPT_Servicer(solar_mpptServicer):
         return ret_val
 
 
-class GrpcServer:
-
-    def __init__(self, opts, reader):
-        port = opts.port
-        address = "0.0.0.0:%d" % port
-        self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
-        add_solar_mpptServicer_to_server(MPPT_Servicer(reader), self._server)
-        self._server.add_insecure_port(address)
-        _logger.info("MPPT server ready on address:%s" % address)
-
-    def start(self):
-        self._server.start()
-        _logger.info("MPPT server started")
-
-    def wait(self):
-        self._server.wait_for_termination()
-
 
 class VEdirect_simulator:
 
@@ -307,3 +308,15 @@ class VEdirect_simulator:
 
     def unlock_data(self):
         pass
+
+
+class MPPTService(GrpcService):
+
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._mppt_device = VictronMPPT(opts)
+
+    def finalize(self):
+        super().finalize()
+        add_solar_mpptServicer_to_server(MPPT_Servicer(self._mppt_device), self.grpc_server)
+        self._mppt_device.start()
