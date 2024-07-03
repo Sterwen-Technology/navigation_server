@@ -22,6 +22,7 @@ from nmea_routing.grpc_server_service import GrpcService
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
+
 def run_cmd(cmd: str):
     args = shlex.split(cmd)
     try:
@@ -134,16 +135,27 @@ class AgentServicerImpl(AgentServicer):
             exec_sequence = network_sequences[cmd]
         except KeyError:
             _logger.error(f"Unknown command {cmd}")
-            resp.error_code = 101
+            resp.err_code = 101
             return resp
         for seq in exec_sequence:
             run_str = seq.format(target)
+            _logger.info(f"Command {run_str}")
             return_code, lines = run_cmd(run_str)
+            _logger.info(f"Command {run_str} {return_code} {lines}")
+            line = ''
             if return_code != 0:
-                resp.lines.extend(lines)
-                resp.error_code = return_code
+                resp.resp = lines
+                resp.err_code = return_code
                 return resp
-        resp.error_code = 0
+            elif len(lines) > 0:
+                for l in lines:
+                    if len(l) == 0:
+                        l = f'{run_str} => OK'
+                    line += l
+            else:
+                line = line + f'{run_str} => OK'
+        resp.resp = line
+        resp.err_code = 0
         return resp
 
 
