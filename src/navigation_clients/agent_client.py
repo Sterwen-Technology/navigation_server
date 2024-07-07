@@ -11,11 +11,13 @@
 
 import logging
 
+import grpc
+
 from generated.agent_pb2 import *
 from generated.agent_pb2_grpc import *
 from router_common.protobuf_utilities import GrpcAccessException
 
-_logger = logging.getLogger("ShipDataServer." + __name__)
+_logger = logging.getLogger("ShipDataClient." + __name__)
 
 
 class AgentClient:
@@ -81,6 +83,23 @@ class AgentClient:
         try:
             resp = self._stub.SystemdCmd(request)
             return resp.lines
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.info("Server %s not accessible error:%s" % (self._address, err))
+            else:
+                _logger.error("SystemdCmd - Error accessing server:%s" % err)
+            raise GrpcAccessException
+
+    def network_cmd(self, cmd, interface):
+        request = NetworkCmdMsg()
+        request.id = self._req_id
+        self._req_id += 1
+        request.cmd = cmd
+        request.interface = interface
+        _logger.info(f"Agent client network cmd {cmd} on {interface}")
+        try:
+            resp = self._stub.NetworkCmd(request)
+            return resp.resp
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
                 _logger.info("Server %s not accessible error:%s" % (self._address, err))

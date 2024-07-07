@@ -123,7 +123,7 @@ This server is to be used if the access to the NMEA2000 bus is done via an adapt
 | queue_size | int    | 20      | input message queue size                         |
 | save_file  | string | None    | Name of the file for saving the NMEA2000 devices |
 
-#### (NMEA2KController) server
+#### NMEA2KActiveController server
 
 This class extends the NMEA2KController feature by adding the capability to claim an address on the CAN bus and therefore send messages. Therefore, it only works when the server has a direct connection to the NMEA2000 (CAN) bus.
 By adding this class, the server becomes a full NMEA2000 device and no adapter is needed.
@@ -308,7 +308,7 @@ Parameters
 
 #### GrpcPublisher
 
-This publisher send NMEA messages (all formats) towards another gRPC Coupler or InputService using the gRPC service defined in input_service.proto.
+This publisher sends NMEA messages (all formats) towards another gRPC Coupler or InputService using the gRPC service defined in input_service.proto.
 
 | Name              | Type                                    | Default   | Signification                                               |
 |-------------------|-----------------------------------------|-----------|-------------------------------------------------------------|
@@ -321,7 +321,7 @@ This publisher send NMEA messages (all formats) towards another gRPC Coupler or 
 | max_retry         | int                                     | 20        | Maximum number of retries, if 0, retries indefinitely       |
 
 NMEA0183 processing flags:
-* **pass_thru**: messages are forwarded with processing
+* **pass_thru**: messages are forwarded without processing
 * **convert_strict**: messages are converted to NMEA2000 when possible and are discarded otherwise
 * **convert_pass**: messages are converted to NMEA2000 when possible or are forwarded as-is when not possible
 

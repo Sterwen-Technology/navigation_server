@@ -11,6 +11,7 @@
 
 
 import logging
+from collections import namedtuple
 
 from generated.input_server_pb2_grpc import NMEAInputServerServicer, add_NMEAInputServerServicer_to_server
 from generated.nmea_messages_pb2 import server_resp
@@ -50,13 +51,9 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
             return resp
 
         if request.HasField("N2K_msg"):
-            if self._callback_n2k is None:
-                resp.reportCode = 1
-                resp.status = "NMEA2000 direct messages not supported"
-            else:
-                msg = request.N2K_msg
-                self._callback_n2k(NMEA2000Msg(msg.pgn, prio=msg.priority, sa=msg.sa, da=msg.da, payload=msg.payload,
-                                               timestamp=msg.timestamp))
+            msg = request.N2K_msg
+            resp.reportCode, resp.status = self.incoming_n2k(msg)
+
         elif request.HasField("N0183_msg"):
             if self._callback_0183 is None:
                 resp.reportCode = 1
@@ -91,6 +88,17 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
             #print(n2k_object)
             self._callback_pb(n2k_object)
         return resp
+
+    def incoming_n2k(self, msg):
+        if self._callback_n2k is None:
+            report_code = 1
+            status = "NMEA2000 direct messages not supported"
+        else:
+            self._callback_n2k(NMEA2000Msg(msg.pgn, prio=msg.priority, sa=msg.sa, da=msg.da, payload=msg.payload,
+                                       timestamp=msg.timestamp))
+            report_code = 0
+            status = "OK"
+        return report_code, status
 
     def status(self, request, context):
         resp = server_resp()
@@ -138,3 +146,37 @@ class GrpcDataService(GrpcService):
     def close(self):
         if self._servicer is not None:
             self._servicer.close()
+
+
+ProcessVector = namedtuple('ProcessVector', ['subscriber', 'msg_id', 'vector'])
+
+
+class DataDispatch(GrpcDataService):
+    '''
+    This class process all input NMEA messages and dispatch them towards the data services that have subscribed
+    to specific PGN. Messages are decoded before being forwarded.
+    Messages without subscription are just discarded
+    '''
+
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._dispatch_table = {}
+        self._subscribers = []
+
+    def subscribe(self, subscriber_id, msg_id, vector):
+        process_vector = ProcessVector(subscriber_id, msg_id, vector)
+        try:
+            pv = self._dispatch_table[msg_id]
+        except KeyError:
+            self._dispatch_table[msg_id] = process_vector
+        else:
+            _logger.error(f"DataDispatch subscription duplicate key {msg_id}")
+
+    def incoming_n2k(self, msg):
+        try:
+            pv = self._dispatch_table[msg.pgn]
+            pv.vector(NMEA2000Msg(msg.pgn, prio=msg.priority, sa=msg.sa, da=msg.da, payload=msg.payload,
+                                  timestamp=msg.timestamp))
+        except KeyError:
+            _logger.debug("DataDispatch incoming_n2k no vector for PGN %d" % msg.pgn)
+
