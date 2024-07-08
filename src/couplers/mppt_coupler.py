@@ -9,17 +9,19 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-from generated.vedirect_pb2 import *
+import logging
+import threading
+from generated.vedirect_pb2 import request
 from generated.vedirect_pb2_grpc import *
 from grpc import StatusCode, insecure_channel, RpcError
 
-from router_core.coupler import *
+from router_core.coupler import Coupler, CouplerReadError, CouplerTimeOut
 from router_core.nmea0183_msg import XDR, NMEA0183SentenceMsg
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-class MPPT_Coupler(Coupler):
+class MpptCoupler(Coupler):
 
     def __init__(self, opts):
 

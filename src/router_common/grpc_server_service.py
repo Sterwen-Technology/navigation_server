@@ -50,6 +50,7 @@ class GrpcServer(NavigationServer):
         self._grpc_server.add_insecure_port(address)
         self.grpc_server_global = self
         self._running = False
+        self._services = []
 
     def server_type(self):
         return "gRPCServer"
@@ -66,6 +67,9 @@ class GrpcServer(NavigationServer):
         self._running = False
 
     def join(self):
+        if len(self._services) == 0:
+            self.stop()
+            return
         self._wait_lock.acquire()
         if self._end_event is not None:
             self._end_event.wait()
@@ -78,6 +82,14 @@ class GrpcServer(NavigationServer):
 
     def running(self) -> bool:
         return self._running
+
+    def add_service(self, name):
+        self._services.append(name)
+
+    def remove_service(self, name):
+        self._services.remove(name)
+        if len(self._services) == 0:
+            self.stop()
 
 
 class GrpcService:
@@ -93,8 +105,12 @@ class GrpcService:
             raise GrpcServerError("No server defined for the service: %s" % self._name)
         self._server = resolve_ref(self._server_name)
         assert self._server is not None
+        self._server.add_service(self._name)
 
     @property
     def grpc_server(self):
         return self._server.grpc_server
+
+    def stop_service(self):
+        self._server.remove_service(self._name)
 

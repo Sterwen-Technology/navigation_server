@@ -41,7 +41,7 @@ class Vedirect(threading.Thread):
 
     def __init__(self, serialport, timeout, trace_input=False):
         super().__init__(name="Vedirect")
-        self.serialport = serialport
+        self._serialport = serialport
         try:
             self.ser = serial.Serial(serialport, 19200, timeout=timeout)
         except (serial.SerialException, BrokenPipeError) as e:
@@ -154,7 +154,13 @@ class Vedirect(threading.Thread):
 
     def run(self):
         while True:
-            data = self.ser.read()
+            try:
+                data = self.ser.read()
+            except serial.serialutil.PortNotOpenError:
+                _logger.error(f"VEdirect read on port {self._serialport} that is not open")
+                self.stop_service()
+                return
+
             for byte in data:
                 packet = self.input(byte)
                 if packet is not None:
@@ -220,7 +226,7 @@ class Vedirect(threading.Thread):
         try:
             self.ser.write(memoryview(self._hex_send_buffer[:cmd_size + 1]))
         except (serial.SerialException, BrokenPipeError) as e:
-            _logger.error(f"VE Direct: Error writing HEX command {e} on tty {self.serialport}")
+            _logger.error(f"VE Direct: Error writing HEX command {e} on tty {self._serialport}")
             raise VEDirectException
 
     def receive_hex_resp(self, message: bytearray):
@@ -230,8 +236,14 @@ class Vedirect(threading.Thread):
 
 class VictronMPPT(Vedirect):
 
-    def __init__(self, opts):
+    def __init__(self, opts, service):
+        self._name = opts.get('name', str, 'VictronMPPT')
         super().__init__(opts.get('device', str, None), opts.get('timeout', float, 10.), opts.get('trace', bool, False))
+        self._service = service
+
+    def stop_service(self):
+        _logger.info(f"MPPT Victron {self._name} request to stop service")
+        self._service.stop_service()
 
 
 class MPPT_Servicer(solar_mpptServicer):
@@ -315,7 +327,7 @@ class MPPTService(GrpcService):
 
     def __init__(self, opts):
         super().__init__(opts)
-        self._mppt_device = VictronMPPT(opts)
+        self._mppt_device = VictronMPPT(opts, self)
 
     def finalize(self):
         super().finalize()

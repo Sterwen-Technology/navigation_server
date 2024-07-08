@@ -16,3 +16,4 @@ from .serial_nmeaport import NMEASerialPort
 from .grpc_nmea_coupler import GrpcNmeaCoupler
 from .ydn2k_coupler import YDCoupler
 from .nmea_tcp_coupler import NMEATCPReader
+from .mppt_coupler import MpptCoupler

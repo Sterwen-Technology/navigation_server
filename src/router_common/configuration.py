@@ -17,6 +17,7 @@ import importlib
 
 from router_common import ObjectCreationError, MessageServerGlobals, ObjectFatalError
 from .grpc_server_service import GrpcServer
+from .generic_top_server import GenericTopServer
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -210,7 +211,6 @@ class NavigationConfiguration:
 
     def build_configuration(self, settings_file):
 
-
         MessageServerGlobals.global_variables = self
         try:
             fp = open(settings_file, 'r')
@@ -223,6 +223,13 @@ class NavigationConfiguration:
             _logger.error("Settings file decoding error %s" % str(e))
             fp.close()
             raise
+        # display the server purpose
+        try:
+            server_purpose = self._configuration['function']
+        except KeyError:
+            server_purpose = 'Unknown'
+            self._configuration['function'] = 'Unknown (missing "function" keyword)'
+        _logger.info(f"Server function {server_purpose}")
         # create entries for allways included classes
         self.import_internal()
         for feature in self.object_descr_iter('features'):
@@ -345,6 +352,7 @@ class NavigationConfiguration:
     def import_internal(self):
 
         self.add_class(GrpcServer)
+        self.add_class(GenericTopServer)
 
     def import_feature(self, feature):
         if type(feature) is str:

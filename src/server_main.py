@@ -36,12 +36,11 @@ def main():
 
     # print("Current directory", os.getcwd())
     # set log for the configuration phase
-    NavigationLogSystem.create_log("Starting Navigation server version %s - copyright Sterwen Technology 2021-2024" %
-                                   MessageServerGlobals.version)
+    NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2024")
+
 
     # build the configuration from the file
     config = NavigationConfiguration().build_configuration(opts.settings)
-
     NavigationLogSystem.finalize_log(config)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     # nmea0183_msg.NMEA0183Sentences.init(config.get_option('talker', 'ST'))

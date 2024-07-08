@@ -1,22 +1,22 @@
 #-------------------------------------------------------------------------------
-# Name:        settings-agent.yml
+# Name:        energy management.yml
 # Purpose:     Settings file for the local agent
 #
 # Author:      Laurent Carré
 #
-# Created:     26/02/2024
+# Created:     08/07/2024
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
-function: Local system control agent
+#
+function: Energy management server
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    main: DEBUG
 
 features:
-    - agent
+    - energy_mgmt
 
 servers:
 
@@ -25,12 +25,12 @@ servers:
 
 - gRPCMain:
     class: GrpcServer
-    port: 4506
+    port: 4505
 
 services:
 
 - Agent:
-    class: AgentService
+    class: MPPTService
     server: gRPCMain
 
 

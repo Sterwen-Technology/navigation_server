@@ -74,7 +74,6 @@ class MPPT_output_proxy:
         return self._output.panel_power
 
 
-
 class MPPT_Client:
 
     def __init__(self, server):

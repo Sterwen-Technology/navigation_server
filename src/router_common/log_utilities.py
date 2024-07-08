@@ -12,6 +12,7 @@
 import logging
 import os
 import datetime
+from .global_variables import MessageServerGlobals
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -49,7 +50,7 @@ class NavigationLogSystem:
         _logger.addHandler(NavigationLogSystem.loghandler)
         _logger.setLevel('INFO')
         NavigationLogSystem.start_string = start_string
-        _logger.info(start_string)
+        _logger.info("Initializing log system")
 
     @staticmethod
     def finalize_log(config):
@@ -69,7 +70,8 @@ class NavigationLogSystem:
             except IOError as e:
                 _logger.error("Error opening log file %s %s" % (log_fullname, e))
                 pass
-        _logger.info(NavigationLogSystem.start_string)
+        _logger.info(NavigationLogSystem.start_string % (config.get_option('function', 'ERROR'),
+                                                         MessageServerGlobals.version))
         _logger.setLevel(config.get_option('log_level', 'INFO'))
         NavigationLogSystem.adjust_log_level(config)
 

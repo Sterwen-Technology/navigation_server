@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name:        agent_server.py
+# Name:        generic_top_server.py
 # Purpose:     main server for the local agent
 #
 # Author:      Laurent Carré
@@ -16,7 +16,7 @@ import os
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-class AgentMainServer:
+class GenericTopServer:
 
     def __init__(self, options):
         self._servers = []
