@@ -13,7 +13,6 @@ function: Local system control agent
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    main: DEBUG
 
 features:
     - agent

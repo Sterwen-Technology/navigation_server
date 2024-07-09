@@ -251,7 +251,7 @@ The device connection and initialisation logic is directly managed by the couple
 No additional parameters in this version. The coupler connects to the modem via a USB port. All parameters are given with the modem control.
 
 
-#### VEDirect(Coupler)
+#### MpptCoupler(Coupler)
 
 This class manages the interface with the VEDirect interface service (see) and convert the data into NMEA0183 XDR messages.
 
@@ -463,7 +463,7 @@ To keep the message timing, the whole file is read and messages stored in memory
 
 
 
-## Victron VE Direct gRPC server
+## Energy Management gRPC server
 This service is permanently reading the VEDirect (RS485 over USB) of the MPPT device.
 Data are available via the gRPC interface.
 

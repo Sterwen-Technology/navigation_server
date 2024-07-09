@@ -156,7 +156,7 @@ class Vedirect(threading.Thread):
         while True:
             try:
                 data = self.ser.read()
-            except serial.serialutil.PortNotOpenError:
+            except (serial.SerialException, serial.SerialTimeoutException):
                 _logger.error(f"VEdirect read on port {self._serialport} that is not open")
                 self.stop_service()
                 return

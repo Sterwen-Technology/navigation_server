@@ -242,6 +242,10 @@ class NavigationConfiguration:
             else:
                 self._obj_dict[nav_obj.name] = nav_obj
                 self._servers[nav_obj.name] = nav_obj
+        if self._main is None:
+            _logger.error("The 'Main' server is missing -> invalid configuration")
+            raise ConfigurationException
+
         try:
             for obj in self.object_descr_iter('couplers'):
                 nav_obj = NavigationServerObject(obj)
