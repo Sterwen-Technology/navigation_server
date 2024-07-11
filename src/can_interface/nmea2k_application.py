@@ -104,6 +104,9 @@ class NMEA2000Application(NMEA2000Device):
         self.init_configuration_information()
         self._manufacturer_name = MessageServerGlobals.manufacturers.by_code(self._iso_name.manufacturer_code).name
 
+    def is_proxy(self):
+        return False
+
     def init_product_information(self):
         '''
         This method is meant to be overloaded in subclasses to create specific product information

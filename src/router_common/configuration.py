@@ -114,7 +114,7 @@ class Feature:
         self._classes = {}
         self._init_function = None
         for obj_name, obj in inspect.getmembers(package):
-            # print("\t", obj_name)
+            _logger.debug("Package %s object %s" % (name, obj_name))
             if inspect.isclass(obj):
                 if package_items is not None:
                     # check if we need it

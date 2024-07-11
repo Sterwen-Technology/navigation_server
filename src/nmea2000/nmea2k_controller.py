@@ -12,6 +12,7 @@
 import logging
 import threading
 import queue
+import time
 
 from .nmea2k_device import NMEA2000Device
 from router_common import NavigationServer
@@ -35,12 +36,16 @@ class NMEA2KController(NavigationServer, threading.Thread):
         self._stop_flag = False
         NavigationConfiguration.get_conf().set_global('N2KController', self)
         self._subscriber = {}
+        self._max_silent = opts.get('max_silent', float, 30.0)
+        self._gc_timer = threading.Timer(self._max_silent, self.device_gc)
+        self._gc_lock = threading.Lock()
 
     def server_type(self):
         return 'NMEA2000_CONTROLLER'
 
     def running(self) -> bool:
         return self.is_alive()
+
 
     def network_addresses(self):
         return self._devices.keys()
@@ -60,6 +65,7 @@ class NMEA2KController(NavigationServer, threading.Thread):
 
     def run(self) -> None:
         _logger.info("%s NMEA2000 Controller starts" % self._name)
+        self._gc_timer.start()
         while not self._stop_flag:
             try:
                 msg = self._input_queue.get(block=True, timeout=1.0)
@@ -88,9 +94,11 @@ class NMEA2KController(NavigationServer, threading.Thread):
     def process_msg(self, msg: NMEA2000Msg):
         if msg.sa >= 254:
             return
+        self._gc_lock.acquire()
         device = self.check_device(msg.sa)
         device.receive_msg(msg)
         self.call_subscribers(msg.pgn, msg)
+        self._gc_lock.release()
 
     def store_devices(self):
         filename = self._options.get('store', str, None)
@@ -98,28 +106,37 @@ class NMEA2KController(NavigationServer, threading.Thread):
             return
 
     def get_device(self) -> NMEA2000Device:
+        self._gc_lock.acquire()
         sorted_dict = sorted(self._devices.items())
         for addr, device in sorted_dict:
             yield device
+        self._gc_lock.release()
 
     def sort_devices(self):
         return sorted(self._devices.items())
 
     def get_device_by_address(self, address: int):
+        self._gc_lock.acquire()
         try:
-            return self._devices[address]
+            dev = self._devices[address]
+            self._gc_lock.release()
+            return dev
         except KeyError:
             _logger.warning('N2K No device with address:%d' % address)
+            self._gc_lock.release()
         raise
 
     def get_device_with_property_value(self, d_property, value):
         # we use brute search
+        self._gc_lock.acquire()
         for dev in self._devices:
             try:
                 if dev.property[d_property] == value:
+                    self._gc_lock.release()
                     return dev
             except KeyError:
                 continue
+        self._gc_lock.release()
         raise KeyError
 
     def init_save(self):
@@ -134,6 +151,25 @@ class NMEA2KController(NavigationServer, threading.Thread):
         except KeyError:
             return
         function(msg)
+
+    def device_gc(self):
+        '''
+        Garbage collect devices that are not sending messages
+        '''
+        self._gc_lock.acquire()
+        check_time = time.time()
+        to_be_deleted = []
+        for key, dev in self._devices:
+            if dev.is_proxy():
+                # only proxies can disappear
+                if check_time - dev.last_time_seen > self._max_silent:
+                    # the device has not been seen, so it shall be removed
+                    to_be_deleted.append(key)
+        for key in to_be_deleted:
+            del self._devices[key]
+        self._gc_lock.release()
+        self._gc_timer = threading.Timer(self._max_silent, self.device_gc)
+        self._gc_timer.start()
 
 
 
