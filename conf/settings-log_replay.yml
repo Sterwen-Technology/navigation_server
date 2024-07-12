@@ -8,9 +8,10 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
-
+function:
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
+debug_configuration: true
 # log_file: test_fast_packet
 log_module:
 

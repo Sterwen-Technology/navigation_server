@@ -1,8 +1,8 @@
-## External system API
+## External/Internal system API
 
 ### Introduction
 
-We describe here only the external interfaces that can be configured on the **nmea_message_server** . These interfaces can transmit messages containing NMEA data on various format and protocol, but also allow the monitoring and control of each server.
+We describe here only the external interfaces that can be configured on the **navigation_server** . These interfaces can transmit messages containing NMEA data on various format and protocol, but also allow the monitoring and control of each server.
 
 The transport layer can be either raw TCP sockets or more sophisticated gRPC communication over HTTP/2. While the data layer is more variable:
 
@@ -11,6 +11,8 @@ The transport layer can be either raw TCP sockets or more sophisticated gRPC com
 - NMEA0183 over gRPC
 - NMEA2000 (binary format) over gRPC
 - NMEA2000 decoded over gRPC
+- Specific protobuf messages over gRPC
+- 
 
 They key benefit of using gRPC is that it fully structure the communication removing the need to analyse the message stream to extract each individual messages. It also provides a fully formalized definition of the interface. On the other end, today, there is no mainstream navigation software accepting gRPC interfaces for the navigation data. So the basic TCP message stream is still what is expected by Navigation software.
 Using gRPC is making also easy to implement communication security, although this not included in the current version.

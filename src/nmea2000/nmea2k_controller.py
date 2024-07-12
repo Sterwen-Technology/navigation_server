@@ -159,11 +159,12 @@ class NMEA2KController(NavigationServer, threading.Thread):
         self._gc_lock.acquire()
         check_time = time.time()
         to_be_deleted = []
-        for key, dev in self._devices:
+        for key, dev in self._devices.items():
             if dev.is_proxy():
                 # only proxies can disappear
                 if check_time - dev.last_time_seen > self._max_silent:
                     # the device has not been seen, so it shall be removed
+                    _logger.info(f"NMEA2000 device at @{key} non longer active")
                     to_be_deleted.append(key)
         for key in to_be_deleted:
             del self._devices[key]

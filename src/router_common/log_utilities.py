@@ -32,6 +32,9 @@ class NavigationLogSystem:
         modules = config.get_option('log_module', None)
         if modules is None:
             return
+        if modules is not dict:
+            _logger.error("Invalid module list in log configuration => ignored")
+            return
         # print(modules)
         for module, level in modules.items():
             mod_log = _logger.getChild(module)

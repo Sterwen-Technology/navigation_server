@@ -1,17 +1,17 @@
 ## Description
-The navigation server-router aggregate and distribute navigation and other operational data aboard recreational vessels.
+The navigation server-router aggregate and distribute navigation and other operational data aboard recreational or small professional vessels.
 It is a focal point and server for all kind of data needed to control the course and operational condition of the boat.
-The system is based on the building blocks described here below. 
-The configuration and parameters of the system are described in a Yaml file.
+The system is based on the building blocks described here below. These building blocks can be configured in several processes and each 
+The configuration and parameters of the system are described in a Yaml file. See the corresponding section.
 All building blocks are optional, but if there is no Coupler or Publisher nothing will happen.
 
-**IMPORTANT NOTE: The *nmea_message_server* program can be configured to perform several kind of tasks, and you can also run several programs communicating via various mechanisms to distribute processing load across several CPU both locals or on remote systems. Hence, the system proposed must be seen as a toolbox to process and route NMEA messages**
+**IMPORTANT NOTE: Every *navigation_server* process can be configured to perform several kind of tasks, and you can also run several programs communicating via various mechanisms to distribute processing load across several CPU both locals or on remote systems. Hence, the system proposed must be seen as a toolbox to process and route NMEA and other messages**
 
-Each *nmea_message_server* is a single Python process and messages are exchanged internally. That could lead to burst of messages and some delays du to the Python GIL, when the workload starts to be significant. To overcome that problem, the easiest solution is to split the processing between several *nmea_message_server* processes.
+Each *navigation_server* is a single Python process and messages are exchanged internally. That could lead to burst of messages and some delays du to the Python GIL, when the workload starts to be significant. To overcome that problem, the easiest solution is to split the processing between *navigation_server* processes.
 
-Inside the *nmea_message_server* process the following entities can be configured and instantiated:
+Inside the *navigation_server* process the following entities can be configured and instantiated:
 
-**Server**: servers can accept incoming connections and then are sending or receiving NMEA messages (or messages containing NMEA data) using several application protocols that are described in details in the **NMEA system PAI** document. In the server category we also find NMEA CAN controllers or pseud-controllers that are not external servers but have a server function versus the CAN network.
+**Server**: servers can accept incoming connections and then are sending or receiving messages using several application and transport protocols that are described in details in the **Navigation system API** document. In the server category we also find NMEA CAN controllers or pseud-controllers that are not external servers but have a server function versus the CAN network. Some servers can also be purely internal. One server is used as a starting and shall be the "Main" server in the configuration file.
 
 **Coupler**: couplers are the interfaces for external devices or for incoming messages for communication between processes
 
@@ -39,6 +39,14 @@ That is not exactly a real protocol over TCP/IP but this is working and the mess
 Even NMEA2000 data frames are carrier over such messages like it is done for Digital Yacht or Shipmodul miniplex.
 Using efficient binary encoding with Protobuf and a real protocol like gRPC allows an increase in efficiency. THis is particularly true for NMEA2000 that is binary protocol by nature.
 For more information on [gPRC](https://grpc.io/) and [Protobuf](https://developers.google.com/protocol-buffers/)
+
+#### NavigationMainServer class
+
+This shall be the **Main** server for a NMEA messages router function.
+
+#### GenericTopServer class
+
+This the generic top level **Main** server that is to be used for non routing function. For instance, it is used for the system agent process and the energy_management process.
 
 #### NMEAServer class
 
@@ -363,7 +371,7 @@ There is currently only one pre-defined application, that is used to inject on t
 
 #### GrpcInputApplication(GrpcDataService, NMEA2000Application)
 
-That application implements a gRPC service as defined in the input_server.proto. It accepts both decoded and non decoded NMEA2000 messages (protobuf)
+That application implements a **service** as defined in the input_server.proto. It accepts both decoded and non decoded NMEA2000 messages (protobuf). It shall be associated with the gRPC server of the process.
 
 | Name             | Type   | Default | Signification                                                                  |
 |------------------|--------|---------|--------------------------------------------------------------------------------|
@@ -464,7 +472,7 @@ To keep the message timing, the whole file is read and messages stored in memory
 
 
 ## Energy Management gRPC server
-This service is permanently reading the VEDirect (RS485 over USB) of the MPPT device.
+This service is permanently reading the VEDirect (RS485 over USB) of the MPPT device in the current version and is intended to move to additional energy management features in the future.
 Data are available via the gRPC interface.
 
 
@@ -486,13 +494,15 @@ The file is divided in 2 main sections: global section and objects section. The 
 
 The global section includes the definition of the following global parameters:
 
-| Name             | Type                     | Default                        | Signification                                                   |
-|------------------|--------------------------|--------------------------------|-----------------------------------------------------------------|
-| log_level        | DEBUG/INFO/WARNING/ERROR | INFO                           | Level of logging (traces)                                       |
-| manufacturer_xml | string                   | ./def/Manufacturers.N2kDfn.xml | XML file containing NMEA Manufacturers definition               |
-| nmea2000_xml     | string                   | ./def/PGNDefns.N2kDfn.xml      | XML file containing NMEA2000 PGN definitions                    |
-| trace_dir        | string                   | /var/log                       | Directory where all the traces and logs will be stored          |
-| log_file         | string                   | None                           | Filename for all program traces, if None stderr is used instead |
+| Name                   | Type                     | Default                        | Signification                                                                                              |
+|------------------------|--------------------------|--------------------------------|------------------------------------------------------------------------------------------------------------|
+| log_level              | DEBUG/INFO/WARNING/ERROR | INFO                           | Level of logging (traces)                                                                                  |
+| manufacturer_xml       | string                   | ./def/Manufacturers.N2kDfn.xml | XML file containing NMEA Manufacturers definition                                                          |
+| nmea2000_xml           | string                   | ./def/PGNDefns.N2kDfn.xml      | XML file containing NMEA2000 PGN definitions                                                               |
+| trace_dir              | string                   | /var/log                       | Directory where all the traces and logs will be stored                                                     |
+| log_file               | string                   | None                           | Filename for all program traces, if None stderr is used instead                                            |
+| debug_configuration    | boolean                  | False                          | Allow debug traces during the process configuration phase                                                  |
+| decode_definition_only | boolean                  | False                          | If set true then the process stops once fully configured. To be used to test and debug configuration files |
 
 There is  also a subsection (log_module) allowing to adjust the log level per module for fine grain debugging
 
@@ -504,13 +514,32 @@ The per object section includes a list oh object and each object as the followin
 
 The following sections are recognized:
 
+- features
 - servers
 - couplers
 - publishers
 - services
 - filters
 
-Sections are not mandatory
+Sections are not mandatory, but if no *features* only the default Python packages are loaded and not all needed classes will be present
+
+#### Features concept and Python modules
+
+A **feature** allows the dynamic import of Python packages. By default, each process comes with a minimal set of packages, then based on the functionalities that have to be supported by the process, the corresponding *feature* must be explicitly declared in the configuration file.
+If no list is specified after the feature, then the full feature (package) is imported, if a list is specified only the symbols of the list are imported.
+
+Here are the features included with the current version
+
+| feature name  | includes                      | needed for                             |
+|---------------|-------------------------------|----------------------------------------|
+| router_common | Message router basic features |                                        |
+| nmea2000      | NMEA2000 Handling             |                                        |
+| nmea0183      | NMEA0183 handling             |                                        |
+| couplers      | Non CAN couplers              |                                        |  
+| can_interface | direct CAN interface          | NMEA2000 Active controller, CANCoupler |
+| agent         | Linux agent service           | Implementation of the Linux Agent      |
+
+
 
 #### Exemple configuration files
 
@@ -527,7 +556,15 @@ log_module:
     nmea_routing.IPCoupler: INFO
     nmea_routing.publisher: DEBUG
 
+features:
+  - router_core
+  - nmea2000
+  - log_replay
+
 servers:
+
+- Main:
+    class: NavigationMainServer
 
 - NMEAServer:
     class: NMEAServer
@@ -596,7 +633,15 @@ log_module:
   nmea2000.nmea2k_can_interface: INFO
   nmea2000.nmea2k_can_coupler: DEBUG
 
+features:
+  - router_core
+  - nmea2000
+  - can_interface
+
 servers:
+
+- Main:
+    class: NavigationMainServer
 
 - NMEAServer:
       class: NMEAServer
@@ -653,10 +698,18 @@ filters:
 | Miniplex configuration server | 4501 | TCP                | Miniplex specific    |
 | gRPC server                   | 4502 | gRPC               | see console.proto    |
 | NMEA message sender           | 4503 | TCP                | NMEA0183 like        |
-| VE Direct MPPT server         | 4505 | gRPC               | see vedirect.proto   |
+| Energy management server      | 4505 | gRPC               | see vedirect.proto   |
 | Local Linux agent             | 4506 | gRPC               | see agent.proto      |
 
 ## Implementation structure
+
+### Root directory
+
+### Launching a message server process
+
+A generic Python module is used to start any server "server_main.py" and it requires the configuration file that is defining the feature and parameters of the process using the *--settings option*
+
+
 
 
 

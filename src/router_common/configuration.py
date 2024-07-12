@@ -223,6 +223,9 @@ class NavigationConfiguration:
             _logger.error("Settings file decoding error %s" % str(e))
             fp.close()
             raise
+        # check if we debug the configuration analysis
+        if self._configuration.get('debug_configuration', False):
+            _logger.setLevel(logging.DEBUG)
         # display the server purpose
         try:
             server_purpose = self._configuration['function']
