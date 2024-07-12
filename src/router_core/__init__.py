@@ -9,7 +9,7 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-from .main_server import NavigationMainServer
+from .router_main import NavigationMainServer
 from .coupler import Coupler, CouplerReadError, CouplerTimeOut, CouplerWriteError, CouplerNotPresent, CouplerOpenRefused
 from .filters import NMEAFilter, FilterSet, TimeFilter
 from .IPCoupler import BufferedIPCoupler, TCPBufferedReader
