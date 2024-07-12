@@ -12,11 +12,7 @@
 import logging
 import time
 
-from nmea2000.nmea2k_manufacturers import Manufacturers
-from nmea2000.nmea2k_pgndefs import PGNDefinitions
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
-from nmea2000.nmea2000_msg import NMEA2000Msg
-from utilities.global_variables import MessageServerGlobals
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 

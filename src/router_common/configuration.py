@@ -1,0 +1,453 @@
+#-------------------------------------------------------------------------------
+# Name:        configuration
+# Purpose:     Decode Yaml configuration file and manage the related objects
+#
+# Author:      Laurent Carré
+#
+# Created:     08/01/2022 - new version with features 20/03/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+
+import inspect
+import yaml
+import logging
+import sys
+import importlib
+
+from router_common import ObjectCreationError, MessageServerGlobals, ObjectFatalError
+from .grpc_server_service import GrpcServer
+from .generic_top_server import GenericTopServer
+
+_logger = logging.getLogger("ShipDataServer."+__name__)
+
+
+class ConfigurationException(Exception):
+    pass
+
+
+class Parameters:
+
+    def __init__(self, param: dict):
+        self._param = param
+
+    def __getitem__(self, p_name):
+        return self._param[p_name]
+
+    @staticmethod
+    def convert(p_name, p_type, value):
+        if p_type == str:
+            return str(value)
+        elif p_type == bytes:
+            return bytes(str(value).encode())
+        elif p_type == bool:
+            if type(value) is bool:
+                return value
+            else:
+                raise ValueError
+        elif p_type == int:
+            if type(value) is int:
+                return value
+            else:
+                _logger.warning("Parameter %s expected int" % p_name)
+                raise ValueError
+        elif p_type == float:
+            if type(value) is float:
+                return value
+            else:
+                try:
+                    return float(value)
+                except ValueError:
+                    _logger.warning("Parameter %s expected float" % p_name)
+                    raise
+        else:
+            _logger.error("Not supported type %s for parameter %s" % (str(p_type), p_name) )
+            raise ValueError
+
+    def getv(self, p_name):
+        try:
+            return self._param[p_name]
+        except KeyError:
+            return "Unknown parameter"
+
+    def get(self, p_name, p_type, default):
+        try:
+            value = self._param[p_name]
+        except KeyError:
+            if default is None:
+                return None
+            value = default
+        return self.convert(p_name, p_type, value)
+
+    def getlist(self, p_name, p_type, default=None):
+        try:
+            value = self._param[p_name]
+        except KeyError:
+            return default
+
+        if issubclass(type(value), list):
+            val_list = []
+            for v in value:
+                val_list.append(self.convert('list item for %s' % p_name, p_type, v))
+            return val_list
+        else:
+            _logger.warning("Parameter %s expected a list" % p_name)
+            return default
+
+    def get_choice(self, p_name, p_list, default):
+        try:
+            value = self._param[p_name]
+        except KeyError:
+            return default
+        if value not in p_list:
+            _logger.error("Incorrect value %s for %s" % (value, p_name))
+            return default
+        return value
+
+
+class Feature:
+
+    def __init__(self, name,  package, configuration, package_items):
+        self._name = name
+        self._package = package
+        self._configuration = configuration
+        self._classes = {}
+        self._init_function = None
+        for obj_name, obj in inspect.getmembers(package):
+            _logger.debug("Package %s object %s" % (name, obj_name))
+            if inspect.isclass(obj):
+                if package_items is not None:
+                    # check if we need it
+                    if obj_name not in package_items:
+                        continue
+                # we are good
+                _logger.info(f"Adding class:{obj_name}")
+                self._configuration.add_class(obj)
+                self._classes[obj_name] = obj
+            elif inspect.isfunction(obj):
+                if obj_name == 'initialize_feature':
+                    # we got it !
+                    self._init_function = obj
+
+    def initialize(self, options):
+        if self._init_function is not None:
+            self._init_function(options)
+
+
+class NavigationServerObject:
+
+    def __init__(self, class_descr):
+        for item in class_descr.items():
+            self._name = item[0]
+            self._param = item[1]
+        self._class = None
+        self._class_name = self._param['class']
+        self._param['name'] = self._name
+        self._object = None
+        # self._instance = self
+
+    @property
+    def obj_class(self):
+        return self._class
+
+    def set_class(self, obj_class):
+        self._class = obj_class
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def object(self):
+        return self._object
+
+    def build_object(self):
+        if self._class is None:
+            try:
+                self._class = NavigationConfiguration.get_conf().get_class(self._class_name)
+            except KeyError:
+                raise ConfigurationException("Missing class to build %s object" % self._class_name)
+        factory = self._param.get('factory', None)
+        try:
+            if factory is None:
+                self._object = self._class(Parameters(self._param))
+            else:
+                self._object = getattr(self._class, factory)(Parameters(self._param))
+            return self._object
+        except (TypeError, ObjectCreationError) as e:
+            _logger.error("Error building object %s class %s: %s" % (self._name, self._class_name, e))
+            raise ObjectCreationError("Error building object %s class %s: %s" % (self._name, self._class_name, e))
+
+    def __str__(self):
+        return "Object %s class %s object %s" % (self._name, self._class, self._object)
+
+
+class NavigationConfiguration:
+
+    _instance = None
+
+    @staticmethod
+    def get_conf():
+        return NavigationConfiguration._instance
+
+    def __init__(self):
+        # print ("Logger", _logger.getEffectiveLevel(), _logger.name)
+        self._configuration = None
+        self._obj_dict = {}
+        self._class_dict = {}
+        self._servers = {}
+        self._couplers = {}
+        self._publishers = {}
+        self._services = {}
+        self._filters = {}
+        self._applications = {}
+        self._globals = {}
+        self._features = {}
+        self._hooks = {}
+        self._main = None
+        self._main_server = None
+        NavigationConfiguration._instance = self
+        MessageServerGlobals.configuration = self
+
+    def build_configuration(self, settings_file):
+
+        MessageServerGlobals.global_variables = self
+        try:
+            fp = open(settings_file, 'r')
+        except IOError as e:
+            _logger.error("Settings file %s error %s" % (settings_file, e))
+            raise
+        try:
+            self._configuration = yaml.load(fp, yaml.FullLoader)
+        except yaml.YAMLError as e:
+            _logger.error("Settings file decoding error %s" % str(e))
+            fp.close()
+            raise
+        # check if we debug the configuration analysis
+        if self._configuration.get('debug_configuration', False):
+            _logger.setLevel(logging.DEBUG)
+        # display the server purpose
+        try:
+            server_purpose = self._configuration['function']
+        except KeyError:
+            server_purpose = 'Unknown'
+            self._configuration['function'] = 'Unknown (missing "function" keyword)'
+        _logger.info(f"Server function {server_purpose}")
+        # create entries for allways included classes
+        self.import_internal()
+        for feature in self.object_descr_iter('features'):
+            # import the required package from the configuration file
+            self.import_feature(feature)
+        for obj in self.object_descr_iter('servers'):
+            nav_obj = NavigationServerObject(obj)
+            if nav_obj.name == 'Main':
+                self._main = nav_obj
+            else:
+                self._obj_dict[nav_obj.name] = nav_obj
+                self._servers[nav_obj.name] = nav_obj
+        if self._main is None:
+            _logger.error("The 'Main' server is missing -> invalid configuration")
+            raise ConfigurationException
+
+        try:
+            for obj in self.object_descr_iter('couplers'):
+                nav_obj = NavigationServerObject(obj)
+                self._obj_dict[nav_obj.name] = nav_obj
+                self._couplers[nav_obj.name] = nav_obj
+        except KeyError:
+            _logger.info("No couplers")
+        try:
+            for obj in self.object_descr_iter('publishers'):
+                nav_obj = NavigationServerObject(obj)
+                self._obj_dict[nav_obj.name] = nav_obj
+                self._publishers[nav_obj.name] = nav_obj
+        except KeyError:
+            _logger.info("No publishers")
+        try:
+            for obj in self.object_descr_iter('services'):
+                nav_obj = NavigationServerObject(obj)
+                self._obj_dict[nav_obj.name] = nav_obj
+                self._services[nav_obj.name] = nav_obj
+        except KeyError:
+            _logger.info("No data clients")
+        try:
+            for obj in self.object_descr_iter('filters'):
+                nav_obj = NavigationServerObject(obj)
+                self._obj_dict[nav_obj.name] = nav_obj
+                self._filters[nav_obj.name] = nav_obj
+        except KeyError:
+            _logger.info("No filters")
+        try:
+            for obj in self.object_descr_iter('applications'):
+                nav_obj = NavigationServerObject(obj)
+                self._obj_dict[nav_obj.name] = nav_obj
+                self._applications[nav_obj.name] = nav_obj
+        except KeyError:
+            _logger.info("No applications")
+
+        _logger.info("Finished analyzing settings file:%s " % settings_file)
+        return self
+
+    def dump(self):
+        print(self._configuration)
+
+    def get_option(self, name, default):
+        return self._configuration.get(name, default)
+
+    def object_descr_iter(self, obj_type):
+        impl_obj_list = self._configuration[obj_type]
+        if impl_obj_list is None:
+            # nothing to iterate
+            _logger.info("No %s objects in the settings file" % obj_type)
+            return
+        for impl_obj in impl_obj_list:
+            yield impl_obj
+
+    def servers(self):
+        return self._servers.values()
+
+    def couplers(self):
+        return self._couplers.values()
+
+    def coupler(self, name):
+        return self._couplers[name]
+
+    def publishers(self):
+        return self._publishers.values()
+
+    def services(self):
+        return self._services.values()
+
+    def filters(self):
+        return self._filters.values()
+
+    def applications(self):
+        return self._applications.values()
+
+    @property
+    def main_server(self):
+        return self._main_server
+
+    def add_class(self, class_object):
+        self._class_dict[class_object.__name__] = class_object
+
+    def get_class(self, name):
+        return self._class_dict[name]
+
+    def get_object(self, name):
+        try:
+            return self._obj_dict[name].object
+        except KeyError:
+            _logger.error("No object named: %s" % name)
+            raise
+
+    def set_global(self, key, obj):
+        self._globals[key] = obj
+
+    def get_global(self, key):
+        try:
+            return self._globals[key]
+        except KeyError:
+            _logger.error("Global reference %s non existent" % key)
+
+    def store_hook(self, key, hook):
+        self._hooks[key] = hook
+
+    def get_hook(self, key):
+        return self._hooks[key]
+
+    def import_internal(self):
+
+        self.add_class(GrpcServer)
+        self.add_class(GenericTopServer)
+
+    def import_feature(self, feature):
+        if type(feature) is str:
+            package_name = feature
+            package_items = None
+        else:
+            package_name, package_items = feature.popitem()
+
+        _logger.info(f"Include feature {package_name} with objects:")
+        try:
+            package = importlib.import_module(package_name)
+        except ImportError as err:
+            _logger.error("Error importing package %s: %s" % (package_name, str(err)))
+            return
+        self._features[package_name] = Feature(package_name, package, self, package_items)
+
+    def initialize_features(self, options):
+        for feature in self._features.values():
+            feature.initialize(options)
+
+    def build_objects(self):
+
+        self._main_server = self._main.build_object()
+        # create the filters upfront
+        for inst_descr in self._filters.values():
+            try:
+                inst_descr.build_object()
+            except ConfigurationException as e:
+                _logger.error(str(e))
+                continue
+        _logger.debug("Filter created")
+        for inst_descr in self._applications.values():
+            inst_descr.build_object()
+        _logger.debug("Applications created")
+        # create the servers
+        for server_descr in self._servers.values():
+            try:
+                server = server_descr.build_object()
+            except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+                _logger.error("Error building server %s" % e)
+                continue
+            self._main_server.add_server(server)
+        _logger.debug("Servers created")
+        # create the services and notably the Console
+        for data_s in self._services.values():
+            try:
+                service = data_s.build_object()
+            except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+                _logger.error("Error building service:%s" % e)
+                continue
+            self._main_server.add_service(service)
+        if not self._main_server.console_present:
+            _logger.warning("No console defined")
+        _logger.debug("Services created")
+        # create the couplers
+        for inst_descr in self._couplers.values():
+            try:
+                coupler = inst_descr.build_object()
+            except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+                _logger.error("Error building Coupler:%s" % str(e))
+                continue
+            self._main_server.add_coupler(coupler)
+            if self._main_server.console_present:
+                self._main_server.console.add_coupler(coupler)
+        _logger.debug("Couplers created")
+        # create the publishers
+        for pub_descr in self._publishers.values():
+            try:
+                publisher = pub_descr.build_object()
+                self._main_server.add_publisher(publisher)
+            except ConfigurationException as e:
+                _logger.error(str(e))
+                continue
+        _logger.debug("Publishers created")
+
+
+def main():
+    file = sys.argv[1]
+    conf = NavigationConfiguration().build_configuration(file)
+    # conf.dump()
+    for server in conf.object_descr_iter('servers'):
+        print(server)
+        items = server.items()
+        for item in items:
+            name = item[0]
+            param = item[1]
+            print(name, param)
+
+
+if __name__ == '__main__':
+    main()

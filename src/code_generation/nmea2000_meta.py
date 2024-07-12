@@ -11,13 +11,12 @@
 
 import logging
 import struct
-from collections import namedtuple
 
-from nmea2000.nmea2k_pgn_definition import PGNDef
-from nmea2000.nmea2k_encode_decode import BitField, BitFieldDef
-from nmea2000.nmea2k_fielddefs import (FIXED_LENGTH_BYTES, FIXED_LENGTH_NUMBER, VARIABLE_LENGTH_BYTES, EnumField,
-                                       REPEATED_FIELD_SET, Field)
-from utilities.global_variables import MessageServerGlobals, manufacturer_name, find_pgn
+from nmea2000_datamodel import PGNDef
+from nmea2000_datamodel.nmea2k_encode_decode import BitField, BitFieldDef
+from nmea2000_datamodel import (FIXED_LENGTH_BYTES, FIXED_LENGTH_NUMBER, VARIABLE_LENGTH_BYTES, EnumField,
+                                                 REPEATED_FIELD_SET, Field)
+from router_common import MessageServerGlobals, manufacturer_name, find_pgn
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)

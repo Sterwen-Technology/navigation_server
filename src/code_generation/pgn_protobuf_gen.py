@@ -15,7 +15,7 @@ import datetime
 
 
 from code_generation.nmea2000_meta import BitFieldAttributeDef, RepeatAttributeDef, ScalarAttributeDef, NMEA2000Meta
-from utilities.global_variables import Typedef
+from router_common import Typedef
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 

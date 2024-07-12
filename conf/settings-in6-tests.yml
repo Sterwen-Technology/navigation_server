@@ -1,6 +1,7 @@
 #-------------------------------------------------------------------------------
-# Name:        settings.yml
-# Purpose:     Settings file for the navigation server
+# Name:        settings-agent.yml
+# Purpose:     Settings file for the local agent
+# Compatibility: Version 2.0
 #
 # Author:      Laurent Carré
 #
@@ -12,10 +13,20 @@
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    nmea_routing.console: INFO
+    router_core.console: DEBUG
+
+features:
+    - router_core
+    - nmea2000
+    - couplers:
+          - ShipModulConfig
+          - ShipModulInterface
 
 
 servers:
+
+- Main:
+      class: NavigationMainServer
 
 - NMEAServer:
     class: NMEAServer
@@ -44,7 +55,7 @@ couplers:
 
 - MiniPlex3:
     class: ShipModulInterface
-    address: 172.16.2.100
+    address: 192.168.1.22
     port: 10110
     nmea2000_controller: NMEANetwork
     protocol: nmea2000

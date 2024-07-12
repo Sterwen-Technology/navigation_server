@@ -10,14 +10,11 @@
 #-------------------------------------------------------------------------------
 
 import socket
-import sys,os
+import sys
 import time
 import serial
-import threading
 
 from argparse import ArgumentParser
-
-from nmea_routing.server_common import NavTCPServer
 
 
 def _parser():

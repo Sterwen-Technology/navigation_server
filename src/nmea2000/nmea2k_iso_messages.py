@@ -13,14 +13,86 @@ import logging
 import struct
 from collections import namedtuple
 
-from nmea2000.nmea2000_msg import NMEA2000Msg, NMEA2000Object
-from nmea2000.nmea2k_name import NMEA2000Name
-from nmea2000.generated_base import extract_var_str
+from router_common import N2KUnknownPGN, find_pgn
+from router_core import NMEA2000Msg
+from nmea2000_datamodel import NMEA2000Name
+from .generated_base import extract_var_str
+from nmea2000_datamodel import PGNDef
 from generated.nmea2000_classes_iso_gen import Pgn126996Class, Pgn126998Class, Pgn126993Class
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 GroupParameter = namedtuple('GroupParameter', ['number', 'value'])
+
+
+class NMEA2000Object:
+    '''
+    This class and subclasses hold decoded NMEA2000 entity that are directly processable
+    The generic subclass is a default
+    Specific subclasses can be created to handle special processing
+    '''
+
+    __slots__ = ('_pgn', '_pgn_def', '_sa', '_da', '_fields', '_message', '_prio')
+
+    def __init__(self, pgn: int):
+        self._pgn = pgn
+        try:
+            self._pgn_def = find_pgn(pgn)
+        except N2KUnknownPGN:
+            _logger.error("NMEA2000Object creation with unknown PGN %d" % pgn)
+            raise
+        self._sa = 0
+        self._da = 255
+        self._fields = None
+        self._message = None
+        self._prio = 7
+
+    def from_message(self, msg: NMEA2000Msg):
+        if self._pgn != msg.pgn:
+            raise ValueError
+        self._sa = msg.sa
+        self._da = msg.da
+        self._message = msg
+        self._fields = msg.decode()['fields']
+        self.update()
+        return self
+
+    def message(self):
+        if self._message is None:
+            self._message = NMEA2000Msg(self._pgn, self._prio, self._sa, self._da, self.encode_payload())
+        if self._pgn_def.pdu_format == PGNDef.PDU1 and self._da == 0:
+            _logger.warning("NMEA2000 Message with PDU1 format and no destination address")
+        return self._message
+
+    def update(self):
+        raise NotImplementedError("Method update To be implemented in subclass")
+
+    def encode_payload(self) -> bytes:
+        raise NotImplementedError("Method encode_payload To be implemented in subclass")
+
+    @property
+    def pgn(self):
+        return self._pgn
+
+    @property
+    def sa(self):
+        return self._sa
+
+    @property
+    def da(self):
+        return self._da
+
+    @property
+    def fields(self) -> dict:
+        return self._fields
+
+    @sa.setter
+    def sa(self, value):
+        self._sa = value
+
+    @da.setter
+    def da(self, value):
+        self._da = value
 
 
 class AddressClaim(NMEA2000Object):

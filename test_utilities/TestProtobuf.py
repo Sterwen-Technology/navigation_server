@@ -1,5 +1,5 @@
 from generated.server_pb2 import nmea_msg
-from nmea0183.nmea0183_msg import NMEA0183Msg
+from router_core.nmea0183_msg import NMEA0183Msg
 
 
 def main():

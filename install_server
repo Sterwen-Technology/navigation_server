@@ -2,19 +2,19 @@
 # shell script to perform the installation on systemd
 #
 cp navigation.service /lib/systemd/system
-cp vedirect.service /lib/systemd/system
+cp energy.service /lib/systemd/system
 cp navigation_agent.service /lib/systemd/system
 
 systemctl daemon-reload
 
 systemctl enable navigation
-systemctl enable vedirect
+systemctl enable energy
 systemctl enable navigation_agent
 
 systemctl start navigation
-systemctl start vedirect
+systemctl start energy
 systemctl start navigation_agent
 
 systemctl status navigation
-systemctl status vedirect
+systemctl status energy
 systemctl status navigation_agent

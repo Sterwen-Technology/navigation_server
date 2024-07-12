@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     23/07/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 import logging
@@ -13,16 +13,16 @@ import threading
 import queue
 import time
 
-from log_replay.raw_log_reader import RawLogFile, LogReadError
-from nmea_routing.coupler import Coupler, CouplerOpenRefused
-from utilities.global_exceptions import IncompleteMessage
-from nmea0183.nmea0183_msg import NMEA0183Msg, NMEAInvalidFrame
-from nmea2000.nmea2000_msg import fromProprietaryNmea, NMEA2000Msg
-from nmea2000.nmea2k_fast_packet import FastPacketHandler, FastPacketException
-from nmea2000.nmea2k_pgndefs import PGNDef
-from nmea_routing.generic_msg import NavGenericMsg, NULL_MSG, N2K_MSG
-from nmea_routing.shipmodul_if import ShipModulInterface
-from nmea_routing.ydn2k_coupler import YDCoupler
+from .raw_log_reader import RawLogFile, LogReadError
+from router_core import Coupler, CouplerOpenRefused
+from router_common import IncompleteMessage
+from router_core import NMEA0183Msg, NMEAInvalidFrame
+from router_core import fromProprietaryNmea, NMEA2000Msg
+from nmea2000 import FastPacketHandler, FastPacketException
+from nmea2000_datamodel import PGNDef
+from router_common import NavGenericMsg, NULL_MSG, N2K_MSG
+from couplers import ShipModulInterface
+from couplers import YDCoupler
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -100,6 +100,7 @@ class RawLogCoupler(Coupler):
             self._pgn_white_list = pgn_white_list
         else:
             self._pgn_white_list = None
+        self._sa_black_list = []
 
     def open(self):
         _logger.info("LogCoupler %s opening log file %s" % (self.object_name(), self._filename))
@@ -199,6 +200,9 @@ class RawLogCoupler(Coupler):
 
         pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
         sa = can_id & 0xFF
+        # filter source
+        if sa in self._sa_black_list:
+            raise IncompleteMessage
         if self._pgn_white_list is not None:
             if pgn not in self._pgn_white_list:
                 raise IncompleteMessage
@@ -255,3 +259,18 @@ class RawLogCoupler(Coupler):
         if self._state == self.ACTIVE:
             _logger.info("RawLogCoupler restart from the beginning")
             self._logfile.restart()
+
+    def remove_sa(self, args):
+        sa = args.get('address', 256)
+        if sa > 253:
+            return
+        self._sa_black_list.append(sa)
+
+    def add_sa(self, args):
+        sa = args.get('address', 256)
+        if sa > 253:
+            return
+        try:
+            self._sa_black_list.remove(sa)
+        except ValueError:
+            return

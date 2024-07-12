@@ -1,0 +1,140 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     09/07/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+function: Navigation message server
+log_level: INFO
+trace_dir: /data/solidsense
+log_module:
+    nmea_routing.console: INFO
+    nmea_routing.internal_gps: INFO
+    router_common.configuration: DEBUG
+
+features:
+    - router_core
+    - nmea2000
+    - nmea0183
+    - couplers:
+          - ShipModulConfig
+          - ShipModulInterface
+          - InternalGps
+          - MpptCoupler
+          - NMEATCPReader
+
+decode_definition_only: true
+
+servers:
+
+- Main:
+      class: NavigationMainServer
+      
+- NMEAServer:
+    class: NMEAServer
+    port: 4500
+    nmea2000: dyfmt
+    filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K, Barometer]
+    
+- gRPCMain:
+    class: GrpcServer
+    port: 4502
+
+- ShipModulConfig:
+    class: ShipModulConfig
+    port: 4501
+    coupler: MiniPlex3
+    
+- NMEASender:
+    class: NMEASenderServer
+    port: 4503
+    coupler: MiniPlex3
+    max_silent: 10
+    # master: 172.16.0.100
+    timeout: 8.0
+    
+- NMEANetwork:
+    class: NMEA2KController
+
+
+couplers:
+
+- MiniPlex3:
+    class: ShipModulInterface
+    address: 172.16.2.100
+    port: 10110
+    transport: TCP
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
+    autostart: true
+    trace_raw: false
+    
+- SolarPanel:
+    class: MpptCoupler
+    port: 4505
+    server: NMEAServer
+    direction: read_only
+    report_timer: 20
+
+- Gps:
+   class: InternalGps
+   autostart: false
+    
+- ScannavReplay:
+    class: NMEATCPReader
+    address: 172.16.1.103
+    port: 2000
+    autostart: false
+    
+services:
+
+- Console:
+    class: Console
+    server: gRPCMain
+
+
+publishers:
+
+#- Trace:
+#    class: N2KTracePublisher
+#    instruments: [MiniPlex3]
+#   queue_size: 40
+#   filter: [129540]
+
+
+#    - MainLog:
+#       class: LogPublisher
+#        file: /data/solidsense/log/navigation.log
+#        instruments: [MiniPlex3]
+
+filters:
+
+- RemoveGPS:
+     class: NMEA0183Filter
+     talker: GP
+     formatter: GSV
+     action: discard
+
+- DiscardAISGPS:
+     class: NMEA2000Filter
+     source: 43
+     pgn: [129025, 129026]
+     action: discard
+
+- AutoPilotN2K:
+    class: NMEA2000Filter
+    source: 7
+    action: discard
+
+- Barometer:
+    class: NMEA2000Filter
+    source: 52
+    pgn: [130310, 130311, 130314]
+    action: time_filter
+    period: 60.0
+

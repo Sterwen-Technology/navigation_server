@@ -13,11 +13,11 @@ import logging
 import time
 
 
-from nmea2000.nmea2000_msg import NMEA2000Msg
-from nmea2000.nmea2k_publisher import PgnRecord
-from nmea2000.nmea2k_pgndefs import N2KUnknownPGN, N2KDecodeException
-from nmea2000.nmea2k_iso_messages import AddressClaim, ConfigurationInformation, ProductInformation, Heartbeat
-from utilities.global_variables import MessageServerGlobals
+from router_core import NMEA2000Msg
+from .nmea2k_publisher import PgnRecord
+from nmea2000_datamodel import N2KUnknownPGN
+from .nmea2k_iso_messages import AddressClaim, ConfigurationInformation, ProductInformation, Heartbeat
+from router_common import MessageServerGlobals
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -58,6 +58,9 @@ class NMEA2000Device:
         except KeyError:
             _logger.debug("Device address %d => no process function for PGN %d" % (self._address, msg.pgn))
             return
+
+    def is_proxy(self):
+        return True
 
     @property
     def address(self):

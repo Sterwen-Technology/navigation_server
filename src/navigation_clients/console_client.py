@@ -13,8 +13,8 @@ import logging
 
 import grpc
 
-from utilities.protobuf_utilities import *
-from utilities.protob_arguments import *
+from router_common import ProtobufProxy, pb_enum_string, dict_to_protob
+# from router_common.protob_arguments import *
 
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
@@ -116,6 +116,10 @@ class ConsoleClient:
         self._address = address
         self._req_id = 0
         _logger.info("Console on navigation server %s" % address)
+
+    @property
+    def address(self):
+        return self._address
 
     def get_couplers(self):
         couplers = []

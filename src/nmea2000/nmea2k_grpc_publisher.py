@@ -8,17 +8,17 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-import logging
 import threading
 import grpc
-from nmea_routing.publisher import ExternalPublisher
-from nmea_routing.filters import FilterSet
-from nmea2000.nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
-from nmea_routing.generic_msg import *
-from nmea2000.generated_base import NMEA2000DecodedMsg, N2K_DECODED
-from nmea0183.nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter, Nmea0183InvalidMessage
-from nmea0183.nmea0183_msg import NMEA0183Msg
-from nmea2000.nmea2000_msg import NMEA2000Msg
+import logging
+
+from router_core import ExternalPublisher
+from .nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
+from router_common import NavGenericMsg, N2K_MSG, N0183_MSG
+from .generated_base import NMEA2000DecodedMsg, N2K_DECODED
+from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter
+from router_core import NMEA0183Msg, NMEA2000Msg, NMEAInvalidFrame
+
 
 from generated.nmea_messages_pb2 import nmea_msg, server_cmd
 from generated.input_server_pb2_grpc import NMEAInputServerStub
@@ -82,7 +82,7 @@ class GrpcPublisher(ExternalPublisher):
             try:
                 for n2k_msg in self._converter.convert(msg):
                     self.send_decoded_n2k(n2k_msg)
-            except Nmea0183InvalidMessage:
+            except NMEAInvalidFrame:
                 if self._nmea183 != 'convert_strict':
                     self.send_nmea0183(msg.msg)
             except Exception as e:
