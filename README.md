@@ -65,9 +65,9 @@ For production the system should be run through *systemd*. Services that can be 
 
 The documentation is located in the *doc* directory.
 
-[message_server documentation](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/NMEA%20message_server.md)
+[message_server documentation](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/Navigation%20message%20server.md)
 
-[System API](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/NMEA%20system%20API.md)
+[System API](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/Navigation%20system%20API.md)
 
 [NMEA2000 support](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/NMEA2000.md)
 
