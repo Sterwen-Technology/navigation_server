@@ -23,7 +23,7 @@ A sample GUI application for the control of the various server is also available
 
 ## Installation
 The project is entirely written in Python 3 and has been tested with Python 3.7 - 3.11. It is intended to run on Linux based system. Is has been tested on Debian, Yocto and Ubuntu.
-Installation on Windows is working with some limitations on TCP sockets and no support on Direct CAN connection.
+Installation on Windows 10 or 11 is working with some limitations on TCP sockets and no support on Direct CAN connection.
 
 Current installation is based on a tar file or clone of the git repo. The tar file (**navigation.tar**) is in the head directory of the git repo. Just extract in the directory where you want to run the system.
 Then you can install all the required packages: `pip install -r requirements.txt`
@@ -43,7 +43,7 @@ It is recommended to set up a Python virtual environment before the installation
  - CAN Direct interfaces:
    - PICAN2 HAT on RPi3 or RPi4
    - SolidRun NXP based gateways: Industrial N6 and N8 Compact with CAN interface
- - Victron VE Direct devices (requires a dedicated process part of the application delivery)
+ - Victron VE Direct devices (requires a dedicated process to be configured)
 
 The most versatile solution is to use a device that has a direct CAN bus access. In that case, no specific hardware is required and more features can be deployed as this system becomes a real ECU (Electronic Control Unit) that can run one or more Controller Applications (NMEA2000 devices).
 The same device could combine some NMEA0183 inputs on serial port(s) and NMEA2000 bus communication.
@@ -65,9 +65,9 @@ For production the system should be run through *systemd*. Services that can be 
 
 The documentation is located in the *doc* directory.
 
-[message_server documentation](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/NMEA%20message_server.md)
+[message_server documentation](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/Navigation%20message%20server.md)
 
-[System API](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/NMEA%20system%20API.md)
+[System API](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/Navigation%20system%20API.md)
 
 [NMEA2000 support](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/NMEA2000.md)
 

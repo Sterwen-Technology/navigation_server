@@ -23,7 +23,7 @@ from router_common import init_options
 # from router_core.main_server import NavigationMainServer
 
 
-MessageServerGlobals.version = "2.0"
+MessageServerGlobals.version = "2.01"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -46,10 +46,12 @@ def main():
     # nmea0183_msg.NMEA0183Sentences.init(config.get_option('talker', 'ST'))
     config.initialize_features(config)
 
+    config.build_objects()
+
     if config.get_option('decode_definition_only', False):
         _logger.info("Decode only mode -> no active server")
         return
-    config.build_objects()
+
     _logger.debug("Starting the main server")
     if config.main_server.start():
         if opts.timer is not None:

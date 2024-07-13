@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     23/07/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 import logging
@@ -100,6 +100,7 @@ class RawLogCoupler(Coupler):
             self._pgn_white_list = pgn_white_list
         else:
             self._pgn_white_list = None
+        self._sa_black_list = []
 
     def open(self):
         _logger.info("LogCoupler %s opening log file %s" % (self.object_name(), self._filename))
@@ -199,6 +200,9 @@ class RawLogCoupler(Coupler):
 
         pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
         sa = can_id & 0xFF
+        # filter source
+        if sa in self._sa_black_list:
+            raise IncompleteMessage
         if self._pgn_white_list is not None:
             if pgn not in self._pgn_white_list:
                 raise IncompleteMessage
@@ -255,3 +259,18 @@ class RawLogCoupler(Coupler):
         if self._state == self.ACTIVE:
             _logger.info("RawLogCoupler restart from the beginning")
             self._logfile.restart()
+
+    def remove_sa(self, args):
+        sa = args.get('address', 256)
+        if sa > 253:
+            return
+        self._sa_black_list.append(sa)
+
+    def add_sa(self, args):
+        sa = args.get('address', 256)
+        if sa > 253:
+            return
+        try:
+            self._sa_black_list.remove(sa)
+        except ValueError:
+            return
