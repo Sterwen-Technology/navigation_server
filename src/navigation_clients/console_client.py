@@ -13,7 +13,7 @@ import logging
 
 import grpc
 
-from router_common import ProtobufProxy, pb_enum_string, dict_to_protob
+from router_common import ProtobufProxy, pb_enum_string, dict_to_protob, protob_to_dict
 # from router_common.protob_arguments import *
 
 from generated.console_pb2 import *
