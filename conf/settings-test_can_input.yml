@@ -20,12 +20,13 @@
 #  injecting the messages (via the Injector 'CanFeed') on the CAN NMEA2000 bus through the DirectCANCoupler 'InputCoupler'
 #  remark: 'DecodedInput' application is not used in this case as it takes decoded NMEA2000 in Protobuf format as input
 
-
+function: Scannav replay to CAN injection
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 
 log_module:
-
+  can_interface.nmea2k_application: INFO
+  can_interface.nmea2k_can_interface: INFO
 
 features:
   - router_core
@@ -48,6 +49,7 @@ servers:
       class: NMEA2KActiveController
       trace: false
       channel: can0
+      max_silent: 60.0
       applications: [InputCoupler, DecodedInput]
 
 couplers:

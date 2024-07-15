@@ -24,7 +24,7 @@ servers:
 
 - gRPCMain:
     class: GrpcServer
-    port: 4506
+    port: 4508
 
 services:
 

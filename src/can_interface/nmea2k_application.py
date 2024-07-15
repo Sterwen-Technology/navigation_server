@@ -19,7 +19,7 @@ from nmea2000 import NMEA2000Device
 from nmea2000_datamodel import NMEA2000MutableName
 from nmea2000.nmea2k_iso_messages import (AddressClaim, ISORequest, ProductInformation, ConfigurationInformation,
                                           AcknowledgeGroupFunction, create_group_function, CommandedAddress,
-                                          CommandGroupFunction)
+                                          CommandGroupFunction, Heartbeat)
 # from nmea2000.nmea2k_active_controller import NMEA2KActiveController
 from router_common import get_id_from_mac
 from router_common import MessageServerGlobals
@@ -85,6 +85,9 @@ class NMEA2000Application(NMEA2000Device):
         _logger.info("Controller Application ECU:%s ISO Name=%08X address=%d type:%s" %
                      (controller.name, self._iso_name.name_value, self._address, self._application_type_name))
         self._claim_timer = None
+        self._heartbeat_timer = None
+        self._heartbeat_interval = 30.0  # can be adjusted in subclasses
+        self._sequence = 0
         super().__init__(self._address, name=self._iso_name)
 
         self._app_state = self.WAIT_FOR_BUS
@@ -127,14 +130,14 @@ class NMEA2000Application(NMEA2000Device):
         self._configuration_information.installation_2 = "Test2"
         self._configuration_information.manufacturer_info = "Sterwen Technology SAS"
 
-    def send_address_claim(self, da=255):
-        self.respond_address_claim(da)
+    def send_address_claim(self):
+        self.respond_address_claim()
         self._app_state = self.ADDRESS_CLAIM
         self._claim_timer = threading.Timer(0.4, self.address_claim_delay)
         self._claim_timer.start()
 
-    def respond_address_claim(self, da):
-        claim_msg = AddressClaim(self._address, name=self._iso_name, da=da)
+    def respond_address_claim(self):
+        claim_msg = AddressClaim(self._address, name=self._iso_name, da=255)
         _logger.debug("Application address %d sending address claim to %d" % (self._address, claim_msg.da))
         self._controller.CAN_interface.send(claim_msg.message(), force_send=True)
 
@@ -144,6 +147,8 @@ class NMEA2000Application(NMEA2000Device):
         self._app_state = self.ACTIVE
         self._controller.CAN_interface.allow_send()
         self.send_iso_request(255, 60928)
+        # start sending heartbeat
+        self.send_heartbeat()
         # request = ISORequest(self._address)
         # self._controller.CAN_interface.send(request.message())
         # t = threading.Timer(1.0, self.send_product_information)
@@ -186,6 +191,10 @@ class NMEA2000Application(NMEA2000Device):
                 return
             # now we need to swap addresses
             self.change_address(address)
+        else:
+            _logger.warning("Local application name %8X keeps address %d" % (self._iso_name.name_value, self._address))
+            # need to send an Address Claimed response
+            self.respond_address_claim()
 
     def change_address(self, address):
         _logger.info("Reassigning new address %d" % address)
@@ -201,7 +210,7 @@ class NMEA2000Application(NMEA2000Device):
             request = ISORequest().from_message(msg)
             _logger.debug("Application ISO request received from %d for pgn %d" % (msg.sa, request.request_pgn))
             if request.request_pgn == 60928:
-                self.respond_address_claim(msg.sa)
+                self.respond_address_claim()
             elif request.request_pgn == 126996:
                 # ok we send back the ProductInformation
                 self.send_product_information()
@@ -256,6 +265,18 @@ class NMEA2000Application(NMEA2000Device):
         self._configuration_information.sa = self._address
         self._controller.CAN_interface.send(self._configuration_information.message(), force_send=True)
 
+    def send_heartbeat(self):
+        _logger.info("sending heartbeat from device %d" % self._address)
+        request = Heartbeat()
+        request.sequence = self._sequence
+        request.sa = self._address
+        self._sequence += 1
+        if self._sequence > 255:
+            self._sequence = 0
+        self._controller.CAN_interface.send(request.message(), force_send=True)
+        self._heartbeat_timer = threading.Timer(self._heartbeat_interval, self.send_heartbeat)
+        self._heartbeat_timer.start()
+
     def group_function_handler(self, msg: NMEA2000Msg):
         '''
         Handle PGN 126408 Group Function handler
@@ -285,17 +306,3 @@ class NMEA2000Application(NMEA2000Device):
                                                                 group_function.parameters, acknowledge)
         else:
             _logger.error("Command Group Function PGN %d not supported" % group_function.function_pgn)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
