@@ -20,8 +20,8 @@ from concurrent import futures
 from collections import namedtuple
 # sys.path.insert(0, "/data/solidsense/navigation/src")
 import grpc
-from generated.vedirect_pb2 import solar_output, request, MPPT_device
-from generated.vedirect_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
+from generated.energy_pb2 import solar_output, request, MPPT_device
+from generated.energy_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
 from router_common import GrpcService
 from router_common.protobuf_utilities import set_protobuf_data
 

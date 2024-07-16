@@ -11,9 +11,10 @@
 function:
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
-debug_configuration: true
+debug_configuration: false
 # log_file: test_fast_packet
 log_module:
+  nmea2000.nmea2k_grpc_publisher: INFO
 
 
 features:
@@ -92,8 +93,9 @@ publishers:
 - DataSender:
       class: GrpcPublisher
       address: 127.0.0.1
-      decode_nmea2000: true
-      port: 4504
+      decode_nmea2000: false
+      stop_on_error: true
+      port: 4508
       active: true
       couplers: [LogReader]
 

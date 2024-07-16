@@ -39,6 +39,7 @@ class GrpcPublisher(ExternalPublisher):
         self._max_retry = opts.get('max_retry', int, 20)
         self._retry_interval = opts.get('retry_interval', float, 10.0)
         self._trace_missing_pgn = opts.get('trace_missing_pgn', bool, False)
+        self._stop_on_error = opts.get('stop_on-error', bool, False)
         self._address = "%s:%d" % (opts.get('address', str, '127.0.0.1'), opts.get('port', int, 4502))
         _logger.info("Creating client for data server at %s" % self._address)
         self._channel = grpc.insecure_channel(self._address)
@@ -116,7 +117,7 @@ class GrpcPublisher(ExternalPublisher):
             self._timer.cancel()
 
     def send_pb_message(self, msg):
-        _logger.debug("gRPC Publisher send message: %s" % msg)
+        _logger.debug("gRPC Publisher send decoded message: %s" % msg)
         try:
             resp = self._stub.pushDecodedNMEA2K(msg)
         except grpc.RpcError as err:
@@ -134,11 +135,13 @@ class GrpcPublisher(ExternalPublisher):
             _logger.error("Grpc Publisher error returned by server %s" % resp.status)
 
     def send_message(self, msg):
+        _logger.debug("gRPC Publisher send message: %s" % msg)
         try:
             resp = self._stub.pushNMEA(msg)
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
                 _logger.error("Server Status - Error accessing server:%s" % err)
+                assert self._stop_on_error
             else:
                 _logger.error("Data client %s GRPC Server %s not accessible" % (self._name, self._address))
                 self._ready = False

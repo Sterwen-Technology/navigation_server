@@ -11,8 +11,8 @@
 
 import logging
 import threading
-from generated.vedirect_pb2 import request
-from generated.vedirect_pb2_grpc import *
+from generated.energy_pb2 import request
+from generated.energy_pb2_grpc import *
 from grpc import StatusCode, insecure_channel, RpcError
 
 from router_core.coupler import Coupler, CouplerReadError, CouplerTimeOut

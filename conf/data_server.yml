@@ -1,0 +1,52 @@
+#-------------------------------------------------------------------------------
+# Name:        settings-agent.yml
+# Purpose:     Settings file for the local agent
+#
+# Author:      Laurent Carré
+#
+# Created:     26/02/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+function: Data server
+server_name: data_server
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+    nmea2000.grpc_nmea_input_service: INFO
+    navigation_data.engine_service: DEBUG
+
+debug_configuration: false
+
+features:
+    - nmea2000
+    - navigation_data
+
+servers:
+
+- Main:
+      class: GenericTopServer
+
+- gRPCMain:
+    class: GrpcServer
+    port: 4508
+
+services:
+
+- Dispatcher:
+    class: DataDispatchService
+    server: gRPCMain
+
+- Engines:
+    class: EngineDataService
+    server: gRPCMain
+    primary: Dispatcher
+
+
+
+
+
+
+
+

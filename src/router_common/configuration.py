@@ -15,15 +15,13 @@ import logging
 import sys
 import importlib
 
-from router_common import ObjectCreationError, MessageServerGlobals, ObjectFatalError
+from router_common import ObjectCreationError, MessageServerGlobals, ObjectFatalError, ConfigurationException
 from .grpc_server_service import GrpcServer
 from .generic_top_server import GenericTopServer
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
 
-class ConfigurationException(Exception):
-    pass
 
 
 class Parameters:
@@ -226,6 +224,13 @@ class NavigationConfiguration:
         # check if we debug the configuration analysis
         if self._configuration.get('debug_configuration', False):
             _logger.setLevel(logging.DEBUG)
+        # set the server name
+        try:
+            MessageServerGlobals.server_name = self._configuration['server_name']
+        except KeyError:
+            _logger.warning("Configuration: Missing the server name global parameter")
+            MessageServerGlobals.server_name = "MessageServer(Default)"
+        _logger.info(f"Server name: {MessageServerGlobals.server_name}")
         # display the server purpose
         try:
             server_purpose = self._configuration['function']

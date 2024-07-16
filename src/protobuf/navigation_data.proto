@@ -1,0 +1,40 @@
+//-------------------------------------------------------------------------------
+// Name:        navigation_data.proto
+// Purpose:     protobuf and grpc for remote control of navigation server
+//
+// Author:      Laurent Carré
+//
+// Created:     16/07/2024
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+message engine_data {
+  uint32 engine_id=1;
+  enum EngineState {
+    ENGINE_OFF=0; // No power
+    ENGINE_ON=1;  // Powered on but not running
+    ENGINE_RUNNING=2;
+  }
+  EngineState state=2;
+  float total_hours=3;
+  float speed=4;
+  float temperature=5;
+  string last_start_time=6; // ISO format
+  string last_stop_time=7;
+}
+
+message engine_response {
+    string error_message=1;
+    engine_data data=2;
+}
+
+message engine_request {
+  uint32 engine_id=1;
+}
+
+service EngineData {
+  rpc GetEngineData(engine_request) returns(engine_response) {}
+}

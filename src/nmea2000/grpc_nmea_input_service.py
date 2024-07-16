@@ -18,7 +18,7 @@ from generated.nmea_messages_pb2 import server_resp
 from router_core import NMEA2000Msg
 from router_core import nmea0183msg_from_protobuf
 from router_common.grpc_server_service import GrpcService, GrpcServerError
-from .nmea2k_decode_dispatch import get_n2k_object_from_protobuf
+from .nmea2k_decode_dispatch import get_n2k_object_from_protobuf, get_n2k_decoded_object
 from .generated_base import NMEA2000DecodedMsg
 
 
@@ -53,6 +53,7 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
 
         if request.HasField("N2K_msg"):
             msg = request.N2K_msg
+            _logger.debug("Input service N2K message %d" % msg.pgn)
             resp.reportCode, resp.status = self.incoming_n2k(msg)
 
         elif request.HasField("N0183_msg"):
@@ -124,7 +125,7 @@ class DataDispatchServicer(GrpcNmeaServicer):
         try:
             pv = self._dispatch_table[process_vector.msg_id]
         except KeyError:
-            self._dispatch_table[process_vector.msg_idmsg_id] = process_vector
+            self._dispatch_table[process_vector.msg_id] = process_vector
         else:
             _logger.error(f"DataDispatch subscription duplicate key {process_vector.msg_idmsg_id}")
 
@@ -133,15 +134,18 @@ class DataDispatchServicer(GrpcNmeaServicer):
             pv = self._dispatch_table[msg.pgn]
         except KeyError:
             _logger.debug("DataDispatch incoming_n2k no vector for PGN %d" % msg.pgn)
-            return
+            return 0, "OK"
 
         msg_n2k = NMEA2000Msg(msg.pgn, prio=msg.priority, sa=msg.sa, da=msg.da, payload=msg.payload,
                               timestamp=msg.timestamp)
-        msg_n2k_dec = NMEA2000DecodedMsg(message=msg_n2k)
+        msg_n2k_dec = get_n2k_decoded_object(msg_n2k)
         try:
+            _logger.debug("DataDispatch executing vector for pgn %d" % msg.pgn)
             pv.vector(msg_n2k_dec)
+            return 0, "OK"
         except Exception as err:
             _logger.error(f"Error processing PGN {msg.pgn}: {err}")
+            return 101, str(err)
 
 
 class GrpcDataService(GrpcService):
@@ -206,7 +210,7 @@ class DataDispatchService(GrpcService):
 
     def subscribe(self, subscriber_id, msg_id, vector):
         process_vector = ProcessVector(subscriber_id, msg_id, vector)
-        self._servicer.subscribe()
+        self._servicer.subscribe(process_vector)
 
 
 

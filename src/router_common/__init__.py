@@ -21,8 +21,8 @@ from .object_utilities import copy_attribute, build_subclass_dict
 from .protobuf_utilities import pb_enum_string, set_protobuf_data, ProtobufProxy, GrpcAccessException
 from .protob_arguments import protob_to_dict, dict_to_protob
 from .xml_utilities import XMLDefinitionFile, XMLDecodeError
-from .configuration import ConfigurationException, NavigationConfiguration
+from .configuration import NavigationConfiguration
 from .message_trace import MessageTraceError, NMEAMsgTrace
 from .server_common import NavigationServer
-from .grpc_server_service import GrpcServer, GrpcService, GrpcServerError
+from .grpc_server_service import GrpcServer, GrpcService, GrpcServerError, GrpcSecondaryService
 from .generic_top_server import GenericTopServer

@@ -10,8 +10,8 @@
 #-------------------------------------------------------------------------------
 
 import grpc
-from generated.vedirect_pb2 import *
-from generated.vedirect_pb2_grpc import *
+from generated.energy_pb2 import *
+from generated.energy_pb2_grpc import *
 import logging
 from router_common.protobuf_utilities import *
 

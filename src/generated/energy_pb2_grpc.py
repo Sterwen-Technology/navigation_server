@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import generated.vedirect_pb2 as vedirect__pb2
+import generated.energy_pb2 as energy__pb2
 
 
 
@@ -17,13 +17,13 @@ class solar_mpptStub(object):
         """
         self.GetDeviceInfo = channel.unary_unary(
                 '/solar_mppt/GetDeviceInfo',
-                request_serializer=vedirect__pb2.request.SerializeToString,
-                response_deserializer=vedirect__pb2.MPPT_device.FromString,
+                request_serializer=energy__pb2.request.SerializeToString,
+                response_deserializer=energy__pb2.MPPT_device.FromString,
                 )
         self.GetOutput = channel.unary_unary(
                 '/solar_mppt/GetOutput',
-                request_serializer=vedirect__pb2.request.SerializeToString,
-                response_deserializer=vedirect__pb2.solar_output.FromString,
+                request_serializer=energy__pb2.request.SerializeToString,
+                response_deserializer=energy__pb2.solar_output.FromString,
                 )
 
 
@@ -47,13 +47,13 @@ def add_solar_mpptServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetDeviceInfo': grpc.unary_unary_rpc_method_handler(
                     servicer.GetDeviceInfo,
-                    request_deserializer=vedirect__pb2.request.FromString,
-                    response_serializer=vedirect__pb2.MPPT_device.SerializeToString,
+                    request_deserializer=energy__pb2.request.FromString,
+                    response_serializer=energy__pb2.MPPT_device.SerializeToString,
             ),
             'GetOutput': grpc.unary_unary_rpc_method_handler(
                     servicer.GetOutput,
-                    request_deserializer=vedirect__pb2.request.FromString,
-                    response_serializer=vedirect__pb2.solar_output.SerializeToString,
+                    request_deserializer=energy__pb2.request.FromString,
+                    response_serializer=energy__pb2.solar_output.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -77,8 +77,8 @@ class solar_mppt(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/solar_mppt/GetDeviceInfo',
-            vedirect__pb2.request.SerializeToString,
-            vedirect__pb2.MPPT_device.FromString,
+            energy__pb2.request.SerializeToString,
+            energy__pb2.MPPT_device.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -94,7 +94,7 @@ class solar_mppt(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/solar_mppt/GetOutput',
-            vedirect__pb2.request.SerializeToString,
-            vedirect__pb2.solar_output.FromString,
+            energy__pb2.request.SerializeToString,
+            energy__pb2.solar_output.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

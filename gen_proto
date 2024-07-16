@@ -23,7 +23,7 @@ adjust_protobuf() {
   python mod_pb2.py "${process_file}" generated $*
 }
 
-gen_protobuf vedirect
+gen_protobuf energy
 gen_protobuf console
 gen_protobuf nmea0183
 gen_protobuf nmea2000
@@ -36,6 +36,7 @@ gen_protobuf ecu
 gen_protobuf nmea2000_classes_iso_gen
 gen_protobuf nmea2000_classes_gen
 gen_protobuf iso_name
+gen_protobuf navigation_data
 adjust_protobuf input_server nmea_messages
 adjust_protobuf nmea_messages nmea0183 nmea2000
 adjust_protobuf nmea_server nmea_messages
