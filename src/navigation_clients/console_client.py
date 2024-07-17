@@ -19,7 +19,7 @@ from router_common import ProtobufProxy, pb_enum_string, dict_to_protob, protob_
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
 
-_logger = logging.getLogger("ShipDataClient")
+_logger = logging.getLogger("ShipDataClient." + __name__)
 
 
 class ConsoleAccessException(Exception):
