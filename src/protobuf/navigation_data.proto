@@ -22,6 +22,7 @@ message engine_data {
   float total_hours=3;
   float speed=4;
   float temperature=5;
+  float alternator_voltage=8;
   string last_start_time=6; // ISO format
   string last_stop_time=7;
 }

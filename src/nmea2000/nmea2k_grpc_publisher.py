@@ -48,9 +48,15 @@ class GrpcPublisher(ExternalPublisher):
         self._ready = True
         self._timer = None
         self._nb_retry = 0
+        self._nb_lost_msg = 0
+        self._retry_in_progress = False
 
     def process_msg(self, gen_msg):
         if not self._ready:
+            if self._nb_lost_msg == 0:
+                _logger.warning("GrpcPublisher %s starts to lose messages. In retry %s" %
+                                (self.name, self._retry_in_progress))
+            self._nb_lost_msg += 1
             return True
         if gen_msg.type == N0183_MSG:
             self.process_nmea183(gen_msg)
@@ -123,9 +129,12 @@ class GrpcPublisher(ExternalPublisher):
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
                 _logger.error("Server Status - Error accessing server:%s" % err)
+                if self._stop_on_error:
+                    self.stop()
             else:
                 _logger.error("Data client %s GRPC Server %s not accessible" % (self._name, self._address))
             self._ready = False
+            self._retry_in_progress = True
             # let's wait a bit
             self._timer = threading.Timer(10.0, self.retry_timer)
             self._timer.start()
@@ -141,10 +150,12 @@ class GrpcPublisher(ExternalPublisher):
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
                 _logger.error("Server Status - Error accessing server:%s" % err)
-                assert self._stop_on_error
+                if self._stop_on_error:
+                    self.stop()
             else:
                 _logger.error("Data client %s GRPC Server %s not accessible" % (self._name, self._address))
                 self._ready = False
+                self._retry_in_progress = True
                 # let's wait a bit
                 self._timer = threading.Timer(self._retry_interval, self.retry_timer)
                 self._timer.start()
@@ -171,13 +182,16 @@ class GrpcPublisher(ExternalPublisher):
 
     def retry_timer(self):
         self._timer = None
+        self._retry_in_progress = False
         _logger.debug("Retry timer for Grpc connection")
         # check first
         if self.check_status():
             if not self._ready:
-                _logger.info("Data client %s => GRPC server %s back on line" % (self._name, self._address))
+                _logger.info("GrpcPublisher %s => GRPC server %s back on line" % (self._name, self._address))
             self._ready = True
             self._nb_retry = 0
+            _logger.warning("GrpcPublisher %s - total lost messages %d" % (self._name, self._nb_lost_msg))
+            self._nb_lost_msg = 0
         else:
             self._nb_retry += 1
             if (
@@ -188,6 +202,7 @@ class GrpcPublisher(ExternalPublisher):
             else:
                 self._timer = threading.Timer(self._retry_interval, self.retry_timer)
                 self._timer.start()
+                self._retry_in_progress = True
 
     def channel_callback(self, connectivity: grpc.ChannelConnectivity):
         if connectivity == grpc.ChannelConnectivity.READY:

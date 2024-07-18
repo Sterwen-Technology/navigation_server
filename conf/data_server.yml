@@ -15,7 +15,7 @@ log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
     nmea2000.grpc_nmea_input_service: INFO
-    navigation_data.engine_service: DEBUG
+    navigation_data.engine_service: INFO
 
 debug_configuration: false
 
