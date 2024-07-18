@@ -22,24 +22,24 @@ _logger = logging.getLogger("ShipDataClient." + __name__)
 class EngineProxy(ProtobufProxy):
 
     def __init__(self, engine_msg: engine_data):
-        self._engine = engine_msg
+        self._msg = engine_msg
 
     @property
     def state(self):
-        return pb_enum_string(self._engine, 'state', self._engine.state)
+        return pb_enum_string(self._msg, 'state', self._msg.state)
 
 
     @property
     def last_start_time(self):
         if self._engine.HasField('last_start_time'):
-            return self._engine.last_start_time
+            return self._msg.last_start_time
         else:
             return "Unknown"
 
     @property
     def last_stop_time(self):
         if self._engine.HasField('last_stop_time'):
-            return self._engine.last_stop_time
+            return self._msg.last_stop_time
         else:
             return "Unknown"
 
