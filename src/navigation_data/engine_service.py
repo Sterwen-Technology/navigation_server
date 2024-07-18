@@ -10,6 +10,7 @@
 #-------------------------------------------------------------------------------
 
 import logging
+import threading
 from collections import namedtuple
 import datetime
 import time
@@ -47,6 +48,7 @@ class EngineDataService(GrpcSecondaryService):
         super().__init__(opts)
         self._servicer = None
         self._engines = {}
+        self._timer = threading.Timer(30.0, self.check_off_engines)
 
     def finalize(self):
         super().finalize()
@@ -55,6 +57,7 @@ class EngineDataService(GrpcSecondaryService):
         self._primary_service.subscribe(self, 127488, self.p127488)
         self._primary_service.subscribe(self, 127489, self.p127489)
         add_EngineDataServicer_to_server(self._servicer, self.grpc_server)
+        self._timer.start()
 
     def get_engine(self, engine_id):
         try:
@@ -63,6 +66,12 @@ class EngineDataService(GrpcSecondaryService):
             engine = EngineData(engine_id)
             self._engines[engine_id] = engine
             return engine
+
+    def check_off_engines(self):
+        for e in self._engines.values():
+            e.check_off()
+        self._timer = threading.Timer(30.0, self.check_off_engines)
+        self._timer.start()
 
     def p127488(self, msg):  # PGN127488 Engine parameters Rapid Update
         _logger.debug("EngineData processing PGN127488 on instance %d speed=%f" % (msg.engine_instance, msg.engine_speed))
@@ -104,12 +113,18 @@ class EngineData:
         self._stop_time = None
 
     def update_speed(self, speed):
-        if self._speed == 0.0 and speed > 0.0:
-            self._state = self.RUNNING
-            self._start_time = datetime.datetime.now()
-        elif self._speed > 0.0 and speed == 0.0:
+        if speed > 0.0:
+            if self._state != self.RUNNING:
+                self._state = self.RUNNING
+                _logger.info(f"Engine {self._id} is starting")
+                self._start_time = datetime.datetime.now()
+        elif speed == 0.0:
+            if self._state == self.RUNNING:
+                self._stop_time = datetime.datetime.now()
+                _logger.info(f"Engine {self._id} stops")
+            elif self._state == self.OFF:
+                _logger.info(f"Engine {self._id} is turned on")
             self._state = self.ON
-            self._stop_time = datetime.datetime.now()
         self._speed = speed
 
     def new_message(self):
@@ -118,6 +133,7 @@ class EngineData:
     def update_data(self, msg):
         if self._state == self.OFF:
             self._state = self.ON
+            _logger.info(f"Engine {self._id} is turned on. Total hours: {msg.total_engine_hours}")
         self._temperature = msg.temperature
         self._alternator_voltage = msg.alternator_voltage
         self._total_hours = msg.total_engine_hours
@@ -128,14 +144,18 @@ class EngineData:
         response.total_hours = self._total_hours
         response.speed = self._speed
         response.temperature = self._temperature
+        response.alternator_voltage = self._alternator_voltage
         if self._start_time is not None:
             response.last_start_time = self._start_time.isoformat()
         if self._stop_time is not None:
             response.last_stop_time = self._stop_time.isoformat()
 
     def check_off(self):
-        if self._speed == 0.0 and time.time() - self._last_message > 30.0:
+        if time.time() - self._last_message > 30.0:
+            _logger.info(f"Engine {self._id} is turned off")
             self._state = self.OFF
+            self._speed = 0.0
+            self._temperature = 0.0
 
 
 

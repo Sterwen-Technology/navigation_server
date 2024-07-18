@@ -40,6 +40,8 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
         self._callback_0183 = callback_0183
         self._callback_pb = callback_pb
         self._accept_messages = False
+        self._total_n2k_msg = 0
+        self._total_n183_msg = 0
 
     def pushNMEA(self, request, context):
         '''
@@ -53,10 +55,12 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
 
         if request.HasField("N2K_msg"):
             msg = request.N2K_msg
+            self._total_n2k_msg += 1
             _logger.debug("Input service N2K message %d" % msg.pgn)
             resp.reportCode, resp.status = self.incoming_n2k(msg)
 
         elif request.HasField("N0183_msg"):
+            self._total_n183_msg += 1
             if self._callback_0183 is None:
                 resp.reportCode = 1
                 resp.status = " NMEA0183 messages not supported"
