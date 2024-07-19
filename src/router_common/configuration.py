@@ -14,6 +14,8 @@ import yaml
 import logging
 import sys
 import importlib
+import os
+import os.path
 
 from router_common import ObjectCreationError, MessageServerGlobals, ObjectFatalError, ConfigurationException
 from .grpc_server_service import GrpcServer
@@ -238,6 +240,13 @@ class NavigationConfiguration:
             server_purpose = 'Unknown'
             self._configuration['function'] = 'Unknown (missing "function" keyword)'
         _logger.info(f"Server function {server_purpose}")
+        try:
+            data_directory = self._configuration['data_dir']
+        except KeyError:
+            base_directory, app_dir = os.path.split(os.getcwd())
+            data_directory = os.path.join(base_directory, 'data')
+        MessageServerGlobals.data_dir = data_directory
+        _logger.info(f"Data directory:{data_directory}")
         # create entries for allways included classes
         self.import_internal()
         for feature in self.object_descr_iter('features'):

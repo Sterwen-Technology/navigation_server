@@ -23,6 +23,7 @@ class MessageServerGlobals:
     configuration = None
     global_variables = None
     server_name = None
+    data_dir = None
 
 
 def find_pgn(pgn: int, mfg_id: int = 0):

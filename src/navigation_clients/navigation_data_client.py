@@ -28,7 +28,6 @@ class EngineProxy(ProtobufProxy):
     def state(self):
         return pb_enum_string(self._msg, 'state', self._msg.state)
 
-
     @property
     def last_start_time(self):
         if self._engine.HasField('last_start_time'):
@@ -42,6 +41,17 @@ class EngineProxy(ProtobufProxy):
             return self._msg.last_stop_time
         else:
             return "Unknown"
+
+
+class EngineEventProxy(ProtobufProxy):
+
+    @property
+    def current_state(self):
+        return pb_enum_string(self._msg, 'current_state', self._msg.current_state)
+
+    @property
+    def previous_state(self):
+        return pb_enum_string(self._msg, 'previous_state', self._msg.previous_state)
 
 
 class EngineClient:
@@ -62,6 +72,26 @@ class EngineClient:
             raise GrpcAccessException
         if result.error_message == 'NO_ERROR':
             return EngineProxy(result.data)
+        else:
+            _logger.error(f"EngineData => No engine instance #{engine_instance}")
+            return None
+
+    def get_events(self, engine_instance):
+        request = engine_request()
+        request.engine_id = engine_instance
+        try:
+            result = self._stub.GetEngineData(request)
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.info("Server not accessible")
+            else:
+                _logger.error("GetEngineData - Error accessing server:%s" % err)
+            raise GrpcAccessException
+        if result.error_message == 'NO_ERROR':
+            events = []
+            for e_pb in result.events:
+                events.append(EngineEventProxy(e_pb))
+            return events
         else:
             _logger.error(f"EngineData => No engine instance #{engine_instance}")
             return None
