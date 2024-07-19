@@ -15,7 +15,7 @@ from collections import namedtuple
 import datetime
 import time
 
-from generated.navigation_data_pb2 import engine_data, engine_request, engine_response
+from generated.navigation_data_pb2 import engine_data, engine_request, engine_response, engine_event
 from generated.navigation_data_pb2_grpc import EngineDataServicer, add_EngineDataServicer_to_server
 
 from router_common import GrpcSecondaryService
@@ -39,6 +39,18 @@ class EngineDataServicerImpl(EngineDataServicer):
             response.error_message = "NO_ERROR"
         except KeyError:
             response.error_message = "NO_ENGINE"
+        return response
+
+    def GetEngineEvents(self, request, context):
+        engine_id = request.engine_id
+        response = engine_response()
+        # response.data.engine_id = engine_id
+        try:
+            self._engine_service.get_engine_events(engine_id, response.events)
+            response.error_message = "NO_ERROR"
+        except KeyError:
+            response.error_message = "NO_ENGINE"
+
         return response
 
 
@@ -68,8 +80,11 @@ class EngineDataService(GrpcSecondaryService):
             return engine
 
     def check_off_engines(self):
+        nb_engines = len(self._engines)
         for e in self._engines.values():
-            e.check_off()
+            if e.check_off():
+                nb_engines -= 1
+        # restart the timer in any case - let's see what we do when no engine is active
         self._timer = threading.Timer(30.0, self.check_off_engines)
         self._timer.start()
 
@@ -95,6 +110,33 @@ class EngineDataService(GrpcSecondaryService):
             raise
         engine.get_data(response)
 
+    def get_engine_events(self, engine_id, response):
+        try:
+            engine = self._engines[engine_id]
+        except KeyError:
+            _logger.error(f"Engine {engine_id} non existent")
+            raise
+        for event in engine.get_events_pb():
+            response.append(event)
+
+
+class EngineEvent:
+
+    def __init__(self, total_hours, previous_state, current_state):
+        self._ts = datetime.datetime.now()
+        self._total_hours = total_hours
+        self._previous_state = previous_state
+        self._current_state = current_state
+
+    def as_protobuf(self, engine_id):
+        e_pb = engine_event()
+        e_pb.engine_id = engine_id
+        e_pb.timestamp = self._ts.isoformat()
+        e_pb.total_hours = self._total_hours
+        e_pb.current_state = self._current_state
+        e_pb.previous_state = self._previous_state
+        return e_pb
+
 
 class EngineData:
 
@@ -102,7 +144,7 @@ class EngineData:
 
     def __init__(self, engine_id:int):
         self._id = engine_id
-        self._state = self.ON
+        self._state = self.OFF
         self._speed = 0.0
         self._first_on = datetime.datetime.now()
         self._last_message = time.time()
@@ -111,27 +153,49 @@ class EngineData:
         self._alternator_voltage = 0.
         self._start_time = None
         self._stop_time = None
+        self._day_events = []
 
     def update_speed(self, speed):
         if speed > 0.0:
             if self._state != self.RUNNING:
+                self.add_event(self.RUNNING)
                 self._state = self.RUNNING
                 _logger.info(f"Engine {self._id} is starting")
                 self._start_time = datetime.datetime.now()
         elif speed == 0.0:
             if self._state == self.RUNNING:
                 self._stop_time = datetime.datetime.now()
+                self.add_event(self.ON)
+                self._state = self.ON
                 _logger.info(f"Engine {self._id} stops")
             elif self._state == self.OFF:
                 _logger.info(f"Engine {self._id} is turned on")
-            self._state = self.ON
+                self.add_event(self.ON)
+                self._state = self.ON
         self._speed = speed
 
     def new_message(self):
         self._last_message = time.time()
 
+    def add_event(self, current_state):
+        _logger.info(f"Engine {self._id} new event:({self._state},{current_state})")
+        self._day_events.append(
+            EngineEvent(self._total_hours, self._state, current_state)
+        )
+
+    def get_events(self):
+        for e in self._day_events:
+            yield e
+
+    def get_events_pb(self):
+        for e in self._day_events:
+            e_pb = e.as_protobuf(self._id)
+            # e_pb.engine_id = self._id
+            yield e_pb
+
     def update_data(self, msg):
         if self._state == self.OFF:
+            self.add_event(self.ON)
             self._state = self.ON
             _logger.info(f"Engine {self._id} is turned on. Total hours: {msg.total_engine_hours}")
         self._temperature = msg.temperature
@@ -151,11 +215,18 @@ class EngineData:
             response.last_stop_time = self._stop_time.isoformat()
 
     def check_off(self):
+        if self._state == self.OFF:
+            return True
         if time.time() - self._last_message > 30.0:
             _logger.info(f"Engine {self._id} is turned off")
+            if self._state == self.RUNNING:
+                self._stop_time = datetime.datetime.now()
+            self.add_event(self.OFF)
             self._state = self.OFF
             self._speed = 0.0
             self._temperature = 0.0
+            return True
+        return False
 
 
 
