@@ -66,7 +66,7 @@ class EngineClient:
             result = self._stub.GetEngineData(request)
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info("Server not accessible")
+                _logger.error("GetEngineData - Server not accessible")
             else:
                 _logger.error("GetEngineData - Error accessing server:%s" % err)
             raise GrpcAccessException
@@ -80,12 +80,12 @@ class EngineClient:
         request = engine_request()
         request.engine_id = engine_instance
         try:
-            result = self._stub.GetEngineData(request)
+            result = self._stub.GetEngineEvents(request)
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info("Server not accessible")
+                _logger.error("GetEngineEvents - Server not accessible:%s" % err)
             else:
-                _logger.error("GetEngineData - Error accessing server:%s" % err)
+                _logger.error("GetEngineEvents - Error accessing server:%s" % err)
             raise GrpcAccessException
         if result.error_message == 'NO_ERROR':
             events = []
