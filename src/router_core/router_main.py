@@ -15,7 +15,7 @@ import threading
 import datetime
 import os
 
-from router_common import MessageServerGlobals, test_exec_hook
+from router_common import MessageServerGlobals, test_exec_hook, GenericTopServer
 # from router_common import NavigationConfiguration
 from .console import Console
 from .publisher import Publisher
@@ -23,35 +23,25 @@ from .publisher import Publisher
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-class NavigationMainServer:
+class NavigationMainServer(GenericTopServer):
 
     def __init__(self, options):
 
-        self._name = 'main'
+        super().__init__(options)
+        self._name = 'router_main'
         self._console = None
-        self._servers = []
         self._couplers = {}
         self._publishers = []
-        self._services = []
         self._applications = []
         self._filters = []
-        self._sigint_count = 0
         self._is_running = False
         self._logfile = None
         self._start_time = 0
         self._start_time_s = "Not started"
-        self._analyse_timer = None
-        self._analyse_interval = 0
 
-        signal.signal(signal.SIGINT, self.stop_handler)
-
-    @property
     def couplers(self):
         return self._couplers.values()
 
-    @property
-    def name(self):
-        return self._name
 
     @property
     def console_present(self) -> bool:
@@ -67,10 +57,6 @@ class NavigationMainServer:
     @staticmethod
     def version():
         return MessageServerGlobals.version
-
-    def add_server(self, server):
-
-        self._servers.append(server)
 
     def start(self) -> bool:
         '''
@@ -109,7 +95,6 @@ class NavigationMainServer:
         _logger.info("Message server all servers and instruments threads stopped")
         if self._analyse_timer is not None:
             self._analyse_timer.cancel()
-        print_threads()
         self._is_running = False
 
     def stop_server(self):
@@ -122,17 +107,6 @@ class NavigationMainServer:
         # self._console.close()
         _logger.info("All servers stopped")
         # print_threads()
-
-    def stop_handler(self, signum, frame):
-        self._sigint_count += 1
-        if self._sigint_count == 1:
-            _logger.info("SIGINT received => stopping the system")
-            self.stop_server()
-        else:
-            print_threads()
-            if self._sigint_count > 2:
-                os._exit(1)
-        # sys.exit(0)
 
     def request_stop(self, param):
         self.stop_server()
@@ -188,22 +162,4 @@ class NavigationMainServer:
         if self.console_present and new_coupler is not None:
             self._console.add_coupler(new_coupler)
         return "Start request OK"
-
-    def start_analyser(self, interval):
-        self._analyse_interval = interval
-        self._analyse_timer = threading.Timer(interval, self.timer_lapse)
-        self._analyse_timer.start()
-
-    def timer_lapse(self):
-        print_threads()
-        self._analyse_timer = threading.Timer(self._analyse_interval, self.timer_lapse)
-        self._analyse_timer.start()
-
-
-def print_threads():
-    _logger.info("Number of remaining active threads: %d" % threading.active_count())
-    _logger.info("Active thread %s" % threading.current_thread().name)
-    thl = threading.enumerate()
-    for t in thl:
-        _logger.info("Thread:%s" % t.name)
 

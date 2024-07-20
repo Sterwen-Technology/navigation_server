@@ -62,18 +62,22 @@ class GrpcServer(NavigationServer):
         self._running = True
 
     def stop(self):
-        _logger.info("Stopping %s GRPC Server" % self._name)
+        _logger.debug("Stopping %s GRPC Server" % self._name)
         self._end_event = self._grpc_server.stop(0.1)
         self._wait_lock.release()
         self._running = False
 
     def join(self):
+        _logger.debug("gRPC server enter join - number of running services:%d" % len(self._services))
         if len(self._services) == 0:
             self.stop()
             return
         self._wait_lock.acquire()
+        _logger.debug("gRPC Server wait lock released")
         if self._end_event is not None:
+            _logger.debug("gRPC Server wait for server termination")
             self._end_event.wait()
+            _logger.debug("gRPC Server terminated")
         else:
             self._grpc_server.wait_for_termination()
 

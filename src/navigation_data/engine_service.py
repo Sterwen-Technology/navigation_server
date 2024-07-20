@@ -119,6 +119,11 @@ class EngineDataService(GrpcSecondaryService):
         for event in engine.get_events_pb():
             response.append(event)
 
+    def stop_service(self):
+        if self._timer is not None:
+            self._timer.cancel()
+        super().stop_service()
+
 
 class EngineEvent:
 
