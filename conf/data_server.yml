@@ -9,14 +9,22 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
-function: Local system control agent
-server_name: navigation_agent
+function: Data server
+server_name: data_server
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
+data_dir: /mnt/meaban/Bateau/tests
 log_module:
+    nmea2000.grpc_nmea_input_service: INFO
+    navigation_data.engine_service: INFO
+    router_common.grpc_server_service: INFO
+    router_common.generic_top_server: INFO
+
+debug_configuration: false
 
 features:
-    - agent
+    - nmea2000
+    - navigation_data
 
 servers:
 
@@ -29,9 +37,15 @@ servers:
 
 services:
 
-- Agent:
-    class: AgentService
+- Dispatcher:
+    class: DataDispatchService
     server: gRPCMain
+
+- Engines:
+    class: EngineDataService
+    server: gRPCMain
+    primary: Dispatcher
+
 
 
 

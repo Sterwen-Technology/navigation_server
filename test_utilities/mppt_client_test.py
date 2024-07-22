@@ -14,8 +14,8 @@ import grpc
 from argparse import ArgumentParser
 import sys
 
-from generated.vedirect_pb2 import *
-from generated.vedirect_pb2_grpc import *
+from generated.energy_pb2 import *
+from generated.energy_pb2_grpc import *
 
 
 def _parser():

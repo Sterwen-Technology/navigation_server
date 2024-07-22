@@ -4,17 +4,22 @@
 cp navigation.service /lib/systemd/system
 cp energy.service /lib/systemd/system
 cp navigation_agent.service /lib/systemd/system
+cp navigation_data.service /lib/systemd/system
 
 systemctl daemon-reload
 
 systemctl enable navigation
 systemctl enable energy
 systemctl enable navigation_agent
+systemctl enable navigation_data
 
 systemctl start navigation
 systemctl start energy
 systemctl start navigation_agent
+systemctl start navigation_data
+
 
 systemctl status navigation
 systemctl status energy
 systemctl status navigation_agent
+systemctl status navigation_data

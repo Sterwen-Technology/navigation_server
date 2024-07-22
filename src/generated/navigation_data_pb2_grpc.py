@@ -2,11 +2,11 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import generated.vedirect_pb2 as vedirect__pb2
+import generated.navigation_data_pb2 as navigation__data__pb2
 
 
 
-class solar_mpptStub(object):
+class EngineDataStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -15,58 +15,58 @@ class solar_mpptStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GetDeviceInfo = channel.unary_unary(
-                '/solar_mppt/GetDeviceInfo',
-                request_serializer=vedirect__pb2.request.SerializeToString,
-                response_deserializer=vedirect__pb2.MPPT_device.FromString,
+        self.GetEngineData = channel.unary_unary(
+                '/EngineData/GetEngineData',
+                request_serializer=navigation__data__pb2.engine_request.SerializeToString,
+                response_deserializer=navigation__data__pb2.engine_response.FromString,
                 )
-        self.GetOutput = channel.unary_unary(
-                '/solar_mppt/GetOutput',
-                request_serializer=vedirect__pb2.request.SerializeToString,
-                response_deserializer=vedirect__pb2.solar_output.FromString,
+        self.GetEngineEvents = channel.unary_unary(
+                '/EngineData/GetEngineEvents',
+                request_serializer=navigation__data__pb2.engine_request.SerializeToString,
+                response_deserializer=navigation__data__pb2.engine_response.FromString,
                 )
 
 
-class solar_mpptServicer(object):
+class EngineDataServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def GetDeviceInfo(self, request, context):
+    def GetEngineData(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetOutput(self, request, context):
+    def GetEngineEvents(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_solar_mpptServicer_to_server(servicer, server):
+def add_EngineDataServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetDeviceInfo': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetDeviceInfo,
-                    request_deserializer=vedirect__pb2.request.FromString,
-                    response_serializer=vedirect__pb2.MPPT_device.SerializeToString,
+            'GetEngineData': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetEngineData,
+                    request_deserializer=navigation__data__pb2.engine_request.FromString,
+                    response_serializer=navigation__data__pb2.engine_response.SerializeToString,
             ),
-            'GetOutput': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetOutput,
-                    request_deserializer=vedirect__pb2.request.FromString,
-                    response_serializer=vedirect__pb2.solar_output.SerializeToString,
+            'GetEngineEvents': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetEngineEvents,
+                    request_deserializer=navigation__data__pb2.engine_request.FromString,
+                    response_serializer=navigation__data__pb2.engine_response.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'solar_mppt', rpc_method_handlers)
+            'EngineData', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
  # This class is part of an EXPERIMENTAL API.
-class solar_mppt(object):
+class EngineData(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetDeviceInfo(request,
+    def GetEngineData(request,
             target,
             options=(),
             channel_credentials=None,
@@ -76,14 +76,14 @@ class solar_mppt(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/solar_mppt/GetDeviceInfo',
-            vedirect__pb2.request.SerializeToString,
-            vedirect__pb2.MPPT_device.FromString,
+        return grpc.experimental.unary_unary(request, target, '/EngineData/GetEngineData',
+            navigation__data__pb2.engine_request.SerializeToString,
+            navigation__data__pb2.engine_response.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def GetOutput(request,
+    def GetEngineEvents(request,
             target,
             options=(),
             channel_credentials=None,
@@ -93,8 +93,8 @@ class solar_mppt(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/solar_mppt/GetOutput',
-            vedirect__pb2.request.SerializeToString,
-            vedirect__pb2.solar_output.FromString,
+        return grpc.experimental.unary_unary(request, target, '/EngineData/GetEngineEvents',
+            navigation__data__pb2.engine_request.SerializeToString,
+            navigation__data__pb2.engine_response.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

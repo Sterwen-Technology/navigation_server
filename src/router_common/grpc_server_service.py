@@ -17,7 +17,8 @@ import threading
 import logging
 
 from .server_common import NavigationServer
-from router_common import resolve_ref
+from router_common import ConfigurationException
+from .global_variables import resolve_ref
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -61,18 +62,22 @@ class GrpcServer(NavigationServer):
         self._running = True
 
     def stop(self):
-        _logger.info("Stopping %s GRPC Server" % self._name)
+        _logger.debug("Stopping %s GRPC Server" % self._name)
         self._end_event = self._grpc_server.stop(0.1)
         self._wait_lock.release()
         self._running = False
 
     def join(self):
+        _logger.debug("gRPC server enter join - number of running services:%d" % len(self._services))
         if len(self._services) == 0:
             self.stop()
             return
         self._wait_lock.acquire()
+        _logger.debug("gRPC Server wait lock released")
         if self._end_event is not None:
+            _logger.debug("gRPC Server wait for server termination")
             self._end_event.wait()
+            _logger.debug("gRPC Server terminated")
         else:
             self._grpc_server.wait_for_termination()
 
@@ -97,6 +102,8 @@ class GrpcService:
     def __init__(self, opts):
         self._name = opts.get('name', str, "DefaultGrpcService")
         self._server_name = opts.get('server', str, None)
+        if self._server_name is None:
+            raise ConfigurationException(f"Service {self._name} missing server reference")
         self._server = None
         _logger.info("Creating service %s on server %s" % (self._name, self._server_name))
 
@@ -113,4 +120,24 @@ class GrpcService:
 
     def stop_service(self):
         self._server.remove_service(self._name)
+
+    @property
+    def name(self):
+        return self._name
+
+
+class GrpcSecondaryService(GrpcService):
+
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._primary_name = opts.get('primary', str, None)
+        if self._primary_name is None:
+            raise ConfigurationException(f"Secondary service {self._name} missing primary name")
+        self._primary_service = None
+        _logger.info("Creating service %s on service %s" % (self._name, self._primary_name))
+
+    def finalize(self):
+        super().finalize()
+        self._primary_service = resolve_ref(self._primary_name)
+        assert self._primary_service is not None
 

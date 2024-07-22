@@ -14,16 +14,16 @@ import yaml
 import logging
 import sys
 import importlib
+import os
+import os.path
 
-from router_common import ObjectCreationError, MessageServerGlobals, ObjectFatalError
+from router_common import ObjectCreationError, MessageServerGlobals, ObjectFatalError, ConfigurationException
 from .grpc_server_service import GrpcServer
 from .generic_top_server import GenericTopServer
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
 
-class ConfigurationException(Exception):
-    pass
 
 
 class Parameters:
@@ -226,6 +226,13 @@ class NavigationConfiguration:
         # check if we debug the configuration analysis
         if self._configuration.get('debug_configuration', False):
             _logger.setLevel(logging.DEBUG)
+        # set the server name
+        try:
+            MessageServerGlobals.server_name = self._configuration['server_name']
+        except KeyError:
+            _logger.warning("Configuration: Missing the server name global parameter")
+            MessageServerGlobals.server_name = "MessageServer(Default)"
+        _logger.info(f"Server name: {MessageServerGlobals.server_name}")
         # display the server purpose
         try:
             server_purpose = self._configuration['function']
@@ -233,6 +240,13 @@ class NavigationConfiguration:
             server_purpose = 'Unknown'
             self._configuration['function'] = 'Unknown (missing "function" keyword)'
         _logger.info(f"Server function {server_purpose}")
+        try:
+            data_directory = self._configuration['data_dir']
+        except KeyError:
+            base_directory, app_dir = os.path.split(os.getcwd())
+            data_directory = os.path.join(base_directory, 'data')
+        MessageServerGlobals.data_dir = data_directory
+        _logger.info(f"Data directory:{data_directory}")
         # create entries for allways included classes
         self.import_internal()
         for feature in self.object_descr_iter('features'):

@@ -247,6 +247,13 @@ class Heartbeat(Pgn126993Class):
 
     def __init__(self, message=None):
         super().__init__(message=message)
+        if message is None:
+            self.interval = 0.0
+            self.ctrl1_state = 0
+            self.ctrl2_state = 0
+            self.sequence = 0
+            self.equipment_status = 0
+            self.da = 255
 
 
 class CommandedAddress(NMEA2000Object):

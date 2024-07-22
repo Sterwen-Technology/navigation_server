@@ -9,18 +9,37 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
+function: replay to gRPC injector
+server_name: replay_grpc
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    nmea_routing.console: INFO
+    router_core.console: INFO
     nmea2000.nmea2k_grpc_publisher: INFO
     nmea0183.nmea0183_to_nmea2k: INFO
 
+features:
+    - router_core
+    - nmea2000
+    - couplers:
+          - NMEATCPReader
+
 servers:
+
+- Main:
+      class: NavigationMainServer
+
+- NMEAServer:
+      class: NMEAServer
+      port: 4500
+      nmea2000: dyfmt
 
 - gRPCMainServer:
       class: GrpcServer
       port: 4502
+
+- NMEA2000:
+    class: NMEA2KController
 
 services:
 
@@ -46,10 +65,11 @@ publishers:
     class: GrpcPublisher
     active: true
     decode_nmea2000: false
-    # nmea0183: convert_strict
-    address: 192.168.1.44
-    port: 4502
+    nmea0183: convert_strict
+    address: 127.0.0.1
+    port: 4508
     max_retry: 0
+    filters: [Engine]
     couplers: [SNReplay]
 
 - TraceOutput:
@@ -66,6 +86,11 @@ filters:
 - AISStatic:
       class: NMEA2000Filter
       pgn: [ 129794, 129809, 129810 ]
+      action: select
+
+- Engine:
+      class: NMEA2000Filter
+      pgn: [127488, 127489]
       action: select
 
 

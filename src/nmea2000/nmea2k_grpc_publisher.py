@@ -39,6 +39,7 @@ class GrpcPublisher(ExternalPublisher):
         self._max_retry = opts.get('max_retry', int, 20)
         self._retry_interval = opts.get('retry_interval', float, 10.0)
         self._trace_missing_pgn = opts.get('trace_missing_pgn', bool, False)
+        self._stop_on_error = opts.get('stop_on-error', bool, False)
         self._address = "%s:%d" % (opts.get('address', str, '127.0.0.1'), opts.get('port', int, 4502))
         _logger.info("Creating client for data server at %s" % self._address)
         self._channel = grpc.insecure_channel(self._address)
@@ -47,9 +48,15 @@ class GrpcPublisher(ExternalPublisher):
         self._ready = True
         self._timer = None
         self._nb_retry = 0
+        self._nb_lost_msg = 0
+        self._retry_in_progress = False
 
     def process_msg(self, gen_msg):
         if not self._ready:
+            if self._nb_lost_msg == 0:
+                _logger.warning("GrpcPublisher %s starts to lose messages. In retry %s" %
+                                (self.name, self._retry_in_progress))
+            self._nb_lost_msg += 1
             return True
         if gen_msg.type == N0183_MSG:
             self.process_nmea183(gen_msg)
@@ -116,15 +123,18 @@ class GrpcPublisher(ExternalPublisher):
             self._timer.cancel()
 
     def send_pb_message(self, msg):
-        _logger.debug("gRPC Publisher send message: %s" % msg)
+        _logger.debug("gRPC Publisher send decoded message: %s" % msg)
         try:
             resp = self._stub.pushDecodedNMEA2K(msg)
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
                 _logger.error("Server Status - Error accessing server:%s" % err)
+                if self._stop_on_error:
+                    self.stop()
             else:
                 _logger.error("Data client %s GRPC Server %s not accessible" % (self._name, self._address))
             self._ready = False
+            self._retry_in_progress = True
             # let's wait a bit
             self._timer = threading.Timer(10.0, self.retry_timer)
             self._timer.start()
@@ -134,14 +144,18 @@ class GrpcPublisher(ExternalPublisher):
             _logger.error("Grpc Publisher error returned by server %s" % resp.status)
 
     def send_message(self, msg):
+        _logger.debug("gRPC Publisher send message: %s" % msg)
         try:
             resp = self._stub.pushNMEA(msg)
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
                 _logger.error("Server Status - Error accessing server:%s" % err)
+                if self._stop_on_error:
+                    self.stop()
             else:
                 _logger.error("Data client %s GRPC Server %s not accessible" % (self._name, self._address))
                 self._ready = False
+                self._retry_in_progress = True
                 # let's wait a bit
                 self._timer = threading.Timer(self._retry_interval, self.retry_timer)
                 self._timer.start()
@@ -168,13 +182,16 @@ class GrpcPublisher(ExternalPublisher):
 
     def retry_timer(self):
         self._timer = None
+        self._retry_in_progress = False
         _logger.debug("Retry timer for Grpc connection")
         # check first
         if self.check_status():
             if not self._ready:
-                _logger.info("Data client %s => GRPC server %s back on line" % (self._name, self._address))
+                _logger.info("GrpcPublisher %s => GRPC server %s back on line" % (self._name, self._address))
             self._ready = True
             self._nb_retry = 0
+            _logger.warning("GrpcPublisher %s - total lost messages %d" % (self._name, self._nb_lost_msg))
+            self._nb_lost_msg = 0
         else:
             self._nb_retry += 1
             if (
@@ -185,6 +202,7 @@ class GrpcPublisher(ExternalPublisher):
             else:
                 self._timer = threading.Timer(self._retry_interval, self.retry_timer)
                 self._timer.start()
+                self._retry_in_progress = True
 
     def channel_callback(self, connectivity: grpc.ChannelConnectivity):
         if connectivity == grpc.ChannelConnectivity.READY:

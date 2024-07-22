@@ -193,6 +193,9 @@ class Injector(ExternalPublisher):
     def descr(self):
         return "Injector %s" % self._name
 
+    def refresh_target(self, target):
+        self._target = target
+
 
 class PrintPublisher(ExternalPublisher):
 

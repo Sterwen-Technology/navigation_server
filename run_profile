@@ -1,0 +1,2 @@
+#!/bin/bash
+python3 -m cProfile src/server_main.py --settings conf/"$1" -d "$PWD"

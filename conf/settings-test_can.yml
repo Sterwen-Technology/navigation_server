@@ -9,28 +9,47 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 #
+function: trace CAN
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 # log_file: test_fast_packet
 log_module:
-  nmea_routing.coupler: INFO
+  router_core.coupler: INFO
   nmea2000.nmea2000_msg: INFO
-  nmea2000.nmea2k_controller: INFO
+  can_interface.nmea2k_controller: INFO
   nmea2000.nmea2k_active_controller: INFO
   nmea2000.nmea2k_device: INFO
-  nmea2000.nmea2k_application: DEBUG
+  can_interface.nmea2k_application: INFO
   nmea2000.n2k_name: INFO
-  nmea2000.nmea2k_can_interface: DEBUG
+  can_interface.nmea2k_can_interface: INFO
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
-  nmea2000.nmea2k_can_coupler: DEBUG
+  can_interface.nmea2k_can_coupler: INFO
+
+features:
+  - router_core
+  - can_interface
+  - nmea2000
 
 servers:
+
+- Main:
+    class: NavigationMainServer
+
+- NMEAServer:
+    class: NMEAServer
+    port: 4500
+    nmea2000: dyfmt
+
+- gRPCMain:
+      class: GrpcServer
+      port: 4502
 
 - NMEANetwork:
       class: NMEA2KActiveController
       trace: false
       channel: can0
+      max_silent: 60.0
       applications: [CANCoupler]
 
 couplers:
@@ -41,13 +60,21 @@ couplers:
 
 filters:
 
+
+
+services:
+
+- Console:
+      class: Console
+      server: gRPCMain
+
 publishers:
 
 - TraceOutput:
     class: N2KTracePublisher
     couplers: [CANCoupler]
     # filters: [NMEAOutput, AIS]
-    active: true
+    active: false
     flexible_decode: false
 
 applications:

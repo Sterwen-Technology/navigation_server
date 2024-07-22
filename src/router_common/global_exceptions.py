@@ -14,6 +14,10 @@ class ObjectCreationError(Exception):
     pass
 
 
+class ConfigurationException(Exception):
+    pass
+
+
 class ObjectFatalError(Exception):
     pass
 

@@ -13,6 +13,7 @@ import logging
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
+
 class MessageServerGlobals:
 
     pgn_definitions = None
@@ -21,6 +22,8 @@ class MessageServerGlobals:
     version = None
     configuration = None
     global_variables = None
+    server_name = None
+    data_dir = None
 
 
 def find_pgn(pgn: int, mfg_id: int = 0):
@@ -63,6 +66,10 @@ def test_exec_hook(key, target):
         _logger.info("No hook for key %s" % key)
         return
     hook_func(target)
+
+
+def server_name() -> str:
+    return MessageServerGlobals.server_name
 
 
 class Typedef:

@@ -18,7 +18,8 @@ from generated.nmea_messages_pb2 import server_resp
 from router_core import NMEA2000Msg
 from router_core import nmea0183msg_from_protobuf
 from router_common.grpc_server_service import GrpcService, GrpcServerError
-from .nmea2k_decode_dispatch import get_n2k_object_from_protobuf
+from .nmea2k_decode_dispatch import get_n2k_object_from_protobuf, get_n2k_decoded_object
+from .generated_base import NMEA2000DecodedMsg
 
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
@@ -34,11 +35,13 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
     NMEA2000 Decoded protobuf
     '''
 
-    def __init__(self, callback_n2k, callback_0183, callback_pb):
+    def __init__(self, callback_n2k=None, callback_0183=None, callback_pb=None):
         self._callback_n2k = callback_n2k
         self._callback_0183 = callback_0183
         self._callback_pb = callback_pb
         self._accept_messages = False
+        self._total_n2k_msg = 0
+        self._total_n183_msg = 0
 
     def pushNMEA(self, request, context):
         '''
@@ -52,9 +55,12 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
 
         if request.HasField("N2K_msg"):
             msg = request.N2K_msg
+            self._total_n2k_msg += 1
+            _logger.debug("Input service N2K message %d" % msg.pgn)
             resp.reportCode, resp.status = self.incoming_n2k(msg)
 
         elif request.HasField("N0183_msg"):
+            self._total_n183_msg += 1
             if self._callback_0183 is None:
                 resp.reportCode = 1
                 resp.status = " NMEA0183 messages not supported"
@@ -113,6 +119,39 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
         self._accept_messages = False
 
 
+class DataDispatchServicer(GrpcNmeaServicer):
+
+    def __init__(self):
+        super().__init__()
+        self._dispatch_table = {}
+
+    def subscribe(self, process_vector):
+        try:
+            pv = self._dispatch_table[process_vector.msg_id]
+        except KeyError:
+            self._dispatch_table[process_vector.msg_id] = process_vector
+        else:
+            _logger.error(f"DataDispatch subscription duplicate key {process_vector.msg_idmsg_id}")
+
+    def incoming_n2k(self, msg):
+        try:
+            pv = self._dispatch_table[msg.pgn]
+        except KeyError:
+            _logger.debug("DataDispatch incoming_n2k no vector for PGN %d" % msg.pgn)
+            return 0, "OK"
+
+        msg_n2k = NMEA2000Msg(msg.pgn, prio=msg.priority, sa=msg.sa, da=msg.da, payload=msg.payload,
+                              timestamp=msg.timestamp)
+        msg_n2k_dec = get_n2k_decoded_object(msg_n2k)
+        try:
+            _logger.debug("DataDispatch executing vector for pgn %d" % msg.pgn)
+            pv.vector(msg_n2k_dec)
+            return 0, "OK"
+        except Exception as err:
+            _logger.error(f"Error processing PGN {msg.pgn}: {err}")
+            return 101, str(err)
+
+
 class GrpcDataService(GrpcService):
 
     def __init__(self, opts, callback_n2k=None, callback_0183=None, callback_pb=None):
@@ -151,7 +190,7 @@ class GrpcDataService(GrpcService):
 ProcessVector = namedtuple('ProcessVector', ['subscriber', 'msg_id', 'vector'])
 
 
-class DataDispatch(GrpcDataService):
+class DataDispatchService(GrpcService):
     '''
     This class process all input NMEA messages and dispatch them towards the data services that have subscribed
     to specific PGN. Messages are decoded before being forwarded.
@@ -160,23 +199,22 @@ class DataDispatch(GrpcDataService):
 
     def __init__(self, opts):
         super().__init__(opts)
-        self._dispatch_table = {}
         self._subscribers = []
+        self._servicer = None
+
+    def finalize(self):
+        try:
+            super().finalize()
+        except GrpcServerError:
+            return
+        _logger.info("Adding service %s to server" % self._name)
+        self._servicer = DataDispatchServicer()
+        add_NMEAInputServerServicer_to_server(self._servicer, self.grpc_server)
+        self._servicer.open()
 
     def subscribe(self, subscriber_id, msg_id, vector):
         process_vector = ProcessVector(subscriber_id, msg_id, vector)
-        try:
-            pv = self._dispatch_table[msg_id]
-        except KeyError:
-            self._dispatch_table[msg_id] = process_vector
-        else:
-            _logger.error(f"DataDispatch subscription duplicate key {msg_id}")
+        self._servicer.subscribe(process_vector)
 
-    def incoming_n2k(self, msg):
-        try:
-            pv = self._dispatch_table[msg.pgn]
-            pv.vector(NMEA2000Msg(msg.pgn, prio=msg.priority, sa=msg.sa, da=msg.da, payload=msg.payload,
-                                  timestamp=msg.timestamp))
-        except KeyError:
-            _logger.debug("DataDispatch incoming_n2k no vector for PGN %d" % msg.pgn)
+
 

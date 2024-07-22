@@ -17,7 +17,7 @@ from router_core import Coupler, CouplerTimeOut, CouplerWriteError
 from .nmea2k_application import NMEA2000Application
 from router_core import NMEA2000Msg
 from router_common import NavGenericMsg, N2K_MSG
-from utilities.global_variables import get_global_var, set_global_var
+from router_common import get_global_var, set_global_var
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
