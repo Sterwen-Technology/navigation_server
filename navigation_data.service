@@ -1,0 +1,13 @@
+[Unit]
+Description=Data Server
+Requires=network.target
+
+[Service]
+Type=simple
+User=solidsense
+ExecStart=/usr/bin/python3  /data/solidsense/navigation/src/server_main.py --settings /data/solidsense/config/data-server.yml -d /data/solidsense/navigation/
+Restart=on-failure
+RestartSec=6
+
+[Install]
+WantedBy=multi-user.target

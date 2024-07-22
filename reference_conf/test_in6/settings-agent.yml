@@ -11,21 +11,22 @@
 #
 function: Local system control agent
 server_name: navigation_agent
+
 log_level: INFO
-trace_dir: /mnt/meaban/Bateau/tests
 log_module:
 
 features:
     - agent
 
+
 servers:
 
 - Main:
-      class: GenericTopServer
+    class: GenericTopServer
 
 - gRPCMain:
     class: GrpcServer
-    port: 4508
+    port: 4506
 
 services:
 

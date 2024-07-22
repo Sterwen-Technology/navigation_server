@@ -65,7 +65,7 @@ class EngineDataService(GrpcSecondaryService):
     def finalize(self):
         super().finalize()
         self._servicer = EngineDataServicerImpl(self)
-        # now setup the subscriptions
+        # now set up the subscriptions
         self._primary_service.subscribe(self, 127488, self.p127488)
         self._primary_service.subscribe(self, 127489, self.p127489)
         add_EngineDataServicer_to_server(self._servicer, self.grpc_server)
