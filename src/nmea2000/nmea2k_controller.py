@@ -82,6 +82,8 @@ class NMEA2KController(NavigationServer, threading.Thread):
 
     def stop(self):
         self._stop_flag = True
+        if self._gc_timer is not None:
+            self._gc_timer.cancel()
 
     def check_device(self, address: int) -> NMEA2000Device:
         try:
@@ -156,6 +158,8 @@ class NMEA2KController(NavigationServer, threading.Thread):
         '''
         Garbage collect devices that are not sending messages
         '''
+        if self._stop_flag:
+            return
         self._gc_lock.acquire()
         check_time = time.time()
         to_be_deleted = []

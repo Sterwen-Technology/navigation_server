@@ -14,7 +14,7 @@ server_name: replay_grpc
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    nmea_routing.console: INFO
+    router_core.console: INFO
     nmea2000.nmea2k_grpc_publisher: INFO
     nmea0183.nmea0183_to_nmea2k: INFO
 
@@ -37,6 +37,9 @@ servers:
 - gRPCMainServer:
       class: GrpcServer
       port: 4502
+
+- NMEA2000:
+    class: NMEA2KController
 
 services:
 

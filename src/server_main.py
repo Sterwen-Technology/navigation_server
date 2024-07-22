@@ -23,7 +23,7 @@ from router_common import init_options
 # from router_core.main_server import NavigationMainServer
 
 
-MessageServerGlobals.version = "2.02"
+MessageServerGlobals.version = "2.03a"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -58,9 +58,13 @@ def main():
             config.main_server.start_analyser(opts.timer)
     # print_threads()
         config.main_server.wait()
-        if opts.timer is not None:
-            config.main_server.stop_analyser()
+        # if opts.timer is not None:
+            # config.main_server.print_threads()
+            # config.main_server.stop_analyser()
+        print("server shall stop now")
+        config.main_server.print_threads()
 
 
 if __name__ == '__main__':
     main()
+    print("main thread ends")

@@ -87,8 +87,6 @@ class GenericTopServer:
 
     def print_threads(self):
         _logger.info("Activity analyzer")
-        for s in self._servers:
-            _logger.info(f"server {s.name} running")
         _logger.info("Number of remaining active threads: %d" % threading.active_count())
         _logger.info("Active thread %s" % threading.current_thread().name)
         thl = threading.enumerate()

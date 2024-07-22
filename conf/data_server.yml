@@ -17,8 +17,8 @@ data_dir: /mnt/meaban/Bateau/tests
 log_module:
     nmea2000.grpc_nmea_input_service: INFO
     navigation_data.engine_service: INFO
-    router_common.grpc_server_service: DEBUG
-    router_common.generic_top_server: DEBUG
+    router_common.grpc_server_service: INFO
+    router_common.generic_top_server: INFO
 
 debug_configuration: false
 

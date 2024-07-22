@@ -209,10 +209,12 @@ class Console(GrpcService):
         self._servers = {}
         self._couplers = {}
         self._injectors = {}
+        self._main_server = None
 
     def finalize(self):
         super().finalize()
         add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self.grpc_server)
+        self._main_server = MessageServerGlobals.configuration.main_server
 
     def add_server(self, server):
         record = ServerRecord(server, server.name, server.class_name())
@@ -244,5 +246,5 @@ class Console(GrpcService):
         return self._couplers[name]
 
     def main_server(self):
-        return self._servers['main'].server
+        return self._main_server
 
