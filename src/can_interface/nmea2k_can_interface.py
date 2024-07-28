@@ -25,7 +25,7 @@ from router_core.nmea2000_msg import NMEA2000Msg
 from nmea2000 import FastPacketHandler, FastPacketException
 from nmea2000 import IsoTransportHandler, IsoTransportException
 from nmea2000_datamodel import PGNDef
-from router_common import NMEAMsgTrace, MessageTraceError
+from router_common import NMEAMsgTrace, MessageTraceError, NavThread
 from router_common import ObjectFatalError
 
 
@@ -41,7 +41,9 @@ class SocketCanReadInvalid(Exception):
 
 
 def check_can_device(link):
+    """
 
+    """
     proc = subprocess.run('/sbin/ip link | grep %s' % link, shell=True, capture_output=True, text=True)
     lines = proc.stdout.split('\n')
     #  print(len(lines), lines)
@@ -58,8 +60,10 @@ def check_can_device(link):
     return
 
 
-class SocketCANInterface(threading.Thread):
+class SocketCANInterface(NavThread):
+    """
 
+    """
     (BUS_NOT_CONNECTED, BUS_CONNECTED, BUS_READY, BUS_SENS_ALLOWED) = range(0, 4)
 
     def __init__(self, channel, out_queue, trace=False):
@@ -337,11 +341,11 @@ class NMEA2000MsgListener(Listener):
 '''
 
 
-class SocketCANWriter(threading.Thread):
+class SocketCANWriter(NavThread):
 
     def __init__(self, in_queue, can_interface, trace):
 
-        super().__init__(name="CAN-Writer", daemon=True)
+        super().__init__(name=f"{can_interface.name}-Writer", daemon=True)
         self._can_interface = can_interface
         self._in_queue = in_queue
         self._bus = None

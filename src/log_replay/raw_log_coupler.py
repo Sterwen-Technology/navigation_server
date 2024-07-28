@@ -9,7 +9,6 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 import logging
-import threading
 import queue
 import time
 
@@ -20,18 +19,17 @@ from router_core import NMEA0183Msg, NMEAInvalidFrame
 from router_core import fromProprietaryNmea, NMEA2000Msg
 from nmea2000 import FastPacketHandler, FastPacketException
 from nmea2000_datamodel import PGNDef
-from router_common import NavGenericMsg, NULL_MSG, N2K_MSG
+from router_common import NavGenericMsg, NULL_MSG, N2K_MSG, NavThread
 from couplers import ShipModulInterface
 from couplers import YDCoupler
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
 
-class AsynchLogReader(threading.Thread):
+class AsynchLogReader(NavThread):
 
     def __init__(self, out_queue, process_message):
-        super().__init__(daemon=True)
-        self.name = "AsynchLogReader"
+        super().__init__(name="AsynchLogReader", daemon=True)
         self._logfile = None
         self._out_queue = out_queue
         self._stop_flag = False

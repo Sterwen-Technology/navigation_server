@@ -8,13 +8,13 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
-import threading
+
 import time
 import queue
 import logging
 
 from .filters import FilterSet
-from router_common import resolve_ref, set_hook
+from router_common import resolve_ref, set_hook, NavThread
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -29,7 +29,7 @@ class PublisherOverflow(Exception):
     pass
 
 
-class Publisher(threading.Thread):
+class Publisher(NavThread):
     '''
     Super class for all publishers
     '''

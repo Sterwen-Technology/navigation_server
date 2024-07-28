@@ -9,11 +9,10 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 import socket
-import threading
 import logging
 
 from .publisher import Publisher
-from router_common import NavGenericMsg, N2K_MSG, NULL_MSG
+from router_common import NavGenericMsg, N2K_MSG, NULL_MSG, NavThread
 from .IPCoupler import TCPBufferedReader
 from .coupler import Coupler, CouplerWriteError
 from .nmea0183_msg import process_nmea0183_frame
@@ -76,7 +75,7 @@ class NMEA2000STPublisher(NMEAPublisher):
             return super().process_msg(msg)
 
 
-class NMEASender(threading.Thread):
+class NMEASender(NavThread):
 
     msg_processing = {'transparent': process_nmea0183_frame,
                       'dyfmt': fromPGDY, 'stfmt': fromPGNST}

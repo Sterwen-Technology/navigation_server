@@ -24,6 +24,8 @@ class MessageServerGlobals:
     global_variables = None
     server_name = None
     data_dir = None
+    thread_controller = None
+    profiling_controller = None
 
 
 def find_pgn(pgn: int, mfg_id: int = 0):
