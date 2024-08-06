@@ -28,10 +28,9 @@ class TimeFilter:
         t = time.monotonic()
         if t - self._tick_time > self._period:
             self._tick_time += self._period
-
-            return False
-        else:
             return True
+        else:
+            return False
 
 
 class NMEAFilter:
@@ -54,9 +53,9 @@ class NMEAFilter:
         '''
 
         if self._type == 'select':
-            return False
+            return True  # record is selected when passing the filter
         else:
-            return True # all records are selected
+            return False  # meaning discard
         # more processing options to come
 
     def valid(self):
@@ -64,7 +63,6 @@ class NMEAFilter:
 
     def message_type(self):
         raise NotImplementedError
-
 
 
 class FilterSet:
@@ -96,8 +94,17 @@ class FilterSet:
             else:
                 raise TypeError
 
-    def process_filter(self, msg, execute_action=True) -> bool:
-        _logger.debug("Filtering %s" % msg)
+    def process_filter(self, msg, execute_action=True, select_filter: bool = True) -> bool:
+        '''
+        Process the filter set for the message
+        return True if the message is to be discarded
+        select_filter = False => All messages rejected by filter are kept (return False)
+                        True => All messages rejected by filter are discarded (return True)
+        Message selected by filter:
+            type (action) = select => return False
+            type (action) = reject => return True
+        '''
+        _logger.debug("Process filter for %s with filter_select %s" % (msg, select_filter))
         result = False
         try:
             if msg.type == N0183_MSG:
@@ -116,14 +123,15 @@ class FilterSet:
         if result:
             # the msg is in the filter, now decide what to do
             if execute_action:
+                _logger.debug("Filter %s executing action" % f.name)
                 result = f.action(msg.msg)
-                #if not result:
-                    #print("Filter", f.name, "Validated by action")
-            if result:
-                _logger.debug("Filter %s => True" % f.name)
-        '''
-        Result is False if the message is not selected by the filter
-        
-        '''
-        return result
-
+                _logger.debug("Filter resulting action %s => %s" % (f.name, result))
+                #  select => pass
+                return not result
+            else:
+                return not select_filter
+        else:
+            '''
+            Result is False if the message is not selected by the filter      
+            '''
+            return select_filter

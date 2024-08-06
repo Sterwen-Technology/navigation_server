@@ -102,10 +102,10 @@ Server for NMEA information and other navigation information using the gRPC prot
 Each of these services corresponds to one *service* in a gRPC/Protobuf definition file (.proto).
 Some services are explicitly defined in the configuration file (Console service for instance), while some others are implicitly defined by Couplers or other entities.
 
-| Name      | Type | Default | Signification                                                  |
-|-----------|------|---------|----------------------------------------------------------------|
-| port      | int  | 4502    | listening port of the server                                   |
-| nb_thread | int  | 5       | Number of thread in the pool to process simultaneuous requests |
+| Name      | Type | Default | Signification                                                 |
+|-----------|------|---------|---------------------------------------------------------------|
+| port      | int  | 4502    | listening port of the server                                  |
+| nb_thread | int  | 5       | Number of thread in the pool to process simultaneous requests |
 
 
 
@@ -122,14 +122,18 @@ Warning: when the application is connected to the server all traffic is re-route
 
 #### NMEA2KController server
 
-This is an internal server that has no direct TCP access. All accesses to this server are via the Console. This server maintain the list of devices connected on the NMEA2000 network along with the information they are sending.
+This is an internal server that has no direct TCP access. All accesses to this server are via the Console. This server maintains the list of devices connected on the NMEA2000 network along with the information they are sending.
 It shall be associated to a coupler by defining the **nmea2000_controller** parameter to capture all relevant messages. This coupler must be configured with **nmea2000** or **nmea_mix** protocol.
 This server is to be used if the access to the NMEA2000 bus is done via an adapter device (see corresponding couplers here below), meaning that the controller has no control on the bus and can only monitor activity.
 
-| Name       | Type   | Default | Signification                                    |
-|------------|--------|---------|--------------------------------------------------|
-| queue_size | int    | 20      | input message queue size                         |
-| save_file  | string | None    | Name of the file for saving the NMEA2000 devices |
+| Name       | Type   | Default | Signification                                                |
+|------------|--------|---------|--------------------------------------------------------------|
+| queue_size | int    | 20      | input message queue size                                     |
+| save_file  | string | None    | Name of the file for saving the NMEA2000 devices             |
+| max_silent | float  | 60.0    | Maximum time between message for one device (see note below) |
+
+Note: devices that are sending messages during an interval exceeding the **max_silent** parameter are considered as switched off and therefore removed from the device table.
+
 
 #### NMEA2KActiveController server
 
@@ -158,7 +162,7 @@ Currently, tested couplers:
 - Yachting Digital Ethernet (or Wi-Fi): NMEA2000 only (the device can be used in NMEA0183 using NMEA0183 over TCP/IP)
 - Direct serial link on NMEA0183: NMEA0183 and NMEA2000 using pseudo NMEA0183 messages (check speed)
 - NMEA0183 over TCP/IP: NMEA0183 and NMEA2000 using pseudo NMEA0183 messages
-- Victron energy device with VEDirect serial line
+- Energy devices via the energy management service
 - Internal GPS using GPS on cellular Modems (Fully tested with Quectel modems)
 - Direct CAN Access: NMEA2000 only
 - GrpcCoupler: allows data flow from a server to another based gRPC (HTTP/2)
@@ -295,6 +299,17 @@ This is a gRPC service used for external monitoring and control of the navigatio
 |------------------|--------|---------|--------------------------------------------------------------------------------|
 | server           | string | None    | gRPC server associated. This is a mandatory parameter                          |
 
+#### AgentService
+
+The Agent service provides a limited but useful remote control of the Linux system on which some servers are running.
+
+**Warning: use this service only in controlled environment as in its current version no access control is implemented**
+
+#### DataDispatchService
+
+This is a **primary** service that is dispatching NMEA messages sent over gRPC using the same interface as the GrpcNmeaCoupler.
+The messages are meant to be processed by *secondary* services that subscribe to this service using NMEA2000 PGN or NMEA0183 formatter as subscribing keys.
+Messages with no subscription are simply ignored.
 
 
 ### Publishers
@@ -496,7 +511,9 @@ The global section includes the definition of the following global parameters:
 
 | Name                   | Type                     | Default                        | Signification                                                                                              |
 |------------------------|--------------------------|--------------------------------|------------------------------------------------------------------------------------------------------------|
-| log_level              | DEBUG/INFO/WARNING/ERROR | INFO                           | Level of logging (traces)                                                                                  |
+| function               | string                   | None                           | Short description of the server function                                                                   |
+| server_name            | string                   | None                           | Name of the server (for traces and more)                                                                   |
+| log_level              | DEBUG/INFO/WARNING/ERROR | INFO                           | Global level of logging (traces)                                                                           |
 | manufacturer_xml       | string                   | ./def/Manufacturers.N2kDfn.xml | XML file containing NMEA Manufacturers definition                                                          |
 | nmea2000_xml           | string                   | ./def/PGNDefns.N2kDfn.xml      | XML file containing NMEA2000 PGN definitions                                                               |
 | trace_dir              | string                   | /var/log                       | Directory where all the traces and logs will be stored                                                     |
@@ -546,6 +563,8 @@ Here are the features included with the current version
 First example with only the connection to a replay server
 
 ```
+function: Navigation messages router
+server_name: navigation_router
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 # log_file: test_log
@@ -619,6 +638,8 @@ services:
 Second example with direct CAN access
 
 ```
+function: Navigation messages router (CAN)
+server_name: navigation_router
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 # log_file: test_fast_packet
@@ -690,16 +711,17 @@ filters:
 
 ```
 
-### Default port assignments for services
+### Default port assignments for servers / services
 
-| service                       | port | transport protocol | application protocol |
-|-------------------------------|------|--------------------|----------------------|
-| NMEA Messages server          | 4500 | TCP                | NMEA0183 like        |
-| Miniplex configuration server | 4501 | TCP                | Miniplex specific    |
-| gRPC server                   | 4502 | gRPC               | see console.proto    |
-| NMEA message sender           | 4503 | TCP                | NMEA0183 like        |
-| Energy management server      | 4505 | gRPC               | see vedirect.proto   |
-| Local Linux agent             | 4506 | gRPC               | see agent.proto      |
+| service                       | port | transport protocol | application protocol      |
+|-------------------------------|------|--------------------|---------------------------|
+| NMEA Messages server          | 4500 | TCP                | NMEA0183 like             |
+| Miniplex configuration server | 4501 | TCP                | Miniplex specific         |
+| gRPC server                   | 4502 | gRPC               | see console.proto         |
+| NMEA message sender           | 4503 | TCP                | NMEA0183 like             |
+| Energy management server      | 4505 | gRPC               | see vedirect.proto        |
+| Local Linux agent             | 4506 | gRPC               | see agent.proto           |
+| Data management server        | 4508 | gRPC               | see navigation_data.proto |
 
 ## Implementation structure
 

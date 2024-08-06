@@ -24,8 +24,6 @@ from .generic_top_server import GenericTopServer
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
 
-
-
 class Parameters:
 
     def __init__(self, param: dict):

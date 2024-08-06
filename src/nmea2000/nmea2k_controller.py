@@ -36,7 +36,7 @@ class NMEA2KController(NavigationServer, threading.Thread):
         self._stop_flag = False
         NavigationConfiguration.get_conf().set_global('N2KController', self)
         self._subscriber = {}
-        self._max_silent = opts.get('max_silent', float, 30.0)
+        self._max_silent = opts.get('max_silent', float, 60.0)
         self._gc_timer = threading.Timer(self._max_silent, self.device_gc)
         self._gc_lock = threading.Lock()
 
@@ -45,7 +45,6 @@ class NMEA2KController(NavigationServer, threading.Thread):
 
     def running(self) -> bool:
         return self.is_alive()
-
 
     def network_addresses(self):
         return self._devices.keys()
@@ -86,6 +85,12 @@ class NMEA2KController(NavigationServer, threading.Thread):
             self._gc_timer.cancel()
 
     def check_device(self, address: int) -> NMEA2000Device:
+        """
+        Check if the device at address is already known
+        If not create the internal table entry for that address.
+        address: CAN address (0-253) of the device
+        returns: proxy object for the device or local device
+        """
         try:
             return self._devices[address]
         except KeyError:
@@ -103,11 +108,16 @@ class NMEA2KController(NavigationServer, threading.Thread):
         self._gc_lock.release()
 
     def store_devices(self):
+
         filename = self._options.get('store', str, None)
         if filename is None:
             return
 
     def get_device(self) -> NMEA2000Device:
+        """
+        generator for the list of devices known sorted by address
+        list is locked to prevent any modification during the generator execution
+        """
         self._gc_lock.acquire()
         sorted_dict = sorted(self._devices.items())
         for addr, device in sorted_dict:

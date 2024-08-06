@@ -29,6 +29,7 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 class GrpcPublisher(ExternalPublisher):
 
     def __init__(self, opts):
+
         super().__init__(opts)
         self._decoded_n2k = opts.get('decode_nmea2000', bool, True)
         self._nmea183 = opts.get_choice('nmea0183', ['convert_strict', 'pass_thru', 'convert_pass' ], 'pass_thru')
@@ -40,6 +41,8 @@ class GrpcPublisher(ExternalPublisher):
         self._retry_interval = opts.get('retry_interval', float, 10.0)
         self._trace_missing_pgn = opts.get('trace_missing_pgn', bool, False)
         self._stop_on_error = opts.get('stop_on-error', bool, False)
+        # we consider that by default filters are select not discard => can be overridden by configuration
+        self._filter_select = opts.get('filter_select', bool, True)
         self._address = "%s:%d" % (opts.get('address', str, '127.0.0.1'), opts.get('port', int, 4502))
         _logger.info("Creating client for data server at %s" % self._address)
         self._channel = grpc.insecure_channel(self._address)
@@ -50,6 +53,7 @@ class GrpcPublisher(ExternalPublisher):
         self._nb_retry = 0
         self._nb_lost_msg = 0
         self._retry_in_progress = False
+
 
     def process_msg(self, gen_msg):
         if not self._ready:
