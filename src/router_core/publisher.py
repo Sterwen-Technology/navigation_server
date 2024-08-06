@@ -43,6 +43,7 @@ class Publisher(threading.Thread):
             self._max_lost = 10
             self._active = True
             daemon = True
+            self._filter_select = False  # meaning that all messages passing the filter are discarded
             object_name = "Internal Publisher %s" % name
         else:
             object_name = opts['name']
@@ -56,6 +57,7 @@ class Publisher(threading.Thread):
                 set_hook(inst_name, self.add_coupler)
                 self._couplers[inst_name] = resolve_ref(inst_name)
             daemon = False
+            self._filter_select = opts.get('filter_select', bool, False)
 
         self._queue_tpass = False
         super().__init__(name=name, daemon=daemon)
@@ -66,7 +68,7 @@ class Publisher(threading.Thread):
         self._stopflag = False
         self._nb_msg_lost = 0
         self._filters = filters
-        self._filter_select = False   # meaning that all messages passing the filter are discarded
+
 
     def start(self):
         _logger.debug("Publisher %s start flag %s" % (self._name, self._active))
@@ -83,18 +85,11 @@ class Publisher(threading.Thread):
         # print("Publisher %s publish msg:%s %s" % (self._name, msg, self._filters))
         if self._filters is not None:
             _logger.debug("Publisher %s publish with filter msg:%s" % (self._name, msg))
-            if self._filters.process_filter(msg):
-                # the message satisfy the filter
-                if not self._filter_select:
-                    # this is a reject filter
-                    _logger.debug("Message discarded")
-                    return
-            else:
-                # the message does not satisfy the filter
-                if self._filter_select:
-                    # that is a select filter
-                    _logger.debug("Message discarded")
-                    return
+            if self._filters.process_filter(msg, select_filter=self._filter_select):
+                # the message does not satisfy the filter and selection direction
+                _logger.debug("Message discarded")
+                return
+            _logger.debug("Message published")
 
         try:
             self._queue.put(msg, block=False)

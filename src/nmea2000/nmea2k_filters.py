@@ -69,12 +69,14 @@ class NMEA2000TimeFilter(NMEA2000Filter):
             return False
 
     def action(self, msg) -> bool:
-
+        _logger.debug("NMEA2000TimeFilter for PGN %d" % msg.pgn)
         result = self._timers[msg.pgn].check_period()
         if result:
             _logger.debug("Time filter for %s => go" % self._name)
-        if self._type == 'select':
-            return not result
+            if self._type == 'select':
+                return True
+            else:
+                return False
         else:
-            return result
+            return False
 
