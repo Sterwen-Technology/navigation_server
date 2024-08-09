@@ -12,7 +12,8 @@
 #
 function: Energy management server
 log_level: INFO
-trace_dir: /mnt/meaban/Bateau/tests
+# trace_dir: /mnt/meaban/Bateau/tests
+trace_dir: /data/solidsense/traces
 log_module:
 
 features:
@@ -33,10 +34,5 @@ services:
     class: MPPTService
     device: /dev/ttyUSB0
     server: gRPCMain
-
-
-
-
-
-
+    trace: false
 

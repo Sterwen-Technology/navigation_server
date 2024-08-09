@@ -53,6 +53,10 @@ def get_global_var(key):
     return MessageServerGlobals.configuration.get_global(key)
 
 
+def get_global_option(key, default):
+    return MessageServerGlobals.configuration.get_option(key, default)
+
+
 def set_hook(key, hook):
     _logger.debug("Setting hook for key:%s" % key)
     MessageServerGlobals.configuration.store_hook(key, hook)

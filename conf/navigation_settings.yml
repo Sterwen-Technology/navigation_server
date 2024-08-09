@@ -100,17 +100,7 @@ services:
 
 publishers:
 
-#- Trace:
-#    class: N2KTracePublisher
-#    instruments: [MiniPlex3]
-#   queue_size: 40
-#   filter: [129540]
 
-
-#    - MainLog:
-#       class: LogPublisher
-#        file: /data/solidsense/log/navigation.log
-#        instruments: [MiniPlex3]
 
 filters:
 
@@ -118,13 +108,13 @@ filters:
      class: NMEA0183Filter
      talker: GP
      formatter: GSV
-     action: discard
+     type: discard
 
 - DiscardAISGPS:
      class: NMEA2000Filter
      source: 43
      pgn: [129025, 129026]
-     action: discard
+     type: discard
 
 - AutoPilotN2K:
     class: NMEA2000Filter
@@ -135,6 +125,6 @@ filters:
     class: NMEA2000Filter
     source: 52
     pgn: [130310, 130311, 130314]
-    action: time_filter
+    type: select
     period: 60.0
 

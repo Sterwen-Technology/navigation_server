@@ -17,13 +17,14 @@ import time
 import datetime
 import os
 from concurrent import futures
-from collections import namedtuple
+from collections import namedtuple, deque
 # sys.path.insert(0, "/data/solidsense/navigation/src")
 import grpc
 from generated.energy_pb2 import solar_output, request, MPPT_device
 from generated.energy_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
-from router_common import GrpcService
+from router_common import GrpcService, MessageServerGlobals
 from router_common.protobuf_utilities import set_protobuf_data
+# from router_common.global_variables import get_global_option
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -70,7 +71,7 @@ class Vedirect(threading.Thread):
         # self._ts = 0
         self._trace_fd = None
         if trace_input:
-            trace_dir = '/var/log'
+            trace_dir = MessageServerGlobals.configuration.get_option('trace_dir', '/var/log')
             date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
             filename = "TRACE-%s-%s.log" % ('VEDirect', date_stamp)
             filepath = os.path.join(trace_dir, filename)
@@ -91,6 +92,12 @@ class Vedirect(threading.Thread):
         except RuntimeError:
             _logger.error("Vedirect data lock release error")
         # _logger.info("Unlocking data")
+
+    def stop_service(self):
+        pass
+
+    def process_data(self):
+        pass
 
     def input(self, byte):
         try:
@@ -153,6 +160,7 @@ class Vedirect(threading.Thread):
             raise AssertionError()
 
     def run(self):
+        msg_count = 0
         while True:
             try:
                 data = self.ser.read()
@@ -166,9 +174,11 @@ class Vedirect(threading.Thread):
                 if packet is not None:
                     # ok we have a good packet
                     if self._trace_fd is not None:
+                        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
                         try:
-                            trace = '%s\n' % self._buffer[:self._buflen].hex()
+                            trace = f"V{msg_count}#{timestamp}>{self._buffer[:self._buflen].hex()}\n"
                             self._trace_fd.write(trace)
+                            self._trace_fd.flush()
                         except IOError as e:
                             _logger.error("Error writing VEdirect trace file %s" % e)
                             self._trace_fd.close()
@@ -180,8 +190,11 @@ class Vedirect(threading.Thread):
                     self.dict['timestamp'] = time.monotonic()
                     # swap the dict.
                     self._data_dict = self.dict
+                    # local processing in subclass
+                    self.process_data()
                     self._active = not self._active
                     self.dict = self._results[self._active]
+                    msg_count += 1
                     self.unlock_data()
                     # _logger.debug(self._buffer[:self._buflen])
                     self._buflen = 0
@@ -240,10 +253,22 @@ class VictronMPPT(Vedirect):
         self._name = opts.get('name', str, 'VictronMPPT')
         super().__init__(opts.get('device', str, None), opts.get('timeout', float, 10.), opts.get('trace', bool, False))
         self._service = service
+        self._trend_depth = opts.get('trend_depth', int, 30)
+        self._trend_period = opts.get('trend_period', float, 10.)
+        self._trend_buckets = deque(maxlen=self._trend_depth)
+        self._start_period = 0.0
 
     def stop_service(self):
         _logger.info(f"MPPT Victron {self._name} request to stop service")
         self._service.stop_service()
+
+    def start(self):
+        self._start_period = time.monotonic()
+        super().start()
+
+    def process_data(self):
+        pass
+
 
 
 class MPPT_Servicer(solar_mpptServicer):

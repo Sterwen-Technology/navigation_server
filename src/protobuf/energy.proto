@@ -11,6 +11,8 @@
 
 syntax = "proto3";
 
+import "arguments.proto";
+
 // Messages to transmit Victron VE direct messages between the reader and the instrument
 
 enum VE_Error{
@@ -64,7 +66,36 @@ message request {
   int32 id = 1;
 }
 
+message trend_request {
+  int32 id=1;
+  int32 nb_values=2;
+}
+
+message trend_response {
+  int32 id=1;
+  int32 nb_values=2;
+  float interval=3;
+  repeated solar_output values=4;
+}
+
 service solar_mppt {
   rpc GetDeviceInfo(request) returns (MPPT_device) {}
   rpc GetOutput(request) returns (solar_output) {}
+  rpc GetTrend(trend_request) returns (trend_response) {}
 }
+
+message energy_svr_cmd {
+  string command=1;
+  repeated Argument arguments=2;
+}
+
+message energy_svr_resp {
+  int32 err_code=1;
+  string resp_message=2;
+  repeated Argument values=3;
+}
+
+service energy_service {
+  rpc EnergyCommand(energy_svr_cmd) returns(energy_svr_resp) {}
+}
+

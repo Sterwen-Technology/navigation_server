@@ -71,7 +71,7 @@ filters:
 - RaymarineProprietary:
     class: NMEA2000Filter
     pgn: [126720]
-    action: discard
+    type: discard
 
 
 publishers:

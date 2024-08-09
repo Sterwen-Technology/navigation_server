@@ -86,12 +86,12 @@ filters:
 - AISStatic:
       class: NMEA2000Filter
       pgn: [ 129794, 129809, 129810 ]
-      action: select
+      type: select
 
 - Engine:
       class: NMEA2000Filter
       pgn: [127488, 127489]
-      action: select
+      type: select
 
 
 
