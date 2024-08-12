@@ -20,7 +20,7 @@ from router_common import MessageServerGlobals
 from router_common import init_options
 
 
-MessageServerGlobals.version = "2.03c"
+MessageServerGlobals.version = "2.04"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 _logger = logging.getLogger("ShipDataServer.main")
 

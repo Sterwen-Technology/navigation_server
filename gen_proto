@@ -42,3 +42,4 @@ adjust_protobuf nmea_messages nmea0183 nmea2000
 adjust_protobuf nmea_server nmea_messages
 adjust_protobuf console arguments iso_name nmea2000_classes_iso_gen
 adjust_protobuf ecu nmea2000
+adjust_protobuf energy arguments

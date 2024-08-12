@@ -25,9 +25,18 @@ def set_protobuf_data(result, keys, data_dict: dict):
                 val = type_v(data_dict[key]) * scale
             else:
                 val = data_dict[key]
-            object.__setattr__(result, attr, val)
+            setattr(result, attr, val)
         except KeyError:
             continue
+
+
+def copy_protobuf_data(source, target, attributes):
+    '''
+    Copy the attributes in the iterator from source to target
+    That is assuming that attributes have the same name in both objects
+    '''
+    for attr in attributes:
+        setattr(target, attr, getattr(source, attr))
 
 
 def pb_enum_string(msg, enum_attr: str, value):

@@ -13,9 +13,11 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
+import generated.arguments_pb2 as arguments__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x65nergy.proto\"\xbf\x01\n\x0bMPPT_device\x12\x12\n\nproduct_id\x18\x01 \x01(\t\x12\x10\n\x08\x66irmware\x18\x02 \x01(\t\x12\x0e\n\x06serial\x18\x03 \x01(\t\x12\x18\n\x05\x65rror\x18\x04 \x01(\x0e\x32\t.VE_Error\x12\x18\n\x05state\x18\x05 \x01(\x0e\x32\t.VE_state\x12\x1c\n\nmppt_state\x18\x07 \x01(\x0e\x32\x08.VE_MPPT\x12\x15\n\rday_max_power\x18\x06 \x01(\x02\x12\x11\n\tday_power\x18\x08 \x01(\x02\"E\n\x0csolar_output\x12\x0f\n\x07\x63urrent\x18\x01 \x01(\x02\x12\x0f\n\x07voltage\x18\x02 \x01(\x02\x12\x13\n\x0bpanel_power\x18\x03 \x01(\x02\"\x15\n\x07request\x12\n\n\x02id\x18\x01 \x01(\x05*\xa6\x01\n\x08VE_Error\x12\x0c\n\x08no_error\x10\x00\x12\x1c\n\x18\x42\x61ttery_voltage_too_high\x10\x02\x12\x1c\n\x18\x42ulk_time_limit_exceeded\x10\x14\x12\x18\n\x14\x43urrent_sensor_issue\x10\x15\x12\x1a\n\x16Input_voltage_too_high\x10!\x12\x1a\n\x16Input_current_too_high\x10\"*\xc4\x01\n\x08VE_state\x12\x07\n\x03Off\x10\x00\x12\r\n\tLow_power\x10\x01\x12\t\n\x05\x46\x61ult\x10\x02\x12\x08\n\x04\x42ulk\x10\x03\x12\x0e\n\nAbsorption\x10\x04\x12\t\n\x05\x46loat\x10\x05\x12\x0b\n\x07Storage\x10\x06\x12\x0c\n\x08\x45qualize\x10\x07\x12\x10\n\x0bStarting_up\x10\xf5\x01\x12\x18\n\x13Repeated_absorption\x10\xf6\x01\x12\x12\n\rAuto_equalize\x10\xf7\x01\x12\x15\n\x10\x45xternal_control\x10\xfc\x01*0\n\x07VE_MPPT\x12\x0c\n\x08MPPT_Off\x10\x00\x12\x0b\n\x07Limited\x10\x01\x12\n\n\x06\x41\x63tive\x10\x02\x32_\n\nsolar_mppt\x12)\n\rGetDeviceInfo\x12\x08.request\x1a\x0c.MPPT_device\"\x00\x12&\n\tGetOutput\x12\x08.request\x1a\r.solar_output\"\x00\x62\x06proto3')
+
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x65nergy.proto\x1a\x0f\x61rguments.proto\"\xbf\x01\n\x0bMPPT_device\x12\x12\n\nproduct_id\x18\x01 \x01(\t\x12\x10\n\x08\x66irmware\x18\x02 \x01(\t\x12\x0e\n\x06serial\x18\x03 \x01(\t\x12\x18\n\x05\x65rror\x18\x04 \x01(\x0e\x32\t.VE_Error\x12\x18\n\x05state\x18\x05 \x01(\x0e\x32\t.VE_state\x12\x1c\n\nmppt_state\x18\x07 \x01(\x0e\x32\x08.VE_MPPT\x12\x15\n\rday_max_power\x18\x06 \x01(\x02\x12\x11\n\tday_power\x18\x08 \x01(\x02\"E\n\x0csolar_output\x12\x0f\n\x07\x63urrent\x18\x01 \x01(\x02\x12\x0f\n\x07voltage\x18\x02 \x01(\x02\x12\x13\n\x0bpanel_power\x18\x03 \x01(\x02\"\x15\n\x07request\x12\n\n\x02id\x18\x01 \x01(\x05\".\n\rtrend_request\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x11\n\tnb_values\x18\x02 \x01(\x05\"`\n\x0etrend_response\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x11\n\tnb_values\x18\x02 \x01(\x05\x12\x10\n\x08interval\x18\x03 \x01(\x02\x12\x1d\n\x06values\x18\x04 \x03(\x0b\x32\r.solar_output\"?\n\x0e\x65nergy_svr_cmd\x12\x0f\n\x07\x63ommand\x18\x01 \x01(\t\x12\x1c\n\targuments\x18\x02 \x03(\x0b\x32\t.Argument\"T\n\x0f\x65nergy_svr_resp\x12\x10\n\x08\x65rr_code\x18\x01 \x01(\x05\x12\x14\n\x0cresp_message\x18\x02 \x01(\t\x12\x19\n\x06values\x18\x03 \x03(\x0b\x32\t.Argument*\xa6\x01\n\x08VE_Error\x12\x0c\n\x08no_error\x10\x00\x12\x1c\n\x18\x42\x61ttery_voltage_too_high\x10\x02\x12\x1c\n\x18\x42ulk_time_limit_exceeded\x10\x14\x12\x18\n\x14\x43urrent_sensor_issue\x10\x15\x12\x1a\n\x16Input_voltage_too_high\x10!\x12\x1a\n\x16Input_current_too_high\x10\"*\xc4\x01\n\x08VE_state\x12\x07\n\x03Off\x10\x00\x12\r\n\tLow_power\x10\x01\x12\t\n\x05\x46\x61ult\x10\x02\x12\x08\n\x04\x42ulk\x10\x03\x12\x0e\n\nAbsorption\x10\x04\x12\t\n\x05\x46loat\x10\x05\x12\x0b\n\x07Storage\x10\x06\x12\x0c\n\x08\x45qualize\x10\x07\x12\x10\n\x0bStarting_up\x10\xf5\x01\x12\x18\n\x13Repeated_absorption\x10\xf6\x01\x12\x12\n\rAuto_equalize\x10\xf7\x01\x12\x15\n\x10\x45xternal_control\x10\xfc\x01*0\n\x07VE_MPPT\x12\x0c\n\x08MPPT_Off\x10\x00\x12\x0b\n\x07Limited\x10\x01\x12\n\n\x06\x41\x63tive\x10\x02\x32\x8e\x01\n\nsolar_mppt\x12)\n\rGetDeviceInfo\x12\x08.request\x1a\x0c.MPPT_device\"\x00\x12&\n\tGetOutput\x12\x08.request\x1a\r.solar_output\"\x00\x12-\n\x08GetTrend\x12\x0e.trend_request\x1a\x0f.trend_response\"\x00\x32\x46\n\x0e\x65nergy_service\x12\x34\n\rEnergyCommand\x12\x0f.energy_svr_cmd\x1a\x10.energy_svr_resp\"\x00\x62\x06proto3')
 
 _VE_ERROR = DESCRIPTOR.enum_types_by_name['VE_Error']
 VE_Error = enum_type_wrapper.EnumTypeWrapper(_VE_ERROR)
@@ -49,6 +51,10 @@ Active = 2
 _MPPT_DEVICE = DESCRIPTOR.message_types_by_name['MPPT_device']
 _SOLAR_OUTPUT = DESCRIPTOR.message_types_by_name['solar_output']
 _REQUEST = DESCRIPTOR.message_types_by_name['request']
+_TREND_REQUEST = DESCRIPTOR.message_types_by_name['trend_request']
+_TREND_RESPONSE = DESCRIPTOR.message_types_by_name['trend_response']
+_ENERGY_SVR_CMD = DESCRIPTOR.message_types_by_name['energy_svr_cmd']
+_ENERGY_SVR_RESP = DESCRIPTOR.message_types_by_name['energy_svr_resp']
 MPPT_device = _reflection.GeneratedProtocolMessageType('MPPT_device', (_message.Message,), {
   'DESCRIPTOR' : _MPPT_DEVICE,
   '__module__' : 'energy_pb2'
@@ -70,22 +76,61 @@ request = _reflection.GeneratedProtocolMessageType('request', (_message.Message,
   })
 _sym_db.RegisterMessage(request)
 
+trend_request = _reflection.GeneratedProtocolMessageType('trend_request', (_message.Message,), {
+  'DESCRIPTOR' : _TREND_REQUEST,
+  '__module__' : 'energy_pb2'
+  # @@protoc_insertion_point(class_scope:trend_request)
+  })
+_sym_db.RegisterMessage(trend_request)
+
+trend_response = _reflection.GeneratedProtocolMessageType('trend_response', (_message.Message,), {
+  'DESCRIPTOR' : _TREND_RESPONSE,
+  '__module__' : 'energy_pb2'
+  # @@protoc_insertion_point(class_scope:trend_response)
+  })
+_sym_db.RegisterMessage(trend_response)
+
+energy_svr_cmd = _reflection.GeneratedProtocolMessageType('energy_svr_cmd', (_message.Message,), {
+  'DESCRIPTOR' : _ENERGY_SVR_CMD,
+  '__module__' : 'energy_pb2'
+  # @@protoc_insertion_point(class_scope:energy_svr_cmd)
+  })
+_sym_db.RegisterMessage(energy_svr_cmd)
+
+energy_svr_resp = _reflection.GeneratedProtocolMessageType('energy_svr_resp', (_message.Message,), {
+  'DESCRIPTOR' : _ENERGY_SVR_RESP,
+  '__module__' : 'energy_pb2'
+  # @@protoc_insertion_point(class_scope:energy_svr_resp)
+  })
+_sym_db.RegisterMessage(energy_svr_resp)
+
 _SOLAR_MPPT = DESCRIPTOR.services_by_name['solar_mppt']
+_ENERGY_SERVICE = DESCRIPTOR.services_by_name['energy_service']
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _VE_ERROR._serialized_start=305
-  _VE_ERROR._serialized_end=471
-  _VE_STATE._serialized_start=474
-  _VE_STATE._serialized_end=670
-  _VE_MPPT._serialized_start=672
-  _VE_MPPT._serialized_end=720
-  _MPPT_DEVICE._serialized_start=17
-  _MPPT_DEVICE._serialized_end=208
-  _SOLAR_OUTPUT._serialized_start=210
-  _SOLAR_OUTPUT._serialized_end=279
-  _REQUEST._serialized_start=281
-  _REQUEST._serialized_end=302
-  _SOLAR_MPPT._serialized_start=722
-  _SOLAR_MPPT._serialized_end=817
+  _VE_ERROR._serialized_start=619
+  _VE_ERROR._serialized_end=785
+  _VE_STATE._serialized_start=788
+  _VE_STATE._serialized_end=984
+  _VE_MPPT._serialized_start=986
+  _VE_MPPT._serialized_end=1034
+  _MPPT_DEVICE._serialized_start=34
+  _MPPT_DEVICE._serialized_end=225
+  _SOLAR_OUTPUT._serialized_start=227
+  _SOLAR_OUTPUT._serialized_end=296
+  _REQUEST._serialized_start=298
+  _REQUEST._serialized_end=319
+  _TREND_REQUEST._serialized_start=321
+  _TREND_REQUEST._serialized_end=367
+  _TREND_RESPONSE._serialized_start=369
+  _TREND_RESPONSE._serialized_end=465
+  _ENERGY_SVR_CMD._serialized_start=467
+  _ENERGY_SVR_CMD._serialized_end=530
+  _ENERGY_SVR_RESP._serialized_start=532
+  _ENERGY_SVR_RESP._serialized_end=616
+  _SOLAR_MPPT._serialized_start=1037
+  _SOLAR_MPPT._serialized_end=1179
+  _ENERGY_SERVICE._serialized_start=1181
+  _ENERGY_SERVICE._serialized_end=1251
 # @@protoc_insertion_point(module_scope)

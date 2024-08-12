@@ -25,6 +25,11 @@ class solar_mpptStub(object):
                 request_serializer=energy__pb2.request.SerializeToString,
                 response_deserializer=energy__pb2.solar_output.FromString,
                 )
+        self.GetTrend = channel.unary_unary(
+                '/solar_mppt/GetTrend',
+                request_serializer=energy__pb2.trend_request.SerializeToString,
+                response_deserializer=energy__pb2.trend_response.FromString,
+                )
 
 
 class solar_mpptServicer(object):
@@ -42,6 +47,12 @@ class solar_mpptServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetTrend(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_solar_mpptServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -54,6 +65,11 @@ def add_solar_mpptServicer_to_server(servicer, server):
                     servicer.GetOutput,
                     request_deserializer=energy__pb2.request.FromString,
                     response_serializer=energy__pb2.solar_output.SerializeToString,
+            ),
+            'GetTrend': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetTrend,
+                    request_deserializer=energy__pb2.trend_request.FromString,
+                    response_serializer=energy__pb2.trend_response.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -96,5 +112,83 @@ class solar_mppt(object):
         return grpc.experimental.unary_unary(request, target, '/solar_mppt/GetOutput',
             energy__pb2.request.SerializeToString,
             energy__pb2.solar_output.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetTrend(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/solar_mppt/GetTrend',
+            energy__pb2.trend_request.SerializeToString,
+            energy__pb2.trend_response.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+
+class energy_serviceStub(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.EnergyCommand = channel.unary_unary(
+                '/energy_service/EnergyCommand',
+                request_serializer=energy__pb2.energy_svr_cmd.SerializeToString,
+                response_deserializer=energy__pb2.energy_svr_resp.FromString,
+                )
+
+
+class energy_serviceServicer(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def EnergyCommand(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_energy_serviceServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'EnergyCommand': grpc.unary_unary_rpc_method_handler(
+                    servicer.EnergyCommand,
+                    request_deserializer=energy__pb2.energy_svr_cmd.FromString,
+                    response_serializer=energy__pb2.energy_svr_resp.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'energy_service', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+
+
+ # This class is part of an EXPERIMENTAL API.
+class energy_service(object):
+    """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def EnergyCommand(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/energy_service/EnergyCommand',
+            energy__pb2.energy_svr_cmd.SerializeToString,
+            energy__pb2.energy_svr_resp.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

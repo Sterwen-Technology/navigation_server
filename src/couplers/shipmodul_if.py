@@ -180,7 +180,7 @@ class ShipModulInterface(BufferedIPCoupler):
                 gmsg = NavGenericMsg(N2K_MSG, raw=m0183.raw, msg=msg)
                 return gmsg
         # here we continue decoding in NMEA2000 mode and for ISO messages
-
+        '''
         data = bytearray(dlc)
         pr_byte = 0
         l_hex = len(fields[2])
@@ -190,13 +190,8 @@ class ShipModulInterface(BufferedIPCoupler):
             pr_byte += 1
             i_hex -= 2
         '''
-        data = array('B', bytes.fromhex(fields[2]))
-        assert len(data) == dlc
+        data = bytearray.fromhex(fields[2].decode())
         data.reverse()
-        data = data.tobytes()
-        '''
-
-
         # now the PGN sentence is decoded
 
         def check_pgn():

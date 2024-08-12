@@ -9,4 +9,4 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-from .mppt_reader import MPPTService
+from .mppt_service import MPPTService

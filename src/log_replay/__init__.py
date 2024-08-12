@@ -10,5 +10,5 @@
 #-------------------------------------------------------------------------------
 
 
-from .raw_log_reader import RawLogFile
+from .raw_log_reader import RawLogFile, LogReadError
 from .raw_log_coupler import RawLogCoupler

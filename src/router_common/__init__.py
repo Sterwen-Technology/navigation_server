@@ -18,7 +18,8 @@ from .global_variables import (MessageServerGlobals, find_pgn, manufacturer_name
 from .log_utilities import NavigationLogSystem
 from .network_utils import get_id_from_mac, get_mac
 from .object_utilities import copy_attribute, build_subclass_dict
-from .protobuf_utilities import pb_enum_string, set_protobuf_data, ProtobufProxy, GrpcAccessException
+from .protobuf_utilities import (pb_enum_string, set_protobuf_data, ProtobufProxy, GrpcAccessException,
+                                 copy_protobuf_data)
 from .protob_arguments import protob_to_dict, dict_to_protob
 from .xml_utilities import XMLDefinitionFile, XMLDecodeError
 from .configuration import NavigationConfiguration

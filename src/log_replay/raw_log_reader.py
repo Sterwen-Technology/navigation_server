@@ -46,6 +46,9 @@ class RawLogRecord:
 
     __slots__ = ('_timestamp', '_message')
 
+    def __init__(self, timestamp):
+        self._timestamp = timestamp
+
     @property
     def timestamp(self):
         return self._timestamp
@@ -58,8 +61,15 @@ class RawLogRecord:
 class RawLogNMEARecord(RawLogRecord):
 
     def __init__(self, timestamp, message):
-        self._timestamp = timestamp
+        super().__init__(timestamp)
         self._message = message.encode() + b'\r\n'
+
+
+class VEDirectRecord(RawLogRecord):
+
+    def __init__(self, timestamp, message):
+        super().__init__(timestamp)
+        self._message = message
 
 
 class RawLogCANMessage(RawLogRecord):
@@ -121,8 +131,14 @@ class RawLogFile:
         _logger.info("Log file type:%s" % self._type)
         if self._type == "SocketCANInterface":
             record_class = RawLogCANMessage
-        else:
+        elif self._type == "ShipModulInterface":
             record_class = RawLogNMEARecord
+        elif self._type == "VEDirectInterface":
+            record_class = VEDirectRecord
+        else:
+            _logger.critical(f"Log Reader => unknown file type {self._type}")
+            raise ValueError
+
         nb_record = 1
         self._records = []
         self._tick_index = []
