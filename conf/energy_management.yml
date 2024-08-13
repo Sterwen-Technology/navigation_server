@@ -37,7 +37,7 @@ couplers:
     class: VEDirectCoupler
     device: /dev/ttyUSB0
     interface: simulation
-    logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1458.log
+    logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
     protocol: non_nmea
     max_attempt: 1
 

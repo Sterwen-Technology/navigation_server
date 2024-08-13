@@ -293,6 +293,7 @@ class DecodeDefinitions:
     int_table = {
         1: ValueCoderSigned(1, '<b'),
         2: ValueCoderSigned(2, '<h'),
+        3: ValueCoderSigned(3, '<hb'),
         4: ValueCoderSigned(4, '<l'),
         8: ValueCoderSigned(8, '<q')
     }

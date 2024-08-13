@@ -109,6 +109,19 @@ class MPPT_Client:
             _logger.error(err)
             return None
 
+    def getTrend(self):
+        _logger.debug("Client GetTrend")
+        try:
+            self._req_id += 1
+            req = trend_request()
+            req.id = self._req_id
+            trend = self._stub.GetTrend(req)
+        except grpc.RpcError as err:
+            _logger.error(err)
+            return None
+        _logger.debug("Trend response with %d values" % trend.nb_values)
+        return trend
+
     def server_status(self):
         return self.getDeviceInfo()
 

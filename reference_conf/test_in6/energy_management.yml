@@ -16,22 +16,35 @@ log_level: INFO
 log_module:
 
 features:
+    - router_core
     - energy_mgmt
+    - couplers:
+          VEDirectCoupler
 
 servers:
 
 - Main:
-      class: GenericTopServer
+      class: NavigationMainServer
 
 - gRPCMain:
     class: GrpcServer
     port: 4505
+    
+couplers:
+
+- MPPTVEDirect:
+    class: VEDirectCoupler
+    device: /dev/ttyUSB0
+    interface: simulation
+    logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
+    protocol: non_nmea
+    max_attempt: 1
 
 services:
 
 - Agent:
     class: MPPTService
-    device: /dev/ttyUSB0
+    coupler: MPPTVEDirect
     server: gRPCMain
 
 
