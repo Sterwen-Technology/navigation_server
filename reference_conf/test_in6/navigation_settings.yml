@@ -21,6 +21,7 @@ features:
     - couplers:
           - ShipModulConfig
           - ShipModulInterface
+          - GrpcNmeaCoupler
 
 
 servers:
@@ -59,6 +60,10 @@ couplers:
     port: 10110
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
+    
+- EnergyInput:
+    class: GrpcNmeaCoupler
+    server: gRPCMain
 
 services:
 

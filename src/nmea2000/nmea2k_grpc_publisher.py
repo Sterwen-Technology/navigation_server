@@ -164,6 +164,11 @@ class GrpcPublisher(ExternalPublisher):
                 self._timer = threading.Timer(self._retry_interval, self.retry_timer)
                 self._timer.start()
             return
+        except ValueError as err:
+            # channel has been closed we need to stop anyway
+            _logger.error(f"Error sending message on {self._name}: {err} => stop")
+            self.stop()
+            return
 
         if resp.reportCode != 0:
             _logger.error("Grpc Publisher error returned by server %s" % resp.status)

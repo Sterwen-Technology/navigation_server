@@ -14,11 +14,12 @@ function: Energy management server
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    energy_mgmt.mppt_service: DEBUG
+    energy_mgmt.mppt_service: INFO
 
 features:
     - router_core
     - energy_mgmt
+    - nmea2000
     - couplers:
           VEDirectCoupler
 
@@ -47,10 +48,30 @@ services:
     class: MPPTService
     coupler: MPPTVEDirect
     server: gRPCMain
+    publisher: NMEAPush
+    protocol: nmea0183
+    talker: EM
 
 - Console:
     class: Console
     server: gRPCMain
+
+publishers:
+
+- NMEAPrint:
+      class: N2KTracePublisher
+      active: true
+      flexible_decode: false
+      output: PRINT
+
+- NMEAPush:
+    class: GrpcPublisher
+    active: true
+    decode_nmea2000: false
+    nmea0183: pass_thru
+    address: 192.168.1.49
+    port: 4502
+
 
 
 

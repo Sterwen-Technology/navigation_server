@@ -72,11 +72,8 @@ class N2KTracePublisher(ExternalPublisher):
 
     def process_msg(self, gen_msg):
         if gen_msg.type != N2K_MSG:
-            if self._convert_nmea183:
-                self.process_nmea183(gen_msg)
-                return True
-            else:
-                return True
+            self.process_nmea183(gen_msg)
+            return True
         msg = gen_msg.msg
         _logger.debug("Trace publisher N2K input msg %s" % msg.format2())
         if self._print_option == 'NONE':
@@ -116,9 +113,13 @@ class N2KTracePublisher(ExternalPublisher):
 
     def process_nmea183(self, msg: NavGenericMsg):
         _logger.debug("Grpc Publisher NMEA0183 input: %s" % msg)
+        if not self._convert_nmea183 and self._print_option in ('ALL', 'PRINT'):
+            print(str(msg))
+            return
         if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
             self._trace_fd.write(str(msg))
             self._trace_fd.write('\n')
+
         try:
             for res in self._converter.convert(msg):
                 print_result = res.as_json()
@@ -131,7 +132,7 @@ class N2KTracePublisher(ExternalPublisher):
         except NMEAInvalidFrame:
             return
         except Exception as e:
-            _logger.error("NMEA0183 decing error:%s" % e)
+            _logger.error("NMEA0183 decoding error:%s" % e)
             return
 
     def stop(self):

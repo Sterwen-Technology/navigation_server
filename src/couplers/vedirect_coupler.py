@@ -21,7 +21,8 @@ import time
 import os
 
 from router_common import MessageServerGlobals, NavGenericMsg, TRANSPARENT_MSG, NULL_MSG
-from router_core import (Coupler, CouplerReadError, CouplerTimeOut, XDR, NMEA0183SentenceMsg)
+from router_core import (Coupler, CouplerReadError, CouplerTimeOut, XDR, NMEA0183SentenceMsg, NMEA0183Sentences,
+                         NMEA0183Msg)
 from log_replay import RawLogFile, LogReadError
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -250,6 +251,7 @@ class Vedirect(threading.Thread):
             value = int(msg[ved_field])
         else:
             value = msg[ved_field]
+        return value
 
 
 class VEDirectMsg(NavGenericMsg):
@@ -340,6 +342,7 @@ class VEDirectCoupler(Coupler):
         if self._mode == self.NON_NMEA:
             self._convert_message = self.no_convert
         elif self._mode == self.NMEA0183:
+            NMEA0183Sentences.set_talker(opts.get('talker', str, 'ST'))
             self._convert_message = self.convert_nmea0183
         else:
             raise ValueError
@@ -380,4 +383,4 @@ def mppt_nmea0183(dict_msg):
                             'V', 'DC Circuit Voltage')
     sentence.add_transducer('W', "%.1f" % Vedirect.value_from_message(dict_msg, 'panel_power'),
                             'W', 'Solar Panel Power')
-    return NMEA0183SentenceMsg(sentence)
+    return NMEA0183Msg(data=sentence.message())

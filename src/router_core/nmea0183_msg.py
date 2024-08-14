@@ -222,8 +222,13 @@ class NMEA0183Sentences:
         msg = ("%s*%2X\r\n" % (self._sentence, checksum)).encode()
         return msg
 
-    def talker(self):
-        return self._sender_id
+    @classmethod
+    def talker(cls):
+        return cls._sender_id
+
+    @classmethod
+    def set_talker(cls, talker_id: str):
+        cls._sender_id = talker_id
 
     def formatter(self):
         raise NotImplementedError
@@ -249,7 +254,7 @@ class ZDA(NMEA0183Sentences):
 class XDR(NMEA0183Sentences):
 
     def __init__(self):
-        self._sentence = "$%sXDR" % self._sender_id
+        self._sentence = f"${self._sender_id}XDR"
         self._nbt = 0
 
     def add_transducer(self, t_type, data, unit, t_id):

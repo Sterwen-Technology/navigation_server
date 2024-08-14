@@ -18,6 +18,7 @@ from collections import namedtuple, deque
 from generated.energy_pb2 import solar_output, request, MPPT_device, trend_response
 from generated.energy_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
 from router_common import GrpcService, MessageServerGlobals, resolve_ref, copy_protobuf_data
+from router_core import NMEA0183Sentences
 from couplers import mppt_nmea0183
 
 from generated.nmea2000_classes_gen import Pgn127751Class, Pgn127507Class
@@ -63,11 +64,13 @@ class MPPTData:
         res.eq_time_remaining = 0
         return res
 
-    def gen_pgn_127751(self):
+    def gen_pgn_127751(self, sid: int):
         res = Pgn127751Class()
+        res.sequence_id = sid % 256
         res.connection_number = 1
         res.voltage = self.voltage
         res.current = self.current
+        return res
 
 
 MPPTBucket = namedtuple('MPPTBucket', ['voltage', 'current', 'power'])
@@ -85,6 +88,8 @@ class VictronMPPT:
         self._publisher_name = opts.get('publisher', str, None)
         if self._publisher_name is not None:
             self._protocol = opts.get_choice('protocol', ('nmea0183', 'nmea2000'), 'nmea0183')
+        if self._protocol == 'nmea0183':
+            NMEA0183Sentences.set_talker(opts.get('talker', str, 'ST'))
         self._publisher = None
         self._publish_function = None
         self._service = service
@@ -123,12 +128,17 @@ class VictronMPPT:
             try:
                 self._publisher = resolve_ref(self._publisher_name)
             except KeyError:
-                pass
+                _logger.error("MPPTService no publisher %s" % self._publisher_name)
+
             if self._publisher is not None:
+                _logger.debug(
+                    "MPPT Service publisher set:%s protocol:%s" % (self._publisher.object_name(), self._protocol))
                 if self._protocol == 'nmea0183':
+
                     self._publish_function = self.publish0183
                 else:
                     self._publish_function = self.publish2000
+                    self._sid = 0
 
         self._coupler.register(self)
         self._start_period = time.monotonic()
@@ -163,13 +173,15 @@ class VictronMPPT:
             self._current_data.output_info_pb(device_info)
 
     def publish0183(self):
+        _logger.debug("MPPT Service publish NMEA0183")
         msg = mppt_nmea0183(self._current_data_dict)
         self._publisher.publish(msg)
 
     def publish2000(self):
         msg = self._current_data.gen_pgn_127507()
         self._publisher.publish(msg)
-        msg = self._current_data.gen_pgn_127751()
+        msg = self._current_data.gen_pgn_127751(self._sid)
+        self._sid += 1
         self._publisher.publish(msg)
 
 
