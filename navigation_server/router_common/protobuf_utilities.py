@@ -65,6 +65,15 @@ def copy_protobuf_data(source, target, attributes):
         setattr(target, attr, getattr(source, attr))
 
 
+def copy_protobuf_data(source, target, attributes):
+    '''
+    Copy the attributes in the iterator from source to target
+    That is assuming that attributes have the same name in both objects
+    '''
+    for attr in attributes:
+        setattr(target, attr, getattr(source, attr))
+
+
 def pb_enum_string(msg, enum_attr: str, value):
     return msg.DESCRIPTOR.fields_by_name[enum_attr].enum_type.values_by_number[value].name
 
