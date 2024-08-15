@@ -19,15 +19,11 @@ class MessageServerGlobals:
     pgn_definitions = None
     manufacturers = None
     enums = None
-    units = None
     version = None
     configuration = None
     global_variables = None
     server_name = None
     data_dir = None
-    thread_controller = None
-    profiling_controller = None
-    main_server = None
 
 
 def find_pgn(pgn: int, mfg_id: int = 0):
@@ -59,9 +55,6 @@ def get_global_var(key):
 
 def get_global_option(key, default):
     return MessageServerGlobals.configuration.get_option(key, default)
-
-def get_global_enum(key):
-    return MessageServerGlobals.enums.get_enum(key)
 
 
 def set_hook(key, hook):
