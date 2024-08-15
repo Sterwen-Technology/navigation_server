@@ -93,6 +93,11 @@ filters:
       pgn: [127488, 127489]
       type: select
 
+- Engine:
+      class: NMEA2000Filter
+      pgn: [127488, 127489]
+      action: select
+
 
 
 
