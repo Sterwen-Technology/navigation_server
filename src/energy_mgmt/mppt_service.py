@@ -88,8 +88,8 @@ class VictronMPPT:
         self._publisher_name = opts.get('publisher', str, None)
         if self._publisher_name is not None:
             self._protocol = opts.get_choice('protocol', ('nmea0183', 'nmea2000'), 'nmea0183')
-            if self._protocol == 'nmea0183':
-                NMEA0183Sentences.set_talker(opts.get('talker', str, 'ST'))
+        if self._protocol == 'nmea0183':
+            NMEA0183Sentences.set_talker(opts.get('talker', str, 'ST'))
         self._publisher = None
         self._publish_function = None
         self._service = service

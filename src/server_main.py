@@ -20,7 +20,7 @@ from router_common import MessageServerGlobals
 from router_common import init_options
 
 
-MessageServerGlobals.version = "2.06a"
+MessageServerGlobals.version = "2.04"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -52,8 +52,6 @@ def main():
         _logger.info("Decode only mode -> no active server")
         return
 
-    assert MessageServerGlobals.main_server is not None
-
     _logger.debug("Starting the main server")
     if config.main_server.start():
         if opts.timer is not None:
@@ -63,9 +61,6 @@ def main():
         config.main_server.wait()
         _logger.info("server shall stop now")
         config.main_server.print_threads()
-        MessageServerGlobals.profiling_controller.stop_and_output()
-        for thread in MessageServerGlobals.thread_controller.running_threads():
-            _logger.warning(f"Wrongfully running thread {thread.name})")
     else:
         _logger.critical("Main server did not start properly => stop server")
 
