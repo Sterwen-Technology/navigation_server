@@ -2,11 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-<<<<<<<< HEAD:src/generated/navigation_data_pb2_grpc.py
 import generated.navigation_data_pb2 as navigation__data__pb2
-========
-import generated.energy_pb2 as energy__pb2
->>>>>>>> refs/heads/main_publish:src/generated/energy_pb2_grpc.py
 
 
 
@@ -19,7 +15,6 @@ class EngineDataStub(object):
         Args:
             channel: A grpc.Channel.
         """
-<<<<<<<< HEAD:src/generated/navigation_data_pb2_grpc.py
         self.GetEngineData = channel.unary_unary(
                 '/EngineData/GetEngineData',
                 request_serializer=navigation__data__pb2.engine_request.SerializeToString,
@@ -29,17 +24,6 @@ class EngineDataStub(object):
                 '/EngineData/GetEngineEvents',
                 request_serializer=navigation__data__pb2.engine_request.SerializeToString,
                 response_deserializer=navigation__data__pb2.engine_response.FromString,
-========
-        self.GetDeviceInfo = channel.unary_unary(
-                '/solar_mppt/GetDeviceInfo',
-                request_serializer=energy__pb2.request.SerializeToString,
-                response_deserializer=energy__pb2.MPPT_device.FromString,
-                )
-        self.GetOutput = channel.unary_unary(
-                '/solar_mppt/GetOutput',
-                request_serializer=energy__pb2.request.SerializeToString,
-                response_deserializer=energy__pb2.solar_output.FromString,
->>>>>>>> refs/heads/main_publish:src/generated/energy_pb2_grpc.py
                 )
 
 
@@ -61,7 +45,6 @@ class EngineDataServicer(object):
 
 def add_EngineDataServicer_to_server(servicer, server):
     rpc_method_handlers = {
-<<<<<<<< HEAD:src/generated/navigation_data_pb2_grpc.py
             'GetEngineData': grpc.unary_unary_rpc_method_handler(
                     servicer.GetEngineData,
                     request_deserializer=navigation__data__pb2.engine_request.FromString,
@@ -71,17 +54,6 @@ def add_EngineDataServicer_to_server(servicer, server):
                     servicer.GetEngineEvents,
                     request_deserializer=navigation__data__pb2.engine_request.FromString,
                     response_serializer=navigation__data__pb2.engine_response.SerializeToString,
-========
-            'GetDeviceInfo': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetDeviceInfo,
-                    request_deserializer=energy__pb2.request.FromString,
-                    response_serializer=energy__pb2.MPPT_device.SerializeToString,
-            ),
-            'GetOutput': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetOutput,
-                    request_deserializer=energy__pb2.request.FromString,
-                    response_serializer=energy__pb2.solar_output.SerializeToString,
->>>>>>>> refs/heads/main_publish:src/generated/energy_pb2_grpc.py
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -104,15 +76,9 @@ class EngineData(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-<<<<<<<< HEAD:src/generated/navigation_data_pb2_grpc.py
         return grpc.experimental.unary_unary(request, target, '/EngineData/GetEngineData',
             navigation__data__pb2.engine_request.SerializeToString,
             navigation__data__pb2.engine_response.FromString,
-========
-        return grpc.experimental.unary_unary(request, target, '/solar_mppt/GetDeviceInfo',
-            energy__pb2.request.SerializeToString,
-            energy__pb2.MPPT_device.FromString,
->>>>>>>> refs/heads/main_publish:src/generated/energy_pb2_grpc.py
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -127,14 +93,8 @@ class EngineData(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-<<<<<<<< HEAD:src/generated/navigation_data_pb2_grpc.py
         return grpc.experimental.unary_unary(request, target, '/EngineData/GetEngineEvents',
             navigation__data__pb2.engine_request.SerializeToString,
             navigation__data__pb2.engine_response.FromString,
-========
-        return grpc.experimental.unary_unary(request, target, '/solar_mppt/GetOutput',
-            energy__pb2.request.SerializeToString,
-            energy__pb2.solar_output.FromString,
->>>>>>>> refs/heads/main_publish:src/generated/energy_pb2_grpc.py
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
