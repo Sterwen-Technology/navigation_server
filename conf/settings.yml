@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
@@ -73,17 +73,6 @@ services:
     class: Console
     server: gRPCMain
 
-#- Trace:
-#    class: N2KTracePublisher
-#    instruments: [MiniPlex3]
-#   queue_size: 40
-#   filter: [129540]
-
-
-#    - MainLog:
-#       class: LogPublisher
-#        file: /data/solidsense/log/navigation.log
-#        instruments: [MiniPlex3]
 
 
 

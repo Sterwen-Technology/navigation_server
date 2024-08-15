@@ -2032,29 +2032,30 @@
     </PGNDefn>
     <PGNDefn PGN="127507">
       <Name>Charger Status</Name>
+      <Scope>Generate</Scope>
       <ByteLength>7</ByteLength>
       <Fields>
-        <InstanceField Name="Charger Instance">
+        <InstanceField Name="Charger Instance" key="charger_instance">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
         </InstanceField>
-        <InstanceField Name="Battery Instance">
+        <InstanceField Name="Battery Instance" key="battery_instance">
           <BitOffset>8</BitOffset>
           <BitLength>8</BitLength>
         </InstanceField>
-        <UIntField Name="Operating State">
+        <UIntField Name="Operating State" key="operating_state">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="Charge Mode">
+        <UIntField Name="Charge Mode" key="charger_mode">
           <BitOffset>24</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="Charger Enable/Disable">
+        <UIntField Name="Charger Enable/Disable" key="charger_enable">
           <BitOffset>32</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <UIntField Name="Equalization Pending">
+        <UIntField Name="Equalization Pending" key="equalization_pending">
           <BitOffset>34</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
@@ -2062,7 +2063,7 @@
           <BitOffset>36</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <UIntField Name="Equalization Time Remaining">
+        <UIntField Name="Equalization Time Remaining" key="eq_time_remaining">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
         </UIntField>
@@ -2352,6 +2353,35 @@
         </UIntField>
         <UIntField Name="Generator Off Reason">
           <BitOffset>40</BitOffset>
+          <BitLength>8</BitLength>
+        </UIntField>
+      </Fields>
+    </PGNDefn>
+    <PGNDefn PGN="127751">
+      <Name>DC Voltage/Current</Name>
+      <Scope>Generate</Scope>
+      <ByteLength>8</ByteLength>
+      <Fields>
+        <UIntField Name="SID" key="sequence_id">
+          <BitOffset>0</BitOffset>
+          <BitLength>8</BitLength>
+        </UIntField>
+        <UIntField Name="Connection number" key="connection_number">
+          <BitOffset>8</BitOffset>
+          <BitLength>8</BitLength>
+        </UIntField>
+        <UDblField Name="DC voltage" key="voltage">
+          <BitOffset>16</BitOffset>
+          <BitLength>16</BitLength>
+          <Scale>0.1</Scale>
+        </UDblField>
+        <DblField Name="DC Current" key="current">
+          <BitOffset>32</BitOffset>
+          <BitLength>24</BitLength>
+          <Scale>0.01</Scale>
+        </DblField>
+        <UIntField Name="Reserved">
+          <BitOffset>56</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
       </Fields>

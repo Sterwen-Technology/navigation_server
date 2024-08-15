@@ -13,9 +13,10 @@ function: Navigation message server
 log_level: INFO
 trace_dir: /data/solidsense
 log_module:
-    nmea_routing.console: INFO
-    nmea_routing.internal_gps: INFO
-    router_common.configuration: DEBUG
+    nmea2000.nmea2k_filters: INFO
+    router_core.filters: INFO
+    router_core.publisher: INFO
+
 
 features:
     - router_core
@@ -27,8 +28,6 @@ features:
           - InternalGps
           - MpptCoupler
           - NMEATCPReader
-
-decode_definition_only: true
 
 servers:
 
@@ -60,6 +59,7 @@ servers:
     
 - NMEANetwork:
     class: NMEA2KController
+    max_silent: 70.0
 
 
 couplers:
@@ -100,7 +100,16 @@ services:
 
 publishers:
 
-
+- SendNMEA2000:
+    class: GrpcPublisher
+    active: true
+    decode_nmea2000: false
+    nmea0183: convert_strict
+    address: 127.0.0.1
+    port: 4508
+    max_retry: 0
+    filters: [Engine]
+    couplers: [MiniPlex3]
 
 filters:
 
@@ -119,12 +128,17 @@ filters:
 - AutoPilotN2K:
     class: NMEA2000Filter
     source: 7
-    action: discard
+    type: discard
 
 - Barometer:
-    class: NMEA2000Filter
+    class: NMEA2000TimeFilter
     source: 52
     pgn: [130310, 130311, 130314]
     type: select
-    period: 60.0
+    period: 10.0
 
+- Engine:
+    class: NMEA2000Filter
+    pgn: [127488, 127489]
+    type: select
+      

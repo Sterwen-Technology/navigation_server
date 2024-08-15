@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
@@ -20,6 +20,13 @@ log_module:
     nmea_routing.publisher: INFO
     nmea_routing.filters: INFO
     nmea_routing.coupler: INFO
+
+features:
+    - router_core
+    - nmea2000
+    - nmea0183
+    - couplers:
+          - NMEATCPReader
 
 servers:
 

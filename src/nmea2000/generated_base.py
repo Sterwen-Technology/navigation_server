@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     26/11/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
@@ -27,6 +27,10 @@ def resolve_global_enum(enum_set: str, enum_value: int):
 
 
 def check_valid(value: int, mask: int, default: int) -> int:
+    '''
+    Check if the value is valid versus NMEA2000 standard (all bits@1)
+    If valid returns the value, if not returns the default value
+    '''
     if value == mask:
         return default
     else:
@@ -64,6 +68,12 @@ def clean_string(bytes_to_clean: bytearray) -> str:
 
 
 def extract_var_str(payload: bytearray, start_byte: int):
+    '''
+    Extract a variable length string from an NMEA message
+    payload: bytearray buffer containing the payload
+    start_byte: decoding_index
+    returns: string, total number of bytes decoded
+    '''
     total_len = payload[start_byte]
     str_len = total_len - 2
     if payload[start_byte + 1] != 1:
@@ -74,6 +84,9 @@ def extract_var_str(payload: bytearray, start_byte: int):
 
 
 def insert_var_str(payload: bytearray, start_byte, string_to_insert) -> int:
+    """
+
+    """
     bytes_to_insert = string_to_insert.encode()
     str_len = len(bytes_to_insert)
     payload[start_byte] = str_len + 2
@@ -117,12 +130,19 @@ N2K_DECODED = 201
 
 
 class NMEA2000DecodedMsg:
+    """
+    Superclass for all generated NMEA2000 messages classes. This is a pure virtual superclass.
+    Instances must be created from an actual (generated) child class.
+    """
 
     __slots__ = ('_sa', '_da', '_timestamp', '_priority')
 
     DEFAULT_BUFFER_SIZE = (31*7)+6   # max Fast packet
 
     def __init__(self, message: NMEA2000Msg = None, protobuf: nmea2000_decoded_pb = None):
+        """
+
+        """
 
         if message is not None:
             # initialization from a NMEA2000 CAN message
@@ -130,23 +150,23 @@ class NMEA2000DecodedMsg:
             self._da = message.da
             self._timestamp = message.timestamp
             self._priority = message.prio
-            self.decode_payload(message.payload)
+            self.decode_payload(message.payload)  # from the subclass
         elif protobuf is not None:
             self._sa = protobuf.sa
             self._da = protobuf.da
             self._timestamp = protobuf.timestamp
             self._priority = protobuf.priority
-            self.unpack_protobuf(protobuf)
+            self.unpack_protobuf(protobuf)  # from the subclass
         else:
             self._timestamp = time.time()
             self._sa = 0
             self._da = 255
             self._priority = 7
 
-
-        # we need a way to initialise the NMEA2000 message
-
     def protobuf_message(self) -> nmea2000_decoded_pb:
+        '''
+        Returns an instance of the generic class supporting protobuf encoded message ready to be
+        '''
         message = nmea2000_decoded_pb()
         message.pgn = self.pgn  # implemented in specific subclasses
         message.sa = self._sa

@@ -20,32 +20,32 @@ from router_common import MessageServerGlobals
 from router_common import init_options
 
 
-# from router_core.main_server import NavigationMainServer
-
-
-MessageServerGlobals.version = "2.03a"
+MessageServerGlobals.version = "2.04"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 _logger = logging.getLogger("ShipDataServer.main")
 
 
 def main():
-    # global global_configuration
-
+    """
+    Generic main for all servers or services
+    options:
+    --settings: filename of the specific configuration file of the server/service
+    --working_dir: working directory for the service, practically this shall be the head directory of the
+                   navigation_server software
+    """
+    # initialise command line arguments
     opts = init_options(default_base_dir)
-    # global parameters
 
-    # print("Current directory", os.getcwd())
     # set log for the configuration phase
     NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2024")
-
 
     # build the configuration from the file
     config = NavigationConfiguration().build_configuration(opts.settings)
     NavigationLogSystem.finalize_log(config)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
-    # nmea0183_msg.NMEA0183Sentences.init(config.get_option('talker', 'ST'))
+    # dynamically import modules declared in the configuration file
     config.initialize_features(config)
-
+    # create all server or service objects
     config.build_objects()
 
     if config.get_option('decode_definition_only', False):
@@ -55,16 +55,16 @@ def main():
     _logger.debug("Starting the main server")
     if config.main_server.start():
         if opts.timer is not None:
+            # for debug only trace running threads at regular interval
             config.main_server.start_analyser(opts.timer)
-    # print_threads()
+        # wait for all threads to stop now
         config.main_server.wait()
-        # if opts.timer is not None:
-            # config.main_server.print_threads()
-            # config.main_server.stop_analyser()
-        print("server shall stop now")
+        _logger.info("server shall stop now")
         config.main_server.print_threads()
+    else:
+        _logger.critical("Main server did not start properly => stop server")
 
 
 if __name__ == '__main__':
     main()
-    print("main thread ends")
+    _logger.info("Navigation server main thread ends")

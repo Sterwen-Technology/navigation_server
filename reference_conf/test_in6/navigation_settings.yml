@@ -21,6 +21,7 @@ features:
     - couplers:
           - ShipModulConfig
           - ShipModulInterface
+          - GrpcNmeaCoupler
 
 
 servers:
@@ -59,6 +60,10 @@ couplers:
     port: 10110
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
+    
+- EnergyInput:
+    class: GrpcNmeaCoupler
+    server: gRPCMain
 
 services:
 
@@ -84,11 +89,11 @@ filters:
 - RaymarineProprietary:
     class: NMEA2000Filter
     pgn: [126720]
-    action: discard
+    type: discard
 
 
 - Engine:
       class: NMEA2000Filter
       pgn: [127488, 127489]
-      action: select
+      type: select
 

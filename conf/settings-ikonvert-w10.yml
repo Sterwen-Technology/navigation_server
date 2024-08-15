@@ -13,6 +13,12 @@ log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
 
+features:
+    - router_core
+    - nmea2000
+    - nmea0183
+    - couplers:
+          - iKonvert
 
 servers:
 
@@ -57,17 +63,17 @@ filters:
 - FastPacket:
     class: NMEA2000Filter
     pgn: [129029, 126996, 129540]
-    action: select
+    type: select
 
 - RaymarineProprietary:
     class: NMEA2000Filter
     pgn: [126720]
-    action: select
+    type: select
 
 - NMEASent:
     class: NMEA2000Filter
     pgn: [129025, 129026, 129283, 129284]
-    action: select
+    type: select
 
 
 publishers:

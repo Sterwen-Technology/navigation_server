@@ -11,45 +11,28 @@
 #
 #
 function: Energy management server
-server_name: energy_management
 log_level: INFO
+# trace_dir: /mnt/meaban/Bateau/tests
+trace_dir: /data/solidsense/traces
 log_module:
 
 features:
-    - router_core
     - energy_mgmt
-    - couplers:
-          VEDirectCoupler
 
 servers:
 
 - Main:
-      class: NavigationMainServer
+      class: GenericTopServer
 
 - gRPCMain:
     class: GrpcServer
     port: 4505
-    
-couplers:
-
-- MPPTVEDirect:
-    class: VEDirectCoupler
-    device: /dev/ttyUSB0
-    interface: simulation
-    logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
-    protocol: non_nmea
-    max_attempt: 1
 
 services:
 
 - Agent:
     class: MPPTService
-    coupler: MPPTVEDirect
+    device: /dev/ttyUSB0
     server: gRPCMain
-
-
-
-
-
-
+    trace: false
 

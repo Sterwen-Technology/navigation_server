@@ -8,7 +8,7 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
-function:
+function: Log replay server
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 debug_configuration: false
@@ -61,12 +61,12 @@ filters:
 - FastPacket:
     class: NMEA2000Filter
     pgn: [129029, 126996, 129540]
-    action: select
+    type: select
 
 - RaymarineProprietary:
     class: NMEA2000Filter
     pgn: [126720]
-    action: select
+    type: select
 
 
 services:

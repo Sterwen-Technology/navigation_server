@@ -72,11 +72,12 @@ filters:
 - NMEAOutput:
     class: NMEA2000Filter
     pgn: [129283, 129284, 129285, 126992, 130074]
-    action: select
+    type: select
 
 - AIS:
     class: NMEA2000Filter
     pgn: [129794, 129810, 129809]
+    type: select
 
 services:
 
@@ -90,6 +91,7 @@ publishers:
     class: N2KTracePublisher
     couplers: [InputCoupler]
     filters: [NMEAOutput]
+    filter_select: true
     active: true
     flexible_decode: false
 

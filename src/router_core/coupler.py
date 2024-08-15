@@ -55,14 +55,14 @@ class Coupler(threading.Thread):
 
     (NOT_READY, OPEN, CONNECTED, ACTIVE) = range(4)
     (BIDIRECTIONAL, READ_ONLY, WRITE_ONLY) = range(10, 13)
-    (NMEA0183, NMEA2000, NMEA_MIX) = range(20, 23)
+    (NMEA0183, NMEA2000, NMEA_MIX, NON_NMEA) = range(20, 24)
     (TRACE_IN, TRACE_OUT) = range(30, 32)
 
     dir_dict = {'bidirectional': BIDIRECTIONAL,
                 'read_only': READ_ONLY,
                 'write_only': WRITE_ONLY}
 
-    protocol_dict = {'nmea0183': NMEA0183, 'nmea2000': NMEA2000, 'nmea_mix': NMEA_MIX}
+    protocol_dict = {'nmea0183': NMEA0183, 'nmea2000': NMEA2000, 'nmea_mix': NMEA_MIX, 'non_nmea': NON_NMEA}
 
     def __init__(self, opts):
         object_name = opts['name']

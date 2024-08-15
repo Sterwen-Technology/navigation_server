@@ -6,7 +6,7 @@
 #
 # Created:     26/12/2021
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
-# Licence:     <your licence>
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
 trace: DEBUG
@@ -14,6 +14,13 @@ trace_dir: /mnt/meaban/Bateau/tests
 log_module:
   nmea_routing.coupler: INFO
   nmea0183.nmea0183_to_nmea2k: INFO
+
+features:
+    - router_core
+    - nmea2000
+    - nmea0183
+    - couplers:
+          - InternalGps
 
 servers:
 

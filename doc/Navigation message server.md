@@ -102,10 +102,10 @@ Server for NMEA information and other navigation information using the gRPC prot
 Each of these services corresponds to one *service* in a gRPC/Protobuf definition file (.proto).
 Some services are explicitly defined in the configuration file (Console service for instance), while some others are implicitly defined by Couplers or other entities.
 
-| Name      | Type | Default | Signification                                                  |
-|-----------|------|---------|----------------------------------------------------------------|
-| port      | int  | 4502    | listening port of the server                                   |
-| nb_thread | int  | 5       | Number of thread in the pool to process simultaneuous requests |
+| Name      | Type | Default | Signification                                                 |
+|-----------|------|---------|---------------------------------------------------------------|
+| port      | int  | 4502    | listening port of the server                                  |
+| nb_thread | int  | 5       | Number of thread in the pool to process simultaneous requests |
 
 
 
@@ -122,14 +122,18 @@ Warning: when the application is connected to the server all traffic is re-route
 
 #### NMEA2KController server
 
-This is an internal server that has no direct TCP access. All accesses to this server are via the Console. This server maintain the list of devices connected on the NMEA2000 network along with the information they are sending.
+This is an internal server that has no direct TCP access. All accesses to this server are via the Console. This server maintains the list of devices connected on the NMEA2000 network along with the information they are sending.
 It shall be associated to a coupler by defining the **nmea2000_controller** parameter to capture all relevant messages. This coupler must be configured with **nmea2000** or **nmea_mix** protocol.
 This server is to be used if the access to the NMEA2000 bus is done via an adapter device (see corresponding couplers here below), meaning that the controller has no control on the bus and can only monitor activity.
 
-| Name       | Type   | Default | Signification                                    |
-|------------|--------|---------|--------------------------------------------------|
-| queue_size | int    | 20      | input message queue size                         |
-| save_file  | string | None    | Name of the file for saving the NMEA2000 devices |
+| Name       | Type   | Default | Signification                                                |
+|------------|--------|---------|--------------------------------------------------------------|
+| queue_size | int    | 20      | input message queue size                                     |
+| save_file  | string | None    | Name of the file for saving the NMEA2000 devices             |
+| max_silent | float  | 60.0    | Maximum time between message for one device (see note below) |
+
+Note: devices that are sending messages during an interval exceeding the **max_silent** parameter are considered as switched off and therefore removed from the device table.
+
 
 #### NMEA2KActiveController server
 
@@ -158,30 +162,30 @@ Currently, tested couplers:
 - Yachting Digital Ethernet (or Wi-Fi): NMEA2000 only (the device can be used in NMEA0183 using NMEA0183 over TCP/IP)
 - Direct serial link on NMEA0183: NMEA0183 and NMEA2000 using pseudo NMEA0183 messages (check speed)
 - NMEA0183 over TCP/IP: NMEA0183 and NMEA2000 using pseudo NMEA0183 messages
-- Victron energy device with VEDirect serial line
+- Energy devices via the energy management service
 - Internal GPS using GPS on cellular Modems (Fully tested with Quectel modems)
 - Direct CAN Access: NMEA2000 only
-- GrpcCoupler: allows data flow from a server to another based gRPC (HTTP/2)
+- GrpcCoupler: allows data flow from a server to another based on gRPC (HTTP/2)
 
 on hold
 - Actisense adapter (NGT-1-USB or NGX-1) - Actisense is not willing to open the documentation of the interface, so development is on hold.
 
 #### Coupler generic parameters
 
-| Name                | Type                                 | Default       | Signification                                                                                                                                            |
-|---------------------|--------------------------------------|---------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| timeout             | float                                | 10            | Time out on coupler read in seconds                                                                                                                      |
- | report_timer        | float                                | 30            | Reporting / tracing interval in sec.                                                                                                                     |
- | max_attempt         | integer                              | 20            | Max number of attempt to open the device                                                                                                                 |
-| open_delay          | float                                | 2             | Delay between attempt to open the device                                                                                                                 |
-| talker              | string (2)                           | None          | Talker ID substitution for NMEA0183                                                                                                                      |
-| protocol            | nmea0183, nmea2000, nmea_mix         | nmea0183      | Message processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 pseudo NMEA0183 messages                  |
-| direction           | read_only, write_only, bidirectional | bidirectional | Direction of exchange with device                                                                                                                        |
-| trace_messages      | boolean                              | False         | Trace all messages after internal pre-processing                                                                                                         |
-| trace_raw           | boolean                              | False         | Trace all messages in device format (see tracing and replay paragraph)                                                                                   | 
-| autostart           | boolean                              | True          | The coupler is started automatically when the service starts, if False it needs to be started via the Console                                            |
-| nmea2000_controller | string                               | None          | Name of the server of class NMEA2KController associated with the coupler                                                                                 |
-| nmea0183_convert    | boolean                              | False         | Convert NMEA0183 to NMEA2000, if protocol is specified as *nmea2000* then non converted messages are discarded, otherwise they are forwarded as NMEA0183 |
+| Name                | Type                                   | Default       | Signification                                                                                                                                            |
+|---------------------|----------------------------------------|---------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| timeout             | float                                  | 10            | Time out on coupler read in seconds                                                                                                                      |
+ | report_timer        | float                                  | 30            | Reporting / tracing interval in sec.                                                                                                                     |
+ | max_attempt         | integer                                | 20            | Max number of attempt to open the device                                                                                                                 |
+| open_delay          | float                                  | 2             | Delay between attempt to open the device                                                                                                                 |
+| talker              | string (2)                             | None          | Talker ID substitution for NMEA0183                                                                                                                      |
+| protocol            | nmea0183, nmea2000, nmea_mix, non_nmea | nmea0183      | Message processing directive nmea0183 treat all messages as NMEA0183 sentence, nmea2000: translate in NMEA2000 pseudo NMEA0183 messages                  |
+| direction           | read_only, write_only, bidirectional   | bidirectional | Direction of exchange with device                                                                                                                        |
+| trace_messages      | boolean                                | False         | Trace all messages after internal pre-processing                                                                                                         |
+| trace_raw           | boolean                                | False         | Trace all messages in device format (see tracing and replay paragraph)                                                                                   | 
+| autostart           | boolean                                | True          | The coupler is started automatically when the service starts, if False it needs to be started via the Console                                            |
+| nmea2000_controller | string                                 | None          | Name of the server of class NMEA2KController associated with the coupler                                                                                 |
+| nmea0183_convert    | boolean                                | False         | Convert NMEA0183 to NMEA2000, if protocol is specified as *nmea2000* then non converted messages are discarded, otherwise they are forwarded as NMEA0183 |
 
 
 Remarks on protocol behavior:
@@ -191,6 +195,8 @@ a) When nmea2000 is selected, NMEA0183 messages are anyway routed transparently 
 b) When nmea0183 is selected, all messages are routed in NMEA0183 and no decoding of possible NMEA2000 is performed.
 
 c) When nmea_mix is selected, the protocol PGN are decoded and processed in the corresponding NMEA2KController instance to give a view of the network. All other messages are routed internally as NMEA2000, but externally they stay in their input format. That mode is only working if a NMEA2KController has been instanced.
+
+d) non_nmea messages are only for internal use within a server, they must be converted to NMEA0183 or NMEA2000 to be routed externally, or exchange through a specific gRPC service
 
 **When a NMEA2KController is defined, all ISO protocol messages are processed locally and not forwarded to the message server, so they are not visible by the client**
 
@@ -259,14 +265,16 @@ The device connection and initialisation logic is directly managed by the couple
 No additional parameters in this version. The coupler connects to the modem via a USB port. All parameters are given with the modem control.
 
 
-#### MpptCoupler(Coupler)
+#### VEDirectCoupler(Coupler)
 
-This class manages the interface with the VEDirect interface service (see) and convert the data into NMEA0183 XDR messages.
+This class manages Victron VEDirect serial interface or a VEDirect log file as simulation. As VEDirect is not NMEA, they have a specific internal format by default. If the coupler mode is set to NMEA0183, then a XDR sentence is generated with the current, voltage and power from the panel.
+This coupler is intended to be used by the energy management agent, rather than the global messaging router-server, but if only some measurements are needed for display, it can be integrated like any other coupler but only in NMEA mode (protocol => nmea0183)
 
-| Name    | Type   | Default   | Signification            |
-|---------|--------|-----------|--------------------------|
-| address | string | 127.0.0.1 | IP address of the server |
-| port    | int    | 4505      | listening port           |
+| Name      | Type               | Default | Signification                                          |
+|-----------|--------------------|---------|--------------------------------------------------------|
+| device    | string             | None    | name of the serial device with the VEDirect connection |
+| interface | serial, simulation | serial  | type of input: direct serial or simulation             |
+| logfile   | string             | None    | name of the file to be used for VEDirect simulation    |
 
 #### DirectCANCoupler(Coupler)
 This coupler class works when a CAN bus interface with socketcan driver is installed on the system. Obviously, only NMEA2000 messages can be processed.
@@ -286,15 +294,50 @@ The
 ### Services
 
 The services are attached to the gRPC server that is declared and running in the process. If no gRPC server is declared, then all services definition and creation will fail
+All services have a dedicated gRPC interface described in **Protobuf** language. All interfaces description files are located in the src/proto directory.
+All services must be associated with a gRPC server (one per process)
 
-#### Console service
-
-This is a gRPC service used for external monitoring and control of the navigation server process. The protobuf interface is in the src/proto/console.proto file.
 
 | Name             | Type   | Default | Signification                                                                  |
 |------------------|--------|---------|--------------------------------------------------------------------------------|
 | server           | string | None    | gRPC server associated. This is a mandatory parameter                          |
 
+#### Console service
+
+This is a gRPC service used for external monitoring and control of the navigation server process. The protobuf interface is in the **console.proto** file.
+
+
+#### AgentService
+
+The Agent service provides a limited but useful remote control of the Linux system on which some servers are running.
+
+**Warning: use this service only in controlled environment as in its current version no access control is implemented**
+
+#### DataDispatchService
+
+This is a **primary** service that is dispatching NMEA messages sent over gRPC using the same interface as the GrpcNmeaCoupler.
+The messages are meant to be processed by *secondary* services that subscribe to this service using NMEA2000 PGN or NMEA0183 formatter as subscribing keys.
+Messages with no subscription are simply ignored.
+
+#### Energy management service
+
+The service provides a global control for several services linked to energy management. The interface is described in **energy.proto**
+
+##### MPPTService
+
+This service receive the MPPT info via a VEDirectCoupler and keeps track of data and trends from the solar panel and MPPT output.
+The service can also be used to forward NMEA0183 or NMEA2000 messages via a *gRPCNMEAPublisher*
+Interface is part of **energy.proto**
+
+Additional parameters
+
+| Name         | Type               | Default  | Signification                                                          |
+|--------------|--------------------|----------|------------------------------------------------------------------------|
+| coupler      | string             | None     | VEDirectCoupler required for data input. This is a mandatory parameter |
+| publisher    | string             | None     | Optional publisher used to forward energy messages (see below)         |
+| protocol     | nmea0183, nmea2000 | nmea0183 | XDR sentence for NMEA0183, PGN 127507, 127751 for NMEA2000             |
+| trend_depth  | int                | 30       | number of values in the trend table                                    |
+| trend_period | float              | 10       | period of the trend bucket in seconds (min 1 sec)                      |
 
 
 ### Publishers
@@ -306,27 +349,33 @@ There are also specific Publishers for tracing and logging and interprocess comm
 
 Parameters
 
-| Name       | Type            | Default | Signification                                                       |
-|------------|-----------------|---------|---------------------------------------------------------------------|
-| queue_size | int             | 20      | Size of the input queue (nb of messages)                            |
-| max_lost   | int             | 5       | Number of messages allowed to be lost before stopping the Publisher |
-| couplers   | list of strings | None    | List of couplers associated with this publisher                     |
-| active     | bool            | true    | specify whether the publisher is active upon system start           |
-| filters    | list of strings | None    | List of filters that are to applied before sending messages         |
+| Name          | Type            | Default | Signification                                                       |
+|---------------|-----------------|---------|---------------------------------------------------------------------|
+| queue_size    | int             | 20      | Size of the input queue (nb of messages)                            |
+| max_lost      | int             | 5       | Number of messages allowed to be lost before stopping the Publisher |
+| couplers      | list of strings | None    | List of couplers associated with this publisher                     |
+| active        | bool            | true    | specify whether the publisher is active upon system start           |
+| filters       | list of strings | None    | List of filters that are to applied before sending messages         |
+| filter_select | bool            | false   | Specify the behavior of filtering (see below)                       |
+
+The parameter **filter_select** indicates the behavior of the publisher on filtering.
+    - **filter_select** is false, then all messages not matching the filter are published. Messages that match the filter are published if their **type** is 'select'
+    - **filter_select** is true, then only the messages matching the filter are published when their **type** is 'select'
 
 #### GrpcPublisher
 
 This publisher sends NMEA messages (all formats) towards another gRPC Coupler or InputService using the gRPC service defined in input_service.proto.
 
-| Name              | Type                                    | Default   | Signification                                               |
-|-------------------|-----------------------------------------|-----------|-------------------------------------------------------------|
-| address           | string                                  | 127.0.0.1 | IP address of the gRPC target server                        |
-| port              | int                                     | 4502      | Port number of the target gRPC server                       |
-| decode_nmea2000   | bool                                    | false     | when true all NMEA2000 are fully decoded before being sent  |
-| trace_missing_pgn | bool                                    | false     | When true all messages with PGN not decoded are logged      |
-| nmea0183          | convert_strict, convert_pass, pass_thru | pass_thru | specify processing for NMEA0183 messages (see below)        |
-| retry_interval    | float                                   | 10.0      | Interval between connection retries to the gRPC server      |
-| max_retry         | int                                     | 20        | Maximum number of retries, if 0, retries indefinitely       |
+| Name              | Type                                    | Default   | Signification                                              |
+|-------------------|-----------------------------------------|-----------|------------------------------------------------------------|
+| address           | string                                  | 127.0.0.1 | IP address of the gRPC target server                       |
+| port              | int                                     | 4502      | Port number of the target gRPC server                      |
+| decode_nmea2000   | bool                                    | false     | when true all NMEA2000 are fully decoded before being sent |
+| trace_missing_pgn | bool                                    | false     | When true all messages with PGN not decoded are logged     |
+| nmea0183          | convert_strict, convert_pass, pass_thru | pass_thru | specify processing for NMEA0183 messages (see below)       |
+| retry_interval    | float                                   | 10.0      | Interval between connection retries to the gRPC server     |
+| max_retry         | int                                     | 20        | Maximum number of retries, if 0, retries indefinitely      |
+| filter_select     | bool                                    | true      | Default value is true for this class                       |
 
 NMEA0183 processing flags:
 * **pass_thru**: messages are forwarded without processing
@@ -496,7 +545,9 @@ The global section includes the definition of the following global parameters:
 
 | Name                   | Type                     | Default                        | Signification                                                                                              |
 |------------------------|--------------------------|--------------------------------|------------------------------------------------------------------------------------------------------------|
-| log_level              | DEBUG/INFO/WARNING/ERROR | INFO                           | Level of logging (traces)                                                                                  |
+| function               | string                   | None                           | Short description of the server function                                                                   |
+| server_name            | string                   | None                           | Name of the server (for traces and more)                                                                   |
+| log_level              | DEBUG/INFO/WARNING/ERROR | INFO                           | Global level of logging (traces)                                                                           |
 | manufacturer_xml       | string                   | ./def/Manufacturers.N2kDfn.xml | XML file containing NMEA Manufacturers definition                                                          |
 | nmea2000_xml           | string                   | ./def/PGNDefns.N2kDfn.xml      | XML file containing NMEA2000 PGN definitions                                                               |
 | trace_dir              | string                   | /var/log                       | Directory where all the traces and logs will be stored                                                     |
@@ -546,6 +597,8 @@ Here are the features included with the current version
 First example with only the connection to a replay server
 
 ```
+function: Navigation messages router
+server_name: navigation_router
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 # log_file: test_log
@@ -619,6 +672,8 @@ services:
 Second example with direct CAN access
 
 ```
+function: Navigation messages router (CAN)
+server_name: navigation_router
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 # log_file: test_fast_packet
@@ -690,16 +745,17 @@ filters:
 
 ```
 
-### Default port assignments for services
+### Default port assignments for servers / services
 
-| service                       | port | transport protocol | application protocol |
-|-------------------------------|------|--------------------|----------------------|
-| NMEA Messages server          | 4500 | TCP                | NMEA0183 like        |
-| Miniplex configuration server | 4501 | TCP                | Miniplex specific    |
-| gRPC server                   | 4502 | gRPC               | see console.proto    |
-| NMEA message sender           | 4503 | TCP                | NMEA0183 like        |
-| Energy management server      | 4505 | gRPC               | see vedirect.proto   |
-| Local Linux agent             | 4506 | gRPC               | see agent.proto      |
+| service                       | port | transport protocol | application protocol      |
+|-------------------------------|------|--------------------|---------------------------|
+| NMEA Messages server          | 4500 | TCP                | NMEA0183 like             |
+| Miniplex configuration server | 4501 | TCP                | Miniplex specific         |
+| gRPC server                   | 4502 | gRPC               | see console.proto         |
+| NMEA message sender           | 4503 | TCP                | NMEA0183 like             |
+| Energy management server      | 4505 | gRPC               | see vedirect.proto        |
+| Local Linux agent             | 4506 | gRPC               | see agent.proto           |
+| Data management server        | 4508 | gRPC               | see navigation_data.proto |
 
 ## Implementation structure
 

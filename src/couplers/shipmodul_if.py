@@ -11,6 +11,7 @@
 
 import socket
 import logging
+from array import array
 
 from router_core import NavTCPServer, ConnectionRecord, Publisher, Coupler, BufferedIPCoupler
 from router_common import IncompleteMessage, N2KUnknownPGN
@@ -179,6 +180,7 @@ class ShipModulInterface(BufferedIPCoupler):
                 gmsg = NavGenericMsg(N2K_MSG, raw=m0183.raw, msg=msg)
                 return gmsg
         # here we continue decoding in NMEA2000 mode and for ISO messages
+        '''
         data = bytearray(dlc)
         pr_byte = 0
         l_hex = len(fields[2])
@@ -187,7 +189,9 @@ class ShipModulInterface(BufferedIPCoupler):
             data[pr_byte] = int(fields[2][i_hex:i_hex + 2], 16)
             pr_byte += 1
             i_hex -= 2
-
+        '''
+        data = bytearray.fromhex(fields[2].decode())
+        data.reverse()
         # now the PGN sentence is decoded
 
         def check_pgn():
