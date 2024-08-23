@@ -198,7 +198,7 @@ class ShipModulInterface(BufferedIPCoupler):
             try:
                 fp = PGNDef.fast_packet_check(pgn)
             except N2KUnknownPGN as e:
-                _logger.info("%s MXPGN decode %s SA=%d data=%s" % (coupler.name(), e, source_addr, data.hex()))
+                _logger.info("%s MXPGN decode %s SA=%d data=%s" % (coupler.object_name(), e, source_addr, data.hex()))
                 raise IncompleteMessage
             return fp
 
@@ -253,7 +253,7 @@ class ConfigPublisher(Publisher):
 
     def last_action(self):
         # print("Deregister config publisher")
-        self._couplers[0].deregister(self)
+        self.deregister()
 
 
 class ShipModulConfig(NavTCPServer):
@@ -322,6 +322,7 @@ class ShipModulConfig(NavTCPServer):
         self._reader = self.resolve_ref('coupler')
         if self._reader is None:
             _logger.error("%s no coupler associated => stop" % self.name)
+        _logger.debug("ShipModulConfig associated coupler:%s state:%s" % (self._reader.object_name(), self._reader.state()))
 
     def nb_connections(self):
         if self._connection is not None:
