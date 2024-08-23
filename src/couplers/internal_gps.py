@@ -44,6 +44,7 @@ class InternalGps(Coupler):
         fp = open("/data/solidsense/modem_gps/parameters.json")
         self._params = json.load(fp)
         fp.close()
+        _logger.debug("modem control file:%s" % self._params['modem_ctrl'])
         self._modem = QuectelModem(self._params['modem_ctrl'])
         status = self._modem.getGpsStatus()
         _logger.info("Internal GPS status:%s" % status)

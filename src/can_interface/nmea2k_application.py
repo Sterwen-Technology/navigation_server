@@ -173,28 +173,32 @@ class NMEA2000Application(NMEA2000Device):
         _logger.debug("Application [%d] receive address claim from address %d da=%d" % (self._address, msg.sa, msg.da))
         if self._claim_timer is not None:
             self._claim_timer.cancel()
-        address_claim_obj = AddressClaim(message=msg, da=msg.sa)
-        iso_name = address_claim_obj.name
-        _logger.warning("Address claim with conflict on address %d received with name %8X. Our name: %8X" % (
-                        self._address, iso_name.name_value, self._iso_name.name_value))
-        if iso_name.name_value > self._iso_name.name_value:
-            # here we need to change the address => not implemented
-            _logger.warning("CAN address %d not available need to change it" % self._address)
-            # let's find a new address
-            address = self._controller.app_pool.get_new_address()
-            if address == 254:
-                _logger.critical("Cannot obtain a CAN address => Going off line")
-                msg = AddressClaim(address, name=self._iso_name, da=msg.sa)
-                _logger.warning("Application address %d sending cannot claim address" % self._address)
-                self._controller.CAN_interface.send(msg.message(), force_send=True)
-                self._controller.stop()
-                return
-            # now we need to swap addresses
-            self.change_address(address)
-        else:
-            _logger.warning("Local application name %8X keeps address %d" % (self._iso_name.name_value, self._address))
-            # need to send an Address Claimed response
-            self.respond_address_claim()
+        # correction bug 28/08/24 (test sur Swann). => need to test the SA first
+        if self._address == msg.sa:
+            # then we have a conflict and there a need to react
+            address_claim_obj = AddressClaim(message=msg, da=msg.sa)
+            iso_name = address_claim_obj.name
+            _logger.warning("Address claim with conflict on address %d received with name %8X. Our name: %8X" % (
+                            self._address, iso_name.name_value, self._iso_name.name_value))
+            _logger.warning("Conflicting NAME details: %s" % str(iso_name))
+            if iso_name.name_value > self._iso_name.name_value:
+                # here we need to change the address => not implemented
+                _logger.warning("CAN address %d not available need to change it" % self._address)
+                # let's find a new address
+                address = self._controller.app_pool.get_new_address()
+                if address == 254:
+                    _logger.critical("Cannot obtain a CAN address => Going off line")
+                    msg = AddressClaim(address, name=self._iso_name, da=msg.sa)
+                    _logger.warning("Application address %d sending cannot claim address" % self._address)
+                    self._controller.CAN_interface.send(msg.message(), force_send=True)
+                    self._controller.stop()
+                    return
+                # now we need to swap addresses
+                self.change_address(address)
+            else:
+                _logger.warning("Local application name %8X keeps address %d" % (self._iso_name.name_value, self._address))
+                # need to send an Address Claimed response
+                self.respond_address_claim()
 
     def change_address(self, address):
         _logger.info("Reassigning new address %d" % address)
