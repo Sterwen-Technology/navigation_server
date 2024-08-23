@@ -16,6 +16,7 @@ log_module:
     nmea2000.nmea2k_filters: INFO
     router_core.filters: INFO
     router_core.publisher: INFO
+    couplers.shipmodul_if: INFO
 
 
 features:

@@ -3342,6 +3342,141 @@
         </EnumField>
       </Fields>
     </PGNDefn>
+    <PGNDefn PGN="129041">
+      <Name>AIS Aids to Navigation (AtoN) Report</Name>
+      <ByteLength>26</ByteLength>
+      <Fields>
+        <UIntField Name="Message ID">
+          <BitOffset>0</BitOffset>
+          <BitLength>6</BitLength>
+        </UIntField>
+        <EnumField Name="Repeat Indicator">
+          <BitOffset>6</BitOffset>
+          <BitLength>2</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="Initial" />
+            <EnumPair Value="1" Name="First retransmission" />
+            <EnumPair Value="2" Name="Second retransmission" />
+            <EnumPair Value="3" Name="Final retransmission" />
+          </EnumValues>
+        </EnumField>
+        <IntField Name="User ID">
+          <BitOffset>8</BitOffset>
+          <BitLength>32</BitLength>
+        </IntField>
+         <DblField Name="Longitude">
+          <BitOffset>40</BitOffset>
+          <BitLength>32</BitLength>
+          <FormatAs>Latitude</FormatAs>
+          <Scale>1E-07</Scale>
+        </DblField>
+        <DblField Name="Latitude">
+          <BitOffset>72</BitOffset>
+          <BitLength>32</BitLength>
+          <FormatAs>Longitude</FormatAs>
+          <Scale>1E-07</Scale>
+        </DblField>
+        <EnumField Name="Position Accuracy">
+          <BitOffset>104</BitOffset>
+          <BitLength>1</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="Low" />
+            <EnumPair Value="1" Name="High" />
+          </EnumValues>
+        </EnumField>
+        <EnumField Name="AIS RAIM flag">
+          <BitOffset>105</BitOffset>
+          <BitLength>1</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="not in use" />
+            <EnumPair Value="1" Name="in use" />
+          </EnumValues>
+        </EnumField>
+        <EnumField Name="Time Stamp">
+          <Description>0-59 = UTC second when the report was generated</Description>
+          <BitOffset>106</BitOffset>
+          <BitLength>6</BitLength>
+          <EnumValues>
+            <EnumPair Value="60" Name="Not available" />
+            <EnumPair Value="61" Name="Manual input mode" />
+            <EnumPair Value="62" Name="Dead reckoning mode" />
+            <EnumPair Value="63" Name="Positioning system is inoperative" />
+          </EnumValues>
+        </EnumField>
+        <DblField Name="Length">
+          <BitOffset>192</BitOffset>
+          <BitLength>16</BitLength>
+          <Scale>0.1</Scale>
+        </DblField>
+        <DblField Name="Beam">
+          <BitOffset>208</BitOffset>
+          <BitLength>16</BitLength>
+          <Scale>0.1</Scale>
+        </DblField>
+        <DblField Name="Position reference from Starboard">
+          <BitOffset>224</BitOffset>
+          <BitLength>16</BitLength>
+          <Scale>0.1</Scale>
+        </DblField>
+        <DblField Name="Position reference from true North facing edge">
+          <BitOffset>240</BitOffset>
+          <BitLength>16</BitLength>
+          <Scale>0.1</Scale>
+        </DblField>
+        <EnumField Name="AToN type">
+          <BitOffset>256</BitOffset>
+          <BitLength>5</BitLength>
+        </EnumField>
+        <EnumField Name="Off Position Indicator">
+          <BitOffset>261</BitOffset>
+          <BitLength>1</BitLength>
+        </EnumField>
+        <EnumField Name="Virtual AtoN Flag">
+          <BitOffset>262</BitOffset>
+          <BitLength>1</BitLength>
+        </EnumField>
+        <EnumField Name="Assigned Mode Flag">
+          <BitOffset>263</BitOffset>
+          <BitLength>1</BitLength>
+        </EnumField>
+        <UIntField Name="Reserved">
+          <BitOffset>264</BitOffset>
+          <BitLength>1</BitLength>
+        </UIntField>
+        <EnumField Name="GNSS type" Definition="GNSS type">
+          <BitOffset>265</BitOffset>
+          <BitLength>4</BitLength>
+        </EnumField>
+        <UIntField Name="Reserved">
+          <BitOffset>269</BitOffset>
+          <BitLength>3</BitLength>
+        </UIntField>
+        <UIntField Name="AToN status">
+          <BitOffset>272</BitOffset>
+          <BitLength>8</BitLength>
+        </UIntField>
+        <EnumField Name="AIS Transceiver information">
+          <BitOffset>280</BitOffset>
+          <BitLength>5</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="Channel A VDL reception" />
+            <EnumPair Value="1" Name="Channel B VDL reception" />
+            <EnumPair Value="2" Name="Channel A VDL transmission" />
+            <EnumPair Value="3" Name="Channel B VDL transmission" />
+            <EnumPair Value="4" Name="Own information not broadcast" />
+            <EnumPair Value="5" Name="Reserved" />
+          </EnumValues>
+        </EnumField>
+        <UIntField Name="Reserved">
+          <BitOffset>285</BitOffset>
+          <BitLength>3</BitLength>
+        </UIntField>
+        <VarLengthStringField Name="AToN name">
+          <BitOffset>288</BitOffset>
+          <BitLength>-1</BitLength>
+        </VarLengthStringField>
+      </Fields>
+    </PGNDefn>
     <PGNDefn PGN="129044">
       <Name>Datum</Name>
       <ByteLength>20</ByteLength>
