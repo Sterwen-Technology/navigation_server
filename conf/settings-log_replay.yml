@@ -46,7 +46,7 @@ couplers:
 - LogReader:
     class: RawLogCoupler
     # logfile: C:\Users\laure\Laurent-Drive\Logiciel bateau\tests\TRACE-CAN-if-can0-231101-Corrigee.log
-    logfile: /mnt/meaban/Bateau/tests/TRACE-CAN-if-can0-231101-Corrigee.log
+    logfile: /mnt/meaban/Bateau/tests/TRACE-CAN-if-can0-240822-2134.log
     # logfile: /mnt/meaban/Bateau/tests/TRACE-MiniPlex3-230720-0644.log
 
     autostart: true

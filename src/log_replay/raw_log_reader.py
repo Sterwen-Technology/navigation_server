@@ -144,10 +144,15 @@ class RawLogFile:
         self._tick_index = []
         self._tick_interval = tick_interval
         first_line = fd.readline()
-        try:
-            ts, msg = read_decode(first_line)
-        except ValueError:
-            pass
+        while True:
+            # sometimes first lines are output that needs to be filtered out
+            try:
+                ts, msg = read_decode(first_line)
+                break
+            except ValueError:
+                first_line = fd.readline()
+                continue
+
         self._t0 = ts
         self._records.append(record_class(ts, msg))
         self._nb_tick = 0

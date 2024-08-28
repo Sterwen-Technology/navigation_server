@@ -178,7 +178,12 @@ class PGNDef (BitFieldGenerator):
                 except KeyError:
                     _logger.error("PGN %d Field class %s not defined for %s" % (self._id, field.tag, field.get('Name')))
                     continue
-                fo = field_class(field)
+                try:
+                    fo = field_class(field)
+                except Exception as err:
+                    _logger.error(f"Error during analysis of PGN {self._id} field {field.get('Name')}: {err}")
+                    raise N2KDefinitionError(f"Cannot process definition for PGN{self._id}")
+
                 fo.set_index(field_index)
                 field_index += 1
                 self.check_bf_add_field(fo)
