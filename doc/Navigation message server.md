@@ -262,7 +262,7 @@ The device connection and initialisation logic is directly managed by the couple
 
 #### InternalGps (Coupler)
 
-No additional parameters in this version. The coupler connects to the modem via a USB port. All parameters are given with the modem control.
+No additional parameters in this version. The coupler connects to the GNSS receiver via a TTY port. For that coupler class, it is assumed that the GNSS is integrated in a cellular modem. For isolated GNSS receiver the NMEASerialPort class shall be used.
 
 
 #### VEDirectCoupler(Coupler)
@@ -321,12 +321,13 @@ Messages with no subscription are simply ignored.
 
 #### Energy management service
 
-The service provides a global control for several services linked to energy management. The interface is described in **energy.proto**
+The service provides a global control for several services linked to energy management. The interface is described in **energy.proto**.
+Currently, only the **MPPTService** is available, the team is working on the implementation of new services, for batteries and chargers.
 
 ##### MPPTService
 
 This service receive the MPPT info via a VEDirectCoupler and keeps track of data and trends from the solar panel and MPPT output.
-The service can also be used to forward NMEA0183 or NMEA2000 messages via a *gRPCNMEAPublisher*
+The service can also be used to forward NMEA0183 or NMEA2000 messages via a **GrpcPublisher** towards another server.
 Interface is part of **energy.proto**
 
 Additional parameters
@@ -382,7 +383,7 @@ NMEA0183 processing flags:
 * **convert_strict**: messages are converted to NMEA2000 when possible and are discarded otherwise
 * **convert_pass**: messages are converted to NMEA2000 when possible or are forwarded as-is when not possible
 
-#### N2KTRacePublisher
+#### N2KTracePublisher
 
 Traces decoded NMEA2000 messages on stdout and/or in a file.
 
@@ -517,16 +518,18 @@ All Coupler parameters are applicable, and some must be set like the *nmea2000* 
 
 To keep the message timing, the whole file is read and messages stored in memory before the messages start to be sent in the system. By consequence, the LogReplayCoupler must be used on machines with enough RAM capacity. Recommendation is minimum 4GB of RAM to use the LogReplayCoupler.
 
+## Organizing the processes
 
+All the building blocks needs to be organized in several processes for the overall system reliability and processing distribution across CPU (local multiple cores or multiple CPU).
 
+Here are some recommendations based on experience:
 
-## Energy Management gRPC server
-This service is permanently reading the VEDirect (RS485 over USB) of the MPPT device in the current version and is intended to move to additional energy management features in the future.
-Data are available via the gRPC interface.
+1) for reliability reason the Agent service is to be implemented in a specific process. This will allow that process to monitor other processes.
+2) Connectivity to NMEA devices (via Coupler) as well as server for NMEA messages. For further processing, like NMEA2000 full decoding, a **GrpcPublisher** can be used to push the NMEA messages.
+3) It is recommended to locate energy management devices without NMEA2000 interface in a dedicated server that is instantiating the **MpptService**. This service can be associated to a Publisher that will forward NMEA messages translated from the native interface.
+4) The data server is another type of server that will hold data representing the current state of the yacht control system. It can be regularly polled by GUI type of applications. The first version is limited to engine data management but will be extended in the next versions. The data service is expected to receive NMEA messages via a **GrpcInputService**
 
-
-
-
+Many distributions are possible, they can even be spread across several physical machines. Some practical examples are available in the conf directory.
 
 ## Configuration files
 
@@ -583,7 +586,7 @@ Here are the features included with the current version
 
 | feature name  | includes                      | needed for                             |
 |---------------|-------------------------------|----------------------------------------|
-| router_common | Message router basic features |                                        |
+| router_core   | Message router basic features |                                        |
 | nmea2000      | NMEA2000 Handling             |                                        |
 | nmea0183      | NMEA0183 handling             |                                        |
 | couplers      | Non CAN couplers              |                                        |  
@@ -746,6 +749,9 @@ filters:
 ```
 
 ### Default port assignments for servers / services
+
+In the current version, the port assignment shall be managed manually. In most of the cases that is not an issue as the configuration for one application is rather static.
+However, having the system agent allocating the ports can be envisaged in future releases.
 
 | service                       | port | transport protocol | application protocol      |
 |-------------------------------|------|--------------------|---------------------------|

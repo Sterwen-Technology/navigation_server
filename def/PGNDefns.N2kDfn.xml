@@ -3419,25 +3419,25 @@
             <EnumPair Value="10" Name="Fixed beacon: cardinal E" />
             <EnumPair Value="11" Name="Fixed beacon: cardinal S" />
             <EnumPair Value="12" Name="Fixed beacon: cardinal W" />
-          <EnumPair Value="13" Name="Fixed beacon: port hand" />
-14	Fixed beacon: starboard hand
-15	Fixed beacon: preferred channel port hand
-16	Fixed beacon: preferred channel starboard hand
-17	Fixed beacon: isolated danger
-18	Fixed beacon: safe water
-19	Fixed beacon: special mark
-20	Floating AtoN: cardinal N
-21	Floating AtoN: cardinal E
-22	Floating AtoN: cardinal S
-23	Floating AtoN: cardinal W
-24	Floating AtoN: port hand mark
-25	Floating AtoN: starboard hand mark
-26	Floating AtoN: preferred channel port hand
-27	Floating AtoN: preferred channel starboard hand
-28	Floating AtoN: isolated danger
-29	Floating AtoN: safe water
-30	Floating AtoN: special mark
-31	Floating AtoN: light vessel/LANBY/rigs
+            <EnumPair Value="13" Name="Fixed beacon: port hand" />
+            <EnumPair Value="14" Name="Fixed beacon: starboard hand" />
+            <EnumPair Value="15" Name="Fixed beacon: preferred channel port hand" />
+            <EnumPair Value="16" Name="Fixed beacon: preferred channel starboard hand" />
+            <EnumPair Value="17" Name="Fixed beacon: isolated danger" />
+            <EnumPair Value="18" Name="Fixed beacon: safe water" />
+            <EnumPair Value="19" Name="Fixed beacon: special mark" />
+            <EnumPair Value="20" Name="Floating AtoN: cardinal N" />
+            <EnumPair Value="21" Name="Floating AtoN: cardinal E" />
+            <EnumPair Value="22" Name="Floating AtoN: cardinal S" />
+            <EnumPair Value="23" Name="Floating AtoN: cardinal W" />
+            <EnumPair Value="24" Name="Floating AtoN: port hand mark" />
+            <EnumPair Value="25" Name="Floating AtoN: starboard hand mark" />
+            <EnumPair Value="26" Name="Floating AtoN: preferred channel port hand" />
+            <EnumPair Value="27" Name="Floating AtoN: preferred channel starboard hand" />
+            <EnumPair Value="28" Name="Floating AtoN: isolated danger" />
+            <EnumPair Value="29" Name="Floating AtoN: safe water" />
+            <EnumPair Value="30" Name="Floating AtoN: special mark" />
+            <EnumPair Value="31" Name="Floating AtoN: light vessel/LANBY/rigs" />
           </EnumValues>
         </EnumField>
         <EnumField Name="Off Position Indicator" Definition="On-Off">
