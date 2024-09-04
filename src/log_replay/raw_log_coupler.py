@@ -52,7 +52,7 @@ class AsynchLogReader(NavThread):
         self._logfile.shift_start_replay(delta)
         self._suspend_flag = False
 
-    def run(self):
+    def nrun(self):
 
         while not self._stop_flag:
             if self._suspend_flag:

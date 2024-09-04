@@ -96,7 +96,7 @@ class NMEASender(NavThread):
     def add_publisher(self, publisher):
         self._publisher = publisher
 
-    def run(self) -> None:
+    def nrun(self) -> None:
         reader = TCPBufferedReader(self._connection, b'\r\n', self._address, self._msg_processing,
                                    self._buffer_size, self._timeout)
         while not self._stop_flag:

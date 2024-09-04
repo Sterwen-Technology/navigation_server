@@ -47,6 +47,7 @@ class Publisher(NavThread):
             object_name = "Internal Publisher %s" % name
         else:
             object_name = opts['name']
+            name = object_name
             self._opts = opts
             self._queue_size = opts.get('queue_size', int, 20)
             self._max_lost = opts.get('max_lost', int, 5)
@@ -62,7 +63,6 @@ class Publisher(NavThread):
         self._queue_tpass = False
         super().__init__(name=name, daemon=daemon)
         self._name = object_name
-        self.name = object_name
         # moving registration to start
         self._queue = queue.Queue(self._queue_size)
         self._stopflag = False
@@ -123,7 +123,7 @@ class Publisher(NavThread):
         self._stopflag = True
         self.deregister()
 
-    def run(self) -> None:
+    def nrun(self) -> None:
         _logger.info("Starting Publisher %s" % self._name)
         while not self._stopflag:
             count = 0

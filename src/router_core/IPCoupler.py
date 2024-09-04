@@ -199,7 +199,7 @@ class IPAsynchReader(NavThread):
         self._buffer = bytearray(512)
         self._transparent = False
 
-    def run(self):
+    def nrun(self):
         part = False
         part_buf = bytearray()
         while not self._stop_flag:

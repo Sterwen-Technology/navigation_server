@@ -251,7 +251,7 @@ class SocketCANInterface(NavThread):
         can_id |= (n2k_msg.prio & 7) << 26
         return can_id
 
-    def run(self):
+    def nrun(self):
 
         #  Run loop
 
@@ -363,7 +363,7 @@ class SocketCANWriter(NavThread):
     def total_msg(self):
         return self._total_msg
 
-    def run(self):
+    def nrun(self):
         '''
         Wait for messages to be sent on the queue and then send them to the CAN BUS
         Message pacing is implemented with a fixed timing of 5ms (to be improved)

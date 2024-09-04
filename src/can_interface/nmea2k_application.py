@@ -149,6 +149,7 @@ class NMEA2000Application(NMEA2000Device):
         self.send_iso_request(255, 60928)
         # start sending heartbeat
         self.send_heartbeat()
+        self._controller.application_started()
         # request = ISORequest(self._address)
         # self._controller.CAN_interface.send(request.message())
         # t = threading.Timer(1.0, self.send_product_information)
@@ -345,6 +346,9 @@ class DeviceReplaySimulator(NMEA2000Application):
 
     def input_message(self, can_id, data):
         _logger.debug("DeviceReplaySimulator message %4X %s" % (can_id, data.hex()))
+        if self._app_state != self.ACTIVE:
+            _logger.warning(f"Application {self._name} not ready to take messages")
+            return
         pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
         # need to avoid all protocol pgn
         if PGNDef.pgn_for_controller(pgn):

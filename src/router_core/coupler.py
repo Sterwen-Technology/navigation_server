@@ -17,7 +17,7 @@ import time
 # from publisher import Publisher
 
 from .publisher import PublisherOverflow
-from router_common import NavGenericMsg, NULL_MSG, N2K_MSG
+from router_common import NavGenericMsg, NULL_MSG, N2K_MSG, NavThread
 from .nmea2000_msg import NMEA2000Msg, NMEA2000Writer
 from router_common import NMEAMsgTrace, MessageTraceError
 # from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter, Nmea0183InvalidMessage
@@ -48,7 +48,7 @@ class CouplerOpenRefused(Exception):
     pass
 
 
-class Coupler(threading.Thread):
+class Coupler(NavThread):
     '''
     Base abstract class for all couplers
     '''
@@ -67,7 +67,7 @@ class Coupler(threading.Thread):
     def __init__(self, opts):
         object_name = opts['name']
         super().__init__(name=object_name)
-        self.name = object_name
+        # self.name = object_name
         self._name = object_name
         self._opts = opts
         self._publishers = []
@@ -228,7 +228,7 @@ class Coupler(threading.Thread):
             _logger.info("Stopping NMEA2000 Writer")
             self._n2k_writer.stop()
 
-    def run(self):
+    def nrun(self):
         self._has_run = True
         # now resolve internal references
         if self._n2k_ctlr_name is not None:

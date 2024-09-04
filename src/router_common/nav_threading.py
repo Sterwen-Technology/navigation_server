@@ -22,7 +22,7 @@ class NavThread(threading.Thread):
 
     def __init__(self, name: str, daemon=False):
         self._name = name
-        self._profile = MessageServerGlobals.profiling_controller.get_profile(name)
+        self._profile = MessageServerGlobals.profiling_controller.get_profile(self)
         MessageServerGlobals.thread_controller.register(self)
         if self._profile is None:
             target = self._run
@@ -35,14 +35,22 @@ class NavThread(threading.Thread):
         return self._name
 
     def _run(self):
+        _logger.debug("Thread %s starts" % self._name)
         MessageServerGlobals.thread_controller.record_start(self)
-        self.run()
+        self.nrun()
         MessageServerGlobals.thread_controller.record_stop(self)
+        _logger.debug("Thread %s stops" % self._name)
 
     def _run_profiling(self):
+        _logger.debug("Thread %s start with profiling" % self._name)
         self._profile.enable()
-        self._run()
+        self.nrun()
         self._profile.disable()
+        self._profile.create_stats()
+        _logger.debug("Thread %s stopped with profiling" % self._name)
+
+    def nrun(self):
+        raise NotImplementedError
 
 
 class NavThreadingController:
@@ -87,7 +95,7 @@ class NavProfilingController:
             symbols = profiling_conf.get('symbols', None)
             if symbols is None:
                 return
-            elif symbols is not list:
+            elif type(symbols) is not list:
                 _logger.error("Profiling symbol list syntax error")
                 return
             for sym in symbols:
@@ -108,10 +116,11 @@ class NavProfilingController:
     def get_profile(self, instance: NavThread):
         if not self._enable:
             return None
-
+        _logger.debug("Creating profile for thread %s" % instance.name)
         def create_profile():
             profile = cProfile.Profile()
             self._profiles[instance.name] = profile
+            return profile
 
         if self._enabled_classes is None:
             return create_profile()
@@ -126,7 +135,11 @@ class NavProfilingController:
     def stop_and_output(self):
         if not self._enable:
             return
-        for profile in self._profiles.values():
-            profile.print_stats()
+        for name, profile in self._profiles.items():
+            try:
+                print(f"Profiling results for thread:{name}\n")
+                profile.print_stats()
+            except TypeError:
+                _logger.error("Error in profile %s" % name)
 
 

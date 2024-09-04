@@ -61,6 +61,7 @@ def main():
         config.main_server.wait()
         _logger.info("server shall stop now")
         config.main_server.print_threads()
+        MessageServerGlobals.profiling_controller.stop_and_output()
     else:
         _logger.critical("Main server did not start properly => stop server")
 

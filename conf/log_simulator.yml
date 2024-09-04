@@ -16,6 +16,7 @@ debug_configuration: false
 log_module:
   nmea2000.nmea2k_publisher: INFO
   router_core.coupler: INFO
+  router_common.nav_threading: DEBUG
 
 
 features:
@@ -23,6 +24,14 @@ features:
   - nmea2000
   - log_replay
   - can_interface
+
+profiling:
+  enable: true
+  symbols:
+    - N2KSourceDispatcher
+    - NMEA2KActiveController
+    - SocketCANInterface
+    - SocketCANWriter
 
 
 servers:
