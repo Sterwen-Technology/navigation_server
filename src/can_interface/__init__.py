@@ -18,5 +18,4 @@ except ModuleNotFoundError as e:
 from .nmea2k_active_controller import NMEA2KActiveController
 from .grpc_input_application import GrpcInputApplication
 from .nmea2k_can_coupler import DirectCANCoupler
-from .nmea2k_application import NMEA2000Application
-
+from .nmea2k_application import NMEA2000Application, DeviceReplaySimulator

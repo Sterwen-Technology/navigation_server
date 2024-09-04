@@ -1,0 +1,130 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/12/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+function: Log replay server
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+debug_configuration: false
+# log_file: test_fast_packet
+log_module:
+  nmea2000.nmea2k_publisher: INFO
+  router_core.coupler: INFO
+
+
+features:
+  - router_core
+  - nmea2000
+  - log_replay
+  - can_interface
+
+
+servers:
+
+- Main:
+    class: NavigationMainServer
+
+- NMEAServer:
+      class: NMEAServer
+      port: 4500
+      nmea2000: dyfmt
+
+- gRPCMain:
+      class: GrpcServer
+      port: 4502
+
+- NMEANetwork:
+      class: NMEA2KActiveController
+      channel: can0
+      applications: [STInput, GPS, AIS]
+
+
+couplers:
+
+- LogReader:
+    class: TransparentCanLogCoupler
+    # logfile: C:\Users\laure\Laurent-Drive\Logiciel bateau\tests\TRACE-CAN-if-can0-231101-Corrigee.log
+    logfile: /mnt/meaban/Bateau/tests/TRACE-CAN-if-can0-240822-2134.log
+    # logfile: /mnt/meaban/Bateau/tests/TRACE-MiniPlex3-230720-0644.log
+
+    autostart: true
+    nmea2000_controller: NMEANetwork
+    protocol: non_nmea
+    direction: read_only
+    # pgn_white_list: [129025, 129026]
+    # pgn_white_list: [130842]
+
+filters:
+
+- FastPacket:
+    class: NMEA2000Filter
+    pgn: [129029, 126996, 129540]
+    type: select
+
+- RaymarineProprietary:
+    class: NMEA2000Filter
+    pgn: [126720]
+    type: select
+
+
+services:
+
+- Console:
+      class: Console
+      server: gRPCMain
+
+publishers:
+
+- TraceAll:
+    class: N2KTracePublisher
+    file: test_decode
+    output: FILE
+    active: false
+    flexible_decode: false
+    couplers: [LogReader]
+
+- Stats:
+    class: N2KStatisticPublisher
+    couplers: [LogReader]
+    active: false
+
+- Dispatcher:
+    class: N2KSourceDispatcher
+    mode: transparent
+    couplers: [LogReader]
+    queue_size: 50
+
+applications:
+
+  - STInput:
+      class: DeviceReplaySimulator
+      source: 1
+      publisher: Dispatcher
+
+  - GPS:
+      class: DeviceReplaySimulator
+      source: 2
+      publisher: Dispatcher
+
+  - AIS:
+      class: DeviceReplaySimulator
+      source: 43
+      publisher: Dispatcher
+
+  - Engine:
+      class: DeviceReplaySimulator
+      source: 56
+      publisher: Dispatcher
+
+  - Pilot:
+      class: DeviceReplaySimulator
+      source: 56
+      publisher: Dispatcher
+
+

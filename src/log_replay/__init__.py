@@ -11,4 +11,4 @@
 
 
 from .raw_log_reader import RawLogFile, LogReadError
-from .raw_log_coupler import RawLogCoupler
+from .raw_log_coupler import RawLogCoupler, TransparentCanLogCoupler

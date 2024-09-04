@@ -10,6 +10,7 @@
 # -------------------------------------------------------------------------------
 
 import logging
+import threading
 
 from router_core import NMEA2000Msg
 from nmea2000 import NMEA2KController
@@ -37,6 +38,7 @@ class NMEA2KActiveController(NMEA2KController):
         self._apool = NMEA2000ApplicationPool(self, opts)
         self._application_names = opts.getlist('applications', str, None)
         self._address_change_request = None
+        self._start_application_lock = threading.Lock()
 
     def start(self):
         _logger.info("CAN active controller start")
