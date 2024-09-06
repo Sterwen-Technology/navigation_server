@@ -136,8 +136,9 @@ class N2KTracePublisher(ExternalPublisher):
             return
 
     def stop(self):
-        print("List of missing decode for PGN")
-        self._stats.print_entries()
+        if self._active:
+            print("List of missing decode for PGN")
+            self._stats.print_entries()
         if self._trace_fd is not None:
             self._trace_fd.close()
         super().stop()
@@ -158,8 +159,9 @@ class N2KStatisticPublisher(ExternalPublisher):
         return True
 
     def stop(self):
-        self._n183_stats.print_entries()
-        self._n2k_stats.print_entries()
+        if self._active:
+            self._n183_stats.print_entries()
+            self._n2k_stats.print_entries()
         super().stop()
 
 

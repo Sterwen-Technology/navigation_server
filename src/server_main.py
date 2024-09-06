@@ -20,7 +20,7 @@ from router_common import MessageServerGlobals
 from router_common import init_options
 
 
-MessageServerGlobals.version = "2.04"
+MessageServerGlobals.version = "2.05"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -51,6 +51,9 @@ def main():
     if config.get_option('decode_definition_only', False):
         _logger.info("Decode only mode -> no active server")
         return
+
+    assert MessageServerGlobals.main_server is not None
+    # print(config.main_server)
 
     _logger.debug("Starting the main server")
     if config.main_server.start():

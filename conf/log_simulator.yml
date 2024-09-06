@@ -12,11 +12,13 @@ function: Log replay server
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 debug_configuration: false
+
 # log_file: test_fast_packet
 log_module:
   nmea2000.nmea2k_publisher: INFO
   router_core.coupler: INFO
-  router_common.nav_threading: DEBUG
+  router_common.nav_threading: INFO
+  router_common.configuration: DEBUG
 
 
 features:
@@ -26,7 +28,7 @@ features:
   - can_interface
 
 profiling:
-  enable: true
+  enable: false
   symbols:
     - N2KSourceDispatcher
     - NMEA2KActiveController
@@ -51,7 +53,7 @@ servers:
 - NMEANetwork:
       class: NMEA2KActiveController
       channel: can0
-      applications: [STInput, GPS, AIS]
+      applications: [STInput, GPS, AIS, Engine, Pressure, Pilot]
 
 
 couplers:
@@ -66,6 +68,7 @@ couplers:
     nmea2000_controller: NMEANetwork
     protocol: non_nmea
     direction: read_only
+    stop_system: true
     # pgn_white_list: [129025, 129026]
     # pgn_white_list: [130842]
 
@@ -107,7 +110,7 @@ publishers:
     class: N2KSourceDispatcher
     mode: transparent
     couplers: [LogReader]
-    queue_size: 50
+    queue_size: 60
 
 applications:
 
@@ -115,25 +118,36 @@ applications:
       class: DeviceReplaySimulator
       source: 1
       publisher: Dispatcher
+      model_id: Seatalk Input
 
   - GPS:
       class: DeviceReplaySimulator
       source: 2
       publisher: Dispatcher
+      model_id: GPS
 
   - AIS:
       class: DeviceReplaySimulator
       source: 43
       publisher: Dispatcher
+      model_id: AIS
 
   - Engine:
       class: DeviceReplaySimulator
       source: 56
       publisher: Dispatcher
+      model_id: Engine 0
+
+  - Pressure:
+      class: DeviceReplaySimulator
+      source: 53
+      publisher: Dispatcher
+      model_id: Atmospheric Pressure
 
   - Pilot:
       class: DeviceReplaySimulator
-      source: 56
+      source: 7
       publisher: Dispatcher
+      model_id: Autopilot
 
 

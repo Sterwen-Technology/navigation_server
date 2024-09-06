@@ -17,7 +17,7 @@ import time
 # from publisher import Publisher
 
 from .publisher import PublisherOverflow
-from router_common import NavGenericMsg, NULL_MSG, N2K_MSG, NavThread
+from router_common import NavGenericMsg, NULL_MSG, N2K_MSG, NavThread, MessageServerGlobals
 from .nmea2000_msg import NMEA2000Msg, NMEA2000Writer
 from router_common import NMEAMsgTrace, MessageTraceError
 # from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter, Nmea0183InvalidMessage
@@ -113,6 +113,7 @@ class Coupler(NavThread):
                 self._trace_raw = False
         else:
             self._tracer = None
+        self._stop_system = opts.get('stop_system', bool, False)
         self._check_in_progress = False
         self._fast_packet_handler = None
         self._separator = None
@@ -309,6 +310,9 @@ class Coupler(NavThread):
         self.close()
         self.stop_trace()
         _logger.info("%s coupler thread stops" % self._name)
+        # before exiting thread stop the main server if needed
+        if self._stop_system:
+            MessageServerGlobals.configuration.main_server.request_stop(0)
 
     def register(self, pub):
         self._publishers.append(pub)

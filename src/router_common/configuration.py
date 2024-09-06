@@ -405,7 +405,7 @@ class NavigationConfiguration:
             feature.initialize(options)
 
     def build_objects(self):
-
+        _logger.debug("Configuration: creating main server")
         self._main_server = self._main.build_object()
         # create the filters upfront
         for inst_descr in self._filters.values():
@@ -414,7 +414,7 @@ class NavigationConfiguration:
             except ConfigurationException as e:
                 _logger.error(str(e))
                 continue
-        _logger.debug("Filter created")
+        _logger.debug("Filters created")
         for inst_descr in self._applications.values():
             inst_descr.build_object()
         _logger.debug("Applications created")

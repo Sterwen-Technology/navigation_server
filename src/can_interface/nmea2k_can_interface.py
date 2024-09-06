@@ -321,24 +321,6 @@ class SocketCANInterface(NavThread):
         if self._trace is not None:
             self._trace.stop_trace()
 
-'''
-class NMEA2000MsgListener(Listener):
-
-    def __init__(self, interface: SocketCANInterface, bus_queue: queue.Queue):
-        # super().___init__()
-        self._interface = interface
-        self._bus_queue = bus_queue
-
-    def on_message_received(self, msg: Message) -> None:
-        if not msg.is_extended_id or msg.is_remote_frame:
-            return
-        # _logger.debug("CAN interface received: %s" % msg)
-        self._interface.read_bus(msg)
-
-    def on_error(self, exc: Exception) -> None:
-        _logger.error("BUS CAN error: %s" % exc)
-
-'''
 
 
 class SocketCANWriter(NavThread):
@@ -373,13 +355,18 @@ class SocketCANWriter(NavThread):
         last_write_time = time.monotonic()
         while not self._stop_flag:
 
-            if time.monotonic() - last_write_time < 0.005:
-                continue
+
 
             try:
                 msg = self._in_queue.get(timeout=1.0)
             except queue.Empty:
                 continue
+            # 2024-09-07 change the pacing algorithm
+            msg_pace = time.monotonic() - last_write_time
+            # each ECU is allowed to max 20% of the bus, so 1 msg every 5ms
+            if msg_pace < 0.005:
+                # stop the thread for the delta
+                time.sleep(0.005 - msg_pace)
             if self._trace is not None:
                 dts = datetime.datetime.fromtimestamp(msg.timestamp)
                 self._trace.trace_n2k_raw_can(dts, self._total_msg, NMEAMsgTrace.TRACE_OUT,

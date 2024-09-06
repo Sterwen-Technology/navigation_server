@@ -88,6 +88,7 @@ class NMEA2000Application(NMEA2000Device):
         self._heartbeat_timer = None
         self._heartbeat_interval = 60.0  # can be adjusted in subclasses
         self._sequence = 0
+        self._master_app = False
         super().__init__(self._address, name=self._iso_name)
 
         self._app_state = self.WAIT_FOR_BUS
@@ -256,7 +257,7 @@ class NMEA2000Application(NMEA2000Device):
     def remote_address_claim(self, msg):
         _logger.debug("Receive address claim from address %d" % msg.sa)
         device = self._controller.get_device_by_address(msg.sa)
-        if device.product_information is None:
+        if device.product_information is None and self._master_app:
             self.send_iso_request(msg.sa, 126996)
             self.send_iso_request(msg.sa, 126998)
 
@@ -271,7 +272,7 @@ class NMEA2000Application(NMEA2000Device):
         self._controller.CAN_interface.send(self._configuration_information.message(), force_send=True)
 
     def send_heartbeat(self):
-        _logger.info("sending heartbeat from device %d sequence %d" % (self._address, self._sequence))
+        _logger.debug("sending heartbeat from device %d sequence %d" % (self._address, self._sequence))
         request = Heartbeat()
         request.sequence = self._sequence
         request.sa = self._address
