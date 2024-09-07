@@ -28,6 +28,8 @@ class NMEA2KController(NavigationServer, NavThread):
         NavThread.__init__(self, name=self._name)
         self._devices = {}
         queue_size = opts.get('queue_size', int, 20)
+        if queue_size < self.min_queue_size:
+            queue_size = self.min_queue_size
         self._save_file = opts.get('save_file', str, None)
         if self._save_file is not None:
             self.init_save()
@@ -47,6 +49,10 @@ class NMEA2KController(NavigationServer, NavThread):
 
     def network_addresses(self):
         return self._devices.keys()
+
+    @property
+    def min_queue_size(self):
+        return 20
 
     def delete_device(self, address):
         del self._devices[address]

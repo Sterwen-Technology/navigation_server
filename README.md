@@ -83,12 +83,12 @@ To overcome the problem a specific Python script has been developed (mod_pb2.py)
 For any problem encountered, please open an issue in this repository.
 
 ## Roadmap
-The current stable version is V1.80. Documentation is aligned on this version.
+The current stable version is V2.05. Documentation is aligned on this version.
 
 
 ## Contributing
 
-All contributions welcome. Currently 
+All contributions welcome. 
 
 ## Authors and acknowledgment
 Laurent Carré - [Sterwen Technology](http://www.sterwen-technology.eu). 

@@ -214,7 +214,7 @@ class NMEA2000Application(NMEA2000Device):
         # _logger.debug("Received ISO request from %d da=%d" % (msg.sa, msg.da))
         if msg.da == self._address or msg.da == 255:
             request = ISORequest().from_message(msg)
-            _logger.debug("Application ISO request received from %d for pgn %d" % (msg.sa, request.request_pgn))
+            _logger.debug("Application %d ISO request received from %d for pgn %d" % (self._address, msg.sa, request.request_pgn))
             if request.request_pgn == 60928:
                 self.respond_address_claim()
             elif request.request_pgn == 126996:
@@ -248,7 +248,7 @@ class NMEA2000Application(NMEA2000Device):
         '''
         That method processed ISO messages that have a DA=255
         '''
-        _logger.debug("Receive ISO message from address %d PGN %d" % (msg.sa, msg.pgn))
+        _logger.debug("Device %d Receive ISO message from address %d PGN %d" % (self._address, msg.sa, msg.pgn))
         try:
             self._process_broadcast_vector[msg.pgn](msg)
         except KeyError:
@@ -257,7 +257,8 @@ class NMEA2000Application(NMEA2000Device):
     def remote_address_claim(self, msg):
         _logger.debug("Receive address claim from address %d" % msg.sa)
         device = self._controller.get_device_by_address(msg.sa)
-        if device.product_information is None and self._master_app:
+        if device.product_information is None:
+            _logger.debug("Device %d request PGN 126996, 126998 to %d" % (self._address, msg.sa))
             self.send_iso_request(msg.sa, 126996)
             self.send_iso_request(msg.sa, 126998)
 
@@ -346,7 +347,7 @@ class DeviceReplaySimulator(NMEA2000Application):
         self._publisher.subscribe(self._source, self.input_message)
 
     def input_message(self, can_id, data):
-        _logger.debug("DeviceReplaySimulator message %4X %s" % (can_id, data.hex()))
+        # _logger.debug("DeviceReplaySimulator message %4X %s" % (can_id, data.hex()))
         if self._app_state != self.ACTIVE:
             _logger.warning(f"Application {self._name} not ready to take messages")
             return

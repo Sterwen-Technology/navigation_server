@@ -40,6 +40,10 @@ class NMEA2KActiveController(NMEA2KController):
         self._address_change_request = None
         self._start_application_lock = threading.Lock()
 
+    @property
+    def min_queue_size(self):
+        return 40
+
     def start(self):
         _logger.info("CAN active controller start")
         if self._application_names is not None:

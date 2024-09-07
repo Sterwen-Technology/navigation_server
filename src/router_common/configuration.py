@@ -120,7 +120,7 @@ class Feature:
                     if obj_name not in package_items:
                         continue
                 # we are good
-                _logger.info(f"Adding class:{obj_name}")
+                _logger.debug(f"Adding class:{obj_name}")
                 self._configuration.add_class(obj)
                 self._classes[obj_name] = obj
             elif inspect.isfunction(obj):
