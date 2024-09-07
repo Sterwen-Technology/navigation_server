@@ -27,3 +27,4 @@ from .message_trace import MessageTraceError, NMEAMsgTrace
 from .server_common import NavigationServer
 from .grpc_server_service import GrpcServer, GrpcService, GrpcServerError, GrpcSecondaryService
 from .generic_top_server import GenericTopServer
+from .nav_threading import NavThread, NavThreadingController, NavProfilingController

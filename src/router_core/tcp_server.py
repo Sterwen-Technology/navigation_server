@@ -9,12 +9,11 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-import threading
 import logging
 import socket
 import collections
 
-from router_common import NavigationServer
+from router_common import NavigationServer, NavThread
 from .filters import FilterSet
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
@@ -23,13 +22,13 @@ _logger = logging.getLogger("ShipDataServer."+__name__)
 ConnectionRecord = collections.namedtuple('ConnectionRecord', ['address', 'port', 'msg_count'])
 
 
-class NavTCPServer(NavigationServer, threading.Thread):
+class NavTCPServer(NavigationServer, NavThread):
 
     def __init__(self, options):
         super().__init__(options)
         if self._port == 0:
             raise ValueError
-        threading.Thread.__init__(self, name=self._name)
+        NavThread.__init__(self, name=self._name)
         self._max_connections = options.get('max_connections', int, 10)
         self._heartbeat = options.get('heartbeat', float, 30.0)
         self._timeout = options.get('timeout', float, 5.0)

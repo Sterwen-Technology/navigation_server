@@ -8,13 +8,13 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
-import threading
+
 import time
 import queue
 import logging
 
 from .filters import FilterSet
-from router_common import resolve_ref, set_hook
+from router_common import resolve_ref, set_hook, NavThread
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -29,7 +29,7 @@ class PublisherOverflow(Exception):
     pass
 
 
-class Publisher(threading.Thread):
+class Publisher(NavThread):
     '''
     Super class for all publishers
     '''
@@ -47,6 +47,7 @@ class Publisher(threading.Thread):
             object_name = "Internal Publisher %s" % name
         else:
             object_name = opts['name']
+            name = object_name
             self._opts = opts
             self._queue_size = opts.get('queue_size', int, 20)
             self._max_lost = opts.get('max_lost', int, 5)
@@ -62,7 +63,6 @@ class Publisher(threading.Thread):
         self._queue_tpass = False
         super().__init__(name=name, daemon=daemon)
         self._name = object_name
-        self.name = object_name
         # moving registration to start
         self._queue = queue.Queue(self._queue_size)
         self._stopflag = False
@@ -123,7 +123,7 @@ class Publisher(threading.Thread):
         self._stopflag = True
         self.deregister()
 
-    def run(self) -> None:
+    def nrun(self) -> None:
         _logger.info("Starting Publisher %s" % self._name)
         while not self._stopflag:
             count = 0

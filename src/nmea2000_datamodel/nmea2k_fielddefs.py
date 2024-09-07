@@ -33,6 +33,8 @@ class Field:
         self._variable_length = False
         self._name = xml.attrib['Name']
         self._keyword = xml.attrib.get('key')
+        self._global_enum = None
+        self._global_enum_name = None
         # if self._keyword is not None:
             #  print("Field", self._name, "Keyword", self._keyword)
         self._attributes = {}
@@ -48,6 +50,11 @@ class Field:
                         break
             if process_it:
                 self._attributes[attrib.tag] = self.extract_attr(attrib)
+        # check if we have a bit length attribute
+        if self.is_enum():
+            # try to get it from the definition
+            self.check_global_field_def(xml)
+
         self.compute_decode_param()
         if 0 < self._byte_length <= 4:
             self._value_coder = DecodeDefinitions.uint_table[self._byte_length]
@@ -139,6 +146,19 @@ class Field:
             self._end_byte = self._start_byte + self._byte_length
         else:
             self._variable_length = True
+
+    def check_global_field_def(self, xml):
+        self._global_enum_name = xml.get('Definition')
+        self._global_enum = None
+        if self._global_enum_name is not None:
+            # now we need to look into the global enum table
+            try:
+                self._global_enum = MessageServerGlobals.enums.get_enum(self._global_enum_name)
+                # print("EnumField", self.name, "Use global enum", self._global_enum.name)
+            except KeyError:
+                _logger.error("Global enum definition %s non-existent" % self._global_enum_name)
+                return
+            self.BitLength = self._global_enum.bit_length
 
     def is_bit_value(self) -> bool:
         return self._bit_offset != 0 or self.BitLength % 8 != 0
@@ -306,7 +326,6 @@ class Field:
             buffer[index: index + self._byte_length] = str_value.encode()[:self._byte_length]
             return self._byte_length
 
-
 decode_uint_str = {1: "B", 2: "H", 3: "HB", 4: "I", 8: "Q"}
 decode_int_str = {1: "b", 2: "h", 3: "hb", 4: "i", 8: "q"}
 
@@ -353,15 +372,6 @@ class EnumField(Field):
 
     def __init__(self, xml):
         super().__init__(xml, do_not_process=("EnumValues", "EnumPair"))
-        self._global_enum_name = xml.get('Definition')
-        self._global_enum = None
-        if self._global_enum_name is not None:
-            # now we need to look into the global enum table
-            try:
-                self._global_enum = MessageServerGlobals.enums.get_enum(self._global_enum_name)
-                # print("EnumField", self.name, "Use global enum", self._global_enum.name)
-            except KeyError:
-                _logger.error("Global enum definition %s non-existent" % self._global_enum_name)
         if self._global_enum is None:
             self._value_pair = {}
             enum_values = xml.find('EnumValues')

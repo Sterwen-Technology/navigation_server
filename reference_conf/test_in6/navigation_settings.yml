@@ -75,7 +75,7 @@ publishers:
 
 - SendNMEA2000:
     class: GrpcPublisher
-    active: true
+    active: false
     decode_nmea2000: false
     nmea0183: convert_strict
     address: 127.0.0.1

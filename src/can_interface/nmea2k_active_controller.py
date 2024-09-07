@@ -10,6 +10,7 @@
 # -------------------------------------------------------------------------------
 
 import logging
+import threading
 
 from router_core import NMEA2000Msg
 from nmea2000 import NMEA2KController
@@ -37,6 +38,11 @@ class NMEA2KActiveController(NMEA2KController):
         self._apool = NMEA2000ApplicationPool(self, opts)
         self._application_names = opts.getlist('applications', str, None)
         self._address_change_request = None
+        self._start_application_lock = threading.Lock()
+
+    @property
+    def min_queue_size(self):
+        return 40
 
     def start(self):
         _logger.info("CAN active controller start")
@@ -96,7 +102,13 @@ class NMEA2KActiveController(NMEA2KController):
     def start_applications(self):
         _logger.debug("NMEA2000 Controller => Applications starts")
         for app in self._applications.values():
+            # to limit the load on the CAN bus, applications are started one at a time
+            if not self._start_application_lock.acquire(timeout=2.0):
+                _logger.error("ActiveController timeout on application start")
             app.start_application()
+
+    def application_started(self):
+        self._start_application_lock.release()
 
     def process_msg(self, msg: NMEA2000Msg):
         _logger.debug("CAN data received sa=%d PGN=%d da=%d" % (msg.sa, msg.pgn, msg.da))

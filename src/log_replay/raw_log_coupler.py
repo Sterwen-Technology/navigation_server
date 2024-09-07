@@ -9,29 +9,27 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 import logging
-import threading
 import queue
 import time
 
 from .raw_log_reader import RawLogFile, LogReadError
 from router_core import Coupler, CouplerOpenRefused
-from router_common import IncompleteMessage
+from router_common import IncompleteMessage, TRANSPARENT_MSG
 from router_core import NMEA0183Msg, NMEAInvalidFrame
 from router_core import fromProprietaryNmea, NMEA2000Msg
 from nmea2000 import FastPacketHandler, FastPacketException
 from nmea2000_datamodel import PGNDef
-from router_common import NavGenericMsg, NULL_MSG, N2K_MSG
+from router_common import NavGenericMsg, NULL_MSG, N2K_MSG, NavThread
 from couplers import ShipModulInterface
 from couplers import YDCoupler
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
 
-class AsynchLogReader(threading.Thread):
+class AsynchLogReader(NavThread):
 
     def __init__(self, out_queue, process_message):
-        super().__init__(daemon=True)
-        self.name = "AsynchLogReader"
+        super().__init__(name="AsynchLogReader", daemon=True)
         self._logfile = None
         self._out_queue = out_queue
         self._stop_flag = False
@@ -54,7 +52,7 @@ class AsynchLogReader(threading.Thread):
         self._logfile.shift_start_replay(delta)
         self._suspend_flag = False
 
-    def run(self):
+    def nrun(self):
 
         while not self._stop_flag:
             if self._suspend_flag:
@@ -102,7 +100,7 @@ class RawLogCoupler(Coupler):
             self._pgn_white_list = None
         self._sa_black_list = []
 
-    def open(self):
+    def _open(self):
         _logger.info("LogCoupler %s opening log file %s" % (self.object_name(), self._filename))
         if self._logfile is not None:
             # we can't reopen a file
@@ -114,23 +112,33 @@ class RawLogCoupler(Coupler):
             return False
 
         self._in_queue = queue.SimpleQueue()
-        if self._logfile.file_type == "ShipModulInterface":
-            if self._mode == self.NMEA0183:
-                self._reader = AsynchLogReader(self._in_queue, self.process_nmea0183)
-            else:
-                self._reader = AsynchLogReader(self._in_queue, self.process_n2k)
-        elif self._logfile.file_type == "YDCoupler":
-            self._reader = AsynchLogReader(self._in_queue, self.process_yd_frame)
-        elif self._logfile.file_type == "SocketCANInterface":
-            self._reader = AsynchLogReader(self._in_queue, self.process_can_frame)
+        return True
 
+    def _start_log_read(self):
         self._reader.open(self._logfile)
         self._state = self.OPEN
         self._logfile.prepare_read()
         self._reader.start()
         self._state = self.CONNECTED
         _logger.info("LogCoupler %s ready" % self.object_name())
-        return True
+
+    def open(self):
+
+        if self._open():
+            if self._logfile.file_type == "ShipModulInterface":
+                if self._mode == self.NMEA0183:
+                    self._reader = AsynchLogReader(self._in_queue, self.process_nmea0183)
+                else:
+                    self._reader = AsynchLogReader(self._in_queue, self.process_n2k)
+            elif self._logfile.file_type == "YDCoupler":
+                self._reader = AsynchLogReader(self._in_queue, self.process_yd_frame)
+            elif self._logfile.file_type == "SocketCANInterface":
+                self._reader = AsynchLogReader(self._in_queue, self.process_can_frame)
+
+            self._start_log_read()
+            return True
+        else:
+            return False
 
     def close(self):
         self._state = self.NOT_READY
@@ -274,3 +282,21 @@ class RawLogCoupler(Coupler):
             self._sa_black_list.remove(sa)
         except ValueError:
             return
+
+
+class TransparentCanLogCoupler(RawLogCoupler):
+
+    def __init__(self, opts):
+        super().__init__(opts)
+
+    def open(self):
+        if self._open():
+            if self._logfile.file_type == "SocketCANInterface":
+                self._reader = AsynchLogReader(self._in_queue, self.forward_can_frame)
+                self._start_log_read()
+                return True
+        return False
+
+    def forward_can_frame(self, frame):
+        msg = NavGenericMsg(TRANSPARENT_MSG, raw=frame, msg=frame)
+        return msg

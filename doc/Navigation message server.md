@@ -186,6 +186,7 @@ on hold
 | autostart           | boolean                                | True          | The coupler is started automatically when the service starts, if False it needs to be started via the Console                                            |
 | nmea2000_controller | string                                 | None          | Name of the server of class NMEA2KController associated with the coupler                                                                                 |
 | nmea0183_convert    | boolean                                | False         | Convert NMEA0183 to NMEA2000, if protocol is specified as *nmea2000* then non converted messages are discarded, otherwise they are forwarded as NMEA0183 |
+| stop_system         | boolean                                | False         | When true stop the whole executable when the coupler stops. Useful for log_replay and tests                                                              |
 
 
 Remarks on protocol behavior:
@@ -262,7 +263,7 @@ The device connection and initialisation logic is directly managed by the couple
 
 #### InternalGps (Coupler)
 
-No additional parameters in this version. The coupler connects to the modem via a USB port. All parameters are given with the modem control.
+No additional parameters in this version. The coupler connects to the GNSS receiver via a TTY port. For that coupler class, it is assumed that the GNSS is integrated in a cellular modem. For isolated GNSS receiver the NMEASerialPort class shall be used.
 
 
 #### VEDirectCoupler(Coupler)
@@ -321,12 +322,13 @@ Messages with no subscription are simply ignored.
 
 #### Energy management service
 
-The service provides a global control for several services linked to energy management. The interface is described in **energy.proto**
+The service provides a global control for several services linked to energy management. The interface is described in **energy.proto**.
+Currently, only the **MPPTService** is available, the team is working on the implementation of new services, for batteries and chargers.
 
 ##### MPPTService
 
 This service receive the MPPT info via a VEDirectCoupler and keeps track of data and trends from the solar panel and MPPT output.
-The service can also be used to forward NMEA0183 or NMEA2000 messages via a *gRPCNMEAPublisher*
+The service can also be used to forward NMEA0183 or NMEA2000 messages via a **GrpcPublisher** towards another server.
 Interface is part of **energy.proto**
 
 Additional parameters
@@ -382,7 +384,7 @@ NMEA0183 processing flags:
 * **convert_strict**: messages are converted to NMEA2000 when possible and are discarded otherwise
 * **convert_pass**: messages are converted to NMEA2000 when possible or are forwarded as-is when not possible
 
-#### N2KTRacePublisher
+#### N2KTracePublisher
 
 Traces decoded NMEA2000 messages on stdout and/or in a file.
 
@@ -408,7 +410,18 @@ The injector is collecting the messages coming from one or more coupler and inje
 |--------|------------------|---------|--------------------------------------------------------------------------------|
 | target | string           | none    | Name of the coupler that will receive the messages and send them to the device |
 
+### N2KSourceDispatcher (Publisher)
 
+This publisher dispatch messages based on the NMEA2000 source address. Objects need to subscribe internally to receive the messages in three possible modes.
+
+| Name | Type             | Default | Signification                                                               |
+|------|------------------|---------|-----------------------------------------------------------------------------|
+| mode | string           | message | Format in which the message is passed to the application object (see below) |
+
+Messages modes definition:
+- **transparent** : The content of the message is not interpreted and the raw format from the coupler is passed to the application
+- **message** : NMEA2000 binary message format with Fast packet reassembly
+- **decoded** : NMEA2000 fully decoded (Python object)
 
 ### Applications
 
@@ -517,16 +530,34 @@ All Coupler parameters are applicable, and some must be set like the *nmea2000* 
 
 To keep the message timing, the whole file is read and messages stored in memory before the messages start to be sent in the system. By consequence, the LogReplayCoupler must be used on machines with enough RAM capacity. Recommendation is minimum 4GB of RAM to use the LogReplayCoupler.
 
+### TransparentCanLogCoupler (RawLogCoupler)
+
+This is variant of the RawLogCoupler working only on CAN level traces. Its purpose is to inject the NMEA2000 CAN frames in the system to create a simulator based on existing traces by using the N2KSourceDispatcher as publisher on this coupler.
+
+### DeviceReplaySimulator (NMEA2000Application)
+
+That application act as Controller Application and simulate a NMEA2000 devices based on messages read from a log. Only one device per object, so to simulate multiple devices, multiple objects must be instantiated.
+
+| Name      | Type | Default | Signification                                                          |
+|-----------|------|---------|------------------------------------------------------------------------|
+| source    | int  | none    | source address of the device in the logs                               |
+| publisher | str  | none    | Nmea of the publisher dispatching messages (N2KSourceDispatcher class) |
+| model_id  | str  | none    | String defining the simulated device for display                       |
 
 
 
-## Energy Management gRPC server
-This service is permanently reading the VEDirect (RS485 over USB) of the MPPT device in the current version and is intended to move to additional energy management features in the future.
-Data are available via the gRPC interface.
+## Organizing the processes
 
+All the building blocks needs to be organized in several processes for the overall system reliability and processing distribution across CPU (local multiple cores or multiple CPU).
 
+Here are some recommendations based on experience:
 
+1) for reliability reason the Agent service is to be implemented in a specific process. This will allow that process to monitor other processes.
+2) Connectivity to NMEA devices (via Coupler) as well as server for NMEA messages. For further processing, like NMEA2000 full decoding, a **GrpcPublisher** can be used to push the NMEA messages.
+3) It is recommended to locate energy management devices without NMEA2000 interface in a dedicated server that is instantiating the **MpptService**. This service can be associated to a Publisher that will forward NMEA messages translated from the native interface.
+4) The data server is another type of server that will hold data representing the current state of the yacht control system. It can be regularly polled by GUI type of applications. The first version is limited to engine data management but will be extended in the next versions. The data service is expected to receive NMEA messages via a **GrpcInputService**
 
+Many distributions are possible, they can even be spread across several physical machines. Some practical examples are available in the conf directory.
 
 ## Configuration files
 
@@ -566,6 +597,7 @@ The per object section includes a list oh object and each object as the followin
 The following sections are recognized:
 
 - features
+- profiling
 - servers
 - couplers
 - publishers
@@ -583,7 +615,7 @@ Here are the features included with the current version
 
 | feature name  | includes                      | needed for                             |
 |---------------|-------------------------------|----------------------------------------|
-| router_common | Message router basic features |                                        |
+| router_core   | Message router basic features |                                        |
 | nmea2000      | NMEA2000 Handling             |                                        |
 | nmea0183      | NMEA0183 handling             |                                        |
 | couplers      | Non CAN couplers              |                                        |  
@@ -744,8 +776,27 @@ filters:
     action: select
 
 ```
+#### Profiling
+
+To tackle performance problems, it is possible to enable profiling on specific threads.
+A profiling summary is printed on stdout when the server stops
+
+Exemple profiling section
+
+```
+profiling:
+  enable: true
+  symbols:
+    - N2KSourceDispatcher
+    - NMEA2KActiveController
+    - SocketCANInterface
+    - SocketCANWriter
+```
 
 ### Default port assignments for servers / services
+
+In the current version, the port assignment shall be managed manually. In most of the cases that is not an issue as the configuration for one application is rather static.
+However, having the system agent allocating the ports can be envisaged in future releases.
 
 | service                       | port | transport protocol | application protocol      |
 |-------------------------------|------|--------------------|---------------------------|

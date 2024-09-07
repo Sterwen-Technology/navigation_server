@@ -55,4 +55,8 @@ class NMEA2000Enum:
     def name(self):
         return self._name
 
+    @property
+    def bit_length(self) -> int:
+        return self._bit_length
+
 

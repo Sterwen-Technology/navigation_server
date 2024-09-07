@@ -107,6 +107,34 @@
             <EnumPair Value="99" Name="Other (no additional information)" />
           </EnumValues>
         </Enum>
+    <Enum Name="AIS Repeat Indicator">
+          <BitLength>2</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="Initial" />
+            <EnumPair Value="1" Name="First retransmission" />
+            <EnumPair Value="2" Name="Second retransmission" />
+            <EnumPair Value="3" Name="Final retransmission" />
+          </EnumValues>
+        </Enum>
+    <Enum Name="AIS Transceiver information">
+          <BitLength>5</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="Channel A VDL reception" />
+            <EnumPair Value="1" Name="Channel B VDL reception" />
+            <EnumPair Value="2" Name="Channel A VDL transmission" />
+            <EnumPair Value="3" Name="Channel B VDL transmission" />
+            <EnumPair Value="4" Name="Own information not broadcast" />
+            <EnumPair Value="5" Name="Reserved" />
+            <EnumPair Value="6" Name="Reserved" />
+          </EnumValues>
+        </Enum>
+    <Enum Name="On-Off">
+      <BitLength>1</BitLength>
+      <EnumValues>
+        <EnumPair Value="0" Name="Off" />
+        <EnumPair Value="1" Name="On" />
+      </EnumValues>
+    </Enum>
   </GlobalEnums>
   <PGNDefns>
     <PGNDefn PGN="59392">
@@ -2856,7 +2884,7 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator" key="repeat_indicator">
+        <EnumField Name="Repeat Indicator" key="repeat_indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
           <BitLength>2</BitLength>
           <EnumValues>
@@ -2926,17 +2954,8 @@
           <BitOffset>144</BitOffset>
           <BitLength>19</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information" key="transceiver_information">
+        <EnumField Name="AIS Transceiver information" key="transceiver_information" Definition="AIS Transceiver information">
           <BitOffset>163</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UDblField Name="Heading" key="heading">
           <Description>True heading</Description>
@@ -2981,15 +3000,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator" key="repeat_indicator">
+        <EnumField Name="Repeat Indicator" key="repeat_indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <IntField Name="User ID" key="mmsi">
           <BitOffset>8</BitOffset>
@@ -3051,18 +3063,8 @@
           <BitOffset>144</BitOffset>
           <BitLength>19</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information" key="transceiver_info">
+        <EnumField Name="AIS Transceiver information" key="transceiver_info" Definition="AIS Transceiver information">
           <BitOffset>163</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-            <EnumPair Value="6" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UDblField Name="Heading" key="heading">
           <Description>True heading</Description>
@@ -3147,15 +3149,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <IntField Name="User ID">
           <BitOffset>8</BitOffset>
@@ -3328,17 +3323,8 @@
           <BitOffset>418</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>422</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
       </Fields>
     </PGNDefn>
@@ -3350,15 +3336,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <IntField Name="User ID">
           <BitOffset>8</BitOffset>
@@ -3426,18 +3405,49 @@
         <EnumField Name="AToN type">
           <BitOffset>256</BitOffset>
           <BitLength>5</BitLength>
+          <EnumValues>
+            <EnumPair Value="0" Name="Default: Type of AtoN not specified" />
+            <EnumPair Value="1" Name="Reference point" />
+            <EnumPair Value="2" Name="RACON" />
+            <EnumPair Value="3"	Name="Fixed structure off-shore" />
+            <EnumPair Value="4" Name="Reserved for future use" />
+            <EnumPair Value="5" Name="Fixed light: without sectors" />
+            <EnumPair Value="6" Name="Fixed light: with sectors" />
+            <EnumPair Value="7" Name="Fixed leading light front" />
+            <EnumPair Value="8"	Name="leading light rear" />
+            <EnumPair Value="9" Name="Fixed beacon: cardinal N" />
+            <EnumPair Value="10" Name="Fixed beacon: cardinal E" />
+            <EnumPair Value="11" Name="Fixed beacon: cardinal S" />
+            <EnumPair Value="12" Name="Fixed beacon: cardinal W" />
+            <EnumPair Value="13" Name="Fixed beacon: port hand" />
+            <EnumPair Value="14" Name="Fixed beacon: starboard hand" />
+            <EnumPair Value="15" Name="Fixed beacon: preferred channel port hand" />
+            <EnumPair Value="16" Name="Fixed beacon: preferred channel starboard hand" />
+            <EnumPair Value="17" Name="Fixed beacon: isolated danger" />
+            <EnumPair Value="18" Name="Fixed beacon: safe water" />
+            <EnumPair Value="19" Name="Fixed beacon: special mark" />
+            <EnumPair Value="20" Name="Floating AtoN: cardinal N" />
+            <EnumPair Value="21" Name="Floating AtoN: cardinal E" />
+            <EnumPair Value="22" Name="Floating AtoN: cardinal S" />
+            <EnumPair Value="23" Name="Floating AtoN: cardinal W" />
+            <EnumPair Value="24" Name="Floating AtoN: port hand mark" />
+            <EnumPair Value="25" Name="Floating AtoN: starboard hand mark" />
+            <EnumPair Value="26" Name="Floating AtoN: preferred channel port hand" />
+            <EnumPair Value="27" Name="Floating AtoN: preferred channel starboard hand" />
+            <EnumPair Value="28" Name="Floating AtoN: isolated danger" />
+            <EnumPair Value="29" Name="Floating AtoN: safe water" />
+            <EnumPair Value="30" Name="Floating AtoN: special mark" />
+            <EnumPair Value="31" Name="Floating AtoN: light vessel/LANBY/rigs" />
+          </EnumValues>
         </EnumField>
-        <EnumField Name="Off Position Indicator">
+        <EnumField Name="Off Position Indicator" Definition="On-Off">
           <BitOffset>261</BitOffset>
-          <BitLength>1</BitLength>
         </EnumField>
-        <EnumField Name="Virtual AtoN Flag">
+        <EnumField Name="Virtual AtoN Flag" Definition="On-Off">
           <BitOffset>262</BitOffset>
-          <BitLength>1</BitLength>
         </EnumField>
-        <EnumField Name="Assigned Mode Flag">
+        <EnumField Name="Assigned Mode Flag" Definition="On-Off">
           <BitOffset>263</BitOffset>
-          <BitLength>1</BitLength>
         </EnumField>
         <UIntField Name="Reserved">
           <BitOffset>264</BitOffset>
@@ -3455,17 +3465,8 @@
           <BitOffset>272</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>280</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Reserved">
           <BitOffset>285</BitOffset>
@@ -4583,15 +4584,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <IntField Name="User ID">
           <BitOffset>8</BitOffset>
@@ -4642,17 +4636,8 @@
           <BitOffset>144</BitOffset>
           <BitLength>19</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>163</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Position Date">
           <Description>Days since January 1, 1970</Description>
@@ -4785,17 +4770,8 @@
           <BitOffset>591</BitOffset>
           <BitLength>1</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information" key="AIS_transceiver_info">
+        <EnumField Name="AIS Transceiver information" key="AIS_transceiver_info" Definition="AIS Transceiver information">
           <BitOffset>592</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
       </Fields>
     </PGNDefn>
@@ -4807,15 +4783,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <IntField Name="Source ID">
           <BitOffset>8</BitOffset>
@@ -4826,17 +4795,8 @@
           <BitOffset>40</BitOffset>
           <BitLength>1</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>41</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Sequence Number">
           <BitOffset>46</BitOffset>
@@ -4878,15 +4838,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
@@ -4897,17 +4850,8 @@
           <BitOffset>40</BitOffset>
           <BitLength>1</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>41</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Reserved">
           <Description>reserved</Description>
@@ -4943,15 +4887,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
@@ -4962,17 +4899,8 @@
           <BitOffset>40</BitOffset>
           <BitLength>1</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>41</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Reserved">
           <Description>reserved</Description>
@@ -5067,17 +4995,8 @@
           <BitOffset>144</BitOffset>
           <BitLength>19</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>163</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <DblField Name="Altitude">
           <BitOffset>168</BitOffset>
@@ -5142,15 +5061,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
@@ -5161,17 +5073,8 @@
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>40</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Reserved">
           <Description>reserved</Description>
@@ -5197,15 +5100,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
@@ -5216,17 +5112,8 @@
           <BitOffset>40</BitOffset>
           <BitLength>1</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>41</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Sequence Number">
           <BitOffset>46</BitOffset>
@@ -5264,15 +5151,9 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
           <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
@@ -5283,17 +5164,8 @@
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>40</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Reserved">
           <Description>reserved</Description>
@@ -5314,15 +5186,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
@@ -5333,17 +5198,8 @@
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>40</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Reserved">
           <Description>reserved</Description>
@@ -5395,15 +5251,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <IntField Name="Source ID">
           <BitOffset>8</BitOffset>
@@ -5414,17 +5263,8 @@
           <BitOffset>40</BitOffset>
           <BitLength>1</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>41</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Reserved">
           <Description>reserved</Description>
@@ -5453,15 +5293,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
@@ -5472,17 +5305,8 @@
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>40</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Reserved">
           <Description>reserved</Description>
@@ -5515,15 +5339,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
@@ -5534,17 +5351,8 @@
           <BitOffset>38</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
-        <EnumField Name="AIS Transceiver information">
+        <EnumField Name="AIS Transceiver information" Definition="AIS Transceiver information">
           <BitOffset>40</BitOffset>
-          <BitLength>5</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Channel A VDL reception" />
-            <EnumPair Value="1" Name="Channel B VDL reception" />
-            <EnumPair Value="2" Name="Channel A VDL transmission" />
-            <EnumPair Value="3" Name="Channel B VDL transmission" />
-            <EnumPair Value="4" Name="Own information not broadcast" />
-            <EnumPair Value="5" Name="Reserved" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Reserved">
           <Description>reserved</Description>
@@ -5635,15 +5443,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat Indicator">
+        <EnumField Name="Repeat Indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="Source ID">
           <BitOffset>8</BitOffset>
