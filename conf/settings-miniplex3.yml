@@ -14,7 +14,7 @@ trace_dir: /mnt/meaban/Bateau/tests
 log_module:
     router_core.coupler: INFO
     couplers.shipmodul_if: INFO
-    router_core.nmea2000_msg: INFO
+    router_core.nmea2000_msg: DEBUG
 
 features:
     - router_core
@@ -39,6 +39,7 @@ servers:
     port: 4503
     coupler: MiniPlex3
     max_silent: 10
+    nmea2000: dyfmt
 
 - gRPCMain:
     class: GrpcServer

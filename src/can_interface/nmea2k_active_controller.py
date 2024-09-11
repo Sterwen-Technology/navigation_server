@@ -34,11 +34,14 @@ class NMEA2KActiveController(NMEA2KController):
             _logger.error(e)
             raise ObjectCreationError(str(e))
         self._coupler_queue = None
-        self._applications = {}
+        self._applications = []
+        self._app_index = {}
         self._apool = NMEA2000ApplicationPool(self, opts)
         self._application_names = opts.getlist('applications', str, None)
         self._address_change_request = None
         self._start_application_lock = threading.Lock()
+        self._pgn_vector = {}
+        self._catch_all = []
 
     @property
     def min_queue_size(self):
@@ -79,29 +82,46 @@ class NMEA2KActiveController(NMEA2KController):
     def app_pool(self) -> NMEA2000ApplicationPool:
         return self._apool
 
+    def set_pgn_vector(self, application, pgn_list):
+        if type(pgn_list) is list:
+            for pgn in pgn_list:
+                if pgn in self._pgn_vector:
+                    _logger.error(f"Duplicate vector for PGN {pgn} ignored")
+                    continue
+                self._pgn_vector[pgn] = application
+        elif type(pgn_list) is int:
+            if pgn_list == -1:
+                self._catch_all.append(application)
+            elif 254 > pgn_list >= 0:
+                self._pgn_vector[pgn_list] = application
+
     def add_application(self, application):
+        self._applications.append(application)
+        self.add_application_index(application)
+
+    def add_application_index(self, application):
         self._devices[application.address] = application
-        self._applications[application.address] = application
+        self._app_index[application.address] = application
         self._can.add_address(application.address)
 
     def apply_change_application_address(self):
         # application must already be initialized with the target address
-        self.remove_application(self._address_change_request[1])
-        self.add_application(self._address_change_request[0])
+        self.remove_application_index(self._address_change_request[1])
+        self.add_application_index(self._address_change_request[0])
         self._address_change_request = None
 
     def change_application_address(self, application, old_address):
         assert self._address_change_request is None
         self._address_change_request = (application, old_address)
 
-    def remove_application(self, old_address: int):
+    def remove_application_index(self, old_address: int):
         self.delete_device(old_address)
         self._can.remove_address(old_address)
-        del self._applications[old_address]
+        del self._app_index[old_address]
 
     def start_applications(self):
         _logger.debug("NMEA2000 Controller => Applications starts")
-        for app in self._applications.values():
+        for app in self._applications:
             # to limit the load on the CAN bus, applications are started one at a time
             if not self._start_application_lock.acquire(timeout=2.0):
                 _logger.error("ActiveController timeout on application start")
@@ -116,9 +136,9 @@ class NMEA2KActiveController(NMEA2KController):
             # we have a da, so call the application
             try:
                 if msg.is_iso_protocol:
-                    self._applications[msg.da].receive_msg(msg)
+                    self._app_index[msg.da].receive_msg(msg)
                 else:
-                    self._applications[msg.da].receive_data_msg(msg)
+                    self._app_index[msg.da].receive_data_msg(msg)
             except KeyError:
                 _logger.error("Wrongly routed message for destination %d pgn %d" % (msg.da, msg.pgn))
                 return
@@ -126,14 +146,19 @@ class NMEA2KActiveController(NMEA2KController):
             if msg.is_iso_protocol:
                 super().process_msg(msg)    # proxy treatment
                 # need also to process broadcast (DA=255) messages
-                for application in self._applications.values():
+                for application in self._applications:
                     application.receive_iso_msg(msg)
                 if self._address_change_request is not None:
                     # address change cannot be applied on the fly
                     self.apply_change_application_address()
             else:
                 _logger.debug("Active controller message dispatch sa=%d pgn =%d" % (msg.sa, msg.pgn))
-                for application in self._applications.values():
+                # new version 2024-09-11 dispatch via subscription
+                try:
+                    self._pgn_vector[msg.pgn].receive_data_msg(msg)
+                except KeyError:
+                    pass
+                for application in self._catch_all:
                     application.receive_data_msg(msg)
 
     def poll_devices(self):

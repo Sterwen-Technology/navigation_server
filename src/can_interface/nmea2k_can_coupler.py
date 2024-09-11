@@ -37,6 +37,7 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
         NMEA2000Application.__init__(self, controller)
         self._controller_set = True
         set_global_var(f'{self.object_name()}.controller', controller)
+        controller.set_pgn_vector(self, -1) # catch all
 
     def restart(self):
         _logger.debug("DirectCANCoupler restart")

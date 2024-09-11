@@ -8,6 +8,7 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
+import binascii
 import queue
 import threading
 import time
@@ -21,6 +22,7 @@ import struct
 
 from generated.nmea2000_pb2 import nmea2000pb
 from router_common import NavGenericMsg, N2K_MSG, N2KDecodeException, NULL_MSG, N2KUnknownPGN
+from .nmea0183_msg import NMEAInvalidFrame
 from .nmea0183_msg import process_nmea0183_frame, NMEA0183Msg
 from router_common import format_timestamp, find_pgn
 
@@ -42,7 +44,7 @@ class NMEA2000Msg:
 
     ts_format = "%H:%M:%S.%f"
     struct_2b = struct.Struct("<H")
-    pgn_service = [59392, 59904, 60928, 65240, 126208, 126464, 126993, 126996, 126998]
+    pgn_service = (59392, 59904, 60928, 65240, 126208, 126464, 126993, 126996, 126998)
 
     def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytearray = None, timestamp=0.0,
                  protobuf=None):
@@ -262,11 +264,16 @@ def decodePGDY(msg: NMEA0183Msg) -> NMEA2000Msg:
         da = int(fields[1])
         if da == 0:
             da = 255
+        try:
+            bin_data = base64.b64decode(fields[2])
+        except binascii.Error as err:
+            _logger.error(f"Cannot convert binascii {fields[2]}: {err}")
+            raise N2KRawDecodeError(f"PGDY decode error of base64 string {fields[2]}")
 
         rmsg = NMEA2000Msg(
             pgn=int(fields[0]),
             da=da,
-            payload=base64.b64decode(fields[2])
+            payload=bin_data
         )
     else:
         raise N2KRawDecodeError("PDGY message format error => number of fields:%d" % len(fields))
@@ -286,7 +293,8 @@ def fromPGDY(frame) -> NMEA2000Msg:
     if msg.address() != b'PDGY' or msg.delimiter() != ord('!'):
         # print("Delimiter:", msg.delimiter(), "address:", msg.address())
         _logger.warning("PDGY sentence invalid: %s" % str(msg))
-        raise ValueError
+        raise NMEAInvalidFrame
+
     try:
         rmsg = decodePGDY(msg)
     except N2KRawDecodeError as e:

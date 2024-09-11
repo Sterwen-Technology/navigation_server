@@ -14,6 +14,7 @@
 import logging
 import threading
 
+from nmea2000.nmea2k_decode_dispatch import get_n2k_decoded_object
 from router_core import NMEA2000Msg
 from nmea2000 import NMEA2000Device
 from nmea2000_datamodel import NMEA2000MutableName, PGNDef
@@ -45,6 +46,10 @@ class NMEA2000ApplicationPool:
         address = self.get_new_address()
         if address == 254:
             raise IndexError
+        iso_name = self.application_name()
+        return address, iso_name
+
+    def application_name(self) -> NMEA2000MutableName:
         if self._application_count < self._max_application:
             # create the ISO NAME
             iso_name = NMEA2000MutableName(
@@ -59,7 +64,7 @@ class NMEA2000ApplicationPool:
         else:
             _logger.error("NMEA2000 Applications number reached")
             raise IndexError
-        return address, iso_name
+        return iso_name
 
     def get_new_address(self):
         while self._ap_index < len(self._address_pool):
@@ -75,12 +80,20 @@ class NMEA2000Application(NMEA2000Device):
 
     (WAIT_FOR_BUS, ADDRESS_CLAIM, ACTIVE) = range(10, 13)
 
-    def __init__(self, controller):
+    def __init__(self, controller, address=-1):
 
         self._controller = controller
         self._application_type_name = "Generic NMEA2000 CA"
         # get address and create ISO Name
-        self._address, self._iso_name = controller.app_pool.application_ids()
+        if address < 0 or address > 253:
+            self._address, self._iso_name = controller.app_pool.application_ids()
+        else:
+            # check that the address has not been allocated locally
+            if address is controller.network_addresses():
+                _logger.error(f"CAN bus address {address} already allocated")
+                raise IndexError
+            self._address = address
+            self._iso_name = controller.app_pool.application_name()
 
         _logger.info("Controller Application ECU:%s ISO Name=%08X address=%d type:%s" %
                      (controller.name, self._iso_name.name_value, self._address, self._application_type_name))
@@ -182,7 +195,7 @@ class NMEA2000Application(NMEA2000Device):
             iso_name = address_claim_obj.name
             _logger.warning("Address claim with conflict on address %d received with name %8X. Our name: %8X" % (
                             self._address, iso_name.name_value, self._iso_name.name_value))
-            _logger.warning("Conflicting NAME details: %s" % str(iso_name))
+            _logger.debug("Conflicting NAME details: %s" % str(iso_name))
             if iso_name.name_value > self._iso_name.name_value:
                 # here we need to change the address => not implemented
                 _logger.warning("CAN address %d not available need to change it" % self._address)
@@ -359,4 +372,36 @@ class DeviceReplaySimulator(NMEA2000Application):
         can_id_sent = (can_id & 0xFFFFF00) | self._address
         assert self._controller is not None
         self._controller.CAN_interface.put_can_msg(can_id_sent, data)
+
+
+class DeviceSimulator(NMEA2000Application):
+    '''
+    This class is a default NMEA2000 device simulator (or even implementation)
+    '''
+
+    def __init__(self, opts):
+        self._name = opts['name']
+        self._requested_address = opts.get('address', int, -1)
+        self._model_id = opts.get('model_id', str, 'Device Simulator')
+        self._processed_pgn = opts.getlist('pgn_list',int, None)
+        if self._processed_pgn is None:
+            _logger.error(f"Device Simulator {self._name} must have a set of pgn assigned")
+            raise ValueError
+
+    def init_product_information(self):
+        super().init_product_information()
+        self._product_information.model_id = self._model_id
+
+    def set_controller(self, controller):
+        super().__init__(controller, self._requested_address)
+        # here we assume that the publisher has been instantiated as well
+        _logger.info(f"Device Simulator {self._name} ready")
+        controller.set_pgn_vector(self, self._processed_pgn)
+
+    def receive_data_msg(self, msg: NMEA2000Msg):
+        '''
+        This is a generic method that is only printing the message received
+        '''
+        n2k_obj = get_n2k_decoded_object(msg)
+        print("Device", self._address, "PGN", msg.pgn, "receive:", n2k_obj)
 

@@ -50,7 +50,7 @@ servers:
       trace: false
       channel: can0
       max_silent: 60.0
-      applications: [CANCoupler]
+      applications: [CANCoupler, APSimulator]
 
 couplers:
 
@@ -78,6 +78,12 @@ publishers:
     flexible_decode: false
 
 applications:
+
+- APSimulator:
+    class: DeviceSimulator
+    address: 10
+    pgn_list: [129283, 129284, 129285]
+    model_id: Auto Pilot
 
 
 
