@@ -12,7 +12,7 @@
 from .router_main import NavigationMainServer
 from .coupler import Coupler, CouplerReadError, CouplerTimeOut, CouplerWriteError, CouplerNotPresent, CouplerOpenRefused
 from .filters import NMEAFilter, FilterSet, TimeFilter
-from .IPCoupler import BufferedIPCoupler, TCPBufferedReader
+from .IPCoupler import BufferedIPCoupler, TCPBufferedReader, IPAsynchReader
 from .message_server import NMEAServer, NMEASenderServer
 from .publisher import Publisher, PublisherOverflow, ExternalPublisher, Injector, PrintPublisher
 from .nmea0183_msg import (NMEA0183Msg, NMEAInvalidFrame, NMEA0183Sentences, nmea0183msg_from_protobuf, XDR,

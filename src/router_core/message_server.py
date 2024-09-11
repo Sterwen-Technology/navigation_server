@@ -53,7 +53,7 @@ class NMEAServer(NavTCPServer):
         if self._timer is not None:
             self._timer.cancel()
 
-    def run(self):
+    def nrun(self):
         _logger.info("%s ready listening on port %d" % (self.name, self._port))
         # self._sender_coupler = self.resolve_ref('sender')
         # print("Sender:", self._sender_instrument)
@@ -249,7 +249,7 @@ class NMEASenderServer(NavTCPServer):
         if self._timer is not None:
             self._timer.cancel()
 
-    def run(self):
+    def nrun(self):
         self._coupler = self.resolve_ref('coupler')
         if self._coupler is None:
             _logger.error("NMEA Sender %s Coupler %s unknown => STOP server" % (self.name,

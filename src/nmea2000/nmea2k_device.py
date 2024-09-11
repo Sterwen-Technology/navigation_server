@@ -45,6 +45,7 @@ class NMEA2000Device:
         self._iso_name = name
         self._manufacturer_name = None
         self._changed = True
+        self._product_info_sent = False
 
     def receive_msg(self, msg: NMEA2000Msg):
         _logger.debug("NMEA2000 Device manager: New message PGN %d for device @%d" % (msg.pgn, self._address))
@@ -77,6 +78,14 @@ class NMEA2000Device:
     @property
     def manufacturer_name(self) -> str:
         return self._manufacturer_name
+
+    @property
+    def product_information_sent(self) -> bool:
+        return self._product_info_sent
+
+    @product_information_sent.setter
+    def product_information_sent(self, flag:bool):
+        self._product_info_sent = flag
 
     def add_pgn_count(self, pgn) -> PgnRecord:
         try:

@@ -15,20 +15,21 @@ import queue
 import time
 
 from .nmea2k_device import NMEA2000Device
-from router_common import NavigationServer
+from router_common import NavigationServer, NavThread
 from router_core import NMEA2000Msg
 from router_common import NavigationConfiguration
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
-
-class NMEA2KController(NavigationServer, threading.Thread):
+class NMEA2KController(NavigationServer, NavThread):
 
     def __init__(self, opts):
         NavigationServer.__init__(self, opts)
-        threading.Thread.__init__(self, name=self._name)
+        NavThread.__init__(self, name=self._name)
         self._devices = {}
         queue_size = opts.get('queue_size', int, 20)
+        if queue_size < self.min_queue_size:
+            queue_size = self.min_queue_size
         self._save_file = opts.get('save_file', str, None)
         if self._save_file is not None:
             self.init_save()
@@ -49,6 +50,10 @@ class NMEA2KController(NavigationServer, threading.Thread):
     def network_addresses(self):
         return self._devices.keys()
 
+    @property
+    def min_queue_size(self):
+        return 20
+
     def delete_device(self, address):
         del self._devices[address]
 
@@ -62,7 +67,7 @@ class NMEA2KController(NavigationServer, threading.Thread):
         except queue.Full:
             _logger.warning("NMEA2000 Controller input queue full")
 
-    def run(self) -> None:
+    def nrun(self) -> None:
         _logger.info("%s NMEA2000 Controller starts" % self._name)
         self._gc_timer.start()
         while not self._stop_flag:

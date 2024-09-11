@@ -20,6 +20,7 @@ import os.path
 from router_common import ObjectCreationError, MessageServerGlobals, ObjectFatalError, ConfigurationException
 from .grpc_server_service import GrpcServer
 from .generic_top_server import GenericTopServer
+from .nav_threading import NavProfilingController, NavThreadingController
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -119,7 +120,7 @@ class Feature:
                     if obj_name not in package_items:
                         continue
                 # we are good
-                _logger.info(f"Adding class:{obj_name}")
+                _logger.debug(f"Adding class:{obj_name}")
                 self._configuration.add_class(obj)
                 self._classes[obj_name] = obj
             elif inspect.isfunction(obj):
@@ -190,6 +191,7 @@ class NavigationConfiguration:
 
     def __init__(self):
         # print ("Logger", _logger.getEffectiveLevel(), _logger.name)
+        assert self._instance is None
         self._configuration = None
         self._obj_dict = {}
         self._class_dict = {}
@@ -206,6 +208,7 @@ class NavigationConfiguration:
         self._main_server = None
         NavigationConfiguration._instance = self
         MessageServerGlobals.configuration = self
+        self.init_server_globals()
 
     def build_configuration(self, settings_file):
 
@@ -297,8 +300,17 @@ class NavigationConfiguration:
         except KeyError:
             _logger.info("No applications")
 
+        # configure profiling
+        profiler_conf = self._configuration.get('profiling', None)
+        if profiler_conf is not None:
+            MessageServerGlobals.profiling_controller.configure(self, profiler_conf)
         _logger.info("Finished analyzing settings file:%s " % settings_file)
         return self
+
+    @staticmethod
+    def init_server_globals():
+        MessageServerGlobals.thread_controller = NavThreadingController()
+        MessageServerGlobals.profiling_controller = NavProfilingController()
 
     def dump(self):
         print(self._configuration)
@@ -393,7 +405,7 @@ class NavigationConfiguration:
             feature.initialize(options)
 
     def build_objects(self):
-
+        _logger.debug("Configuration: creating main server")
         self._main_server = self._main.build_object()
         # create the filters upfront
         for inst_descr in self._filters.values():
@@ -402,7 +414,7 @@ class NavigationConfiguration:
             except ConfigurationException as e:
                 _logger.error(str(e))
                 continue
-        _logger.debug("Filter created")
+        _logger.debug("Filters created")
         for inst_descr in self._applications.values():
             inst_descr.build_object()
         _logger.debug("Applications created")

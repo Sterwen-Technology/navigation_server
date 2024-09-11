@@ -16,13 +16,13 @@ import threading
 
 from router_core import NMEA2000Msg
 from nmea2000 import NMEA2000Device
-from nmea2000_datamodel import NMEA2000MutableName
+from nmea2000_datamodel import NMEA2000MutableName, PGNDef
 from nmea2000.nmea2k_iso_messages import (AddressClaim, ISORequest, ProductInformation, ConfigurationInformation,
                                           AcknowledgeGroupFunction, create_group_function, CommandedAddress,
                                           CommandGroupFunction, Heartbeat)
 # from nmea2000.nmea2k_active_controller import NMEA2KActiveController
 from router_common import get_id_from_mac
-from router_common import MessageServerGlobals
+from router_common import MessageServerGlobals, resolve_ref
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -86,8 +86,9 @@ class NMEA2000Application(NMEA2000Device):
                      (controller.name, self._iso_name.name_value, self._address, self._application_type_name))
         self._claim_timer = None
         self._heartbeat_timer = None
-        self._heartbeat_interval = 30.0  # can be adjusted in subclasses
+        self._heartbeat_interval = 60.0  # can be adjusted in subclasses
         self._sequence = 0
+        self._master_app = False
         super().__init__(self._address, name=self._iso_name)
 
         self._app_state = self.WAIT_FOR_BUS
@@ -149,6 +150,7 @@ class NMEA2000Application(NMEA2000Device):
         self.send_iso_request(255, 60928)
         # start sending heartbeat
         self.send_heartbeat()
+        self._controller.application_started()
         # request = ISORequest(self._address)
         # self._controller.CAN_interface.send(request.message())
         # t = threading.Timer(1.0, self.send_product_information)
@@ -212,7 +214,7 @@ class NMEA2000Application(NMEA2000Device):
         # _logger.debug("Received ISO request from %d da=%d" % (msg.sa, msg.da))
         if msg.da == self._address or msg.da == 255:
             request = ISORequest().from_message(msg)
-            _logger.debug("Application ISO request received from %d for pgn %d" % (msg.sa, request.request_pgn))
+            _logger.debug("Application %d ISO request received from %d for pgn %d" % (self._address, msg.sa, request.request_pgn))
             if request.request_pgn == 60928:
                 self.respond_address_claim()
             elif request.request_pgn == 126996:
@@ -246,7 +248,7 @@ class NMEA2000Application(NMEA2000Device):
         '''
         That method processed ISO messages that have a DA=255
         '''
-        _logger.debug("Receive ISO message from address %d PGN %d" % (msg.sa, msg.pgn))
+        _logger.debug("Device %d Receive ISO message from address %d PGN %d" % (self._address, msg.sa, msg.pgn))
         try:
             self._process_broadcast_vector[msg.pgn](msg)
         except KeyError:
@@ -256,6 +258,7 @@ class NMEA2000Application(NMEA2000Device):
         _logger.debug("Receive address claim from address %d" % msg.sa)
         device = self._controller.get_device_by_address(msg.sa)
         if device.product_information is None:
+            _logger.debug("Device %d request PGN 126996, 126998 to %d" % (self._address, msg.sa))
             self.send_iso_request(msg.sa, 126996)
             self.send_iso_request(msg.sa, 126998)
 
@@ -270,13 +273,14 @@ class NMEA2000Application(NMEA2000Device):
         self._controller.CAN_interface.send(self._configuration_information.message(), force_send=True)
 
     def send_heartbeat(self):
-        _logger.info("sending heartbeat from device %d" % self._address)
+        _logger.debug("sending heartbeat from device %d sequence %d" % (self._address, self._sequence))
         request = Heartbeat()
         request.sequence = self._sequence
         request.sa = self._address
         self._sequence += 1
         if self._sequence > 255:
             self._sequence = 0
+
         self._controller.CAN_interface.send(request.message(), force_send=True)
         self._heartbeat_timer = threading.Timer(self._heartbeat_interval, self.send_heartbeat)
         self._heartbeat_timer.start()
@@ -310,3 +314,49 @@ class NMEA2000Application(NMEA2000Device):
                                                                 group_function.parameters, acknowledge)
         else:
             _logger.error("Command Group Function PGN %d not supported" % group_function.function_pgn)
+
+
+class DeviceReplaySimulator(NMEA2000Application):
+
+    def __init__(self, opts):
+        self._name = opts['name']
+        self._source = opts.get('source', int, 255)
+        if self._source > 253:
+            raise ValueError
+        self._publisher_name = opts.get('publisher', str, None)
+        self._publisher = None
+        if self._publisher_name is None:
+            _logger.error(f"DeviceReplaySimulator {self._name} missing publisher")
+            raise ValueError
+        self._model_id = opts.get('model_id', str, 'Replay Simulator')
+
+
+    def init_product_information(self):
+        super().init_product_information()
+        self._product_information.model_id = self._model_id
+
+    def set_controller(self, controller):
+        super().__init__(controller)
+        # here we assume that the publisher has been instantiated as well
+        try:
+            self._publisher = resolve_ref(self._publisher_name)
+        except KeyError:
+            _logger.error(f"DeviceReplaySimulator {self._name} incorrect publisher {self._publisher_name}")
+            return
+        assert self._publisher is not None
+        self._publisher.subscribe(self._source, self.input_message)
+
+    def input_message(self, can_id, data):
+        # _logger.debug("DeviceReplaySimulator message %4X %s" % (can_id, data.hex()))
+        if self._app_state != self.ACTIVE:
+            _logger.warning(f"Application {self._name} not ready to take messages")
+            return
+        pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
+        # need to avoid all protocol pgn
+        if PGNDef.pgn_for_controller(pgn):
+            return
+        # adjust the CAN ID
+        can_id_sent = (can_id & 0xFFFFF00) | self._address
+        assert self._controller is not None
+        self._controller.CAN_interface.put_can_msg(can_id_sent, data)
+

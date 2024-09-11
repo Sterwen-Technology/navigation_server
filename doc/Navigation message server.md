@@ -186,6 +186,7 @@ on hold
 | autostart           | boolean                                | True          | The coupler is started automatically when the service starts, if False it needs to be started via the Console                                            |
 | nmea2000_controller | string                                 | None          | Name of the server of class NMEA2KController associated with the coupler                                                                                 |
 | nmea0183_convert    | boolean                                | False         | Convert NMEA0183 to NMEA2000, if protocol is specified as *nmea2000* then non converted messages are discarded, otherwise they are forwarded as NMEA0183 |
+| stop_system         | boolean                                | False         | When true stop the whole executable when the coupler stops. Useful for log_replay and tests                                                              |
 
 
 Remarks on protocol behavior:
@@ -409,7 +410,18 @@ The injector is collecting the messages coming from one or more coupler and inje
 |--------|------------------|---------|--------------------------------------------------------------------------------|
 | target | string           | none    | Name of the coupler that will receive the messages and send them to the device |
 
+### N2KSourceDispatcher (Publisher)
 
+This publisher dispatch messages based on the NMEA2000 source address. Objects need to subscribe internally to receive the messages in three possible modes.
+
+| Name | Type             | Default | Signification                                                               |
+|------|------------------|---------|-----------------------------------------------------------------------------|
+| mode | string           | message | Format in which the message is passed to the application object (see below) |
+
+Messages modes definition:
+- **transparent** : The content of the message is not interpreted and the raw format from the coupler is passed to the application
+- **message** : NMEA2000 binary message format with Fast packet reassembly
+- **decoded** : NMEA2000 fully decoded (Python object)
 
 ### Applications
 
@@ -518,6 +530,22 @@ All Coupler parameters are applicable, and some must be set like the *nmea2000* 
 
 To keep the message timing, the whole file is read and messages stored in memory before the messages start to be sent in the system. By consequence, the LogReplayCoupler must be used on machines with enough RAM capacity. Recommendation is minimum 4GB of RAM to use the LogReplayCoupler.
 
+### TransparentCanLogCoupler (RawLogCoupler)
+
+This is variant of the RawLogCoupler working only on CAN level traces. Its purpose is to inject the NMEA2000 CAN frames in the system to create a simulator based on existing traces by using the N2KSourceDispatcher as publisher on this coupler.
+
+### DeviceReplaySimulator (NMEA2000Application)
+
+That application act as Controller Application and simulate a NMEA2000 devices based on messages read from a log. Only one device per object, so to simulate multiple devices, multiple objects must be instantiated.
+
+| Name      | Type | Default | Signification                                                          |
+|-----------|------|---------|------------------------------------------------------------------------|
+| source    | int  | none    | source address of the device in the logs                               |
+| publisher | str  | none    | Nmea of the publisher dispatching messages (N2KSourceDispatcher class) |
+| model_id  | str  | none    | String defining the simulated device for display                       |
+
+
+
 ## Organizing the processes
 
 All the building blocks needs to be organized in several processes for the overall system reliability and processing distribution across CPU (local multiple cores or multiple CPU).
@@ -569,6 +597,7 @@ The per object section includes a list oh object and each object as the followin
 The following sections are recognized:
 
 - features
+- profiling
 - servers
 - couplers
 - publishers
@@ -746,6 +775,22 @@ filters:
     pgn: [126720]
     action: select
 
+```
+#### Profiling
+
+To tackle performance problems, it is possible to enable profiling on specific threads.
+A profiling summary is printed on stdout when the server stops
+
+Exemple profiling section
+
+```
+profiling:
+  enable: true
+  symbols:
+    - N2KSourceDispatcher
+    - NMEA2KActiveController
+    - SocketCANInterface
+    - SocketCANWriter
 ```
 
 ### Default port assignments for servers / services

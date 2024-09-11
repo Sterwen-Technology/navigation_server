@@ -25,7 +25,7 @@ from router_core.nmea2000_msg import NMEA2000Msg
 from nmea2000 import FastPacketHandler, FastPacketException
 from nmea2000 import IsoTransportHandler, IsoTransportException
 from nmea2000_datamodel import PGNDef
-from router_common import NMEAMsgTrace, MessageTraceError
+from router_common import NMEAMsgTrace, MessageTraceError, NavThread
 from router_common import ObjectFatalError
 
 
@@ -41,7 +41,9 @@ class SocketCanReadInvalid(Exception):
 
 
 def check_can_device(link):
+    """
 
+    """
     proc = subprocess.run('/sbin/ip link | grep %s' % link, shell=True, capture_output=True, text=True)
     lines = proc.stdout.split('\n')
     #  print(len(lines), lines)
@@ -58,8 +60,10 @@ def check_can_device(link):
     return
 
 
-class SocketCANInterface(threading.Thread):
+class SocketCANInterface(NavThread):
+    """
 
+    """
     (BUS_NOT_CONNECTED, BUS_CONNECTED, BUS_READY, BUS_SENS_ALLOWED) = range(0, 4)
 
     def __init__(self, channel, out_queue, trace=False):
@@ -247,7 +251,7 @@ class SocketCANInterface(threading.Thread):
         can_id |= (n2k_msg.prio & 7) << 26
         return can_id
 
-    def run(self):
+    def nrun(self):
 
         #  Run loop
 
@@ -317,31 +321,13 @@ class SocketCANInterface(threading.Thread):
         if self._trace is not None:
             self._trace.stop_trace()
 
-'''
-class NMEA2000MsgListener(Listener):
-
-    def __init__(self, interface: SocketCANInterface, bus_queue: queue.Queue):
-        # super().___init__()
-        self._interface = interface
-        self._bus_queue = bus_queue
-
-    def on_message_received(self, msg: Message) -> None:
-        if not msg.is_extended_id or msg.is_remote_frame:
-            return
-        # _logger.debug("CAN interface received: %s" % msg)
-        self._interface.read_bus(msg)
-
-    def on_error(self, exc: Exception) -> None:
-        _logger.error("BUS CAN error: %s" % exc)
-
-'''
 
 
-class SocketCANWriter(threading.Thread):
+class SocketCANWriter(NavThread):
 
     def __init__(self, in_queue, can_interface, trace):
 
-        super().__init__(name="CAN-Writer", daemon=True)
+        super().__init__(name=f"{can_interface.name}-Writer", daemon=True)
         self._can_interface = can_interface
         self._in_queue = in_queue
         self._bus = None
@@ -359,7 +345,7 @@ class SocketCANWriter(threading.Thread):
     def total_msg(self):
         return self._total_msg
 
-    def run(self):
+    def nrun(self):
         '''
         Wait for messages to be sent on the queue and then send them to the CAN BUS
         Message pacing is implemented with a fixed timing of 5ms (to be improved)
@@ -369,13 +355,18 @@ class SocketCANWriter(threading.Thread):
         last_write_time = time.monotonic()
         while not self._stop_flag:
 
-            if time.monotonic() - last_write_time < 0.005:
-                continue
+
 
             try:
                 msg = self._in_queue.get(timeout=1.0)
             except queue.Empty:
                 continue
+            # 2024-09-07 change the pacing algorithm
+            msg_pace = time.monotonic() - last_write_time
+            # each ECU is allowed to max 20% of the bus, so 1 msg every 5ms
+            if msg_pace < 0.005:
+                # stop the thread for the delta
+                time.sleep(0.005 - msg_pace)
             if self._trace is not None:
                 dts = datetime.datetime.fromtimestamp(msg.timestamp)
                 self._trace.trace_n2k_raw_can(dts, self._total_msg, NMEAMsgTrace.TRACE_OUT,

@@ -14,11 +14,10 @@
 
 import socket
 import queue
-import threading
 import time
 
 from router_common.generic_msg import *
-from router_common import IncompleteMessage
+from router_common import IncompleteMessage, NavThread
 from .coupler import Coupler, CouplerReadError, CouplerTimeOut
 from .nmea0183_msg import process_nmea0183_frame, NMEAInvalidFrame
 
@@ -170,7 +169,7 @@ class TCP_reader(IP_transport):
             return False
 
 
-class IPAsynchReader(threading.Thread):
+class IPAsynchReader(NavThread):
     '''
     This class provides asynchronous messages reassembly over IP protocol. Preferably TCP/IP to avoid messages loss
     It acts as an intermediate between the IP transport and the coupler.
@@ -183,7 +182,7 @@ class IPAsynchReader(threading.Thread):
     '''
 
     def __init__(self, coupler, out_queue, separator, msg_processing):
-        super().__init__(name="IPAsynchReader", daemon=True)
+        super().__init__(name=f"{coupler.name}-IPAsynchReader", daemon=True)
         if isinstance(coupler, IPCoupler):
             self._transport = coupler.transport()
             self._coupler = coupler
@@ -200,7 +199,7 @@ class IPAsynchReader(threading.Thread):
         self._buffer = bytearray(512)
         self._transparent = False
 
-    def run(self):
+    def nrun(self):
         part = False
         part_buf = bytearray()
         while not self._stop_flag:

@@ -38,6 +38,7 @@ class NavigationMainServer(GenericTopServer):
         self._logfile = None
         self._start_time = 0
         self._start_time_s = "Not started"
+        MessageServerGlobals.main_server = self
 
     def couplers(self):
         return self._couplers.values()

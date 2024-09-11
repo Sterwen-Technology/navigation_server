@@ -73,7 +73,10 @@ class NavGenericMsg:
         elif self._type == N2K_MSG:
             return str(self._msg)
         elif self._type == TRANSPARENT_MSG:
-            return self._raw.decode().strip('\r\n')
+            if type(self._raw) is str:
+                return self._raw
+            else:
+                return self._raw.decode().strip('\r\n')
         else:
             return "NULL"
 
