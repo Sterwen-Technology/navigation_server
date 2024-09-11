@@ -18,6 +18,7 @@ from .nmea2k_device import NMEA2000Device
 from router_common import NavigationServer, NavThread
 from router_core import NMEA2000Msg
 from router_common import NavigationConfiguration
+from nmea2000.nmea2k_iso_messages import ISORequest
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -40,6 +41,7 @@ class NMEA2KController(NavigationServer, NavThread):
         self._max_silent = opts.get('max_silent', float, 60.0)
         self._gc_timer = threading.Timer(self._max_silent, self.device_gc)
         self._gc_lock = threading.Lock()
+        self._coupler = None
 
     def server_type(self):
         return 'NMEA2000_CONTROLLER'
@@ -49,6 +51,9 @@ class NMEA2KController(NavigationServer, NavThread):
 
     def network_addresses(self):
         return self._devices.keys()
+
+    def set_coupler(self, coupler):
+        self._coupler = coupler
 
     @property
     def min_queue_size(self):
@@ -190,6 +195,28 @@ class NMEA2KController(NavigationServer, NavThread):
         self._gc_lock.release()
         self._gc_timer = threading.Timer(self._max_silent, self.device_gc)
         self._gc_timer.start()
+
+    def poll_devices(self):
+        '''
+        This method is used to detect devices on the CAN network and get their properties
+        It is used in case the CAN is connected via a coupler-adapter, not when directly connected to the CAN
+
+        '''
+        if self._coupler is not None:
+            _logger.info("N2K Controller sending request for Product en Configuration information")
+            # request the product information
+            request = ISORequest(0, 255,126996)
+            msg = request.nav_message()
+            self._coupler.send_msg_gen(msg)
+            # request the configuration information
+            request = ISORequest(0, 255, 126998)
+            msg = request.nav_message()
+            self._coupler.send_msg_gen(msg)
+        else:
+            _logger.error("N2K Controller => no coupler associated")
+
+
+
 
 
 

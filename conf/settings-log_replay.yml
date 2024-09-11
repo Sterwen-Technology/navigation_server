@@ -12,7 +12,7 @@ function: Log replay server
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 debug_configuration: false
-decode_definition_only: true
+decode_definition_only: false
 # log_file: test_fast_packet
 log_module:
   nmea2000.nmea2k_grpc_publisher: INFO
@@ -55,6 +55,7 @@ couplers:
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
     direction: read_only
+    stop_system: true
     # pgn_white_list: [129025, 129026]
     # pgn_white_list: [130842]
 

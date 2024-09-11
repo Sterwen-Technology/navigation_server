@@ -112,7 +112,8 @@ class Publisher(NavThread):
 
     def deregister(self):
         for inst in self._couplers.values():
-            inst.deregister(self)
+            if inst is not None:    # this can happen when configuration in mangled
+                inst.deregister(self)
 
     def add_coupler(self, coupler):
         self._couplers[coupler.object_name()] = coupler

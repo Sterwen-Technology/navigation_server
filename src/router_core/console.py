@@ -8,7 +8,7 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
-
+import time
 from collections import namedtuple
 from generated.console_pb2 import *
 from generated.console_pb2_grpc import *
@@ -178,6 +178,11 @@ class ConsoleServicer(NavigationConsoleServicer):
         if n2k_svr is None:
             _logger.debug("No NMEA200 Server present")
             return
+        if request.cmd == 'poll':
+            _logger.debug("Poll for devices first")
+            n2k_svr.poll_devices()
+            time.sleep(3.0) # wait a bit to get the responses
+
         for device in n2k_svr.get_device():
             resp = N2KDeviceMsg()
             resp.address = device.address

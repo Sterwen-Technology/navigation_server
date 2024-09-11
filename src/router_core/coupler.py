@@ -235,6 +235,7 @@ class Coupler(NavThread):
         if self._n2k_ctlr_name is not None:
             try:
                 self._n2k_controller = resolve_ref(self._n2k_ctlr_name)
+                self._n2k_controller.set_coupler(self)
             except KeyError:
                 pass
         # self._data_sink = self.resolve_ref(self._data_sink_name, "Data sink")

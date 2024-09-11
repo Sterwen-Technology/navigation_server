@@ -315,7 +315,7 @@ class NMEA2000Writer(threading.Thread):
         super().__init__(name=self._name, daemon=True)
         self._instrument = instrument
         self._max_throughput = max_throughput
-        self._queue = queue.Queue(80)
+        self._queue = queue.Queue(30)
         self._stop_flag = False
         self._interval = 1.0 / max_throughput
         self._last_msg_ts = time.monotonic()
@@ -330,11 +330,12 @@ class NMEA2000Writer(threading.Thread):
             if msg.type == NULL_MSG:
                 break
             actual = time.monotonic()
-            delta = self._last_msg_ts - actual
+            delta = actual - self._last_msg_ts
             if delta < self._interval:
                 time.sleep(self._interval - delta)
                 actual = time.monotonic()
             self._last_msg_ts = actual
+            _logger.debug("N2K Writer %s sending:%s" % (self._name, msg.raw))
             self._instrument.send(msg)
             self._instrument.validate_n2k_frame(msg.raw)
         _logger.info("%s thread stops" % self._name)

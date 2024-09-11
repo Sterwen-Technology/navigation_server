@@ -322,6 +322,7 @@ class ShipModulConfig(NavTCPServer):
         self._reader = self.resolve_ref('coupler')
         if self._reader is None:
             _logger.error("%s no coupler associated => stop" % self.name)
+            return
         _logger.debug("ShipModulConfig associated coupler:%s state:%s" % (self._reader.object_name(), self._reader.state()))
 
     def nb_connections(self):

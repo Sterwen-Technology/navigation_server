@@ -13,7 +13,7 @@ import logging
 import struct
 from collections import namedtuple
 
-from router_common import N2KUnknownPGN, find_pgn
+from router_common import N2KUnknownPGN, find_pgn, NavGenericMsg, N2K_MSG
 from router_core import NMEA2000Msg
 from nmea2000_datamodel import NMEA2000Name
 from .generated_base import extract_var_str
@@ -94,6 +94,11 @@ class NMEA2000Object:
     def da(self, value):
         self._da = value
 
+    def to_message(self) -> NMEA2000Msg:
+        return NMEA2000Msg(self._pgn, self._prio, self._sa, self._da, self.encode_payload())
+
+    def nav_message(self) -> NavGenericMsg:
+        return NavGenericMsg(N2K_MSG, msg= self.to_message())
 
 class AddressClaim(NMEA2000Object):
 

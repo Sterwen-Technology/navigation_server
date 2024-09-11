@@ -136,5 +136,11 @@ class NMEA2KActiveController(NMEA2KController):
                 for application in self._applications.values():
                     application.receive_data_msg(msg)
 
-
+    def poll_devices(self):
+        '''
+        We just the application 0 that is the default
+        '''
+        app = self._applications.values()[0] # shall not crash
+        app.send_iso_request(255, 126996)
+        app.send_iso_request(255, 129998)
 
