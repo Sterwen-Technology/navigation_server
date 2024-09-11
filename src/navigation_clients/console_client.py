@@ -201,9 +201,11 @@ class ConsoleClient:
                 _logger.error("Server Cmd - Error accessing server:%s" % err)
             raise ConsoleAccessException
 
-    def get_devices(self):
+    def get_devices(self, command=None):
         req = Request(id=self._req_id)
         self._req_id += 1
+        if command is not None:
+            req.cmd = command
         devices = []
         try:
             for dev in self._stub.GetDevices(req):
