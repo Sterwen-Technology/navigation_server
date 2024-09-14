@@ -26,6 +26,10 @@ class N2KDecodeException(Exception):
     pass
 
 
+class N2KInvalidMessageException(Exception):
+    pass
+
+
 class N2KDecodeEOLException(N2KDecodeException):
     pass
 

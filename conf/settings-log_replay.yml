@@ -16,7 +16,7 @@ decode_definition_only: false
 # log_file: test_fast_packet
 log_module:
   nmea2000.nmea2k_grpc_publisher: INFO
-  router_common.configuration: DEBUG
+  router_common.configuration: INFO
 
 
 features:

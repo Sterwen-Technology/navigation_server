@@ -77,10 +77,29 @@ class NMEA2000ApplicationPool:
 
 
 class NMEA2000Application(NMEA2000Device):
+    '''
+    This call is the super class for all Controller Applications in the sense of J1939 or NMEA2000 Applications or devices
+    It performs all Network Management actions based on J1939 and transmit specific NMEA2000 PGN:
+        - 126993 Heartbeat
+        - 126996 Product Information
+        - 126998 Configuration Information
+
+    On the network management domain, the following actions based on J1939 are implemented:
+        - Address Claim
+        - Address Claimed / Cannot Claim
+
+    The address can be either taken automatically from the address pool or assigned by configuration.
+    In case of conflict and after ISO/J1939 NAME comparison another address is allocated from the pool.
+    If all addresses from the pool are exhausted, then the CA/Device goes offline.
+    '''
 
     (WAIT_FOR_BUS, ADDRESS_CLAIM, ACTIVE) = range(10, 13)
 
     def __init__(self, controller, address=-1):
+        '''
+        controller: NMEA2KActiveController acting as ECU and managing CAN bus access
+        address: address to be assigned (0-253) or address taken from the pool
+        '''
 
         self._controller = controller
         self._application_type_name = "Generic NMEA2000 CA"
@@ -291,7 +310,7 @@ class NMEA2000Application(NMEA2000Device):
         request.sequence = self._sequence
         request.sa = self._address
         self._sequence += 1
-        if self._sequence > 255:
+        if self._sequence > 253:
             self._sequence = 0
 
         self._controller.CAN_interface.send(request.message(), force_send=True)

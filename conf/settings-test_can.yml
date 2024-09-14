@@ -25,11 +25,13 @@ log_module:
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
   can_interface.nmea2k_can_coupler: INFO
+  nmea2000_devices.nmea2000_device: DEBUG
 
 features:
   - router_core
   - can_interface
   - nmea2000
+  - nmea2000_devices
 
 servers:
 
@@ -50,7 +52,7 @@ servers:
       trace: false
       channel: can0
       max_silent: 60.0
-      applications: [CANCoupler, APSimulator]
+      applications: [CANCoupler, APEmulator]
 
 couplers:
 
@@ -71,7 +73,7 @@ services:
 publishers:
 
 - TraceOutput:
-    class: N2KTracePublisher
+    class: N2KStatisticPublisher
     couplers: [CANCoupler]
     # filters: [NMEAOutput, AIS]
     active: false
@@ -84,6 +86,11 @@ applications:
     address: 10
     pgn_list: [129283, 129284, 129285]
     model_id: Auto Pilot
+
+- APEmulator:
+    class: AutoPilotEmulator
+    address: 10
+    model_id: Auto Pilot Emulator
 
 
 

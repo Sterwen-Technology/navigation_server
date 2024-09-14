@@ -129,7 +129,7 @@ class NMEA2000Device:
 
     def p126998(self, msg: NMEA2000Msg):
         self._configuration_info = ConfigurationInformation(message=msg)
-        _logger.info("Configuration info for address %d: %s" % (self._address, self._configuration_info))
+        _logger.info("Received Configuration info for address %d: %s" % (self._address, self._configuration_info))
 
     #def asDict(self):
         # return {'address:': self._address, 'properties': self._properties}

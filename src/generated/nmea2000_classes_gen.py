@@ -5,6 +5,7 @@
 
 import struct
 
+from router_common.global_exceptions import N2KInvalidMessageException
 from nmea2000.generated_base import *
 from generated.nmea2000_pb2 import nmea2000_decoded_pb
 
@@ -1972,9 +1973,12 @@ class Pgn129026Class(NMEA2000DecodedMsg):
     def decode_payload(self, payload, start_byte=0):
         val = self._struct_str_0.unpack_from(payload, start_byte)
         self._sequence_id = val[0]
+        if val[0] == 0xff:
+            raise N2KInvalidMessageException
         self._COG_reference = val[1] & 0x3
         self._COG = check_convert_float(val[2], 0xffff, 0.005729577951308233)
         self._SOG = check_convert_float(val[3], 0xffff, 0.01)
+        print(f"129026 {payload.hex()} COG {self._COG}, SOG {val[3]}, {self._SOG}")
         start_byte += 8
         return self
 
@@ -3338,6 +3342,7 @@ class Pgn129284Class(NMEA2000DecodedMsg):
         val = self._struct_str_0.unpack_from(payload, start_byte)
         self._sequence_id = val[0]
         self._distance_to_waypoint = check_convert_float(val[1], 0xffffffff, 0.01)
+        print(f"Distance to waypoint coded {val[1]} converted {self._distance_to_waypoint}")
         self._bearing_reference = val[2] & 0x3
         self._perpendicular_crossed = (val[2] >> 2) & 0x3
         self._arrival_circle_entered = (val[2] >> 4) & 0x3
@@ -3351,6 +3356,7 @@ class Pgn129284Class(NMEA2000DecodedMsg):
         self._destination_latitude = check_convert_float(val[9], 0x7fffffff, 1e-07)
         self._destination_longitude = check_convert_float(val[10], 0x7fffffff, 1e-07)
         self._WCV = check_convert_float(val[11], 0x7fff, 0.01)
+        print(f"Waypoint closing velocity coded {val[11]} converted {self._WCV}")
         start_byte += 34
         return self
 

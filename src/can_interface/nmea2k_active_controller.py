@@ -165,7 +165,7 @@ class NMEA2KActiveController(NMEA2KController):
         '''
         We just the application 0 that is the default
         '''
-        app = self._applications.values()[0] # shall not crash
+        app = self._applications[0] # shall not crash as we always have 1 app
         app.send_iso_request(255, 126996)
-        app.send_iso_request(255, 129998)
+        app.send_iso_request(255, 126998)
 
