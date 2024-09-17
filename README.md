@@ -57,6 +57,11 @@ The first step is to define a configuration file that describe your environment 
 
 All servers can be started from the command line, they don't require specific permissions behind the read and write access to the interfaces.
 
+### GUI access to the API
+
+A sample GUI has been developed to have a real time control of the various servers via the public API. It has been built using [guizero](https://lawsie.github.io/guizero/). Honestly that looks quick and dirty and this is really like that.
+Repository for [Navigation server GUI](https://github.com/Sterwen-Technology/navigation_server_gui)
+
 ### Automatic start
 
 For production the system should be run through *systemd*. Services that can be used as samples are provided in the application. And a shell script that install all services at once.
