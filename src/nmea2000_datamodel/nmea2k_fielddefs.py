@@ -35,6 +35,7 @@ class Field:
         self._keyword = xml.attrib.get('key')
         self._global_enum = None
         self._global_enum_name = None
+        self._validation_hook = xml.attrib.get('validation')
         # if self._keyword is not None:
             #  print("Field", self._name, "Keyword", self._keyword)
         self._attributes = {}
@@ -128,6 +129,10 @@ class Field:
     @property
     def protobuf_type(self):
         raise NotImplementedError("To be defined in subclasses")
+
+    @property
+    def validation_hook(self):
+        return self._validation_hook
 
     def descr(self):
         return "%s %s offset %d length %d bit offset %d" % (self._name, self.type(),

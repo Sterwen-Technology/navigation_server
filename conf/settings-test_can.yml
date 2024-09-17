@@ -25,7 +25,7 @@ log_module:
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
   can_interface.nmea2k_can_coupler: INFO
-  nmea2000_devices.nmea2000_device: DEBUG
+  nmea2000_devices.nmea2000_device: INFO
 
 features:
   - router_core

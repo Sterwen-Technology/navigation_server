@@ -14,7 +14,7 @@ trace_dir: /mnt/meaban/Bateau/tests
 log_module:
     router_core.coupler: INFO
     couplers.shipmodul_if: INFO
-    router_core.nmea2000_msg: DEBUG
+    router_core.nmea2000_msg: INFO
 
 features:
     - router_core

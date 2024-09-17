@@ -92,6 +92,7 @@ class SocketCANInterface(NavThread):
         self._total_msg_in = 0
         # self._access_lock = threading.Lock()
         self._addresses = [255]
+        self._write_errors = 0
 
         # self._notifier = None
         # self._listener = NMEA2000MsgListener(self, self._bus_queue)
@@ -195,7 +196,7 @@ class SocketCANInterface(NavThread):
                 try:
                     self._queue.put(n2k_msg, block=False)
                 except queue.Full:
-                    _logger.warning("CAN read queue full, message ignored")
+                    _logger.warning("CAN read queue full for ISO-TP (J1939/21), message ignored")
             return
 
         # Fast packet handling
@@ -278,7 +279,12 @@ class SocketCANInterface(NavThread):
             self._in_queue.put(msg, timeout=5.0)
         except queue.Full:
             _logger.error("Socket CAN Write buffer full")
-            return False
+            self._write_errors += 1
+            if self._write_errors > 20:
+                raise SocketCanError("Socket write buffer full")
+            else:
+                return False
+        self._write_errors = 0
         return True
 
     def send(self, n2k_msg: NMEA2000Msg, force_send=False):

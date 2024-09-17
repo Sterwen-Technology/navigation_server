@@ -2635,7 +2635,7 @@
       <ByteLength>8</ByteLength>
       <Scope>Generate</Scope>
       <Fields>
-        <UIntField Name="SID" key="sequence_id">
+        <UIntField Name="SID" key="sequence_id" validation="valid_key">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
@@ -2653,7 +2653,7 @@
           <BitOffset>10</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <UDblField Name="COG" key="COG" dataset="">
+        <UDblField Name="COG" key="COG">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
           <FormatAs>Heading</FormatAs>
