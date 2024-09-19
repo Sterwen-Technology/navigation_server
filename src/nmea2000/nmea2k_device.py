@@ -104,7 +104,7 @@ class NMEA2000Device:
         if self._iso_name is None or self._iso_name != n2k_obj.name:
             self._changed = True
             self._iso_name = n2k_obj.name
-            _logger.info("Processing ISO address claim for address %d name=%16X" %
+            _logger.debug("Processing ISO address claim for address %d name=%16X" %
                          (self._address, self._iso_name.name_value))
             mfg_code = self._iso_name.manufacturer_code
             _logger.debug("Device address %d claim ISO name details" % self._address)
@@ -116,20 +116,20 @@ class NMEA2000Device:
 
     def p126993(self, msg: NMEA2000Msg):
         self._heartbeat = Heartbeat(message=msg)
-        _logger.info("Device %d heartbeat received: %s" % (msg.sa, self._heartbeat))
+        _logger.debug("Device %d heartbeat received: %s" % (msg.sa, self._heartbeat))
 
     def p126996(self, msg: NMEA2000Msg):
 
         if self._product_information is None:
             self._changed = True
             n2k_obj = ProductInformation(message=msg)
-            _logger.info("Processing Product information for address %d: %s" % (self._address, n2k_obj))
+            _logger.debug("Processing Product information for address %d: %s" % (self._address, n2k_obj))
             self._product_information = n2k_obj
             # print(product_name,"|", product_version,"|", description, "|", firmware)
 
     def p126998(self, msg: NMEA2000Msg):
         self._configuration_info = ConfigurationInformation(message=msg)
-        _logger.info("Received Configuration info for address %d: %s" % (self._address, self._configuration_info))
+        _logger.debug("Received Configuration info for address %d: %s" % (self._address, self._configuration_info))
 
     #def asDict(self):
         # return {'address:': self._address, 'properties': self._properties}

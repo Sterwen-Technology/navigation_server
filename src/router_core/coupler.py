@@ -405,7 +405,7 @@ class Coupler(NavThread):
         if self._stopflag is True:
             _logger.debug("redundant call of stop for %s => no action" % self._name)
         else:
-            _logger.info("Stopping %s coupler" % self._name)
+            _logger.info("Stopping %s coupler - (Coupler)" % self._name)
             self.stop_communication()
             if self._timer is not None:
                 self._timer.cancel()

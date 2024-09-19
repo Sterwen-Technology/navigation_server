@@ -79,6 +79,10 @@ class NavThreadingController:
         except KeyError:
             _logger.error("Attempt to stop non running thread %s" % thread.name)
 
+    def running_threads(self):
+        for thread in self._running_thread.values():
+            yield thread
+
 
 class NavProfilingController:
 

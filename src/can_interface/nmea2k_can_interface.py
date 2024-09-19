@@ -219,7 +219,8 @@ class SocketCANInterface(NavThread):
             try:
                 self._queue.put(n2k_msg, block=False)
             except queue.Full:
-                _logger.warning("CAN read queue full, message ignored")
+                _logger.warning("CAN read queue full, message discarded: %s" % n2k_msg.header_str())
+                time.sleep(0.02)
 
     def read_can(self) -> Message:
         # if self._access_lock.acquire(timeout=0.5):
@@ -272,6 +273,7 @@ class SocketCANInterface(NavThread):
         if self._trace is not None:
             self._trace.stop_trace()
         self._bus.shutdown()
+        _logger.info("CAN Interface %s stopped" % self.name)
 
     def put_can_msg(self, can_id, data) -> bool:
         msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.time(), data=data)
@@ -290,7 +292,7 @@ class SocketCANInterface(NavThread):
     def send(self, n2k_msg: NMEA2000Msg, force_send=False):
 
         if not self._allowed_send.is_set() and not force_send:
-            _logger.error("Trying to send messages on the BUS while no address claimed")
+            _logger.error("Trying to send messages on the CAN BUS while no address claimed")
             return
 
         can_id = self.build_arbitration_id(n2k_msg)
@@ -361,8 +363,6 @@ class SocketCANWriter(NavThread):
         last_write_time = time.monotonic()
         while not self._stop_flag:
 
-
-
             try:
                 msg = self._in_queue.get(timeout=1.0)
             except queue.Empty:
@@ -400,6 +400,6 @@ class SocketCANWriter(NavThread):
             '''
 
             # end of the run loop
-
+        _logger.info("Socket CAN Write thread stops")
 
 

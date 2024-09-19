@@ -171,6 +171,9 @@ class NMEA2000Msg:
         return "2K|%d|%04X|%d|%d|%d|%s|%s" % (self._pgn, self._pgn, self._prio, self._sa, self._da,
                                               format_timestamp(self._ts, self.ts_format), payload)
 
+    def header_str(self):
+        return f"PGN{self._pgn}|SA{self.sa}|DA{self.da}"
+
     def as_protobuf(self, res: nmea2000pb):
 
         res.pgn = self._pgn

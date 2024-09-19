@@ -110,6 +110,11 @@ class RawLogCoupler(Coupler):
             self._logfile = RawLogFile(self._filename)
         except IOError:
             return False
+        try:
+            self._logfile.load_file()
+        except LogReadError as err:
+            _logger.error(err)
+            return False
 
         self._in_queue = queue.SimpleQueue()
         return True
@@ -147,6 +152,8 @@ class RawLogCoupler(Coupler):
             self._reader.join()
 
     def stop(self):
+        if self._logfile is not None:
+            self._logfile.abort_read()
         super().stop()
         self.close()
 

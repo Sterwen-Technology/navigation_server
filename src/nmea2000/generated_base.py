@@ -114,6 +114,9 @@ def insert_string(buffer, start, length, string_to_insert):
 
 
 def check_convert_float(val: int, invalid_mask: int, scale: float, offset: float = 0.0) -> float:
+    '''
+    Convert a value from the NMEA2000 payload to a float in the standard unit (ISO ones)
+    '''
     if val == -1 or val == invalid_mask:
         return float('nan')
     else:
@@ -224,6 +227,10 @@ class NMEA2000DecodedMsg:
     @property
     def type(self):
         return N2K_DECODED
+
+    def decode_payload(self, payload):
+        raise NotImplementedError
+
 
 
 

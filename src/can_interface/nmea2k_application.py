@@ -93,7 +93,9 @@ class NMEA2000Application(NMEA2000Device):
     If all addresses from the pool are exhausted, then the CA/Device goes offline.
     '''
 
-    (WAIT_FOR_BUS, ADDRESS_CLAIM, ACTIVE) = range(10, 13)
+    (WAIT_FOR_BUS, ADDRESS_CLAIM, ACTIVE, STOP_IN_PROGRESS) = range(10, 14)
+
+    application_id = 0
 
     def __init__(self, controller, address=-1):
         '''
@@ -139,9 +141,20 @@ class NMEA2000Application(NMEA2000Device):
         self._configuration_information = ConfigurationInformation()
         self.init_configuration_information()
         self._manufacturer_name = MessageServerGlobals.manufacturers.by_code(self._iso_name.manufacturer_code).name
+        self._id = self.application_id
+        NMEA2000Application.application_id += 1
 
     def is_proxy(self):
         return False
+
+    @property
+    def id(self) -> int:
+        return self._id
+
+    def stop_request(self):
+        self._app_state = self.STOP_IN_PROGRESS
+        if self._heartbeat_timer is not None:
+            self._heartbeat_timer.cancel()
 
     def init_product_information(self):
         '''
@@ -164,6 +177,8 @@ class NMEA2000Application(NMEA2000Device):
         self._configuration_information.manufacturer_info = "Sterwen Technology SAS"
 
     def send_address_claim(self):
+        if self._app_state == self.STOP_IN_PROGRESS:
+            return
         self.respond_address_claim()
         self._app_state = self.ADDRESS_CLAIM
         self._claim_timer = threading.Timer(0.4, self.address_claim_delay)
@@ -182,7 +197,8 @@ class NMEA2000Application(NMEA2000Device):
         self.send_iso_request(255, 60928)
         # start sending heartbeat
         self.send_heartbeat()
-        self._controller.application_started()
+        self._controller.application_started(self)
+        self._claim_timer = None # indicates that no timer is running
         # request = ISORequest(self._address)
         # self._controller.CAN_interface.send(request.message())
         # t = threading.Timer(1.0, self.send_product_information)
@@ -284,7 +300,8 @@ class NMEA2000Application(NMEA2000Device):
         try:
             self._process_broadcast_vector[msg.pgn](msg)
         except KeyError:
-            _logger.debug("Receive ISO message => No handler for device %d on PGN %d" % (self._address, msg.pgn))
+            # _logger.debug("Receive ISO message => No handler for device %d on PGN %d" % (self._address, msg.pgn))
+            pass
 
     def remote_address_claim(self, msg):
         _logger.debug("Receive address claim from address %d" % msg.sa)
@@ -305,6 +322,8 @@ class NMEA2000Application(NMEA2000Device):
         self._controller.CAN_interface.send(self._configuration_information.message(), force_send=True)
 
     def send_heartbeat(self):
+        if self._app_state == self.STOP_IN_PROGRESS:
+            return
         _logger.debug("sending heartbeat from device %d sequence %d" % (self._address, self._sequence))
         request = Heartbeat()
         request.sequence = self._sequence

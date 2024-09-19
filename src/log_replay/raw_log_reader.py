@@ -96,13 +96,19 @@ class RawLogCANMessage(RawLogRecord):
 class RawLogFile:
 
     def __init__(self, logfile, tick_interval=300):
+        self._abort_flag = False
         self._logfile = logfile
+        self._tick_interval = tick_interval
         try:
-            fd = open(logfile, 'r')
+            self._fd = open(logfile, 'r')
         except IOError as e:
             _logger.error("Error opening logfile %s: %s" % (logfile, e))
             raise
         self._lock = threading.Lock()  # to prevent race conditions while moving around in the logs
+        self._records = []
+        self._tick_index = []
+
+    def load_file(self):
 
         def read_decode(l):
             if l[0] != 'R':
@@ -119,9 +125,9 @@ class RawLogFile:
             timestamp = datetime.datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f")
             return timestamp, message
 
-        _logger.info("Start reading log file %s" % logfile)
+        _logger.info("Start reading log file %s" % self._logfile)
         # read the first line
-        line = fd.readline()
+        line = self._fd.readline()
         if line[0] != 'H':
             _logger.error("Log file missing header line")
             self._type = "ShipModulInterface"  # default
@@ -140,26 +146,27 @@ class RawLogFile:
             raise ValueError
 
         nb_record = 1
-        self._records = []
-        self._tick_index = []
-        self._tick_interval = tick_interval
-        first_line = fd.readline()
+
+        first_line = self._fd.readline()
         while True:
             # sometimes first lines are output that needs to be filtered out
             try:
                 ts, msg = read_decode(first_line)
                 break
             except ValueError:
-                first_line = fd.readline()
+                first_line = self._fd.readline()
                 continue
 
         self._t0 = ts
         self._records.append(record_class(ts, msg))
         self._nb_tick = 0
-        self._next_tick_date = self._t0 + datetime.timedelta(seconds=tick_interval)
+        self._next_tick_date = self._t0 + datetime.timedelta(seconds=self._tick_interval)
 
         line_nb = 1
-        for line in fd.readlines():
+        for line in self._fd.readlines():
+            if self._abort_flag:
+                self._fd.close()
+                raise LogReadError("Abort requested")
             line_nb += 1
             try:
                 ts, msg = read_decode(line)
@@ -175,11 +182,14 @@ class RawLogFile:
                 # ok we record the index of the tick
                 self._tick_index.append(nb_record)
                 self._nb_tick += 1
-                self._next_tick_date = self._t0 + datetime.timedelta(seconds=tick_interval * (self._nb_tick+1))
+                self._next_tick_date = self._t0 + datetime.timedelta(seconds=self._tick_interval * (self._nb_tick+1))
             nb_record += 1
+            # give some time back to the scheduler
+            if nb_record % 5000 == 0:
+                time.sleep(0.01) # sleep 0.01 sec every 5000 lines
 
-        fd.close()
-        _logger.info("Logfile %s number of records:%d" % (logfile, nb_record))
+        self._fd.close()
+        _logger.info("Logfile %s number of records:%d" % (self._logfile, nb_record))
         # self._t0 = self._records[0].timestamp
         self._tend = self._records[nb_record-1].timestamp
         self._duration = self._tend - self._t0
@@ -201,6 +211,10 @@ class RawLogFile:
     @property
     def file_type(self):
         return self._type
+
+    def abort_read(self):
+        self._abort_flag = True
+        _logger.info("%s reader abort requested" % self._logfile)
 
     def get_messages(self, first=0, last=0, original_timing=True):
 

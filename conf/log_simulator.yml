@@ -20,6 +20,7 @@ log_module:
   router_common.nav_threading: INFO
   router_common.configuration: INFO
   can_interface.nmea2k_application: INFO
+  can_interface.nmea2k_active_controller: INFO
 
 
 features:

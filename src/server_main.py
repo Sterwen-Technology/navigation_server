@@ -65,6 +65,8 @@ def main():
         _logger.info("server shall stop now")
         config.main_server.print_threads()
         MessageServerGlobals.profiling_controller.stop_and_output()
+        for thread in MessageServerGlobals.thread_controller.running_threads():
+            _logger.warning(f"Wrongfully running thread {thread.name})")
     else:
         _logger.critical("Main server did not start properly => stop server")
 

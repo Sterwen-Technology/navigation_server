@@ -75,6 +75,7 @@ class AutoPilotEmulator(NMEA2000DeviceImplementation):
 
     def cross_track_error(self, msg: NMEA2000Msg):
         msg129283 = Pgn129283Class(message=msg)
+        _logger.debug(msg.format2())
         print(f"PGN129283 SID={msg129283.sequence_id}")
         if msg129283.XTE_mode:
             print("Navigation terminated")
@@ -83,6 +84,7 @@ class AutoPilotEmulator(NMEA2000DeviceImplementation):
 
     def navigation_data(self, msg: NMEA2000Msg):
         msg129284 = Pgn129284Class(message=msg)
+        _logger.debug(msg.format2())
         self._current_sid = msg129284.sequence_id
         print(f"PGN129284 SID={self._current_sid}")
         dtw = msg129284.distance_to_waypoint / nautical_mille
@@ -103,9 +105,10 @@ class AutoPilotEmulator(NMEA2000DeviceImplementation):
 
     def route_wp_information(self, msg: NMEA2000Msg):
         msg129285 = Pgn129285Class(message=msg)
+        _logger.debug(msg.format2())
         wps = []
         nb_items = msg129285.nb_items
-        print(f"Route information with {nb_items} waypoints")
+        print(f"PGN129295 Route information with {nb_items} waypoints")
         for wp in msg129285.WP_definitions:
             wps.append(Waypoint(wp.waypoint_id, wp.waypoint_name, wp.waypoint_latitude, wp.waypoint_longitude))
             print(f"Waypoint [{wp.waypoint_id}]={wp.waypoint_name}")

@@ -45,7 +45,7 @@ class NMEA2KActiveController(NMEA2KController):
 
     @property
     def min_queue_size(self):
-        return 40
+        return 60
 
     def start(self):
         _logger.info("CAN active controller start")
@@ -65,12 +65,16 @@ class NMEA2KActiveController(NMEA2KController):
         if len(self._applications) == 0:
             _logger.info("Creating default application")
             self.add_application(NMEA2000Application(self))
+
         _logger.debug("Starting CAN bus")
         self._can.start()
         super().start()
         self.start_applications()
 
     def stop(self):
+        # stop all applications first
+        for app in self._applications:
+            app.stop_request()
         self._can.stop()
         super().stop()
 
@@ -123,12 +127,17 @@ class NMEA2KActiveController(NMEA2KController):
         _logger.debug("NMEA2000 Controller => Applications starts")
         for app in self._applications:
             # to limit the load on the CAN bus, applications are started one at a time
+            _logger.debug("Start application %d" % app.id)
             if not self._start_application_lock.acquire(timeout=2.0):
                 _logger.error("ActiveController timeout on application start")
             app.start_application()
 
-    def application_started(self):
-        self._start_application_lock.release()
+    def application_started(self, application):
+        try:
+            _logger.debug("Application %d started" % application.id)
+            self._start_application_lock.release()
+        except RuntimeError:
+            _logger.error("Active Controller => release before lock for application:%d" % application.id)
 
     def process_msg(self, msg: NMEA2000Msg):
         _logger.debug("CAN data received sa=%d PGN=%d da=%d" % (msg.sa, msg.pgn, msg.da))
