@@ -43,6 +43,12 @@ servers:
     port: 4500
     nmea2000: dyfmt
 
+- NMEASender:
+    class: NMEASenderServer
+    port: 4503
+    nmea2000: dyfmt
+    coupler: CANCoupler
+
 - gRPCMain:
       class: GrpcServer
       port: 4502

@@ -136,6 +136,94 @@
       </EnumValues>
     </Enum>
   </GlobalEnums>
+  <Units>
+    <Unit Name="second" symbol="s">
+      <Precision>2</Precision>
+      <Quantity>Time</Quantity>
+    </Unit>
+    <Unit Name="day" symbol="d">
+      <Precision>0</Precision>
+      <Quantity>Time</Quantity>
+    </Unit>
+    <Unit Name="meter" symbol="m">
+      <Precision>1</Precision>
+      <Quantity>Length</Quantity>
+      <DisplayUnits>
+        <DisplayUnit Name="nautical mille" symbol="nm">
+          <Scale>0.000539926803</Scale>
+        </DisplayUnit>
+        <DisplayUnit Name="kilometer" symbol="km">
+          <Scale>0.001</Scale>
+        </DisplayUnit>
+      </DisplayUnits>
+    </Unit>
+    <Unit Name="radian" symbol="rad">
+      <Quantity>Angle</Quantity>
+      <Precision>4</Precision>
+      <DisplayUnits>
+        <DisplayUnit Name="degree" symbol="deg">
+          <Scale>57.295779513</Scale>
+          <Precision>1</Precision>
+        </DisplayUnit>
+      </DisplayUnits>
+    </Unit>
+    <Unit Name="meterpersec" symbol="m/s">
+      <Quantity>Speed</Quantity>
+      <Precision>2</Precision>
+      <DisplayUnits>
+        <DisplayUnit Name="knot" symbol="kn">
+          <Scale>1.943844492</Scale>
+          <Precision>2</Precision>
+        </DisplayUnit>
+      </DisplayUnits>
+    </Unit>
+    <Unit Name="ampere" symbol="A">
+      <Quantity>Intensity</Quantity>
+      <Precision>2</Precision>
+    </Unit>
+    <Unit Name="volt" symbol="V">
+      <Quantity>Voltage</Quantity>
+      <Precision>2</Precision>
+    </Unit>
+    <Unit Name="latitude" symbol="lat deg">
+      <Quantity>Latitude</Quantity>
+      <Precision>6</Precision>
+    </Unit>
+    <Unit Name="longitude" symbol="long deg">
+      <Quantity>Longitude</Quantity>
+      <Precision>6</Precision>
+    </Unit>
+    <Unit Name="revolution" symbol="rpm">
+      <Quantity>Revolution per minute</Quantity>
+      <Precision>0</Precision>
+    </Unit>
+    <Unit Name="literperhour" symbol="l/h">
+      <Quantity>Liter per hour</Quantity>
+      <Precision>2</Precision>
+    </Unit>
+    <Unit Name="kelvin" symbol="K">
+      <Quantity>Temperature</Quantity>
+      <Precision>1</Precision>
+      <DisplayUnits>
+        <DisplayUnit Name="Celsius" symbol="°C">
+          <Offset>-273.16</Offset>
+          <Precision>0</Precision>
+        </DisplayUnit>
+      </DisplayUnits>
+    </Unit>
+    <Unit Name="pascal" symbol="Pa">
+      <Quantity>Pressure</Quantity>
+      <Precision>0</Precision>
+    </Unit>
+    <Unit Name="decibel" symbol="dB">
+      <Quantity>Decibel</Quantity>
+      <Precision>0</Precision>
+    </Unit>
+    <Unit Name="percentage" symbol="%">
+      <Quantity>Percentage</Quantity>
+      <Precision>0</Precision>
+    </Unit>
+  </Units>
   <PGNDefns>
     <PGNDefn PGN="59392">
       <Name>ISO Acknowledgement</Name>
@@ -518,12 +606,14 @@
         <UDblField Name="True Heading" key="true_heading">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
         <UDblField Name="Magnetic Heading" key="magnetic_heading">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
       </Fields>
     </PGNDefn>
@@ -1204,13 +1294,13 @@
           <Description>Days since January 1, 1970</Description>
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Date</FormatAs>
+          <Unit>day</Unit>
         </UIntField>
         <UDblField Name="Time" key="time">
           <Description>Seconds since midnight</Description>
           <BitOffset>32</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Time</FormatAs>
+          <Unit>second</Unit>
           <Scale>0.0001</Scale>
         </UDblField>
       </Fields>
@@ -1223,6 +1313,7 @@
         <UDblField Name="Interval" key="interval">
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>second</Unit>
           <Scale>10</Scale>
         </UDblField>
         <UIntField Name="Sequence" key="sequence">
@@ -1433,14 +1524,14 @@
         <DblField Name="Angle Order" key="angle">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </DblField>
         <DblField Name="Position" key="position">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </DblField>
         <UIntField Name="Reserved">
           <BitOffset>48</BitOffset>
@@ -1461,20 +1552,20 @@
         <UDblField Name="Heading" key="heading">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
         <DblField Name="Deviation" key="deviation">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </DblField>
         <DblField Name="Variation" key="variation">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </DblField>
         <EnumField Name="Reference" key="reference">
           <BitOffset>56</BitOffset>
@@ -1482,6 +1573,7 @@
           <EnumValues>
             <EnumPair Value="0" Name="True" />
             <EnumPair Value="1" Name="Magnetic" />
+            <EnumPair Value='2' Name='Error' />
           </EnumValues>
         </EnumField>
         <UIntField Name="Reserved">
@@ -1517,20 +1609,20 @@
         <DblField Name="Yaw">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </DblField>
         <DblField Name="Pitch">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </DblField>
         <DblField Name="Roll">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </DblField>
       </Fields>
     </PGNDefn>
@@ -1568,13 +1660,13 @@
           <Description>Days since January 1, 1970</Description>
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Date</FormatAs>
+          <Unit>day</Unit>
         </UIntField>
         <DblField Name="Variation" key="variation">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </DblField>
       </Fields>
     </PGNDefn>
@@ -1590,12 +1682,14 @@
         <UDblField Name="Engine Speed" key="engine_speed">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>revolution</Unit>
           <Scale>0.25</Scale>
         </UDblField>
         <UIntField Name="Engine Boost Pressure">
           <Description>Pressure in Pa</Description>
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>pascal</Unit>
           <Scale>100</Scale>
         </UIntField>
         <IntField Name="Engine Tilt/Trim">
@@ -1621,48 +1715,51 @@
           <Description>Pressure in Pa</Description>
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>pascal</Unit>
           <Scale>100</Scale>
         </UDblField>
         <UDblField Name="Oil temperature" key="oil_temperature">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.1</Scale>
         </UDblField>
         <UDblField Name="Temperature" key="temperature">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <DblField Name="Alternator Potential" key="alternator_voltage">
           <BitOffset>56</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>volt</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="Fuel Rate" key="fuel_rate">
           <BitOffset>72</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>literperhour</Unit>
           <Scale>0.1</Scale>
         </DblField>
         <UDblField Name="Total Engine hours" key="total_engine_hours">
-          <Description>In seconds converted to hours</Description>
+          <Description>In seconds</Description>
           <BitOffset>88</BitOffset>
           <BitLength>32</BitLength>
-          <Scale>0.00027777778</Scale>
+          <Unit>second</Unit>
         </UDblField>
         <UIntField Name="Coolant Pressure">
           <Description>Pressure in Pa</Description>
           <BitOffset>120</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>pascal</Unit>
           <Scale>100</Scale>
         </UIntField>
         <UIntField Name="Fuel Pressure">
           <Description>Pressure in Pa</Description>
           <BitOffset>136</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>pascal</Unit>
           <Scale>1000</Scale>
         </UIntField>
         <UIntField Name="Reserved">
@@ -1782,7 +1879,7 @@
     </PGNDefn>
     <PGNDefn PGN="127498">
       <Name>Engine Parameters, Static</Name>
-      <ByteLength>6</ByteLength>
+      <ByteLength>52</ByteLength>
       <Fields>
         <InstanceField Name="Engine Instance">
           <BitOffset>0</BitOffset>
@@ -1791,15 +1888,16 @@
         <UIntField Name="Rated Engine Speed">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>revolution</Unit>
         </UIntField>
-        <UIntField Name="VIN">
+        <FixLengthStringField Name="VIN">
           <BitOffset>24</BitOffset>
-          <BitLength>8</BitLength>
-        </UIntField>
-        <UIntField Name="Software ID">
-          <BitOffset>32</BitOffset>
-          <BitLength>16</BitLength>
-        </UIntField>
+          <BitLength>136</BitLength>
+        </FixLengthStringField>
+        <FixLengthStringField Name="Software ID">
+          <BitOffset>160</BitOffset>
+          <BitLength>256</BitLength>
+        </FixLengthStringField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="127501">
@@ -2050,10 +2148,12 @@
         <UIntField Name="Time Remaining">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>second</Unit>
         </UIntField>
         <DblField Name="Ripple Voltage">
           <BitOffset>56</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>volt</Unit>
           <Scale>0.001</Scale>
         </DblField>
       </Fields>
@@ -2094,6 +2194,7 @@
         <UIntField Name="Equalization Time Remaining" key="eq_time_remaining">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>second</Unit>
         </UIntField>
       </Fields>
     </PGNDefn>
@@ -2109,18 +2210,19 @@
         <DblField Name="Voltage" key="voltage">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>volt</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="Current" key="current">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>ampere</Unit>
           <Scale>0.1</Scale>
         </DblField>
         <UDblField Name="Temperature" key="temperature">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <UIntField Name="SID" key="sequence_id">
@@ -2401,11 +2503,13 @@
         <UDblField Name="DC voltage" key="voltage">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>volt</Unit>
           <Scale>0.1</Scale>
         </UDblField>
         <DblField Name="DC Current" key="current">
           <BitOffset>32</BitOffset>
           <BitLength>24</BitLength>
+          <Unit>ampere</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <UIntField Name="Reserved">
@@ -2427,11 +2531,13 @@
         <DblField Name="Speed Water Referenced" key="speed_through_water">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meterpersec</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="Speed Ground Referenced" key="speed_over_ground">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meterpersec</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <EnumField Name="Speed Water Referenced Type" key="speed_through_water_reference">
@@ -2465,19 +2571,21 @@
           <Description>Depth below transducer</Description>
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Length</FormatAs>
+          <Unit>meter</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <DblField Name="Offset" key="offset">
           <Description>Distance between transducer and surface (positive) or keel (negative)</Description>
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.001</Scale>
         </DblField>
         <UDblField Name="Range" key="range">
           <Description>Measurement range</Description>
           <BitOffset>56</BitOffset>
           <BitLength>8</BitLength>
+          <Unit>meter</Unit>
           <Scale>10</Scale>
         </UDblField>
       </Fields>
@@ -2491,24 +2599,26 @@
           <Description>Days since January 1, 1970</Description>
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Date</FormatAs>
+          <Unit>day</Unit>
         </UIntField>
         <UDblField Name="Time" key="time">
           <Description>Seconds since midnight</Description>
           <BitOffset>16</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Time</FormatAs>
+          <Unit>second</Unit>
           <Scale>0.0001</Scale>
         </UDblField>
         <UIntField Name="Log" key="total_log">
           <Description>Total cumulative distance</Description>
           <BitOffset>48</BitOffset>
           <BitLength>32</BitLength>
+          <Unit>meter</Unit>
         </UIntField>
         <UIntField Name="Trip Log" key="trip_log">
           <Description>Distance since last reset</Description>
           <BitOffset>80</BitOffset>
           <BitLength>32</BitLength>
+          <Unit>meter</Unit>
         </UIntField>
       </Fields>
     </PGNDefn>
@@ -2619,13 +2729,13 @@
         <DblField Name="Latitude" key="latitude">
           <BitOffset>0</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Latitude</FormatAs>
+          <Unit>latitude</Unit>
           <Scale>1E-07</Scale>
         </DblField>
         <DblField Name="Longitude" key="longitude">
           <BitOffset>32</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Longitude</FormatAs>
+          <Unit>longitude</Unit>
           <Scale>1E-07</Scale>
         </DblField>
       </Fields>
@@ -2646,6 +2756,7 @@
           <EnumValues>
             <EnumPair Value="0" Name="True" />
             <EnumPair Value="1" Name="Magnetic" />
+            <EnumPair Value='2' Name='Error' />
           </EnumValues>
         </EnumField>
         <UIntField Name="Reserved1">
@@ -2656,13 +2767,13 @@
         <UDblField Name="COG" key="COG">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
         <UDblField Name="SOG" key="SOG">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Speed</FormatAs>
+          <Unit>meterpersec</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <UIntField Name="Reserved2">
@@ -2747,30 +2858,31 @@
           <Description>Days since January 1, 1970</Description>
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Date</FormatAs>
+          <Unit>day</Unit>
         </UIntField>
         <UDblField Name="Time" key="time">
           <Description>Seconds since midnight</Description>
           <BitOffset>24</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Time</FormatAs>
+          <Unit>second</Unit>
           <Scale>0.0001</Scale>
         </UDblField>
         <DblField Name="Latitude" key="latitude">
           <BitOffset>56</BitOffset>
           <BitLength>64</BitLength>
-          <FormatAs>Latitude</FormatAs>
+          <Unit>latitude</Unit>
           <Scale>1E-16</Scale>
         </DblField>
         <DblField Name="Longitude" key="longitude">
           <BitOffset>120</BitOffset>
           <BitLength>64</BitLength>
-          <FormatAs>Longitude</FormatAs>
+          <Unit>longitude</Unit>
           <Scale>1E-16</Scale>
         </DblField>
         <DblField Name="Altitude" key="altitude">
           <BitOffset>184</BitOffset>
           <BitLength>64</BitLength>
+          <Unit>meter</Unit>
           <Scale>1E-6</Scale>
         </DblField>
         <EnumField Name="GNSS type" Definition="GNSS type" key="GNSS_type">
@@ -2859,13 +2971,13 @@
           <Description>Days since January 1, 1970</Description>
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Date</FormatAs>
+          <Unit>day</Unit>
         </UIntField>
         <UDblField Name="Time">
           <Description>Seconds since midnight</Description>
           <BitOffset>16</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Time</FormatAs>
+          <Unit>second</Unit>
           <Scale>0.0001</Scale>
         </UDblField>
         <IntField Name="Local Offset">
@@ -2886,13 +2998,6 @@
         </UIntField>
         <EnumField Name="Repeat Indicator" key="repeat_indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <IntField Name="User ID" key="mmsi">
           <BitOffset>8</BitOffset>
@@ -2901,13 +3006,13 @@
         <DblField Name="Longitude" key="longitude">
           <BitOffset>40</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Latitude</FormatAs>
+          <Unit>longitude</Unit>
           <Scale>1E-07</Scale>
         </DblField>
         <DblField Name="Latitude" key="latitude">
           <BitOffset>72</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Longitude</FormatAs>
+          <Unit>latitude</Unit>
           <Scale>1E-07</Scale>
         </DblField>
         <EnumField Name="Position Accuracy" key="position_accuracy">
@@ -2940,13 +3045,13 @@
         <UDblField Name="COG" key="COG">
           <BitOffset>112</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
         <UDblField Name="SOG" key="SOG">
           <BitOffset>128</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Speed</FormatAs>
+          <Unit>meterpersec</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <UIntField Name="Communication State" key="communication_state">
@@ -2961,14 +3066,14 @@
           <Description>True heading</Description>
           <BitOffset>168</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
         <UDblField Name="Rate of Turn" key="rate_of_turn">
           <BitOffset>184</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
         <EnumField Name="Nav Status" key="navigation_status">
           <BitOffset>200</BitOffset>
@@ -2993,7 +3098,7 @@
     </PGNDefn>
     <PGNDefn PGN="129039">
       <Name>AIS Class B Position Report</Name>
-      <ByteLength>26</ByteLength>
+      <ByteLength>27</ByteLength>
       <Scope>Generate</Scope>
       <Fields>
         <UIntField Name="Message ID" key="message_id">
@@ -3010,13 +3115,13 @@
         <DblField Name="Longitude" key="longitude">
           <BitOffset>40</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Latitude</FormatAs>
+          <Unit>longitude</Unit>
           <Scale>1E-07</Scale>
         </DblField>
         <DblField Name="Latitude" key="latitude">
           <BitOffset>72</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Longitude</FormatAs>
+          <Unit>latitude</Unit>
           <Scale>1E-07</Scale>
         </DblField>
         <EnumField Name="Position Accuracy" key="position_accuracy">
@@ -3049,13 +3154,13 @@
         <UDblField Name="COG" key="COG">
           <BitOffset>112</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>.0001</Scale>
         </UDblField>
         <UDblField Name="SOG" key="SOG">
           <BitOffset>128</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Speed</FormatAs>
+          <Unit>meterpersec</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <UIntField Name="Communication State" key="communication_state">
@@ -3070,14 +3175,14 @@
           <Description>True heading</Description>
           <BitOffset>168</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
         <UIntField Name="Regional Application">
           <BitOffset>184</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="Regional Application">
+        <UIntField Name="Regional ApplicationB">
           <BitOffset>192</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
@@ -3139,6 +3244,10 @@
             <EnumPair Value="1" Name="ITDMA" />
           </EnumValues>
         </EnumField>
+        <UIntField Name="Reserved">
+          <BitOffset>201</BitOffset>
+          <BitLength>15</BitLength>
+        </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="129040">
@@ -3211,7 +3320,7 @@
           <BitOffset>144</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="Regional Application">
+        <UIntField Name="Regional Application B">
           <BitOffset>152</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
@@ -3220,53 +3329,8 @@
           <BitOffset>156</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
-        <EnumField Name="Type of ship">
+        <EnumField Name="Type of ship" Definition="Type of ship">
           <BitOffset>160</BitOffset>
-          <BitLength>8</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="unavailable" />
-            <EnumPair Value="20" Name="Wing In Ground" />
-            <EnumPair Value="29" Name="Wing In Ground (no other information)" />
-            <EnumPair Value="30" Name="Fishing" />
-            <EnumPair Value="31" Name="Towing" />
-            <EnumPair Value="32" Name="Towing exceeds 200m or wider than 25m" />
-            <EnumPair Value="33" Name="Engaged in dredging or underwater operations" />
-            <EnumPair Value="34" Name="Engaged in diving operations" />
-            <EnumPair Value="35" Name="Engaged in military operations" />
-            <EnumPair Value="36" Name="Sailing" />
-            <EnumPair Value="37" Name="Pleasure" />
-            <EnumPair Value="40" Name="High speed craft" />
-            <EnumPair Value="71" Name="Cargo ship carrying dangerous goods" />
-            <EnumPair Value="72" Name="Cargo ship hazard cat B" />
-            <EnumPair Value="73" Name="Cargo ship hazard cat C" />
-            <EnumPair Value="74" Name="Cargo ship hazard cat D" />
-            <EnumPair Value="79" Name="Cargo ship (no additional information)" />
-            <EnumPair Value="50" Name="Pilot vessel" />
-            <EnumPair Value="51" Name="SAR" />
-            <EnumPair Value="52" Name="Tug" />
-            <EnumPair Value="53" Name="Port tender" />
-            <EnumPair Value="54" Name="Anti-pollution" />
-            <EnumPair Value="55" Name="Law enforcement" />
-            <EnumPair Value="56" Name="Spare" />
-            <EnumPair Value="57" Name="Spare #2" />
-            <EnumPair Value="58" Name="Medical" />
-            <EnumPair Value="59" Name="RR Resolution No.18" />
-            <EnumPair Value="60" Name="Passenger ship" />
-            <EnumPair Value="69" Name="Passenger ship (no additional information)" />
-            <EnumPair Value="70" Name="Cargo ship" />
-            <EnumPair Value="80" Name="Tanker" />
-            <EnumPair Value="81" Name="Tanker carrying dangerous goods" />
-            <EnumPair Value="82" Name="Tanker hazard cat B" />
-            <EnumPair Value="83" Name="Tanker hazard cat C" />
-            <EnumPair Value="84" Name="Tanker hazard cat D" />
-            <EnumPair Value="89" Name="Tanker (no additional information)" />
-            <EnumPair Value="90" Name="Other" />
-            <EnumPair Value="91" Name="Other carrying dangerous goods" />
-            <EnumPair Value="92" Name="Other hazard cat B" />
-            <EnumPair Value="93" Name="Other hazard cat C" />
-            <EnumPair Value="94" Name="Other hazard cat D" />
-            <EnumPair Value="99" Name="Other (no additional information)" />
-          </EnumValues>
         </EnumField>
         <UDblField Name="True Heading">
           <BitOffset>168</BitOffset>
@@ -3606,6 +3670,7 @@
         <DblField Name="XTE" key="XTE">
           <BitOffset>16</BitOffset>
           <BitLength>32</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.01</Scale>
         </DblField>
       </Fields>
@@ -3623,6 +3688,7 @@
         <UDblField Name="Distance to Waypoint" key="distance_to_waypoint">
           <BitOffset>8</BitOffset>
           <BitLength>32</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <EnumField Name="Course/Bearing reference" key="bearing_reference">
@@ -3661,26 +3727,26 @@
           <Description>Seconds since midnight</Description>
           <BitOffset>48</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Time</FormatAs>
+          <Unit>second</Unit>
           <Scale>0.0001</Scale>
         </UDblField>
         <UIntField Name="ETA Date" key="ETA_date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>80</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Date</FormatAs>
+          <Unit>day</Unit>
         </UIntField>
         <UDblField Name="Bearing, Origin to Destination Waypoint" key="bearing_origin_to_destination">
           <BitOffset>96</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.001</Scale>
         </UDblField>
         <UDblField Name="Bearing, Position to Destination Waypoint" key="bearing_position_to_destination">
           <BitOffset>112</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
         <UIntField Name="Origin Waypoint Number" key="origin_waypoint">
           <BitOffset>128</BitOffset>
@@ -3693,18 +3759,19 @@
         <DblField Name="Destination Latitude" key="destination_latitude">
           <BitOffset>192</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Latitude</FormatAs>
+          <Unit>latitude</Unit>
           <Scale>1E-07</Scale>
         </DblField>
         <DblField Name="Destination Longitude" key="destination_longitude">
           <BitOffset>224</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Longitude</FormatAs>
+          <Unit>longitude</Unit>
           <Scale>1E-07</Scale>
         </DblField>
         <DblField Name="Waypoint Closing Velocity" key="WCV">
           <BitOffset>256</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meterpersec</Unit>
           <Scale>0.01</Scale>
         </DblField>
       </Fields>
@@ -3764,13 +3831,13 @@
           <DblField Name="WP Latitude" key="waypoint_latitude">
             <BitOffset>0</BitOffset>
             <BitLength>32</BitLength>
-            <FormatAs>Latitude</FormatAs>
+            <Unit>latitude</Unit>
             <Scale>1E-07</Scale>
           </DblField>
           <DblField Name="WP Longitude" key="waypoint_longitude">
             <BitOffset>0</BitOffset>
             <BitLength>32</BitLength>
-            <FormatAs>Longitude</FormatAs>
+            <Unit>longitude</Unit>
             <Scale>1E-07</Scale>
           </DblField>
         </RepeatedFieldSet>
@@ -3801,12 +3868,13 @@
         <UDblField Name="Set">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
         <DblField Name="Drift">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meterpersec</Unit>
           <Scale>0.01</Scale>
         </DblField>
       </Fields>
@@ -4072,21 +4140,19 @@
           <DblField Name="Elevation" key="elevation">
             <BitOffset>8</BitOffset>
             <BitLength>16</BitLength>
-            <FormatAs>Heading</FormatAs>
-            <Units>degrees</Units>
-            <Scale>0.0057295779513082332</Scale>
+            <Unit>radian</Unit>
+            <Scale>0.0001</Scale>
           </DblField>
           <UDblField Name="Azimuth" key="azimuth">
             <BitOffset>24</BitOffset>
             <BitLength>16</BitLength>
-            <FormatAs>Heading</FormatAs>
-            <Units>degrees</Units>
-            <Scale>0.0057295779513082332</Scale>
+            <Unit>radian</Unit>
+            <Scale>.0001</Scale>
           </UDblField>
           <UDblField Name="SNR" key="signal_noise_ratio">
             <BitOffset>40</BitOffset>
             <BitLength>16</BitLength>
-            <Units>dB</Units>
+            <Unit>decibel</Unit>
             <Scale>0.01</Scale>
           </UDblField>
           <UIntField Name="Range residuals" key="range_residuals">
@@ -4669,15 +4735,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat indicator" key="repeat_indicator">
+        <EnumField Name="Repeat indicator" key="repeat_indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <IntField Name="User ID" key="mmsi">
           <BitOffset>8</BitOffset>
@@ -4705,39 +4764,44 @@
         <UDblField Name="Length" key="length">
           <BitOffset>296</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.1</Scale>
         </UDblField>
         <UDblField Name="Beam" key="beam">
           <BitOffset>312</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.1</Scale>
         </UDblField>
         <UDblField Name="Position reference from Starboard" key="position_from_starboard">
           <BitOffset>328</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.1</Scale>
         </UDblField>
         <UDblField Name="Position reference from Bow" key="position_from_bow">
           <BitOffset>344</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.1</Scale>
         </UDblField>
         <UIntField Name="ETA Date" key="ETA_date">
           <Description>Days since January 1, 1970</Description>
           <BitOffset>360</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Date</FormatAs>
+          <Unit>day</Unit>
         </UIntField>
         <UDblField Name="ETA Time" key="ETA_time">
           <Description>Seconds since midnight</Description>
           <BitOffset>376</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Time</FormatAs>
+          <Unit>second</Unit>
           <Scale>0.0001</Scale>
         </UDblField>
         <DblField Name="Draft" key="draft">
           <BitOffset>408</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <FixLengthStringField Name="Destination" key="destination">
@@ -4925,15 +4989,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat indicator">
+        <EnumField Name="Repeat indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <IntField Name="User ID">
           <BitOffset>8</BitOffset>
@@ -5627,15 +5684,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat indicator" key="repeat_indicator">
+        <EnumField Name="Repeat indicator" key="repeat_indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <IntField Name="User ID" key="mmsi">
           <BitOffset>8</BitOffset>
@@ -5656,15 +5706,8 @@
           <BitOffset>0</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat indicator" key="repeat_indicator">
+        <EnumField Name="Repeat indicator" key="repeat_indicator" Definition="AIS Repeat Indicator">
           <BitOffset>6</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <IntField Name="User ID" key="mmsi">
           <BitOffset>8</BitOffset>
@@ -5686,21 +5729,25 @@
         <UDblField Name="Length" key="length">
           <BitOffset>160</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.1</Scale>
         </UDblField>
         <UDblField Name="Beam" key="beam">
           <BitOffset>176</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.1</Scale>
         </UDblField>
         <UDblField Name="Position reference from Starboard" key="position_from_starboard">
           <BitOffset>192</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.1</Scale>
         </UDblField>
         <UDblField Name="Position reference from Bow" key="position_from_bow">
           <BitOffset>208</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.1</Scale>
         </UDblField>
         <IntField Name="Mothership User ID" key="mothership_mmsi">
@@ -6171,13 +6218,13 @@
           <DblField Name="WP Latitude" key="waypoint_latitude">
             <BitOffset>16</BitOffset>
             <BitLength>32</BitLength>
-            <FormatAs>Latitude</FormatAs>
+            <Unit>latitude</Unit>
             <Scale>1E-07</Scale>
           </DblField>
           <DblField Name="WP Longitude" key="waypoint_longitude">
             <BitOffset>48</BitOffset>
             <BitLength>32</BitLength>
-            <FormatAs>Longitude</FormatAs>
+            <Unit>longitude</Unit>
             <Scale>1E-07</Scale>
           </DblField>
         </RepeatedFieldSet>
@@ -6196,13 +6243,14 @@
         <DblField Name="Wind Speed" key="wind_speed">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meterpersec</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <UDblField Name="Wind Angle" key="wind_angle">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Heading</FormatAs>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
         <EnumField Name="Reference" key="reference">
           <BitOffset>40</BitOffset>
@@ -6237,20 +6285,19 @@
         <UDblField Name="Water Temperature" key="water_temperature">
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <UDblField Name="Outside Ambient Air Temperature" key="outside_air_temperature">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <UDblField Name="Atmospheric Pressure" key="atmospheric_pressure">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>pascal</Unit>
           <Scale>100.0</Scale>
         </UDblField>
         <UIntField Name="Reserved">
@@ -6291,18 +6338,19 @@
         <UDblField Name="Temperature" key="temperature">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <DblField Name="Humidity" key="humidity">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>percentage</Unit>
           <Scale>0.004</Scale>
         </DblField>
         <UDblField Name="Atmospheric Pressure" key="atmospheric_pressure">
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>pascal</Unit>
           <Scale>100.0</Scale>
         </UDblField>
       </Fields>
@@ -6328,15 +6376,13 @@
         <UDblField Name="Actual Temperature" key="actual_temperature">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <UDblField Name="Set Temperature" key="set_temperature">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <UIntField Name="Reserved">
@@ -6365,10 +6411,12 @@
         <UIntField Name="Actual Humidity">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>percentage</Unit>
         </UIntField>
         <UIntField Name="Set Humidity">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>percentage</Unit>
         </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>56</BitOffset>
@@ -6404,6 +6452,7 @@
         <UDblField Name="Pressure" key="pressure">
           <BitOffset>24</BitOffset>
           <BitLength>32</BitLength>
+          <Unit>pascal</Unit>
           <Scale>0.1</Scale>
         </UDblField>
         <UIntField Name="Reserved">
@@ -6439,6 +6488,7 @@
         <UIntField Name="Set pressure">
           <BitOffset>24</BitOffset>
           <BitLength>32</BitLength>
+          <Unit>pascal</Unit>
         </UIntField>
         <UIntField Name="Reserved">
           <BitOffset>56</BitOffset>
@@ -6467,15 +6517,13 @@
         <UDblField Name="Actual Temperature" key="actual_temperature">
           <BitOffset>24</BitOffset>
           <BitLength>24</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.001</Scale>
         </UDblField>
         <UDblField Name="Set Temperature" key="set_temperature">
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.1</Scale>
         </UDblField>
       </Fields>
@@ -6511,36 +6559,38 @@
           <Description>Days since January 1, 1970</Description>
           <BitOffset>8</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Date</FormatAs>
+          <Unit>day</Unit>
         </UIntField>
         <UDblField Name="Measurement Time">
           <Description>Seconds since midnight</Description>
           <BitOffset>24</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Time</FormatAs>
+          <Unit>second</Unit>
           <Scale>0.0001</Scale>
         </UDblField>
         <DblField Name="Station Latitude">
           <BitOffset>56</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Latitude</FormatAs>
+          <Unit>latitude</Unit>
           <Scale>1E-07</Scale>
         </DblField>
         <DblField Name="Station Longitude">
           <BitOffset>88</BitOffset>
           <BitLength>32</BitLength>
-          <FormatAs>Longitude</FormatAs>
+          <Unit>longitude</Unit>
           <Scale>1E-07</Scale>
         </DblField>
         <DblField Name="Tide Level">
           <Description>Relative to MLLW</Description>
           <BitOffset>120</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.001</Scale>
         </DblField>
         <DblField Name="Tide Level standard deviation">
           <BitOffset>136</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <UIntField Name="Station ID">
@@ -6974,31 +7024,37 @@
         <DblField Name="Longitudinal Speed, Water-referenced" key="longitudinal_speed_water">
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meterpersec</Unit>
           <Scale>0.001</Scale>
         </DblField>
         <DblField Name="Transverse Speed, Water-referenced" key="transverse_speed_water">
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meterpersec</Unit>
           <Scale>0.001</Scale>
         </DblField>
         <DblField Name="Longitudinal Speed, Ground-referenced" key="longitudinal_speed_ground">
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meterpersec</Unit>
           <Scale>0.001</Scale>
         </DblField>
         <DblField Name="Transverse Speed, Ground-referenced" key="transverse_speed_ground">
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meterpersec</Unit>
           <Scale>0.001</Scale>
         </DblField>
         <DblField Name="Stern Speed, Water-referenced" key="stern_speed_water">
           <BitOffset>64</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meterpersec</Unit>
           <Scale>0.001</Scale>
         </DblField>
         <DblField Name="Stern Speed, Ground-referenced" key="stern_speed_ground">
           <BitOffset>80</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meterpersec</Unit>
           <Scale>0.001</Scale>
         </DblField>
       </Fields>
@@ -7539,15 +7595,8 @@
           <BitOffset>16</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat indicator" key="repeat_indicator">
+        <EnumField Name="Repeat indicator" key="repeat_indicator" Definition="AIS Repeat Indicator">
           <BitOffset>22</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="D">
           <BitOffset>24</BitOffset>
@@ -7577,16 +7626,19 @@
         <DblField Name="Length" key="length">
           <BitOffset>192</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.1</Scale>
         </DblField>
         <DblField Name="Beam" key="beam">
           <BitOffset>208</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.1</Scale>
         </DblField>
         <DblField Name="Position reference from Starboard" key="position_from_starboard">
           <BitOffset>224</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>meter</Unit>
           <Scale>0.1</Scale>
         </DblField>
       </Fields>
@@ -7617,15 +7669,8 @@
           <BitOffset>16</BitOffset>
           <BitLength>6</BitLength>
         </UIntField>
-        <EnumField Name="Repeat indicator" key="repeat_indicator">
+        <EnumField Name="Repeat indicator" key="repeat_indicator" Definition="AIS Repeat Indicator">
           <BitOffset>22</BitOffset>
-          <BitLength>2</BitLength>
-          <EnumValues>
-            <EnumPair Value="0" Name="Initial" />
-            <EnumPair Value="1" Name="First retransmission" />
-            <EnumPair Value="2" Name="Second retransmission" />
-            <EnumPair Value="3" Name="Final retransmission" />
-          </EnumValues>
         </EnumField>
         <UIntField Name="D">
           <BitOffset>24</BitOffset>

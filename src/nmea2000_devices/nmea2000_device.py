@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 
 from can_interface import NMEA2000Application
 from router_core import NMEA2000Msg
-from router_common import N2KInvalidMessageException, nautical_mille, n2ktime_to_datetime, mps_to_knots
+from router_common import N2KInvalidMessageException, nautical_mille, n2ktime_to_datetime, mps_to_knots, radian_to_deg
 from generated.nmea2000_classes_gen import Pgn129283Class, Pgn129284Class, Pgn129285Class, Pgn129026Class, Pgn129029Class
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -65,8 +65,9 @@ class AutoPilotEmulator(NMEA2000DeviceImplementation):
         self._pgn_vector = {129283: self.cross_track_error,
                             129284: self.navigation_data,
                             129285: self.route_wp_information,
-                            129029: self.gnss_data,
+                            # 129029: self.gnss_data,
                             # 129026: self.cog_sog
+                            # 129039: self.ais_classb
                             }
         self._processed_pgn = list(self._pgn_vector)
         self._current_sid = -1
@@ -88,11 +89,11 @@ class AutoPilotEmulator(NMEA2000DeviceImplementation):
         self._current_sid = msg129284.sequence_id
         print(f"PGN129284 SID={self._current_sid}")
         dtw = msg129284.distance_to_waypoint / nautical_mille
-        btw = msg129284.bearing_position_to_destination
+        btw = msg129284.bearing_position_to_destination * radian_to_deg
         dest_wp_idx = msg129284.destination_waypoint
         print(f"Destination WP index {msg129284.destination_waypoint}")
         if self._waypoints is not None:
-            dest_wp_name = self._waypoints[1].name
+            dest_wp_name = self._waypoints[dest_wp_idx].name
         else:
             dest_wp_name = 'Unknown'
         ete = timedelta(seconds=msg129284.distance_to_waypoint/msg129284.WCV)
@@ -121,11 +122,14 @@ class AutoPilotEmulator(NMEA2000DeviceImplementation):
         except N2KInvalidMessageException:
             _logger.debug(f"invalid PGN 129026 from {msg.sa}")
             return
-        print(f"SA:{msg.sa} SOG:{msg129026.SOG:.2f}m/s {msg129026.SOG*3600.0/1852.0:.1f}kn COG {msg129026.COG:.0f}")
+        print(f"SA:{msg.sa} SOG:{msg129026.SOG:.2f}m/s {msg129026.SOG*mps_to_knots:.1f}kn COG {msg129026.COG:.0f}")
 
     def gnss_data(self, msg: NMEA2000Msg):
         msg129029 = Pgn129029Class(message=msg)
         self._gnss_date = n2ktime_to_datetime(msg129029.date, msg129029.time)
         print(f"GNSS date {self._gnss_date} SA={msg.sa}")
+
+    def ais_classb(self, msg: NMEA2000Msg):
+        print(f"PGN129039 payload length{len(msg.payload)}: {msg.payload.hex()}")
 
 

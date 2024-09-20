@@ -59,6 +59,8 @@ def convert_longitude(ew_indicator, longitude_bytes) -> float:
 
 
 knots_to_ms = 1852.0 / 3600.0
+# 2024/09/21 convert direct to SI
+deg_to_radian = math.pi / 180.
 
 
 SatellitesData = collections.namedtuple('SatellitesData',
@@ -139,7 +141,7 @@ class NMEA0183ToNMEA2000Converter:
         pgn129026.sequence_id = self.get_next_sequence('GPS')
         pgn129026.COG_reference = 0
         pgn129026.SOG = float(fields[6]) * knots_to_ms
-        pgn129026.COG = float(fields[7])
+        pgn129026.COG = float(fields[7]) * deg_to_radian
         self._time_fix = convert_time(fields[0])
         self._date = convert_date(fields[8])
         return [pgn129025, pgn129026]
@@ -149,7 +151,7 @@ class NMEA0183ToNMEA2000Converter:
         pgn129026.sequence_id = self.get_next_sequence('GPS')
         pgn129026.COG_reference = 0
         pgn129026.SOG = float(fields[4]) * knots_to_ms
-        pgn129026.COG = float(fields[0])
+        pgn129026.COG = float(fields[0]) * deg_to_radian
         return [pgn129026]
 
     def convertMWV(self, fields: list):
@@ -158,7 +160,7 @@ class NMEA0183ToNMEA2000Converter:
             raise NMEAInvalidFrame
         pgn130306 = Pgn130306Class()
         pgn130306.sequence_id = self.get_next_sequence('Wind')
-        pgn130306.wind_angle = float(fields[0])
+        pgn130306.wind_angle = float(fields[0]) * deg_to_radian
         if fields[1] == b'R':
             pgn130306.reference = 2
         elif fields[1] == b'T':
@@ -235,12 +237,12 @@ class NMEA0183ToNMEA2000Converter:
             prn = int(fields[field_idx])
             field_idx += 1
             if len(fields[field_idx]) > 0:
-                elevation = float(fields[field_idx])
+                elevation = float(fields[field_idx]) * deg_to_radian
             else:
                 elevation = float('nan')
             field_idx += 1
             if len(fields[field_idx]) > 0:
-                azimuth = float(fields[field_idx])
+                azimuth = float(fields[field_idx]) * deg_to_radian
             else:
                 azimuth = float('nan')
             field_idx += 1
@@ -276,8 +278,8 @@ class NMEA0183ToNMEA2000Converter:
         for sat in self._current_sat_gsv_data:
             sat_obj = Pgn129540Class.Satellites_DataClass()
             sat_obj.satellite_number = sat.prn
-            sat_obj.elevation = sat.elevation
-            sat_obj.azimuth = sat.azimuth
+            sat_obj.elevation = sat.elevation * deg_to_radian
+            sat_obj.azimuth = sat.azimuth * deg_to_radian
             sat_obj.signal_noise_ratio = sat.snr
             sat_obj.range_residuals = 0x7fffffff
             sat_obj.status = sat.status
@@ -324,7 +326,7 @@ class NMEA0183ToNMEA2000Converter:
     def convertHDG(self, fields: list):
         pgn127250 = Pgn127250Class()
         pgn127250.sequence_id = self.get_next_sequence('Heading')
-        pgn127250.heading = float(fields[0])
+        pgn127250.heading = float(fields[0]) * deg_to_radian
         pgn127250.reference = 1
         pgn127250.deviation = float('nan')
         pgn127250.variation = float('nan')

@@ -19,6 +19,7 @@ class MessageServerGlobals:
     pgn_definitions = None
     manufacturers = None
     enums = None
+    units = None
     version = None
     configuration = None
     global_variables = None

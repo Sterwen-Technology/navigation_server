@@ -16,7 +16,7 @@ from router_common import XMLDefinitionFile
 from router_common import MessageServerGlobals
 from router_common import N2KUnknownPGN, N2KDefinitionError
 
-from .nmea2k_enumsdefs import EnumSet
+from .nmea2k_enumsdefs import EnumSet, UnitSet
 from .nmea2k_pgn_definition import PGNDef
 
 
@@ -31,6 +31,7 @@ class PGNDefinitions(XMLDefinitionFile):
         # first look for global enums
         # Tbd
         MessageServerGlobals.enums = EnumSet(self.get_definitions('GlobalEnums'))
+        MessageServerGlobals.units = UnitSet(self.get_definitions('Units'))
         self._pgn_defs = {}
         self._pgn_count = 0
         self._to_be_generated = []

@@ -23,6 +23,9 @@ features:
 
 servers:
 
+- Main:
+    class: NavigationMainServer
+
 - NMEAServer:
     class: NMEAServer
     port: 4500

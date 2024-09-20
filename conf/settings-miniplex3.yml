@@ -33,6 +33,7 @@ servers:
     class: NMEAServer
     port: 4500
     nmea2000: dyfmt
+    coupler:
 
 - NMEASender:
     class: NMEASenderServer

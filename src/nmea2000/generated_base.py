@@ -185,6 +185,8 @@ class NMEA2000DecodedMsg:
         message_pb = self.protobuf_message()
         return MessageToJson(message_pb, including_default_value_fields=True, preserving_proto_field_name=True)
 
+
+
     def message(self) -> NMEA2000Msg:
         msg = NMEA2000Msg(self.pgn, prio=self._priority, sa=self._sa, da=self._da,
                           payload=self.encode_payload(), timestamp=self._timestamp)
@@ -229,6 +231,15 @@ class NMEA2000DecodedMsg:
         return N2K_DECODED
 
     def decode_payload(self, payload):
+        raise NotImplementedError
+
+    def encode_payload(self):
+        raise NotImplementedError
+
+    def as_protobuf(self):
+        raise NotImplementedError
+
+    def unpack_protobuf(self, protobuf):
         raise NotImplementedError
 
 

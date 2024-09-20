@@ -10,10 +10,13 @@
 # -------------------------------------------------------------------------------
 
 import datetime
+import math
 
 nautical_mille = 1852.0
 
 mps_to_knots = 3600.0 / nautical_mille
+
+radian_to_deg = 180. / math.pi
 
 n2k_initial_date = datetime.datetime(1970, 1 , 1)
 

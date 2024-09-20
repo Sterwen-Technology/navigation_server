@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------------
 # Name:        NMEA2K-Eumsdefs
-# Purpose:     Handle definitions of NMEA2000 Global enums values
+# Purpose:     Handle definitions of NMEA2000 Global enums values and unit values
 #
 # Author:      Laurent Carré
 #
@@ -58,5 +58,82 @@ class NMEA2000Enum:
     @property
     def bit_length(self) -> int:
         return self._bit_length
+
+
+class UnitSet:
+
+    def __init__(self, xml_root):
+
+        self._units = {}
+        for unit_xml in xml_root.iterfind('Unit'):
+            try:
+                unit = NMEA2000Unit(unit_xml)
+            except ValueError:
+                continue
+            self._units[unit.name] = unit
+
+    def get_unit(self, name):
+        try:
+            return self._units[name]
+        except KeyError:
+            _logger.error(f"No unit {name}")
+            raise
+
+
+class NMEA2000Unit:
+
+    def __init__(self, xml):
+
+        self._name = xml.get('Name')
+        self._symbol = xml.get('symbol')
+        q = xml.find('Quantity')
+        if q is not None:
+            self._quantity = q.text
+        else:
+            self._quantity = "Unknown"
+        precision = xml.find('Precision')
+        if precision is not None:
+            self._precision = f"%.{precision.text}f"
+        else:
+            self._precision = None
+        print(f"New unit {self._name} ({self._symbol}) for {self._quantity} Precision {self._precision}")
+        scale = xml.find('Scale')
+        if scale is not None:
+            self._scale = float(scale.text)
+        else:
+            self._scale = 1.0
+        offset = xml.find('Offset')
+        if offset is not None:
+            self._offset = float(offset.text)
+        else:
+            self._offset = 0.0
+
+        # now look if we have DisplayUnits
+        du_set = xml.find('DisplayUnits')
+        if du_set is not None:
+            self._display_units = {}
+            for du_xml in du_set.iterfind('DisplayUnit'):
+                try:
+                    du = NMEA2000Unit(du_xml)
+                except ValueError:
+                    continue
+                self._display_units[du.name] = du
+        else:
+            self._display_units = None
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def symbol(self):
+        return self._symbol
+
+    @property
+    def scale(self) -> float:
+        return self._scale
+
+    def offset(self) -> float:
+        return self._offset
 
 

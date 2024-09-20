@@ -35,6 +35,7 @@ class Field:
         self._keyword = xml.attrib.get('key')
         self._global_enum = None
         self._global_enum_name = None
+        self._unit = None
         self._validation_hook = xml.attrib.get('validation')
         # if self._keyword is not None:
             #  print("Field", self._name, "Keyword", self._keyword)
@@ -69,8 +70,8 @@ class Field:
             "Description": (True, str),
             "Offset": (True, float),
             "Scale": (True, float),
-            "FormatAs": (True, str),
-            "Units": (True, str)
+            "FormatAs": (False, str), # No more used
+            "Unit": (False, self.set_unit)
         }
         try:
             set_as_attr, attr_type = attr_def[xml.tag]
@@ -80,8 +81,11 @@ class Field:
 
         if attr_type == str:
             t = xml.text
+        elif attr_type is float or attr_type is int:
+            t = attr_type(xml.text)
         else:
             t = attr_type(xml.text)
+
         if set_as_attr:
             self.__setattr__(xml.tag, t)
         return t
@@ -109,6 +113,14 @@ class Field:
 
     def set_index(self, index):
         self._index = index
+
+    def set_unit(self, unit_name):
+        try:
+            self._unit = MessageServerGlobals.units.get_unit(unit_name)
+        except KeyError:
+            _logger.error(f"Field {self._name} Unit {unit_name} Non existent")
+        return None
+
 
     @property
     def decode_string(self) -> str:
