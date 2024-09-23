@@ -60,6 +60,9 @@ def get_global_var(key):
 def get_global_option(key, default):
     return MessageServerGlobals.configuration.get_option(key, default)
 
+def get_global_enum(key):
+    return MessageServerGlobals.enums.get_enum(key)
+
 
 def set_hook(key, hook):
     _logger.debug("Setting hook for key:%s" % key)

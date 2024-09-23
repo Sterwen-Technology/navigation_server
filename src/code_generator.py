@@ -19,7 +19,7 @@ from nmea2000_datamodel import PGNDefinitions
 from router_common.global_variables import MessageServerGlobals
 from code_generation import nmea2000_gen_meta, ProtobufPGNGenerator, PythonPGNGenerator
 
-_version = "V1.01"
+_version = "V2.06"
 
 
 def _parser():

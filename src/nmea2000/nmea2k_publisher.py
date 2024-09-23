@@ -12,15 +12,19 @@
 import datetime
 import time
 import os
+import io
+import sys
 import logging
+import threading
 
 from router_core import ExternalPublisher, NMEAInvalidFrame
+from .generated_base import FormattingOptions
 from .nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
 from nmea_data.nmea_statistics import N2KStatistics, NMEA183Statistics
 # from router_common import *
 from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter
-from router_common import NavigationConfiguration, NavGenericMsg, N2K_MSG, find_pgn, N2KDecodeException, N0183_MSG
-
+from router_common import NavigationConfiguration, NavGenericMsg, N2K_MSG, find_pgn, N2KDecodeException, N0183_MSG, \
+    N2KInvalidMessageException
 
 _logger = logging.getLogger("ShipDataServer" + "." + __name__)
 
@@ -102,7 +106,7 @@ class N2KTracePublisher(ExternalPublisher):
             if type(res) is dict:
                 print_result = res
             else:
-                print_result = res.as_json()
+                print_result = res.as_protobuf_json()
             if self._print_option in ('ALL', 'PRINT'):
                 print("Message:", print_result)
             if self._print_option in ('ALL', 'FILE') and self._trace_fd is not None:
@@ -215,3 +219,92 @@ class N2KSourceDispatcher(ExternalPublisher):
 
     def _decoded(self, msg: NavGenericMsg):
         raise NotImplementedError
+
+
+class N2KJsonPublisher(ExternalPublisher):
+    '''
+    Class that converts and push all PGN messages
+    PGN are converted only via 'hard' decoding i.e. via generated classes. PGN that have no associated classes, are not decoded
+    output is by default on stdout, but can be redirected to any file
+    Filters can be applied
+    If NMEA013 messages are sent to the publisher they will simply be discarded (debug traces)
+    '''
+
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._std_output = False
+        self._option = 0
+        if not self._active:
+            return
+        if opts.get('resolve_enum', bool, False):
+            self._option = FormattingOptions.ResolveEnum
+        if opts.get('remove_invalid', bool, False):
+            self._option |= FormattingOptions.RemoveInvalid
+        if opts.get('alternative_units', bool, False):
+            self._option |= FormattingOptions.AlternativeUnits
+        self._trace_invalid = opts.get('trace_invalid', bool, False)
+        self._output_def = opts.get('output', str, 'stdout')
+        if self._output_def == 'stdout':
+            self._output_fd = sys.stdout
+            self._std_output = True
+        elif self._output_def.lower() == 'file':
+            self._filename = opts.get('filename', str, None)
+            if self._filename is None:
+            # compute default
+                self._filename = "TRACE"
+                trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')
+                date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
+                filename = "%s-N2K-%s.json" % (self._filename, date_stamp)
+                filepath = os.path.join(trace_dir, filename)
+            else:
+                filepath = self._filename
+            try:
+                self._output_fd = open(filepath, "w")
+            except IOError as e:
+                _logger.error(f"Output file {filepath} error {e}")
+                self._output_fd = None
+                raise
+            _logger.info(f"NMEA2000 to Json Publisher Directing output to {filepath}")
+        else:
+            _logger.error(f"N2KJsonPublisher incorrect output {self._output_def}")
+            self._output_fd = None
+            raise ValueError
+        self._stats = N2KStatistics()
+        self._close_lock = threading.Lock()
+
+
+    def process_msg(self, msg: NavGenericMsg):
+        if msg.type != N2K_MSG:
+            return
+        n2k_msg = msg.msg
+        try:
+            decoded_msg = get_n2k_decoded_object(n2k_msg)
+        except N2KMissingDecodeEncodeException:
+            self._stats.add_entry(n2k_msg)
+            return True
+        except N2KInvalidMessageException:
+            if self._trace_invalid:
+                _logger.info(f"Invalid message: {n2k_msg.format1()}")
+            return True
+        except Exception as e:
+            _logger.error(f"Error during PGN {n2k_msg.pgn} from:{n2k_msg.sa} decoding: {e}")
+            return True
+
+        self._close_lock.acquire()
+        if self._output_fd is not None:
+            decoded_msg.push_json(self._output_fd, self._option)
+            self._output_fd.write('\n')
+        self._close_lock.release()
+        return True
+
+    def stop(self):
+        if self._output_fd is not None:
+            self._close_lock.acquire()
+            if not self._std_output:
+                self._output_fd.close()
+            self._output_fd = None
+            self._close_lock.release()
+        if self._active:
+            self._stats.print_entries()
+        super().stop()
+

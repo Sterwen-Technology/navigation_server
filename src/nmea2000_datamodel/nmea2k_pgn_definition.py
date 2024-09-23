@@ -169,6 +169,7 @@ class PGNDef (BitFieldGenerator):
             return
 
         _logger.debug("Starting fields analysis for PGN %d %s" % (self._id, self._name))
+
         field_index = 0
         for field in fields.iter():
             if field.tag.endswith('Field'):
@@ -179,7 +180,7 @@ class PGNDef (BitFieldGenerator):
                     _logger.error("PGN %d Field class %s not defined for %s" % (self._id, field.tag, field.get('Name')))
                     continue
                 try:
-                    fo = field_class(field)
+                    fo = field_class(self, field)
                 except Exception as err:
                     _logger.error(f"Error during analysis of PGN {self._id} field {field.get('Name')}: {err}")
                     raise N2KDefinitionError(f"Cannot process definition for PGN{self._id}")
@@ -192,6 +193,9 @@ class PGNDef (BitFieldGenerator):
                 fo = RepeatedFieldSet(field, self)
                 self._fields[fo.name] = fo
                 self._field_list.append(fo)
+                # now adjust the counter properties
+                count_field = fo.count_field
+                count_field.set_repeated_field(fo)
                 break
         self.check_and_finalize()
         if self._proprietary:

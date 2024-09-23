@@ -141,7 +141,7 @@ class Publisher(NavThread):
                 break
         self.last_action()
 
-        _logger.info("Stopping publisher thread %s" % self._name)
+        _logger.info("Publisher thread %s stops" % self._name)
 
     def last_action(self):
         pass

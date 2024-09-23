@@ -44,7 +44,7 @@ class PythonPGNGenerator:
 
         # generate imports
         self.write("import struct\n")
-        self.write("\nfrom router_common import N2KInvalidMessageException\n")
+        self.write("\nfrom router_common import N2KInvalidMessageException, get_global_enum\n")
         self.write(f"from nmea2000.generated_base import *\n")
         self.write("from generated.nmea2000_pb2 import nmea2000_decoded_pb\n")
         # self.write("from nmea2000.nmea2000_msg import NMEA2000Msg\n")
@@ -143,6 +143,7 @@ class PythonPGNGenerator:
         self.gen_class_variables(pgn_def, pgn_def.attributes, pgn_def.last_attr)
         # self.nl()
         self.gen_enums_definition(pgn_def.enums)
+        self.json_formatting_definition(pgn_def.attributes)
 
         #  __init__ method
         # self.inc_indent()
@@ -238,6 +239,46 @@ class PythonPGNGenerator:
                 self.write("}\n")
                 self.dec_indent()
         # enums end
+
+    def json_formatting_definition(self, attributes):
+        self.write("_json_format = (\n")
+        self.inc_indent()
+        nb_attr = len(attributes)
+        count = 0
+        def enum_ref(field):
+            if field.global_enum is not None:
+                return f"global_enum ='{field.global_enum}'"
+            else:
+                return f"local = _{attr.method}_enum"
+
+        for attr in attributes:
+            if attr.field.python_type == 'int':
+                if attr.field.is_enum():
+                    self.write(f"EnumFormatter('{attr.variable}', '{attr.field.name}', {attr.invalid_value:#x}, {enum_ref(attr.field)} )")
+                elif attr.field.is_repeated_counter:
+                    self.write(f"RepeatedFormatter('{attr.variable}', '{attr.field.name}', '{attr.list_variable}')")
+                else:
+                    self.write(f"GenericFormatter('{attr.variable}', '{attr.field.name}', {attr.invalid_value:#x})")
+            elif attr.field.python_type == 'float':
+                self.write(f"FloatFormatter('{attr.variable}', '{attr.field.name}', '{attr.field.unit.precision}')")
+            elif attr.field.python_type == 'str':
+                self.write(f"TextFormatter('{attr.variable}', '{attr.field.name}')")
+            else:
+                count += 1
+                continue
+            count += 1
+            if count < nb_attr:
+                self._of.write(",\n")
+            else:
+                self._of.write("\n")
+        self.write(")\n")
+        self.dec_indent()
+        self.nl()
+        self.write("def json_format(self):\n")
+        self.inc_indent()
+        self.write("return self._json_format\n")
+        self.dec_indent()
+        self.nl()
 
     def gen_accessors_methods(self, attributes, enums, read_only: bool):
         for attr in attributes:
@@ -649,6 +690,7 @@ class PythonPGNGenerator:
         self.nl()
         self.gen_enums_definition(repeat_field.enums)
         self.nl()
+        self.json_formatting_definition(repeat_field.attributes)
         # gen __init__ method
         self.write('def __init__(self, protobuf=None):\n')
         self.inc_indent()

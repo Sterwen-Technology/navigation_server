@@ -75,7 +75,7 @@ class N2KStatEntry:
         try:
             pgn_name = find_pgn(self._pgn, self._mfg).name
         except N2KUnknownPGN:
-            pgn_name = "Unknown (Mfg=%d)" % self._mfg
+            pgn_name = "Unknown PGN for manufacturer (Mfg=%d)" % self._mfg
 
         return "PGN %d (%s) sa %d: %d" % (self._pgn, pgn_name, self._sa, self._count)
 

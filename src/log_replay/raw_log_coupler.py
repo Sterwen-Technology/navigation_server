@@ -42,6 +42,7 @@ class AsynchLogReader(NavThread):
 
     def stop(self):
         self._stop_flag = True
+        self._out_queue.put(NavGenericMsg(NULL_MSG))
 
     def suspend(self):
         self._suspend_flag = True
@@ -75,6 +76,7 @@ class AsynchLogReader(NavThread):
             except IncompleteMessage:
                 continue
             self._out_queue.put(msg)
+        _logger.info("AsynchLogReader thread stops")
 
 
 class RawLogCoupler(Coupler):

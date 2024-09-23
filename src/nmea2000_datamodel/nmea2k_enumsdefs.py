@@ -59,6 +59,9 @@ class NMEA2000Enum:
     def bit_length(self) -> int:
         return self._bit_length
 
+    def __getitem__(self, value_key):
+        return self._enum_pair[value_key]
+
 
 class UnitSet:
 
@@ -93,10 +96,16 @@ class NMEA2000Unit:
             self._quantity = "Unknown"
         precision = xml.find('Precision')
         if precision is not None:
-            self._precision = f"%.{precision.text}f"
+            self._precision = f"{{:.{precision.text}f}}"
         else:
             self._precision = None
-        print(f"New unit {self._name} ({self._symbol}) for {self._quantity} Precision {self._precision}")
+        option = xml.find('Option')
+        if option is not None:
+            self._option_name = option.text
+        else:
+            self._option_name = None
+        self._option_unit = None
+        # print(f"New unit {self._name} ({self._symbol}) for {self._quantity} Precision {self._precision}")
         scale = xml.find('Scale')
         if scale is not None:
             self._scale = float(scale.text)
@@ -118,12 +127,21 @@ class NMEA2000Unit:
                 except ValueError:
                     continue
                 self._display_units[du.name] = du
+            if self._option_name is not None:
+                try:
+                    self._option_unit = self._display_units[self._option_name]
+                except KeyError:
+                    _logger.error(f"Units: optional unit {self._option_name} not defined")
         else:
             self._display_units = None
 
     @property
     def name(self):
         return self._name
+
+    @property
+    def precision(self):
+        return self._precision
 
     @property
     def symbol(self):
@@ -133,7 +151,12 @@ class NMEA2000Unit:
     def scale(self) -> float:
         return self._scale
 
+    @property
     def offset(self) -> float:
         return self._offset
+
+    @property
+    def option(self):
+        return  self._option_unit
 
 

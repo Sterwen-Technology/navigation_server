@@ -137,6 +137,10 @@
     </Enum>
   </GlobalEnums>
   <Units>
+    <Unit Name="default" symbol="">
+      <Precision>0</Precision>
+      <Quantity>No Dimension</Quantity>
+    </Unit>
     <Unit Name="second" symbol="s">
       <Precision>2</Precision>
       <Quantity>Time</Quantity>
@@ -160,6 +164,8 @@
     <Unit Name="radian" symbol="rad">
       <Quantity>Angle</Quantity>
       <Precision>4</Precision>
+      <Option>degree</Option>
+      <Alternative>degree</Alternative>
       <DisplayUnits>
         <DisplayUnit Name="degree" symbol="deg">
           <Scale>57.295779513</Scale>
@@ -207,13 +213,19 @@
       <DisplayUnits>
         <DisplayUnit Name="Celsius" symbol="°C">
           <Offset>-273.16</Offset>
-          <Precision>0</Precision>
+          <Precision>1</Precision>
         </DisplayUnit>
       </DisplayUnits>
     </Unit>
     <Unit Name="pascal" symbol="Pa">
       <Quantity>Pressure</Quantity>
       <Precision>0</Precision>
+      <DisplayUnits>
+        <DisplayUnit Name="hectopascal" symbol="hPa">
+          <Scale>0.01</Scale>
+          <Precision>1</Precision>
+        </DisplayUnit>
+      </DisplayUnits>
     </Unit>
     <Unit Name="decibel" symbol="dB">
       <Quantity>Decibel</Quantity>
@@ -360,8 +372,7 @@
         <UDblField Name="Actual Temperature">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.01</Scale>
         </UDblField>
       </Fields>
@@ -633,12 +644,14 @@
         <UDblField Name="True Heading">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
         <UDblField Name="Magnetic Heading">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
-          <Scale>0.0057295779513082332</Scale>
+          <Unit>radian</Unit>
+          <Scale>0.0001</Scale>
         </UDblField>
       </Fields>
     </PGNDefn>
@@ -732,13 +745,13 @@
         <UDblField Name="Internal Device Temperature">
           <BitOffset>24</BitOffset>
           <BitLength>16</BitLength>
-          <FormatAs>Temperature</FormatAs>
-          <Offset>-273.15</Offset>
+          <Unit>kelvin</Unit>
           <Scale>0.01</Scale>
         </UDblField>
         <DblField Name="Supply Voltage">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>volt</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <UIntField Name="Reserved">
@@ -2927,18 +2940,21 @@
           <Description>Horizontal dilution of precision</Description>
           <BitOffset>272</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>default</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="PDOP" key="PDOP">
           <Description>Probable dilution of precision</Description>
           <BitOffset>288</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>default</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="Geoidal Separation" key="geoidal_separation">
           <Description>Geoidal Separation</Description>
           <BitOffset>304</BitOffset>
           <BitLength>32</BitLength>
+          <Unit>default</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <UIntField Name="nStations" key="nb_ref_stations">
@@ -2947,17 +2963,18 @@
           <BitLength>8</BitLength>
         </UIntField>
         <RepeatedFieldSet Name="Reference Stations" Count="nStations" key="ref_stations">
-          <UIntField Name="Reference Station ID" key="station_id">
+          <EnumField Name="Reference Station Type" Definition="GNSS type" key="GNSS_type">
             <BitOffset>0</BitOffset>
             <BitLength>4</BitLength>
-          </UIntField>
-          <EnumField Name="Reference Station Type" Definition="GNSS type" key="GNSS_type">
-            <BitOffset>4</BitOffset>
-            <BitLength>4</BitLength>
           </EnumField>
+          <UIntField Name="Reference Station ID" key="station_id">
+            <BitOffset>4</BitOffset>
+            <BitLength>12</BitLength>
+          </UIntField>
           <DblField Name="Age of DGNSS Corrections" key="age_DGNSS_correction">
-            <BitOffset>8</BitOffset>
+            <BitOffset>16</BitOffset>
             <BitLength>16</BitLength>
+            <Unit>second</Unit>
             <Scale>0.01</Scale>
           </DblField>
         </RepeatedFieldSet>
@@ -3031,7 +3048,7 @@
             <EnumPair Value="1" Name="in use" />
           </EnumValues>
         </EnumField>
-        <EnumIntField Name="Time Stamp" key="timestamp">
+        <EnumIntField Name="Time Stamp" key="report_timestamp">
           <Description>0-59 = UTC second when the report was generated</Description>
           <BitOffset>106</BitOffset>
           <BitLength>6</BitLength>
@@ -3140,7 +3157,7 @@
             <EnumPair Value="1" Name="in use" />
           </EnumValues>
         </EnumField>
-        <EnumIntField Name="Time Stamp" key="timestamp">
+        <EnumIntField Name="Time Stamp" key="report_timestamp">
           <Description>0-59 = UTC second when the report was generated</Description>
           <BitOffset>106</BitOffset>
           <BitLength>6</BitLength>
@@ -4090,18 +4107,21 @@
           <Description>Horizontal dilution of precision</Description>
           <BitOffset>16</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>default</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="VDOP" key="VDOP">
           <Description>Vertical dilution of precision</Description>
           <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>default</Unit>
           <Scale>0.01</Scale>
         </DblField>
         <DblField Name="TDOP" key="TDOP">
           <Description>Time dilution of precision</Description>
           <BitOffset>48</BitOffset>
           <BitLength>16</BitLength>
+          <Unit>default</Unit>
           <Scale>0.01</Scale>
         </DblField>
       </Fields>
@@ -4133,7 +4153,7 @@
           <BitLength>8</BitLength>
         </UIntField>
         <RepeatedFieldSet Name="Satellites data" Count="Sats in View" key="satellites_data">
-          <UIntField Name="Sat #" key="satellite_number">
+          <UIntField Name="PRN" key="satellite_number">
             <BitOffset>0</BitOffset>
             <BitLength>8</BitLength>
           </UIntField>
@@ -4155,10 +4175,10 @@
             <Unit>decibel</Unit>
             <Scale>0.01</Scale>
           </UDblField>
-          <UIntField Name="Range residuals" key="range_residuals">
+          <IntField Name="Range residuals" key="range_residuals">
             <BitOffset>56</BitOffset>
             <BitLength>32</BitLength>
-          </UIntField>
+          </IntField>
           <EnumField Name="Status" key="status">
             <BitOffset>88</BitOffset>
             <BitLength>4</BitLength>

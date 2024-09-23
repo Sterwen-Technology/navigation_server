@@ -10,10 +10,8 @@
 #-------------------------------------------------------------------------------
 
 import logging
-import signal
 import threading
 import datetime
-import os
 
 from router_common import MessageServerGlobals, test_exec_hook, GenericTopServer
 # from router_common import NavigationConfiguration
@@ -39,10 +37,11 @@ class NavigationMainServer(GenericTopServer):
         self._start_time = 0
         self._start_time_s = "Not started"
         MessageServerGlobals.main_server = self
+        self._stop_in_progress = False
+        self._stop_lock = threading.Lock()
 
     def couplers(self):
         return self._couplers.values()
-
 
     @property
     def console_present(self) -> bool:
@@ -99,17 +98,26 @@ class NavigationMainServer(GenericTopServer):
         self._is_running = False
 
     def stop_server(self):
+        # 2024-09-27 introduce lock to avoid stop reentrance
+        self._stop_lock.acquire()
+        self._stop_in_progress = True
         for server in self._servers:
             server.stop()
         for inst in self._couplers.values():
             inst.stop()
         for pub in self._publishers:
-            pub.stop()
+            if pub.is_alive():
+                _logger.info(f"Main: stopping publisher {pub.object_name()}")
+                pub.stop()
         # self._console.close()
+        self._stop_lock.release()
         _logger.info("All servers stopped")
         # print_threads()
 
     def request_stop(self, param):
+        if self._stop_in_progress:
+            _logger.warning("Main server stop request during stop")
+            return
         self.stop_server()
 
     def add_coupler(self, coupler):

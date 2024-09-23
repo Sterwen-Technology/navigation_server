@@ -13,6 +13,7 @@ import logging
 import struct
 
 from nmea2000_datamodel import PGNDef
+from nmea2000 import NMEA2000DecodedMsg
 from nmea2000_datamodel.nmea2k_encode_decode import BitField, BitFieldDef
 from nmea2000_datamodel import (FIXED_LENGTH_BYTES, FIXED_LENGTH_NUMBER, VARIABLE_LENGTH_BYTES, EnumField,
                                                  REPEATED_FIELD_SET, Field)
@@ -66,6 +67,9 @@ class AttributeDef(AttributeGen):
         self._variable = f"_{field.keyword}"
         self._need_check = False
         self._default = 0
+        if self._variable in NMEA2000DecodedMsg.__slots__:
+            _logger.error(f"Attribute conflict for {field.keyword}")
+            raise ValueError
 
 
     @property
@@ -96,6 +100,15 @@ class AttributeDef(AttributeGen):
     def typedef(self):
         return self._field.typedef
 
+    def add_list_variable(self, variable):
+        self._list_variable = variable
+
+    @property
+    def list_variable(self):
+        return self._list_variable
+
+
+
 
 class BitFieldAttributeDef(AttributeDef):
 
@@ -106,6 +119,7 @@ class BitFieldAttributeDef(AttributeDef):
         self._bitfield = bitfield
         self._sub_field = sub_field
         self._sub_field_idx = sub_field_idx
+        self._invalid_value = 2 ** field.bit_length - 1
 
     @property
     def nb_slots(self) -> int:
@@ -126,6 +140,10 @@ class BitFieldAttributeDef(AttributeDef):
     @property
     def last_sub_field(self) -> bool:
         return self._sub_field_idx == self._bitfield.nb_sub_fields - 1
+
+    @property
+    def invalid_value(self) -> int:
+        return self._invalid_value
 
 
 class ReservedBitFieldAttribute(ReservedAttribute):
@@ -329,6 +347,9 @@ class FieldSetMeta:
                             self._attributes.append(current_attr)
                             self._attr_dict[current_attr.method] = current_attr
                             segment.add_attribute(current_attr)
+                            if issubclass(type(current_attr.field), EnumField):
+                                enum_def = EnumDef(current_attr.field)
+                                self._enums.append(enum_def)
                         else:
                             attr = ReservedBitFieldAttribute(field, a_field, sub_field, sub_field_idx,
                                                              self._decode_index)
@@ -342,17 +363,15 @@ class FieldSetMeta:
                     self._attributes.append(current_attr)
                     self._attr_dict[current_attr.method] = current_attr
                     segment.add_attribute(current_attr)
+                    if issubclass(type(current_attr.field), EnumField):
+                        enum_def = EnumDef(current_attr.field)
+                        self._enums.append(enum_def)
                 else:
                     attr = ReservedAttribute(field, self._decode_index)
                     segment.add_attribute(attr)
                     self._reserved_attributes.append(attr)
 
                 self._decode_index += field.nb_decode_slots
-                # check enum for local generation
-                if current_attr is not None:
-                    if issubclass(type(current_attr.field), EnumField):
-                        enum_def = EnumDef(current_attr.field)
-                        self._enums.append(enum_def)
 
             elif field.decode_method == FIXED_LENGTH_BYTES:
                 if segment is not None:
@@ -445,6 +464,7 @@ class RepeatAttributeDef(FieldSetMeta, AttributeDef):
             _logger.error(f"{self.method} missing repeat count method {field.count_method}")
             raise
         count_field.set_check_default(0)
+        count_field.add_list_variable(self._variable)
 
     @property
     def class_name(self) -> str:
@@ -462,7 +482,11 @@ class NMEA2000Meta(FieldSetMeta):
         self._name = pgn_def.name
         self._pgn_def = pgn_def
         print(f"generating meta model for: {self._name} PGN {self._pgn}")
-        super().__init__(pgn_def.field_list)
+        try:
+            super().__init__(pgn_def.field_list)
+        except ValueError:
+            _logger.error(f"Error in PGN {self._pgn}")
+            raise
         if pgn_def.is_proprietary:
             self._class_name = f"Pgn{self._pgn}Mfg{self.manufacturer}Class"
         else:
@@ -532,7 +556,10 @@ def nmea2000_gen_meta(category: str, pgn=None):
                 if not PGNDef.pgn_for_controller(cls.id):
                     include = True
             if include:
-                class_def_list.append(NMEA2000Meta(cls))
+                try:
+                    class_def_list.append(NMEA2000Meta(cls))
+                except ValueError:
+                    continue
     else:
         try:
             cls = find_pgn(pgn)

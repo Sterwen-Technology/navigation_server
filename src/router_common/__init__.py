@@ -14,7 +14,7 @@ from .date_time_utilities import format_timestamp
 from .global_exceptions import *
 from .generic_msg import *
 from .global_variables import (MessageServerGlobals, find_pgn, manufacturer_name, Typedef, resolve_ref, resolve_class,
-                               set_global_var, get_global_var, set_hook, test_exec_hook, get_global_option)
+                               set_global_var, get_global_var, set_hook, test_exec_hook, get_global_option, get_global_enum)
 from .log_utilities import NavigationLogSystem
 from .network_utils import get_id_from_mac, get_mac
 from .object_utilities import copy_attribute, build_subclass_dict

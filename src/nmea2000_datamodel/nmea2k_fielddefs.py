@@ -24,19 +24,21 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 class Field:
 
-    def __init__(self, xml, do_not_process=None):
+    def __init__(self, pgn_def, xml, do_not_process=None):
         self._start_byte = 0
         self._end_byte = 0
         self._bit_offset = 0
         self._byte_length = 0
         self._index = -1
         self._variable_length = False
+        self._pgn_def = pgn_def  # link to the Parent PGN
         self._name = xml.attrib['Name']
         self._keyword = xml.attrib.get('key')
         self._global_enum = None
         self._global_enum_name = None
         self._unit = None
         self._validation_hook = xml.attrib.get('validation')
+        self._repeated_count_for = None
         # if self._keyword is not None:
             #  print("Field", self._name, "Keyword", self._keyword)
         self._attributes = {}
@@ -121,6 +123,9 @@ class Field:
             _logger.error(f"Field {self._name} Unit {unit_name} Non existent")
         return None
 
+    @property
+    def unit(self):
+        return self._unit
 
     @property
     def decode_string(self) -> str:
@@ -145,6 +150,17 @@ class Field:
     @property
     def validation_hook(self):
         return self._validation_hook
+
+    @property
+    def repeated_counter(self):
+        return self._repeated_count_for
+
+    @property
+    def is_repeated_counter(self) -> bool:
+        return self._repeated_count_for is not None
+
+    def set_repeated_field(self, field):
+        self._repeated_count_for = field
 
     def descr(self):
         return "%s %s offset %d length %d bit offset %d" % (self._name, self.type(),
@@ -349,8 +365,8 @@ decode_int_str = {1: "b", 2: "h", 3: "hb", 4: "i", 8: "q"}
 
 class UIntField(Field):
 
-    def __init__(self, xml):
-        super().__init__(xml)
+    def __init__(self, pgn, xml):
+        super().__init__(pgn, xml)
 
     def decode_value(self, payload, specs):
         return self.extract_value(payload, specs)
@@ -381,14 +397,14 @@ class UIntField(Field):
 
 class InstanceField(UIntField):
 
-    def __init__(self, xml):
-        super().__init__(xml)
+    def __init__(self, pgn, xml):
+        super().__init__(pgn, xml)
 
 
 class EnumField(Field):
 
-    def __init__(self, xml):
-        super().__init__(xml, do_not_process=("EnumValues", "EnumPair"))
+    def __init__(self, pgn, xml):
+        super().__init__(pgn, xml, do_not_process=("EnumValues", "EnumPair"))
         if self._global_enum is None:
             self._value_pair = {}
             enum_values = xml.find('EnumValues')
@@ -467,8 +483,8 @@ class EnumIntField(EnumField):
 
 class IntField(Field):
 
-    def __init__(self, xml):
-        super().__init__(xml)
+    def __init__(self, pgn, xml):
+        super().__init__(pgn, xml)
         self._value_coder = DecodeDefinitions.int_table[self.length()]
 
     def decode_value(self, payload, specs):
@@ -507,9 +523,15 @@ class IntField(Field):
 
 class DblField(Field):
 
-    def __init__(self, xml):
-        super().__init__(xml)
+    def __init__(self, pgn, xml):
+        super().__init__(pgn, xml)
         self._value_coder = DecodeDefinitions.int_table[self.length()]
+        if self._unit is None:
+            if pgn.to_be_generated:
+                _logger.error(f"PGN {pgn.id} Float field {self._name} must have a unit associated")
+                self.set_unit('default')
+            else:
+                _logger.info(f"PGN {pgn.id} Float field {self._name}  have no unit associated")
 
     def decode_value(self, payload, specs):
         res = self.extract_value(payload, specs)
@@ -555,8 +577,14 @@ class DblField(Field):
 
 class UDblField(Field):
 
-    def __init__(self, xml):
-        super().__init__(xml)
+    def __init__(self, pgn, xml):
+        super().__init__(pgn, xml)
+        if self._unit is None:
+            if pgn.to_be_generated:
+                _logger.error(f"PGN {pgn.id} Float field {self._name} must have a unit associated")
+                self.set_unit('default')
+            else:
+                _logger.info(f"PGN {pgn.id} Float field {self._name}  have no unit associated")
 
     def decode_value(self, payload, specs):
         res = self.extract_value(payload, specs)
@@ -597,8 +625,8 @@ class UDblField(Field):
 
 class VarLengthStringField(Field):
 
-    def __init__(self, xml):
-        super().__init__(xml)
+    def __init__(self, pgn, xml):
+        super().__init__(pgn, xml)
 
     def decode_value(self, payload, specs):
         return self.extract_var_str(payload, specs)
@@ -624,8 +652,8 @@ class VarLengthStringField(Field):
 
 class FixLengthStringField(Field):
 
-    def __init__(self, xml):
-        super().__init__(xml)
+    def __init__(self, pgn, xml):
+        super().__init__(pgn, xml)
 
     def decode_value(self, payload, specs):
         res = N2KDecodeResult(self._name)
@@ -667,8 +695,8 @@ class NameField(Field):
     See class NMEA2000Name for details
     '''
 
-    def __init__(self, xml):
-        super().__init__(xml)
+    def __init__(self, pgn, xml):
+        super().__init__(pgn, xml)
 
     def decode_value(self, payload, specs):
         b_dec = payload[specs.start: specs.end]
@@ -697,8 +725,8 @@ class NameField(Field):
 
 class BytesField(Field):
 
-    def __init__(self, xml):
-        super().__init__(xml)
+    def __init__(self, pgn, xml):
+        super().__init__(pgn, xml)
 
     @property
     def decode_method(self):
@@ -727,7 +755,7 @@ class RepeatedFieldSet (BitFieldGenerator):
                 except KeyError:
                     _logger.error("Field class %s not defined in PGN %d" % (field.tag, pgn))
                     continue
-                fo = field_class(field)
+                fo = field_class(pgn, field)
                 self.check_bf_add_field(fo)
         self.check_and_finalize()
 
@@ -812,6 +840,10 @@ class RepeatedFieldSet (BitFieldGenerator):
     @property
     def count_method(self) -> str:
         return self._pgn.search_field(self._count).keyword
+
+    @property
+    def count_field(self):
+        return self._pgn.search_field(self._count)
 
     @property
     def field_list(self):

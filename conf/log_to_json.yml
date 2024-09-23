@@ -1,14 +1,15 @@
 #-------------------------------------------------------------------------------
-# Name:        settings.yml
+# Name:        log_to_json.yml
 # Purpose:     Settings file for the navigation server
+#               Read logfile and push Json on file or stdout
 #
 # Author:      Laurent Carré
 #
-# Created:     26/12/2021
+# Created:     26/09/2024
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
-function: Log replay server
+function: Log to Json server
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 debug_configuration: false
@@ -48,7 +49,7 @@ couplers:
 - LogReader:
     class: RawLogCoupler
     # logfile: C:\Users\laure\Laurent-Drive\Logiciel bateau\tests\TRACE-CAN-if-can0-231101-Corrigee.log
-    logfile: /mnt/meaban/Bateau/tests/TRACE-CAN-if-can0-240822-2134.log
+    logfile: /mnt/meaban/Bateau/tests/TRACE-CAN-if-can0-240823-1304.log
     # logfile: /mnt/meaban/Bateau/tests/TRACE-MiniPlex3-230720-0644.log
 
     autostart: true
@@ -56,8 +57,8 @@ couplers:
     protocol: nmea2000
     direction: read_only
     stop_system: true
-    pgn_white_list: [129026, 129540]
-    # pgn_white_list: [130842]
+    # pgn_white_list: [129026, 129540]
+    # pgn_white_list: [129038, 129039]
 
 filters:
 
@@ -80,26 +81,14 @@ services:
 
 publishers:
 
-- TraceAll:
-    class: N2KTracePublisher
-    file: test_decode
-    output: PRINT
+- JsonOutput:
+    class: N2KJsonPublisher
+    #file: test_decode
+    output: file
+    remove_invalid: true
+    resolve_enum: true
     active: true
-    flexible_decode: false
     couplers: [LogReader]
 
-- Stats:
-    class: N2KStatisticPublisher
-    couplers: [LogReader]
-    active: true
-
-- DataSender:
-      class: GrpcPublisher
-      address: 127.0.0.1
-      decode_nmea2000: false
-      stop_on_error: true
-      port: 4508
-      active: false
-      couplers: [LogReader]
 
 

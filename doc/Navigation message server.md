@@ -239,7 +239,7 @@ Instantiable class to manage Ethernet or Wi-Fi interface for Shipmodul Miniplex3
 
 The class instance has 2 possible behavior depending on the protocol selected.
 - nmea0183: all frames are transparently transmitted as NMEA0183
-- nmea2000: All $MXPGN frames are interpreted as NMEA2000 and interpreted as such, including Fast Packet reassembly. Further processing on NMEA2000 frames is explained in the dedicated paragraph.
+- nmea2000: All $MXPGN frames are interpreted as NMEA2000 and processed as such, including Fast Packet reassembly. Further processing on NMEA2000 frames is explained in the dedicated paragraph.
 - nmea_mixed: Only the NMEA2000 bus PGN are reassembled and decoded to be sent to a NMEA2000 Controller, other messages are transmitted transparently
 
 The class is allowing the pass through of configuration messages sent by the MPXconfig utility. This is requiring that a ShipModulConfig server class is set up in the configuration. During the connection of the MPXConfig utility, all messages are directed to it, so no messages sent to clients.
@@ -383,6 +383,22 @@ NMEA0183 processing flags:
 * **pass_thru**: messages are forwarded without processing
 * **convert_strict**: messages are converted to NMEA2000 when possible and are discarded otherwise
 * **convert_pass**: messages are converted to NMEA2000 when possible or are forwarded as-is when not possible
+
+#### N2KJsonPublisher
+
+The publisher is serializing NMEA2000 messages using JSON syntax. Messages are separated by a newline character (ASCII 10)
+That output syntax is compatible with the one used by the [canboat analyzer](https://github.com/canboat). The fields names are used for the Json keywords.
+
+| Name           | Type         | Default | Signification                                                     |
+|----------------|--------------|---------|-------------------------------------------------------------------|
+| output         | stdout, file | stdout  | Where the Json is to be written                                   |
+| filename       | str          | None    | If no filename is given, an automatic name is generated           |
+| resolve_enum   | bool         | false   | replaces the enum integer value by the corresponding text         |
+| remove_invalid | bool         | false   | remove fields with invalid value from the output                  |
+| trace_invalid  | bool         | false   | Write an error message on stderr for any invalid NMEA2000 message |
+
+Only PGN that have an associated Python class (that have the <Scope> tag defined as **Generate**) are processed for output. Meaning that all frequent PGN used in Navigation systems are included.
+If some PGN in the user network are not in Scope, then the PGN XML definition file needs to be updated and the code generated.
 
 #### N2KTracePublisher
 
