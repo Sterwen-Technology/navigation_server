@@ -54,13 +54,18 @@ class iKonvertMsg:
 
         if fields[0][0:6] == b'!PDGY':
             self._type = N2K
+            msg_data = fields[6].rstrip(b'\r\n')
+            if len(msg_data) == 0:
+                # we have a problem
+                _logger.error(f"iKonvert incorrect NMEA2000 message (no data): {data}")
+                raise ValueError
             self._msg = NMEA2000Msg(
                 pgn=int(fields[1]),
                 prio=int(fields[2]),
                 sa=int(fields[3]),
                 da=int(fields[4]),
-                payload=base64.b64decode(fields[6])
-            )
+                payload=base64.b64decode(msg_data)
+                )
         elif fields[0][0:6] == b'$PDGY':
             if fields[1][0] == ord('0'):
                 if len(fields[3]) == 0:
@@ -221,6 +226,7 @@ class iKonvert(Coupler):
             self.process_status(msg)
             if self._ikstate != self.IKCONNECTED:
                 return
+
         if msg.type == N183:
             nav_msg = NavGenericMsg(N0183_MSG, msg.raw)
         else:

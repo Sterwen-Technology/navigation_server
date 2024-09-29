@@ -13,6 +13,7 @@ function: Navigation message server
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
+    nmea2000.nmea2k_controller: DEBUG
 
 features:
     - router_core
@@ -35,6 +36,7 @@ servers:
     class: NMEASenderServer
     port: 4503
     coupler: iKonvertCoupler
+    nmea2000: dyfmt
     max_silent: 10
 
 - gRPCMain:
@@ -43,6 +45,7 @@ servers:
 
 - NMEANetwork:
     class: NMEA2KController
+    queue_size: 40
 
 services:
 

@@ -67,10 +67,11 @@ class NMEA2KController(NavigationServer, NavThread):
             # the thread is not running=> warning and discard
             _logger.error("NMEA Controller thread not running")
             return
+        _logger.debug("NMEA2000 Controller send msg PGN%d from:%d queue size:%d" % (msg.pgn, msg.sa, self._input_queue.qsize()))
         try:
             self._input_queue.put(msg, block=False)
         except queue.Full:
-            _logger.warning("NMEA2000 Controller input queue full")
+            _logger.warning(f"NMEA2000 Controller input queue full message discarded: PGN{msg.pgn} SA:{msg.sa}")
 
     def nrun(self) -> None:
         _logger.info("%s NMEA2000 Controller starts" % self._name)
