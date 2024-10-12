@@ -25,10 +25,15 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 class NMEA2000Device:
     '''
-    This class holds the view of the devices on the NMEA2000 Network
+    This class holds the view of the devices on the NMEA2000 Network (proxy devices)
     '''
 
     def __init__(self, address, name=None):
+        '''
+        Parameters
+        address: device address [0, 253] on the bus
+        name: 64bits ISO/J1939 NAME (Supported by NMEA2000Name class)
+        '''
         self._address = address
         _logger.info("NMEA Controller new device detected at address %d" % address)
         self._lastmsg_ts = 0

@@ -316,11 +316,15 @@ class NMEASenderServer(NavTCPServer):
         self._socket.close()
 
     def heartbeat(self):
+        msgcount = 0
         if self._sender is not None:
             cs = "connected to %s:%d" % self._address
+            if self._sender is not None:
+                msgcount = self._sender.msgcount()
         else:
             cs = "not connected"
-        _logger.info("%s heartbeat  %s" % (self._name, cs))
+
+        _logger.info("%s heartbeat  %s number of msg sent:%d" % (self._name, cs, msgcount))
         self.start_timer()
         if self._stop_flag:
             return

@@ -21,27 +21,25 @@ from router_common.message_trace import NMEAMsgTrace
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
+# message type
 (UNKNOWN, STATUS, NOT_CONN, ACK, NAK, N2K, N183) = range(7)
 
 
 class iKonvertMsg:
+    '''
+    Class supporting the iKonvert message for processing and conversion
+    '''
 
-    def __init__(self):
+    __slots__ = ['_type', '_raw', '_msg', '_param']
+
+    def __init__(self, data: bytearray):
         self._type = UNKNOWN
         self._raw = None
         self._msg = None
         self._param = {}
+        self.decode(data)
 
-    @staticmethod
-    def from_bytes(data):
-        try:
-            msg = iKonvertMsg().decode(data)
-        except (ValueError, IndexError, KeyError):
-            _logger.error("iKonvert decoding error on message:%s" % data)
-            return None
-        return msg
-
-    def decode(self, data):
+    def decode(self, data: bytearray):
 
         self._raw = data
         if len(data) < 8:
@@ -73,11 +71,11 @@ class iKonvertMsg:
                 else:
                     self._type = STATUS
                     self._param['bus_load'] = fields[2]
-                    self._param['frame_errors'] = fields[3]
+                    self._param['frame_errors'] = int(fields[3])
                     self._param['nb_devices'] = fields[4]
                     self._param['uptime'] = fields[5]
                     self._param['CAN_address'] = fields[6]
-                    self._param['nb_rejected_PGN'] = fields[7]
+                    self._param['nb_rejected_PGN'] = int(fields[7])
             elif fields[1] == b'TEXT':
                 self._type = NOT_CONN
                 self._param['boot'] = fields[2]
@@ -118,14 +116,24 @@ class iKonvertMsg:
 
 
 class iKonvertRead(threading.Thread):
+    '''
+    Class for low level read on the iKonvert adapter
+    Run asynchronously and callback according to the message type
+    '''
 
-    def __init__(self, instrument, tty, instr_cbd):
+    def __init__(self, coupler, tty, callback_table):
+        '''
+        parameters:
+        instrument: main coupler (instance of iKonvert)
+        tty: serial connection
+        callback_table: jump table according the message type
+        '''
         self._tty = tty
-        self._instrument = instrument
+        self._coupler = coupler
         super().__init__(name="IKonvertRead", daemon=True)
 
         self._stop_flag = False
-        self._instr_cbd = instr_cbd
+        self._callback_table = callback_table
 
     def run(self) -> None:
         while self._stop_flag is False:
@@ -136,14 +144,18 @@ class iKonvertRead(threading.Thread):
                 continue
             if len(data) == 0:
                 # that is a suspected timeout
-                _logger.info("iKonvert read on %s timeout" % self._instrument.tty_name)
+                _logger.info("iKonvert read on %s timeout" % self._coupler.tty_name)
                 continue
-            self._instrument.trace_raw(NMEAMsgTrace.TRACE_IN, data, strip_suffix='\r\n')
-            self._instrument.increment_count()
-            msg = iKonvertMsg.from_bytes(data)
-            if msg is not None:
-                self._instr_cbd[msg.type](msg)
+            self._coupler.trace_raw(NMEAMsgTrace.TRACE_IN, data, strip_suffix='\r\n')
+            self._coupler.increment_count()
+            try:
+                msg = iKonvertMsg(data)
+            except (ValueError, IndexError, KeyError):
+                _logger.error("iKonvert decoding error on message:%s" % data)
+                continue
 
+            self._callback_table[msg.type](msg)
+            # end of read loop
         _logger.info("stopped iKonvert read")
 
     def stop(self):
@@ -154,7 +166,8 @@ class iKonvert(Coupler):
     """
     This class implement the interface towards the iKonvert Digital Yacht USB-NMEA2000 device
     Inherits from Coupler
-    The full connection logic is
+    The full connection logic is handled by the class
+    NMEA0183 or NMEA2000 messages are pushed in the input queue of the coupler
     """
 
     (IKIDLE, IKREADY, IKCONNECTED) = range(10, 13)
@@ -201,10 +214,11 @@ class iKonvert(Coupler):
                 self._lock.release()
                 return False
             _logger.info("iKonvert serial interface %s open" % self._tty_name)
-        cb = {UNKNOWN: self.process_status, STATUS: self.process_status, NOT_CONN: self.process_status,
+        # build the callback_table
+        callback_table = {UNKNOWN: self.process_status, STATUS: self.process_status, NOT_CONN: self.process_status,
               ACK: self.process_acknak, NAK: self.process_acknak, N2K: self.process_nmea, N183: self.process_nmea}
         if self._reader is None:
-            self._reader = iKonvertRead(self, self._tty, cb)
+            self._reader = iKonvertRead(self, self._tty, callback_table)
             self._reader.start()
         self.wait_status()
         if self._ikstate == self.IKREADY:
@@ -255,6 +269,10 @@ class iKonvert(Coupler):
                 self._wait_sem.release()
             if msg.type == STATUS:
                 _logger.debug("iKonvert connected to NMEA2000 network addr:%s" % msg.get('CAN_address'))
+                frame_errors = msg.get('frame_errors')
+                rejected_pgn = msg.get('nb_rejected_PGN')
+                if frame_errors + rejected_pgn > 0 :
+                    _logger.warning(f'iKonvert frame errors:{frame_errors} rejected PGN:{rejected_pgn}')
                 self._status_count += 1
 
     def process_acknak(self, msg):
@@ -326,14 +344,24 @@ class iKonvert(Coupler):
             self._tty.close()
             self._tty = None
 
-    def send(self, msg):
+    def send(self, msg: NavGenericMsg):
+        '''
+        That method is to send NMEA0183 messages
+        '''
         if self._ikstate != self.IKCONNECTED:
             return False
         if self._trace_msg:
             self.trace(NMEAMsgTrace.TRACE_OUT, msg)
         _logger.debug("iKonvert write %s" % msg.printable())
+        return self._send(msg.raw)
+
+    def _send(self, frame) -> bool:
+        '''
+        Physical write to the iKonvert adapter
+        '''
         try:
-            self._tty.write(msg.raw)
+            self._tty.write(frame)
+            self._tty.flush()
             return True
         except serial.SerialException as e:
             _logger.error("IKonvert write error: %s" % e)
@@ -345,11 +373,11 @@ class iKonvert(Coupler):
     def stop_writer(self):
         pass  # do nothing to avoid recursion
 
-    def send_n2k_msg(self, msg: NMEA2000Msg):
+    def send_n2k_msg(self, msg: NMEA2000Msg) -> bool:
         # encode the message TX PGN
         frame = b'!PGDY,%d,%d,%s\r\n' % (msg.pgn, msg.da, base64.b64encode(msg.payload))
-        rmsg = NavGenericMsg(TRANSPARENT_MSG, raw=frame)
-        return self.send(rmsg)
+        self.trace_raw(NMEAMsgTrace.TRACE_OUT, frame, strip_suffix='\r\n')
+        return self._send(frame)
 
 
 

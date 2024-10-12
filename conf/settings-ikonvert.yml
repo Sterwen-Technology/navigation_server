@@ -13,7 +13,8 @@ function: Navigation message server
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
-    nmea2000.nmea2k_controller: DEBUG
+    nmea2000.nmea2k_controller: INFO
+    couplers.ikonvert: INFO
 
 features:
     - router_core

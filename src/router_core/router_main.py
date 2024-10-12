@@ -36,7 +36,6 @@ class NavigationMainServer(GenericTopServer):
         self._logfile = None
         self._start_time = 0
         self._start_time_s = "Not started"
-        MessageServerGlobals.main_server = self
         self._stop_in_progress = False
         self._stop_lock = threading.Lock()
 

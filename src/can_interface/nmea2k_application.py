@@ -326,6 +326,7 @@ class NMEA2000Application(NMEA2000Device):
             return
         _logger.debug("sending heartbeat from device %d sequence %d" % (self._address, self._sequence))
         request = Heartbeat()
+        request.interval = self._heartbeat_interval
         request.sequence = self._sequence
         request.sa = self._address
         self._sequence += 1

@@ -14,6 +14,8 @@ import signal
 import os
 import threading
 
+from .global_variables import MessageServerGlobals
+
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
@@ -26,6 +28,7 @@ class GenericTopServer:
         self._analyse_interval = 0
         self._analyse_timer = None
         self._sigint_count = 0
+        MessageServerGlobals.main_server = self
         signal.signal(signal.SIGINT, self.stop_handler)
 
     @property

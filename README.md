@@ -88,9 +88,9 @@ To overcome the problem a specific Python script has been developed (mod_pb2.py)
 For any problem encountered, please open an issue in this repository.
 
 ## Roadmap
-The current stable version is V2.06. Documentation is aligned on this version.
+The current stable version is V2.06a. Documentation is aligned on this version.
 
-The version 2.06 introduce mainly the Json output publisher
+The version 2.06a includes various corrections and Digital Yacht iKonvert improved support
 
 
 ## Contributing

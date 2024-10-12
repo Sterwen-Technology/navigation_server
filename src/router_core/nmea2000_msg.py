@@ -283,7 +283,7 @@ def decodePGDY(msg: NMEA0183Msg) -> NMEA2000Msg:
     return rmsg
 
 
-def fromPGDY(frame) -> NMEA2000Msg:
+def fromPGDY(frame) -> NavGenericMsg:
     '''
     Directly transform a PDGY NMEA0183 proprietary frame into a N2K internal message
     If this is not a PDGY message, then return that message without processing
@@ -304,7 +304,7 @@ def fromPGDY(frame) -> NMEA2000Msg:
         _logger.error("PDGY sentence error: %s %s" % (e, str(msg)))
         raise
     _logger.debug("NMEA2000 message from PGDY:%s" % rmsg.format1())
-    return rmsg
+    return NavGenericMsg(N2K_MSG, msg=rmsg)
 
 
 def fromPGNST(frame):

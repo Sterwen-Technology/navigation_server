@@ -20,7 +20,7 @@ from router_common import MessageServerGlobals
 from router_common import init_options
 
 
-MessageServerGlobals.version = "2.06"
+MessageServerGlobals.version = "2.06a"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -53,7 +53,6 @@ def main():
         return
 
     assert MessageServerGlobals.main_server is not None
-    # print(config.main_server)
 
     _logger.debug("Starting the main server")
     if config.main_server.start():

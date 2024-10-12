@@ -1327,7 +1327,7 @@
           <BitOffset>0</BitOffset>
           <BitLength>16</BitLength>
           <Unit>second</Unit>
-          <Scale>10</Scale>
+          <Scale>0.001</Scale>
         </UDblField>
         <UIntField Name="Sequence" key="sequence">
           <BitOffset>16</BitOffset>

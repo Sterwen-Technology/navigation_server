@@ -363,7 +363,7 @@ class Coupler(NavThread):
                 if self._n2k_writer is None:
                     _logger.error("%s cannot send NMEA2000 messages - protocol mismatch" % self._name)
                     return False
-                self.trace_n2k_raw(msg.msg.pgn, msg.msg.da, msg.msg.prio, msg.msg.payload, direction=self.TRACE_OUT)
+                # self.trace_n2k_raw(msg.msg.pgn, msg.msg.da, msg.msg.prio, msg.msg.payload, direction=self.TRACE_OUT)
                 self._n2k_writer.send_n2k_msg(msg.msg)
                 return True
             else:
