@@ -18,6 +18,7 @@ from router_core.coupler import Coupler
 from router_core.nmea2000_msg import NMEA2000Msg
 from router_common.generic_msg import *
 from router_common.message_trace import NMEAMsgTrace
+from router_common.nav_threading import NavThread
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -115,7 +116,7 @@ class iKonvertMsg:
         return self._msg
 
 
-class iKonvertRead(threading.Thread):
+class iKonvertRead(NavThread):
     '''
     Class for low level read on the iKonvert adapter
     Run asynchronously and callback according to the message type
@@ -135,7 +136,7 @@ class iKonvertRead(threading.Thread):
         self._stop_flag = False
         self._callback_table = callback_table
 
-    def run(self) -> None:
+    def nrun(self) -> None:
         while self._stop_flag is False:
             try:
                 data = self._tty.readline()

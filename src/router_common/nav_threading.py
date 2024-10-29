@@ -37,7 +37,10 @@ class NavThread(threading.Thread):
     def _run(self):
         _logger.debug("Thread %s starts" % self._name)
         MessageServerGlobals.thread_controller.record_start(self)
-        self.nrun()
+        try:
+            self.nrun()
+        except Exception as err:
+            _logger.error(f"Fatal error in thread: {self._name}:{err} - stopped")
         MessageServerGlobals.thread_controller.record_stop(self)
         _logger.debug("Thread %s stops" % self._name)
 
@@ -49,7 +52,7 @@ class NavThread(threading.Thread):
         self._profile.create_stats()
         _logger.debug("Thread %s stopped with profiling" % self._name)
 
-    def nrun(self):
+    def nrun(self) -> None:
         raise NotImplementedError
 
 
@@ -69,11 +72,11 @@ class NavThreadingController:
             self._active_threads[thread.name] = thread
 
     def record_start(self, thread: NavThread):
-        _logger.debug("Starting thread %s" % thread.name)
+        _logger.debug("Recording Starting thread %s" % thread.name)
         self._running_thread[thread.name] = thread
 
     def record_stop(self, thread: NavThread):
-        _logger.debug("Thread %s stops" % thread.name)
+        _logger.debug("Recording Thread %s stops" % thread.name)
         try:
             del self._running_thread[thread.name]
         except KeyError:

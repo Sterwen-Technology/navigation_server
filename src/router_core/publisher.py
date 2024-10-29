@@ -47,11 +47,16 @@ class Publisher(NavThread):
             object_name = "Internal Publisher %s" % name
         else:
             object_name = opts['name']
+            _logger.debug("Creating Publisher %s" % object_name)
             name = object_name
             self._opts = opts
             self._queue_size = opts.get('queue_size', int, 20)
             self._max_lost = opts.get('max_lost', int, 5)
             inst_list = opts.getlist('couplers', str, [])
+            if len(inst_list) == 0:
+                # we must have a coupler here
+                _logger.error(f"Publisher {object_name} has no couplers defined")
+                raise ValueError
             self._active = opts.get('active', bool, True)
             self._couplers = {}
             for inst_name in inst_list:
@@ -76,6 +81,7 @@ class Publisher(NavThread):
             for inst in self._couplers.values():
                 # print("Registering %s on %s" % (self._name, inst.name()))
                 inst.register(self)
+            _logger.debug("Publisher %s start requested" % self._name)
             super().start()
 
     def publish(self, msg):
@@ -180,17 +186,19 @@ class Injector(ExternalPublisher):
 
     def __init__(self, opts):
         super().__init__(opts)
-        self._target = resolve_ref(opts['target'])
-        set_hook(self._target.object_name(), self.refresh_target)
+        # warning _target is a variable of thread and create a conflict
+        # 2024-10-29 rename _target to _target_coupler
+        self._target_coupler = resolve_ref(opts['target'])
+        set_hook(self._target_coupler.object_name(), self.refresh_target)
 
     def process_msg(self, msg):
-        return self._target.send_msg_gen(msg)
+        return self._target_coupler.send_msg_gen(msg)
 
     def descr(self):
         return "Injector %s" % self._name
 
     def refresh_target(self, target):
-        self._target = target
+        self._target_coupler = target
 
 
 class PrintPublisher(ExternalPublisher):

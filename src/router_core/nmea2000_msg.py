@@ -10,7 +10,6 @@
 # -------------------------------------------------------------------------------
 import binascii
 import queue
-import threading
 import time
 import logging
 from google.protobuf.json_format import MessageToJson
@@ -24,7 +23,7 @@ from generated.nmea2000_pb2 import nmea2000pb
 from router_common import NavGenericMsg, N2K_MSG, N2KDecodeException, NULL_MSG, N2KUnknownPGN
 from .nmea0183_msg import NMEAInvalidFrame
 from .nmea0183_msg import process_nmea0183_frame, NMEA0183Msg
-from router_common import format_timestamp, find_pgn
+from router_common import format_timestamp, find_pgn, NavThread
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -312,7 +311,7 @@ def fromPGNST(frame):
 
 
 
-class NMEA2000Writer(threading.Thread):
+class NMEA2000Writer(NavThread):
     '''
     This class implements the buffered write on CAN interface
     It handles the conversion towards the actual interface protocol
@@ -335,7 +334,7 @@ class NMEA2000Writer(threading.Thread):
         for msg in self._instrument.encode_nmea2000(msg):
             self._queue.put(msg)
 
-    def run(self):
+    def nrun(self):
         while not self._stop_flag:
             msg = self._queue.get()
             if msg.type == NULL_MSG:

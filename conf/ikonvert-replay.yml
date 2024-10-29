@@ -1,0 +1,93 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     16/10/2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+function: Navigation message server
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+    nmea2000.nmea2k_controller: INFO
+    couplers.ikonvert: INFO
+    router_core.publisher: DEBUG
+    router_common.nav_threading: DEBUG
+
+features:
+    - router_core
+    - nmea2000
+    - nmea0183
+    - couplers:
+          - iKonvert
+          - NMEATCPReader
+
+servers:
+
+- Main:
+    class: NavigationMainServer
+
+- gRPCMain:
+    class: GrpcServer
+    port: 4502
+
+- NMEANetwork:
+    class: NMEA2KController
+    queue_size: 40
+
+services:
+
+- Console:
+    class: Console
+    server: gRPCMain
+
+
+couplers:
+
+- iKonvertCoupler:
+    class: iKonvert
+    device: /dev/ttyUSB0
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
+    msg_queue_size: 20
+    trace_messages: false
+    trace_raw: false
+
+- SNReplay:
+    class: NMEATCPReader
+    address: 192.168.1.21
+    port: 3555
+    autostart: true
+    protocol: nmea2000
+    convert_nmea0183: true
+    trace_messages: false
+    trace_raw: false
+
+
+filters:
+
+
+
+publishers:
+
+- TraceOutput:
+    class: N2KTracePublisher
+    # filters: [NMEASent]
+    couplers: [iKonvertCoupler]
+    active: false
+    flexible_decode: false
+
+- ReplayBridge:
+    class: Injector
+    couplers: [SNReplay]
+    target: iKonvertCoupler
+    active: true
+
+
+
+
+
