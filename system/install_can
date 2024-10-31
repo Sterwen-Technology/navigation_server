@@ -10,7 +10,7 @@ then
   cp python_lib/can/bus.py /usr/lib/python3.7/site-packages/can
 fi
 
-cp can.service /lib/systemd/system
+cp systemd/can.service /lib/systemd/system
 systemctl daemon-reload
 systemctl enable can
 systemctl start can

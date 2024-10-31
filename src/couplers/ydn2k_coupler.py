@@ -34,13 +34,13 @@ class YDCoupler(BufferedIPCoupler):
         else:
             self._fast_packet_handler = FastPacketHandler(self)
             self.set_message_processing(msg_processing=self.input_frame_processing)
-            self._reply_queue = queue.Queue(5)
+            self._reply_queue = queue.Queue(30)  # 2024-10-30  Increase the reply queue size to 30
 
 
 
     @staticmethod
     def decode_frame(coupler, frame, pgn_white_list=None):
-        _logger.debug("%s receive frame=%s" % (coupler.name(), frame))
+        _logger.debug("%s receive frame=%s" % (coupler.object_name(), frame))
         if frame[0] == 4:
             return NavGenericMsg(NULL_MSG)
         # coupler._total_msg_raw += 1
@@ -71,7 +71,7 @@ class YDCoupler(BufferedIPCoupler):
                     _logger.error("YD Coupler unexpected reply from %d pgn:%d %s" % (sa, pgn, frame))
                     raise IncompleteMessage
             else:
-                _logger.debug("%s reply on send: %s" % (coupler.name(), frame))
+                _logger.debug("%s reply on send: %s" % (coupler.object_name(), frame))
                 try:
                     coupler._reply_queue.put(frame, block=False)
                 except queue.Full:

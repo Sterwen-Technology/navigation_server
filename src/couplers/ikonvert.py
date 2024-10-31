@@ -181,7 +181,7 @@ class iKonvert(Coupler):
         self._separator = b'\r\n'
         self._separator_len = 2
         self._tty_name = opts.get("device", str, "/dev/ttyUSB0")
-        self._mode = opts.get("mode", str, "ALL")  # ALL (send all PGN) or NORMAL (send only requested PGN)
+        self._ikonvert_mode = opts.get("mode", str, "ALL")  # ALL (send all PGN) or NORMAL (not used - send only requested PGN)
         self._tty = None
         self._reader = None
         self._wait_sem = threading.Semaphore(0)
@@ -224,7 +224,7 @@ class iKonvert(Coupler):
         self.wait_status()
         if self._ikstate == self.IKREADY:
             # the gateway is not connected
-            self.send_loc_cmd('N2NET_INIT', self._mode)
+            self.send_loc_cmd('N2NET_INIT', self._ikonvert_mode)
             self.wait_status()
         self._lock.release()
         if self._ikstate != self.IKCONNECTED:

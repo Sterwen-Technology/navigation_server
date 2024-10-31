@@ -70,6 +70,7 @@ class Publisher(NavThread):
         self._name = object_name
         # moving registration to start
         self._queue = queue.Queue(self._queue_size)
+        self._queue_threshold = int(self._queue_size * 0.8)
         self._stopflag = False
         self._nb_msg_lost = 0
         self._filters = filters
@@ -107,8 +108,8 @@ class Publisher(NavThread):
             if self._nb_msg_lost >= self._max_lost:
                 raise PublisherOverflow
         qs = self._queue.qsize()
-        if qs > self._queue_size / 2:
-            _logger.warning("%s Publisher Queue filling up size %d" % (self._name, qs))
+        if qs > self._queue_threshold:
+            _logger.warning("%s Publisher Queue filling up over 80%% size %d" % (self._name, qs))
             self._queue_tpass = True
             time.sleep(0.2)
         if self._queue_tpass:
@@ -144,6 +145,7 @@ class Publisher(NavThread):
                     continue
             # print("message get in Publisher %s" % msg, count, self.ident)
             if not self.process_msg(msg):
+                _logger.warning(f"Publisher {self._name} error during send msg => stop")
                 break
         self.last_action()
 
@@ -178,8 +180,11 @@ class ExternalPublisher(Publisher):
         filter_names = opts.getlist('filters', str)
         if filter_names is not None and len(filter_names) > 0:
             _logger.info("Publisher:%s filter set:%s" % (self.object_name(), filter_names))
-            self._filters = FilterSet(filter_names)
-            self._filter_select = True
+            try:
+                self._filters = FilterSet(filter_names)
+                self._filter_select = True
+            except ValueError:
+                _logger.error(f"Publisher {self.object_name()} Invalid filter set")
 
 
 class Injector(ExternalPublisher):
@@ -191,8 +196,11 @@ class Injector(ExternalPublisher):
         self._target_coupler = resolve_ref(opts['target'])
         set_hook(self._target_coupler.object_name(), self.refresh_target)
 
-    def process_msg(self, msg):
-        return self._target_coupler.send_msg_gen(msg)
+    def process_msg(self, msg) -> bool:
+        _logger.debug("Injector process msg %s" % msg.printable())
+        result = self._target_coupler.send_msg_gen(msg)
+        _logger.debug('Injector process msg result: %s' % result)
+        return result
 
     def descr(self):
         return "Injector %s" % self._name

@@ -14,15 +14,18 @@ log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 log_module:
     nmea2000.nmea2k_controller: INFO
-    couplers.ikonvert: INFO
-    router_core.publisher: DEBUG
-    router_common.nav_threading: DEBUG
+    couplers.ydn2k_coupler: INFO
+    router_core.publisher: INFO
+    router_common.nav_threading: INFO
+    router_core.IPCoupler: INFO
+    couplers.iKonvert: DEBUG
 
 features:
     - router_core
     - nmea2000
     - nmea0183
     - couplers:
+          - YDCoupler
           - iKonvert
           - NMEATCPReader
 
@@ -48,12 +51,14 @@ services:
 
 couplers:
 
-- iKonvertCoupler:
-    class: iKonvert
-    device: /dev/ttyUSB0
+- OutputCoupler1:
+    class: YDCoupler
+    address: 192.168.1.28
+    port: 1457
+    autostart: false
     nmea2000_controller: NMEANetwork
     protocol: nmea2000
-    msg_queue_size: 20
+    # nmea0183_convert: true
     trace_messages: false
     trace_raw: false
 
@@ -63,9 +68,19 @@ couplers:
     port: 3555
     autostart: true
     protocol: nmea2000
-    convert_nmea0183: true
+    nmea0183_convert: true
     trace_messages: false
     trace_raw: false
+
+- OutputCoupler2:
+      class: iKonvert
+      device: /dev/ttyUSB0
+      autostart: true
+      nmea2000_controller: NMEANetwork
+      protocol: nmea2000
+      # nmea0183_convert: true
+      trace_messages: false
+      trace_raw: true
 
 
 filters:
@@ -77,14 +92,15 @@ publishers:
 - TraceOutput:
     class: N2KTracePublisher
     # filters: [NMEASent]
-    couplers: [iKonvertCoupler]
+    couplers: [SNReplay]
     active: false
     flexible_decode: false
 
 - ReplayBridge:
     class: Injector
     couplers: [SNReplay]
-    target: iKonvertCoupler
+    queue_size: 40
+    target: OutputCoupler2
     active: true
 
 

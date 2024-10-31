@@ -1,8 +1,13 @@
 #!/bin/bash
 # nmea_router protobuf and gRPC
+if [ ! -v NAVIGATION_HOME ]
+then
+  echo "Environment variable NAVIGATION_HOME is missing"
+  exit
+fi
 
-input_dir=src/protobuf
-output_dir=src/generated
+input_dir="$NAVIGATION_HOME/src/protobuf"
+output_dir="$NAVIGATION_HOME/src/generated"
 
 gen_protobuf() {
   echo "processing:$1"

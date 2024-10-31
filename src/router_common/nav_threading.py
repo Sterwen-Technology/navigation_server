@@ -40,7 +40,7 @@ class NavThread(threading.Thread):
         try:
             self.nrun()
         except Exception as err:
-            _logger.error(f"Fatal error in thread: {self._name}:{err} - stopped")
+            _logger.error(f"{__name__}|Fatal error in thread: {self._name}:{err} - stopped")
         MessageServerGlobals.thread_controller.record_stop(self)
         _logger.debug("Thread %s stops" % self._name)
 

@@ -1,10 +1,10 @@
 #!/bin/bash
 # shell script to perform the installation on systemd
 #
-cp navigation.service /lib/systemd/system
-cp energy.service /lib/systemd/system
-cp navigation_agent.service /lib/systemd/system
-cp navigation_data.service /lib/systemd/system
+cp systemd/navigation.service /lib/systemd/system
+cp systemd/energy.service /lib/systemd/system
+cp systemd/navigation_agent.service /lib/systemd/system
+cp systemd/navigation_data.service /lib/systemd/system
 
 systemctl daemon-reload
 
