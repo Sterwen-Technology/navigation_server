@@ -1,5 +1,13 @@
+#-------------------------------------------------------------------------------
+# Name:        mod_pb2.py
+# Purpose:     Script to adjust grpc generated files
 #
-#  Script to adjust grpc generated files
+# Author:      Laurent Carré
+#
+# Created:     25/10/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
 #
 #  arg1 = file to be analyzed and modified
 #  arg2 = prefix to be added

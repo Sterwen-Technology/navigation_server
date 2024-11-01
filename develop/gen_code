@@ -1,4 +1,10 @@
 #!/bin/bash
+if [ ! -v NAVIGATION_HOME ]
+then
+  echo "Environment variable NAVIGATION_HOME is missing"
+  exit
+fi
+cd "$NAVIGATION_HOME"
 # first generate the protobuf
 python src/code_generator.py -pb -c iso -o nmea2000_classes_iso_gen
 python src/code_generator.py -pb -c data -o nmea2000_classes_gen

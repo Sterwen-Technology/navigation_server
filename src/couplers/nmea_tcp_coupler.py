@@ -49,7 +49,7 @@ class NMEATCPReader(BufferedIPCoupler):
         self._total_msg_raw += 1
         if frame[0:5] == b'!PDGY':
             # ok we have an iKonvert frame => direct decode into NMEA2000
-            ik_msg = iKonvertMsg.from_bytes(frame)
+            ik_msg = iKonvertMsg(frame)
             if ik_msg is None:
                 raise IncompleteMessage
             msg = NavGenericMsg(N2K_MSG, msg=ik_msg.msg)

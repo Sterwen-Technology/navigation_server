@@ -17,7 +17,7 @@ import time
 # from publisher import Publisher
 
 from .publisher import PublisherOverflow
-from router_common import NavGenericMsg, NULL_MSG, N2K_MSG, NavThread, MessageServerGlobals
+from router_common import NavGenericMsg, NULL_MSG, N2K_MSG, NavThread, MessageServerGlobals, N0183_MSG
 from .nmea2000_msg import NMEA2000Msg, NMEA2000Writer
 from router_common import NMEAMsgTrace, MessageTraceError
 # from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter, Nmea0183InvalidMessage
@@ -359,15 +359,18 @@ class Coupler(NavThread):
                 _logger.error("Coupler %s attempt to write on a READ ONLY coupler" % self.object_name())
                 return False
             self._total_msg_s += 1
-            if msg.type == N2K_MSG:
+            if msg.type == N2K_MSG and self._mode in (self.NMEA2000, self.NMEA_MIX):
                 if self._n2k_writer is None:
                     _logger.error("%s cannot send NMEA2000 messages - protocol mismatch" % self._name)
                     return False
                 # self.trace_n2k_raw(msg.msg.pgn, msg.msg.da, msg.msg.prio, msg.msg.payload, direction=self.TRACE_OUT)
                 self._n2k_writer.send_n2k_msg(msg.msg)
                 return True
-            else:
+            elif msg.type == N0183_MSG and self._mode in (self.NMEA0183, self.NMEA_MIX):
                 return self.send(msg)
+            else:
+                _logger.error(f"Coupler {self._name} wrong message type: {msg.printable()}")
+                return True
         else:
             return True
 
@@ -453,7 +456,7 @@ class Coupler(NavThread):
                     self._n2k_controller.send_message(msg.msg)
                 else:
                     fetch_next = False
-            else:
+            elif msg.type == N0183_MSG:
                 fetch_next = False
                 if self._nmea183_convert:
                     try:
@@ -464,6 +467,8 @@ class Coupler(NavThread):
                     except NMEAInvalidFrame:
                         if self._mode == self.NMEA2000:
                             fetch_next = True
+            else:
+                fetch_next = False
 
         # _logger.debug("Read valid data:%s", msg)
         yield msg

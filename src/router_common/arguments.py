@@ -20,6 +20,7 @@ def _parser():
     p.add_argument('-s', '--settings', action='store', type=str, default='./conf/settings.yml')
     p.add_argument('-d', '--working_dir', action='store', type=str)
     p.add_argument("-t", "--timer", action='store', type=float, default=None)
+    p.add_argument('-v', '--version', action='store_true', help='print the version and exit')
 
     return p
 

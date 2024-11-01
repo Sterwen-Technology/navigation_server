@@ -11,7 +11,7 @@
 
 import os
 import logging
-
+import sys
 
 from router_common import NavigationConfiguration, ConfigurationException
 from router_common import NavigationLogSystem
@@ -20,7 +20,7 @@ from router_common import MessageServerGlobals
 from router_common import init_options
 
 
-MessageServerGlobals.version = "2.06a"
+MessageServerGlobals.version = "2.1"
 default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -35,6 +35,10 @@ def main():
     """
     # initialise command line arguments
     opts = init_options(default_base_dir)
+
+    if opts.version:
+        sys.stdout.write(MessageServerGlobals.version)
+        return
 
     # set log for the configuration phase
     NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2024")

@@ -214,6 +214,7 @@ class IPAsynchReader(NavThread):
                 msg = NavGenericMsg(TRANSPARENT_MSG, raw=buffer)
                 self._out_queue.put(msg)
                 continue
+            # _logger.debug("IPCoupler receive: %s" % buffer)
             # start buffer processing
             start_idx = 0
             end_idx = len(buffer)
