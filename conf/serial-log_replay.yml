@@ -24,6 +24,9 @@ features:
   - nmea2000
   - nmea0183
   - log_replay
+  - couplers:
+      - NMEATCPReader
+      - NMEASerialPort
 
 
 servers:
@@ -46,32 +49,22 @@ servers:
 
 couplers:
 
-- LogReader:
-    class: RawLogCoupler
-    # logfile: C:\Users\laure\Laurent-Drive\Logiciel bateau\tests\TRACE-CAN-if-can0-231101-Corrigee.log
-    logfile: /mnt/meaban/Bateau/tests/TRACE-CAN-if-can0-240822-2134.log
-    # logfile: /mnt/meaban/Bateau/tests/TRACE-MiniPlex3-230720-0644.log
-
+- ScannavReplay:
+    class: NMEATCPReader
+    address: 192.168.1.21
+    port: 3555
     autostart: true
-    nmea2000_controller: NMEANetwork
-    protocol: nmea2000
-    direction: read_only
-    stop_system: true
-    pgn_white_list: [129026, 129540]
-    # pgn_white_list: [130842]
+    protocol: nmea0183
+
+
+- SerialCoupler:
+    class: NMEASerialPort
+    device: /dev/ttyUSB1
+    baudrate: 57600
+    autostart: true
+
 
 filters:
-
-- FastPacket:
-    class: NMEA2000Filter
-    pgn: [129029, 126996, 129540]
-    type: select
-
-- RaymarineProprietary:
-    class: NMEA2000Filter
-    pgn: [126720]
-    type: select
-
 
 services:
 
@@ -81,26 +74,11 @@ services:
 
 publishers:
 
-- TraceAll:
-    class: N2KTracePublisher
-    file: test_decode
-    output: PRINT
+- SerialFeed:
+    class: Injector
+    target: SerialCoupler
+    couplers: [ScannavReplay]
     active: true
-    flexible_decode: false
-    couplers: [LogReader]
-
-- Stats:
-    class: N2KStatisticPublisher
-    couplers: [LogReader]
-    active: true
-
-- DataSender:
-      class: GrpcPublisher
-      address: 127.0.0.1
-      decode_nmea2000: false
-      stop_on_error: true
-      port: 4508
-      active: false
-      couplers: [LogReader]
-
+    queue_size: 60
+    max_lost: 10
 

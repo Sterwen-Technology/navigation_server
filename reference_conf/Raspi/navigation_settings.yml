@@ -21,8 +21,10 @@ features:
     - nmea0183
     - can_interface
     - nmea2000_devices
+    - log_replay
     - couplers:
           - NMEATCPReader
+          - NMEASerialPort
 
 servers:
 
@@ -64,7 +66,24 @@ couplers:
     address: 192.168.1.21
     port: 3555
     autostart: false
-    
+    protocol: nmea2000
+    nmea0183_convert: true
+
+- SerialCoupler:
+    class: NMEASerialPort
+    device: /dev/ttyS0
+    baudrate: 57600
+    autostart: false
+
+- LogReader:
+      class: RawLogCoupler
+      logfile: /data/solidsense/logs/TRACE-CAN-if-can0-240823-1304.log
+      autostart: false
+      nmea2000_controller: NMEANetwork
+      protocol: nmea2000
+      direction: read_only
+      stop_system: false
+
 services:
 
 - Console:
@@ -85,8 +104,11 @@ publishers:
 - CanFeed:
     class: Injector
     target: CANCoupler
-    couplers: [ScannavReplay]
-    active: false
+    couplers: [ScannavReplay, SerialCoupler, LogReader]
+    active: true
+    queue_size: 60
+    max_lost: 10
+
 
 filters:
 
