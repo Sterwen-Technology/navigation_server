@@ -1,0 +1,22 @@
+#!/bin/bash
+#
+# tar file generator for navigation system
+# Copyright Sterwen Technology 2021-2024
+#
+if [ ! -v NAVIGATION_HOME ]
+then
+  echo "Environment variable NAVIGATION_HOME is missing"
+  exit
+fi
+
+cd "$NAVIGATION_HOME/src"
+
+# removing all __pycache__ directories
+rm -rf __pycache__
+rm -rf */__pycache__
+
+version=$(python server_main.py --version)
+
+cd ..
+tar cvf "$NAVIGATION_HOME/dist/navigation$version.tar" src/*.py src/*/*.py conf/*.yml def/* system/* LICENSE README.md run_server \
+  requirements.txt

@@ -19,8 +19,7 @@ from router_core import NMEA0183Msg, NMEAInvalidFrame
 from generated.nmea2000_classes_gen import (Pgn129025Class, Pgn129026Class, Pgn129029Class, Pgn130306Class,
                                             Pgn128267Class, Pgn128259Class, Pgn127250Class, Pgn129539Class,
                                             Pgn129540Class)
-from router_common import IncompleteMessage, NavGenericMsg, N2K_MSG
-
+from router_common import IncompleteMessage, NavGenericMsg, N2K_MSG, N0183_MSG
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -100,6 +99,7 @@ class NMEA0183ToNMEA2000Converter:
         self._message_stack = []
 
     def convert(self, msg: NMEA0183Msg):
+        assert msg.type == N0183_MSG
         _logger.debug("NMEA0183 Converter input message:%s" % msg)
         formatter = msg.formatter().decode()
         try:

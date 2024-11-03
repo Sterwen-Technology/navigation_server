@@ -5,14 +5,18 @@ description = ""
 authors = ["laurent <laurent.carre@sterwen-technology.eu>"]
 readme = "README.md"
 packages = [
-    {include = "src"}
+    {include = "src"},
+]
+include = [
+    {path = "def", format = ["sdist", "wheel"] },
+    {path = "conf", format = ["sdist", "wheel"] }
 ]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.12"
 pyserial = "^3.5"
-protobuf = "^4.0.0"
-grpcio = "^1.62.1"
+protobuf = "5.27.2"
+grpcio = "1.66.1"
 pyyaml = "^6.0.1"
 python-can = "^4.0"
 

@@ -22,12 +22,28 @@ A sample GUI application for the control of the various server is also available
 
 
 ## Installation
-The project is entirely written in Python 3 and has been tested with Python 3.7 - 3.11. It is intended to run on Linux based system. Is has been tested on Debian, Yocto and Ubuntu.
+The project is entirely written in Python 3 and has been tested with Python 3.7 - 3.12. It is intended to run on Linux based system. Is has been tested on Debian, Yocto and Ubuntu.
 Installation on Windows 10 or 11 is working with some limitations on TCP sockets and no support on Direct CAN connection.
 
-Current installation is based on a tar file or clone of the git repo. The tar file (**navigation.tar**) is in the head directory of the git repo. Just extract in the directory where you want to run the system.
-Then you can install all the required packages: `pip install -r requirements.txt`
-It is recommended to set up a Python virtual environment before the installation.
+Current installation is based on a tar file or clone of the git repo. 
+The tar file (**navigationVXXX.tar**) is in the **dist** directory of the git repo. Select a version (in many case only the one corresponding the branch is available)
+Create the directory where you want to locate the package and extract the tar
+Then you can install all the required packages: `pip install -r requirements.txt`.
+It is recommended (not to say mandatory) to set up a Python virtual environment before the installation, but in that case you will not be able to run the system via systemd. The support of virtual environments is planned in future releases.
+In that case, the best solution is to use 'apt' instead of 'pip' to install system-wide packages to easily run the servers with systemd
+
+### Running automatically with systemd
+In the **system** directory there are sample files to install several services to run the servers automatically. They can be reused, but you have to make sure that the files and locations are corresponding.
+The script *install_server* creates 4 services:
+- **navigation**: main navigation server for which the 
+- **navigation_agent**: host local agent to allow remote control
+- **energy**: energy management service (currently limited)
+- **navigation_data**: data server, currently mostly some custom processing
+
+So the script is to be customized as well as the service files in the *systemd* subdirectory to match actual installation.
+
+Another service is the **can** service that is initializing the CAN bus on boot. It is to be installed to avoid having to initialize manually the CAN upon boot. Again path to scripts is to be modified in the service file.
+
 
 ### Supported hosts hardware
  - ARM 32 bits systems: NXP iMX6 Dual or Quad core running Debian or Yocto; Raspberry Pi2
@@ -88,9 +104,9 @@ To overcome the problem a specific Python script has been developed (mod_pb2.py)
 For any problem encountered, please open an issue in this repository.
 
 ## Roadmap
-The current stable version is V2.06a. Documentation is aligned on this version.
+The current stable version is V2.1. Documentation is aligned on this version.
 
-The version 2.06a includes various corrections and Digital Yacht iKonvert improved support
+The version 2.1 includes various corrections and Digital Yacht iKonvert and Yachting Digital improved support
 
 
 ## Contributing
