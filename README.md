@@ -23,12 +23,13 @@ A sample GUI application for the control of the various server is also available
 
 ## Installation
 The project is entirely written in Python 3 and has been tested with Python 3.7 - 3.12. It is intended to run on Linux based system. Is has been tested on Debian, Yocto and Ubuntu.
+*note: from version 2.1.1 on Python version 3.12 is preferred*
 Installation on Windows 10 or 11 is working with some limitations on TCP sockets and no support on Direct CAN connection.
 
 Current installation is based on a tar file or clone of the git repo. 
 The tar file (**navigationVXXX.tar**) is in the **dist** directory of the git repo. Select a version (in many case only the one corresponding the branch is available)
 Create the directory where you want to locate the package and extract the tar
-Then you can install all the required packages: `pip install -r requirements.txt`.
+**new in version 2.1.1: dependency management is made by poetry and a python wheel is also available for installation**
 It is recommended (not to say mandatory) to set up a Python virtual environment before the installation, but in that case you will not be able to run the system via systemd. The support of virtual environments is planned in future releases.
 In that case, the best solution is to use 'apt' instead of 'pip' to install system-wide packages to easily run the servers with systemd
 

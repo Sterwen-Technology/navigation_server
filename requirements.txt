@@ -1,9 +1,0 @@
-grpcio>=1.48.0
-grpcio-tools~=1.44.0
-protobuf>=3.19.1
-pyserial~=3.5
-PyYAML~=6.0.2
-six>=1.16.0
-
-python-can~=4.2.2
-setuptools>=40.8.0
