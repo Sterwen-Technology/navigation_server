@@ -9,7 +9,8 @@ packages = [
 ]
 include = [
     {path = "def", format = ["sdist", "wheel"] },
-    {path = "conf", format = ["sdist", "wheel"] }
+    {path = "conf", format = ["sdist", "wheel"] },
+    {path = "system", format = ["sdist", "wheel"]}
 ]
 
 [tool.poetry.dependencies]

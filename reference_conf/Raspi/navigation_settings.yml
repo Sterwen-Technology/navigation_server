@@ -69,6 +69,7 @@ couplers:
     protocol: nmea2000
     nmea0183_convert: true
 
+
 - SerialCoupler:
     class: NMEASerialPort
     device: /dev/ttyS0
