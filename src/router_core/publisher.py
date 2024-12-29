@@ -30,9 +30,9 @@ class PublisherOverflow(Exception):
 
 
 class Publisher(NavThread):
-    '''
+    """
     Super class for all publishers
-    '''
+    """
     def __init__(self, opts, internal=False, couplers=None, name=None, filters=None):
         if internal:
             self._opts = None
@@ -86,10 +86,10 @@ class Publisher(NavThread):
             super().start()
 
     def publish(self, msg):
-        # print("Publisher %s publish msg:%s" % (self._name, msg.decode().strip('\n\r')))
-        # here we implement the filtering, no need to fill the queue with useless messages
-        # that is also implying that the filtering is processed in the Coupler thread
-        # print("Publisher %s publish msg:%s %s" % (self._name, msg, self._filters))
+        """
+        here we implement the filtering, no need to fill the queue with useless messages
+        that is also implying that the filtering is processed in the Coupler thread
+        """
         if self._filters is not None:
             _logger.debug("Publisher %s publish with filter msg:%s" % (self._name, msg))
             if self._filters.process_filter(msg, select_filter=self._filter_select):
@@ -170,10 +170,10 @@ class Publisher(NavThread):
 
 
 class ExternalPublisher(Publisher):
-    '''
+    """
     Abstract class for all Publishers that are created via the Yaml configuration file
     It add the management of filters
-    '''
+    """
 
     def __init__(self, opts):
         super().__init__(opts)

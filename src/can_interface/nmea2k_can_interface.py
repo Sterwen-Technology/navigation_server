@@ -40,11 +40,13 @@ class SocketCanReadInvalid(Exception):
     pass
 
 
-def check_can_device(link):
+def check_can_device(link: str):
     """
-
+    This method checks the readiness of the can channel (link)
+    link: name of the can channel to be checked
+    No return => raise SocketCanError if not present or not ready
     """
-    proc = subprocess.run('/sbin/ip link | grep %s' % link, shell=True, capture_output=True, text=True)
+    proc = subprocess.run(f'/sbin/ip link | grep {link}', shell=True, capture_output=True, text=True)
     lines = proc.stdout.split('\n')
     #  print(len(lines), lines)
     if len(lines) <= 1:
@@ -62,11 +64,11 @@ def check_can_device(link):
 
 class SocketCANInterface(NavThread):
     """
-
+    Manage a socket CAN interface including transport layer both ISO and Fast Packets
     """
     (BUS_NOT_CONNECTED, BUS_CONNECTED, BUS_READY, BUS_SENS_ALLOWED) = range(0, 4)
 
-    def __init__(self, channel, out_queue, trace=False):
+    def __init__(self, channel: str, out_queue, trace=False):
 
         try:
             check_can_device(channel)
@@ -78,15 +80,14 @@ class SocketCANInterface(NavThread):
         super().__init__(name="CAN-if-%s" % channel)
         self._channel = channel
         self._bus = None
-        self._queue = out_queue
+        self._queue = out_queue     # that is the queue used to push all message received towards application
         self._stop_flag = False
         # self._data_queue = None
         self._allowed_send = threading.Event()
         self._allowed_send.clear()
         self._bus_ready = threading.Event()
         self._bus_ready.clear()
-        self._in_queue = queue.Queue(30)
-        self._bus_queue = queue.Queue(50)
+        self._in_queue = queue.Queue(30)    # queue for outgoing messages to the bus (internal queue)
         self._fp_handler = FastPacketHandler(self)
         self._iso_tp_handler = IsoTransportHandler()
         self._total_msg_in = 0
@@ -168,8 +169,10 @@ class SocketCANInterface(NavThread):
         self._trace.trace_n2k_raw_can(date_ts, self._total_msg_in, direction, trace_str)
 
     def process_receive_msg(self, msg_recv: Message):
-        # sub-function to read the bus and perform Fast packet reassembly
-        # return a NMEA200Msg when a valid message as been received or reassembled
+        """
+        function to read the bus and perform Fast packet reassembly
+        push a NMEA200Msg when a valid message as been received or reassembled
+        """
 
         can_id = msg_recv.arbitration_id
         pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
@@ -223,6 +226,11 @@ class SocketCANInterface(NavThread):
                 time.sleep(0.02)
 
     def read_can(self) -> Message:
+        """
+        Perform the actual read on the CAN bus
+        return a Message (python-can)
+        raise SocketCanReadInvalid if any error occurs
+        """
         # if self._access_lock.acquire(timeout=0.5):
             # _logger.debug("Acquire read lock")
         try:
@@ -254,8 +262,10 @@ class SocketCANInterface(NavThread):
         return can_id
 
     def nrun(self):
-
-        #  Run loop
+        """
+        CAN bus read loop
+        Ignore read errors
+        """
 
         while not self._stop_flag:
 
@@ -275,7 +285,10 @@ class SocketCANInterface(NavThread):
         self._bus.shutdown()
         _logger.info("CAN Interface %s stopped" % self.name)
 
-    def put_can_msg(self, can_id, data) -> bool:
+    def put_can_msg(self, can_id: int, data: bytearray) -> bool:
+        """
+
+        """
         msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.time(), data=data)
         try:
             self._in_queue.put(msg, timeout=5.0)
@@ -289,11 +302,11 @@ class SocketCANInterface(NavThread):
         self._write_errors = 0
         return True
 
-    def send(self, n2k_msg: NMEA2000Msg, force_send=False):
+    def send(self, n2k_msg: NMEA2000Msg, force_send=False) -> bool:
 
         if not self._allowed_send.is_set() and not force_send:
             _logger.error("Trying to send messages on the CAN BUS while no address claimed")
-            return
+            return False
 
         can_id = self.build_arbitration_id(n2k_msg)
 
@@ -310,9 +323,9 @@ class SocketCANInterface(NavThread):
         return True
 
     def send_broadcast_with_iso_tp(self, msg: NMEA2000Msg):
-        '''
+        """
         Send a PGN with the J1939/21 Transport protocol
-        '''
+        """
         tp_transact, tpcm_msg = self._iso_tp_handler.new_output_transaction(msg)
         can_id = self.build_arbitration_id(tpcm_msg)
         # send the broadcast announcement
@@ -354,10 +367,11 @@ class SocketCANWriter(NavThread):
         return self._total_msg
 
     def nrun(self):
-        '''
+        """
+        CAN bus write loop
         Wait for messages to be sent on the queue and then send them to the CAN BUS
         Message pacing is implemented with a fixed timing of 5ms (to be improved)
-        '''
+        """
 
         #  Run loop
         last_write_time = time.monotonic()

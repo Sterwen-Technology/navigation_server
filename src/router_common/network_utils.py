@@ -17,7 +17,7 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 def get_mac(interface: str) -> str:
     try:
-        addr_file = "/sys/class/net/%s/address" % interface
+        addr_file = f"/sys/class/net/{interface}/address"
         fd = open(addr_file)
     except IOError as e:
         _logger.error(str(e))

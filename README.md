@@ -50,7 +50,7 @@ Another service is the **can** service that is initializing the CAN bus on boot.
  - ARM 32 bits systems: NXP iMX6 Dual or Quad core running Debian or Yocto; Raspberry Pi2
  - ARM 64 bits systems: RPi3 or 4 (1GB RAM is enough), NXP iMX8 running Debian or Yocto
  - AMD64 systems: Running Ubuntu or Debian
- - AMD64 systems with Windows 10: partial support only.
+ - AMD64 systems with Windows 10 or 11: partial support only.
 
 ### Supported BUS and instrumentation interfaces
  - Shipmodul Miniplex3 using IP host interface (NMEA0183 and NMEA2000)

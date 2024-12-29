@@ -61,22 +61,26 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
     def close(self):
         pass
 
-    def total_msg_raw(self):
+    def total_msg_raw(self) -> int:
         return self._controller.CAN_interface.total_msg_raw()
 
     def receive_data_msg(self, msg: NMEA2000Msg):
+        """
+        This method is called when a full NMEA2000 message is received
+        Overload from NMEA2000Application
+        """
         try:
             self._in_queue.put(msg, block=False)
         except queue.Full:
-            _logger.error("CAN %s queue full - discarding message" % self.object_name())
+            _logger.error(f"CAN Coupler {self.object_name()} receive queue full - discarding message with PGN {msg.pgn}")
 
-    def read(self):
-        '''
+    def read(self) -> NavGenericMsg:
+        """
         the read method is redefined as it is much simplified in that case
         only NMEA2000 message and iso/data already sorted out
         now it is a generator that is emptying the queue
-        '''
-        def process_msg(m):
+        """
+        def process_msg(m) -> NavGenericMsg:
             _logger.debug("Direct CAN read %s" % m.format1())
             gen_msg = NavGenericMsg(N2K_MSG, msg=m)
             self.trace(self.TRACE_IN, gen_msg)
@@ -99,6 +103,9 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
         return None
 
     def send_msg_gen(self, msg: NavGenericMsg):
+        """
+        Send a NMEA2000 message on the CAN bus
+        """
         if msg.type != N2K_MSG:
             raise CouplerWriteError("CAN coupler only accepts NMEA2000 messages")
 
@@ -109,6 +116,9 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
         return self.send(msg.msg)
 
     def send(self, msg: NMEA2000Msg):
+        """
+        Send the NMEA2000 message to the bus interface
+        """
         return self._controller.CAN_interface.send(msg)
 
     def stop_trace(self):

@@ -16,8 +16,6 @@ from google.protobuf.json_format import MessageToJson
 import base64
 import struct
 
-# from nmea2000.nmea2k_pgndefs import *
-# from nmea2000.nmea2k_encode_decode import BitField
 
 from generated.nmea2000_pb2 import nmea2000pb
 from router_common import NavGenericMsg, N2K_MSG, N2KDecodeException, NULL_MSG, N2KUnknownPGN
@@ -38,7 +36,9 @@ class N2KEncodeError(Exception):
 
 
 class NMEA2000Msg:
-
+    """
+    Internal support for NMEA2000 messages with non-decoded payload
+    """
     __slots__ = ('_pgn', '_prio', '_sa', '_da', '_is_iso', '_ts', '_fast_packet', '_payload')
 
     ts_format = "%H:%M:%S.%f"
@@ -47,8 +47,22 @@ class NMEA2000Msg:
 
     def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytearray = None, timestamp=0.0,
                  protobuf=None):
+        """
+
+        :pgn: message PGN Parameter Group Number
+        :prio: message priority (1-7)
+        :sa: source address
+        :da: destination address
+        :payload: bytearray with the message data. None if the instance is built from Protobuf
+        :timestamp: timestamp of the message if it needs to be set or adjusted otherwise original timestamp is retained
+        :protobuf: Protobuf object (instance of nmea2000pb)
+        raise ValueError if both payload and protobuf are None
+        """
         self._pgn = pgn
         if protobuf is None:
+            if payload is None:
+                _logger.error("Cannot build NMEA2000Msg with no payload and no protobuf")
+                raise ValueError
             self._prio = prio
             self._sa = sa
             self._da = da
@@ -143,9 +157,9 @@ class NMEA2000Msg:
             return self.format2()
 
     def format1(self):
-        '''
+        """
         Generate a string to display the message with PGN name
-        '''
+        """
         try:
             pgn_def = find_pgn(self._pgn)
             name = pgn_def.name
@@ -160,9 +174,9 @@ class NMEA2000Msg:
                                                                      self._fast_packet, self._payload.hex())
 
     def format2(self):
-        '''
+        """
         Generate a string to display the message with PGN number
-        '''
+        """
         if self._payload is None:
             payload = " "
         else:
@@ -174,7 +188,9 @@ class NMEA2000Msg:
         return f"PGN{self._pgn}|SA{self.sa}|DA{self.da}"
 
     def as_protobuf(self, res: nmea2000pb):
-
+        """
+        Fill the protobuf object with the data of the NMEA2000Msg instance
+        """
         res.pgn = self._pgn
         res.priority = self._prio
         res.sa = self._sa
@@ -215,7 +231,7 @@ class NMEA2000Msg:
             _logger.error("%s ignoring" % str(e))
             return None
 
-    def asPDGY(self):
+    def asPDGY(self) -> bytes:
         try:
             msg_data = b'!PDGY,%d,%1d,%d,%d,%d,%s\r\n' % (self._pgn, self._prio, self._sa, self._da, self._ts,
                                                       base64.b64encode(self._payload))
@@ -224,17 +240,17 @@ class NMEA2000Msg:
             raise N2KEncodeError
         return msg_data
 
-    def asPGNST(self):
+    def asPGNST(self) -> bytes:
         msg_data = b'!PGNST,%d,%1d,%d,%d,%s\r\n' % (self._pgn, self._prio, self._sa, self._ts, self._payload.hex())
         return msg_data
 
     def get_manufacturer(self) -> int:
-        '''
+        """
         Read the manufacturer code in the payload. It is assumed that the message includes the Mfg Code
-        No checj here on message type
+        No check here on message PGN
         :return:
         manufacturer code on int (11bits)
-        '''
+        """
         mfg = self.struct_2b.unpack(self._payload[:2])[0] & (2**11 - 1)
         # print("PGN", self._pgn, "SA", self._sa, ":", self._payload.hex(), "mfg=", mfg, "%4X" % mfg)
         return mfg
@@ -283,12 +299,12 @@ def decodePGDY(msg: NMEA0183Msg) -> NMEA2000Msg:
 
 
 def fromPGDY(frame) -> NavGenericMsg:
-    '''
+    """
     Directly transform a PDGY NMEA0183 proprietary frame into a N2K internal message
     If this is not a PDGY message, then return that message without processing
     :param frame: bytearray with the NMEA0183 frame
     :return a NavGenericMsg:
-    '''
+    """
     msg = process_nmea0183_frame(frame, checksum=False)
     if msg.type == NULL_MSG:
         return msg
@@ -312,29 +328,38 @@ def fromPGNST(frame):
 
 
 class NMEA2000Writer(NavThread):
-    '''
+    """
     This class implements the buffered write on CAN interface
     It handles the conversion towards the actual interface protocol
     Queuing of messages and throughput management
+    For interfaces needed it NMEA2000 messages are broken down using Fast Packet protocol
+    """
 
-    '''
-
-    def __init__(self, instrument, max_throughput):
-        self._name = instrument.object_name() + '-Writer'
+    def __init__(self, coupler, max_throughput):
+        self._name = coupler.object_name() + '-Writer'
         _logger.info('Creating writer:%s' % self._name)
         super().__init__(name=self._name, daemon=True)
-        self._instrument = instrument
-        self._max_throughput = max_throughput
+        self._coupler = coupler
+        self._max_throughput = max_throughput # max throughput in msg/sec
         self._queue = queue.Queue(30)
         self._stop_flag = False
         self._interval = 1.0 / max_throughput
         self._last_msg_ts = time.monotonic()
 
     def send_n2k_msg(self, msg: NMEA2000Msg):
-        for msg in self._instrument.encode_nmea2000(msg):
-            self._queue.put(msg)
+        """
+        Convert the message to the coupler format and send it to the queue
+        """
+        for msg in self._coupler.encode_nmea2000(msg):
+            try:
+                self._queue.put(msg, timeout=1.0)
+            except queue.Full:
+                _logger.error(f"NMEA2000Writer {self._name} sending queue full")
 
     def nrun(self):
+        """
+        Actual sending loop with message pacing based on max throughput
+        """
         while not self._stop_flag:
             msg = self._queue.get()
             if msg.type == NULL_MSG:
@@ -346,8 +371,8 @@ class NMEA2000Writer(NavThread):
                 actual = time.monotonic()
             self._last_msg_ts = actual
             _logger.debug("N2K Writer %s sending:%s" % (self._name, msg.raw))
-            self._instrument.send(msg)
-            self._instrument.validate_n2k_frame(msg.raw)
+            self._coupler.send(msg)
+            self._coupler.validate_n2k_frame(msg.raw) # useful only for YDCoupler
         _logger.info("%s thread stops" % self._name)
 
     def stop(self):

@@ -27,24 +27,24 @@ class FastPacketException(Exception):
 
 
 class FastPacket:
-    '''
+    """
     This manage the reassembly for one NMEA2000 with payload > 8 bytes
     An instance is created each time a new sequence is detected
-    '''
+    """
 
     __slots__ = ('_key', '_source', '_seq', '_byte_length', '_length', '_pgn', '_frames', '_count', '_nbframes',
                  '_timestamp')
 
     @staticmethod
-    def compute_key(pgn, addr, seq):
-        '''
+    def compute_key(pgn, addr, seq) -> int:
+        """
         input:
         pgn: on 20 bits maximum (17 so far)
         addr: source address on 8 bits
         seq: sequence number of the fats packet super frame on 3 (max 4) bits
 
         Return the key on 32 bits
-        '''
+        """
         return pgn + (addr << 20) + (seq << 28)
 
     def __init__(self, pgn, addr, seq):
@@ -83,7 +83,7 @@ class FastPacket:
         self._count += 1
         self._length += len(frame) - 1
 
-    def check_complete(self):
+    def check_complete(self) -> bool:
         if self._nbframes == 0:
             return False
         if self._length >= self._byte_length or self._count >= self._nbframes:
@@ -91,7 +91,7 @@ class FastPacket:
         else:
             return False
 
-    def total_frame(self):
+    def total_frame(self) -> bytearray:
         result = bytearray(self._byte_length)
         start_idx = 0
         for i in range(0, self._nbframes):
@@ -109,11 +109,11 @@ class FastPacket:
         return result
 
     def check_validity(self) -> bool:
-        '''
+        """
         Check the validity of the current sequence to eliminate uncomplete sequences
         After a certain time
         :return:
-        '''
+        """
         if self._nbframes > 0:
             if time.time() - self._timestamp < (0.01 * self._nbframes):
                 return True
@@ -130,24 +130,24 @@ class FastPacket:
 
 class FastPacketHandler:
 
-    '''
+    """
     This class is linked to one Coupler instance and handle the reassembly of fast Packets payload
 
-    '''
+    """
 
     def __init__(self, instrument):
         self._sequences = {}
         self._instrument = instrument
         self._write_sequences = {}
 
-    def process_frame(self, pgn, addr, frame, trace=None):
+    def process_frame(self, pgn, addr, frame):
         seq = (frame[0] >> 5) & 7
         key = FastPacket.compute_key(pgn, addr, seq)
         handle = self._sequences.get(key, None)
         counter = frame[0] & 0x1f
         _logger.debug("Fast Packet ==> PGN %d addr %d seq %d frame %s" % (pgn, addr, seq, frame.hex()))
 
-        def allocate_handle():
+        def allocate_handle() -> FastPacket:
             l_handle = FastPacket(pgn, addr, seq)
             self._sequences[l_handle.key] = l_handle
             _logger.debug(
@@ -186,13 +186,13 @@ class FastPacketHandler:
         for key in to_be_removed:
             del self._sequences[key]
 
-    def split_message(self, pgn, data) -> bytearray:
-        '''
-        split the NMEA payload with length > 8 with Fast Packet structure
+    def split_message(self, pgn: int, data: bytearray) -> bytearray:
+        """
+        split the NMEA payload with Fast Packet structure
         :param pgn:
         :param data: NMEA 2000 payload
         :return: iterator over Fast Packet frames
-        '''
+        """
         nb_frames = ((len(data) - 6) / 7) + 1
         seq = self.allocate_seq(pgn)
         seq_en = seq << 5
@@ -222,7 +222,11 @@ class FastPacketHandler:
             counter += 1
         self.free_seq(pgn, seq)
 
-    def allocate_seq(self, pgn):
+    def allocate_seq(self, pgn: int) -> int:
+        """
+        Allocate a sequence number for a given PGN. Currently one sequence at a time for a given PGN
+        So seq is always 1
+        """
         seq = self._write_sequences.get(pgn, 0)
         if seq == 0:
             self._write_sequences[pgn] = 1

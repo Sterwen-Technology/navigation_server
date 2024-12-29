@@ -28,7 +28,10 @@ class NMEAInvalidFrame(Exception):
 
 
 class NMEA0183Msg(NavGenericMsg):
-
+    """
+    Class for handling NMEA0183 internally. This is an un-decoded form where all the data are still in the original
+    sentence format
+    """
     __slots__ = ('_checksum', '_datalen_s', '_ts', '_delimiter', '_address', '_datafields_s', '_proprietary')
 
     def __init__(self, data, checksum=True, timestamp=None):
@@ -101,12 +104,12 @@ class NMEA0183Msg(NavGenericMsg):
         return self._raw[self._datafields_s:self._datalen_s].split(b',')
 
     def as_protobuf(self, r: nmea0183pb, set_raw=False) -> nmea0183pb:
-        '''
+        """
         Initialize the protobuf with the content of the NMEA0183
         Two possibilities
         a: fully decoded message with all fields as string
         b: only the raw message + timestamp (set_raw=True)
-        '''
+        """
         r.timestamp = self._ts
         if set_raw:
             r.raw_message = bytes(self._raw)
@@ -132,6 +135,9 @@ class NMEA0183Msg(NavGenericMsg):
 
 
 class NMEA0183DecodedMsg(NavGenericMsg):
+    #
+    #   Warning this class shall not be used => delete/improve/replace TBD
+    #
 
     def __init__(self, talker: str, formatter: str, values: list, timestamp):
         self._talker = talker
@@ -160,12 +166,13 @@ class NMEA0183DecodedMsg(NavGenericMsg):
 
 
 def nmea0183msg_from_protobuf(pb_msg: nmea0183pb):
-    '''
+    """
     Convert the protobuf in NMEA0183 internal representation
-    '''
+    """
     if len(pb_msg.raw_message) > 0:
         return NMEA0183Msg(pb_msg.raw_message, pb_msg.timestamp)
     else:
+        # that is NOT working
         return NMEA0183DecodedMsg(pb_msg.talker, pb_msg.formatter, [x for x in pb_msg.values], pb_msg.timestamp)
 
 
@@ -238,7 +245,7 @@ class ZDA(NMEA0183Sentences):
 
     def __init__(self, timestamp=0):
         if timestamp == 0:
-            timestamp = datetime.datetime.utcnow()
+            timestamp = datetime.datetime.now(datetime.UTC)
 
         hms = timestamp.strftime("%H%M%S")
         cs = int(timestamp.microsecond / 1e4)

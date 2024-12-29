@@ -49,9 +49,11 @@ class CouplerOpenRefused(Exception):
 
 
 class Coupler(NavThread):
-    '''
+    """
     Base abstract class for all couplers
-    '''
+    parameters passed through opts
+
+    """
 
     (NOT_READY, OPEN, CONNECTED, ACTIVE) = range(4)
     (BIDIRECTIONAL, READ_ONLY, WRITE_ONLY) = range(10, 13)
@@ -209,17 +211,17 @@ class Coupler(NavThread):
         self._autostart = True
 
     def restart(self):
-        '''
+        """
         To be redefined in subclasses that need to perform actions when the coupler is re-created and restarted
         Otherwise do nothing
-        '''
+        """
         pass
 
     def define_n2k_writer(self):
-        '''
+        """
         To be redefined in subclasses when the standard writer does not fit
         :return: an instance of a class implementing 'send_n2k_msg'
-        '''
+        """
         writer = NMEA2000Writer(self, 50)
         writer.start()
         return writer
@@ -230,6 +232,9 @@ class Coupler(NavThread):
             self._n2k_writer.stop()
 
     def nrun(self):
+        """
+        Coupler data read loop
+        """
         self._has_run = True
         # now resolve internal references
         if self._n2k_ctlr_name is not None:
@@ -238,7 +243,6 @@ class Coupler(NavThread):
                 self._n2k_controller.set_coupler(self)
             except KeyError:
                 pass
-        # self._data_sink = self.resolve_ref(self._data_sink_name, "Data sink")
 
         self._startTS = time.time()
         self.start_timer()
@@ -266,6 +270,7 @@ class Coupler(NavThread):
                         nb_attempts = 0
                 except CouplerOpenRefused:
                     _logger.critical("Fatal exception on coupler %s" % self._name)
+                    # the coupler thread will stop
                     break
 
             #  write only section
@@ -326,8 +331,10 @@ class Coupler(NavThread):
             _logger.warning("Removing non attached publisher %s" % pub.descr())
             pass
 
-    def publish(self, msg):
-        # print("Publishing on %d publishers" % len(self._publishers))
+    def publish(self, msg: NavGenericMsg):
+        """
+        Publish the incoming message on all publishers attached to the coupler
+        """
         fault = False
         for p in self._publishers:
             try:
@@ -340,12 +347,13 @@ class Coupler(NavThread):
                 faulty_pub.append(p)
 
         if fault:
+            # there some faulty publishers to be removed
             for p in faulty_pub:
                 self._publishers.remove(p)
             if len(self._publishers) == 0:
                 _logger.error("Coupler %s as no publisher" % self._name)
 
-    def send_msg_gen(self, msg: NavGenericMsg):
+    def send_msg_gen(self, msg: NavGenericMsg) -> bool:
         # first need to check if the coupler is ready to send a message 24-05-18
         if self._state < self.OPEN:
             # ok not ready
@@ -444,8 +452,15 @@ class Coupler(NavThread):
     def is_suspended(self) -> bool:
         return self._suspend_flag
 
-    def read(self):
+    def read(self) -> NavGenericMsg:
+        """
+        Generic Read function with specific intercept
+        NMEA2000 protocol messages are redirected towards the NMEA2000 Controller
+        NMEA0183 message that can be converted to NMEA2000 if behavior is selected
+        :return: NMEA message to be pushed
+        """
         fetch_next = True
+        msg = None
         while fetch_next:
             msg = self._read()
             self.trace(NMEAMsgTrace.TRACE_IN, msg)
@@ -474,13 +489,18 @@ class Coupler(NavThread):
         yield msg
 
     def _read(self) -> NavGenericMsg:
-        '''
+        """
         This method only perform a basic read function without any filtering / processing
         :return: a NMEA message (either NMEA0183 or NMEA2000)
-        '''
+        Must be implemented in all subclasses
+        """
         raise NotImplementedError("Method _read To be implemented in subclass")
 
     def open(self) -> bool:
+        """
+        Open the communication channel for the coupler
+        :return: True if the channel is open and ready to communicate, False otherwise
+        """
         raise NotImplementedError("To be implemented in subclass")
 
     def close(self):
@@ -540,11 +560,11 @@ class Coupler(NavThread):
         raise NotImplementedError("To be implemented in subclass")
 
     def check_ctlr_msg(self, msg) -> bool:
-        '''
+        """
         Check if the message is a service message for the NMEA2000 controller
         :param msg:
         :return: True if the message is directed to the NMEA2000 controller
-        '''
+        """
 
         if self._n2k_controller is not None:
             n2kmsg = msg.msg

@@ -88,16 +88,17 @@ class ShipModulInterface(BufferedIPCoupler):
             return m0183
 
     def shipmodul_process_frame(self, frame):
-        '''
+        """
         Extract tag header when present
         :param frame:
         :return: NMEA0183Msg
-        '''
+        """
         if frame[0] == 4:
             # EOT
             return NavGenericMsg(NULL_MSG)
         self._total_msg_raw += 1
         if self._check_in_progress:
+            # the frame with the software version is expected
             if frame[:self.version_fmt_l] == self.version_fmt:
                 _logger.info("Check connection answer: %s" % frame)
                 self._check_ok = True
@@ -111,10 +112,10 @@ class ShipModulInterface(BufferedIPCoupler):
         return msg
 
     def check_connection(self):
-        '''
+        """
         Send a version message to check the connectivity when no activity
         :return:
-        '''
+        """
         if self._check_in_progress:
             if not self._check_ok:
                 _logger.error("Shipmodul no answer on version request")
@@ -156,14 +157,14 @@ class ShipModulInterface(BufferedIPCoupler):
 
     @staticmethod
     def mxpgn_decode(coupler, m0183: NMEA0183Msg) -> NavGenericMsg:
-        '''
+        """
         Decode a NMEA0183 message encapsulating NMEA2000 in Shipmodul Miniplex format
         :param coupler: The actual coupler
-        :param m0183: The NMEA0183 message from the Miniplex
-        :return:
+        :param m0183: The NMEA0183 message from the Miniplex with $MXPGN format
+        :return: msg: NavGenericMsg containing a NMEA2000 message
         A generic message encapsulating a NMEA2000 message
-        Raise Value Error if the message is incomplete (Fast Packet)
-        '''
+        Raise IncompleteMessage if the message is incomplete (Fast Packet)
+        """
         fields = m0183.fields()
         pgn = int(fields[0], 16)
         attribute = int(fields[1], 16)
