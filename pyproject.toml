@@ -1,9 +1,11 @@
-[tool.poetry]
+[project]
 name = "navigation-server"
-version = "2.1.1"
+package-mode = false
+version = "2.2.0"
 description = "Navigation Server Full Install"
-authors = ["laurent <laurent.carre@sterwen-technology.eu>"]
+authors = [{name="Laurent Carré", email="<laurent.carre@sterwen-technology.eu>"}]
 readme = "README.md"
+requires-python = "^3.12"
 packages = [
     {include = "src"},
 ]
@@ -13,15 +15,16 @@ include = [
     {path = "system", format = ["sdist", "wheel"]}
 ]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-pyserial = "^3.5"
-protobuf = "~5.27.2"
-grpcio = "~1.66.1"
-pyyaml = "^6.0.1"
-python-can = "^4.0"
+dependencies = [
+    "pyserial>=3.5",
+    "protobuf==5.27.2",
+    "grpcio==1.66.1",
+    "pyyaml>=6.0.1",
+    "python-can>=4.0",
+    "gpiod>=2.0"
+]
 
-[tool.poetry.scripts]
+[project.scripts]
 navigation_server = "navigation-server.server_main:main"
 code_generator = "navigation-server.code_generator:main"
 

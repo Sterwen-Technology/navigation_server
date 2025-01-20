@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -20,8 +20,8 @@ from router_common import MessageServerGlobals
 from router_common import init_options
 
 
-MessageServerGlobals.version = "2.1"
-default_base_dir = "/mnt/meaban/Sterwen-Tech-SW/navigation_server"
+MessageServerGlobals.version = "2.2"
+default_base_dir = "/"
 _logger = logging.getLogger("ShipDataServer.main")
 
 
@@ -31,7 +31,7 @@ def main():
     options:
     --settings: filename of the specific configuration file of the server/service
     --working_dir: working directory for the service, practically this shall be the head directory of the
-                   navigation_server software
+                   navigation-server software
     """
     # initialise command line arguments
     opts = init_options(default_base_dir)

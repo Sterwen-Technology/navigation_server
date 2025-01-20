@@ -1,0 +1,6 @@
+#!/bin/bash
+# Run a test command as sudo
+source ../.navigationenv
+export PYTHONPATH="$NAVIGATION_HOME/src"
+"$PYTHON" $*
+

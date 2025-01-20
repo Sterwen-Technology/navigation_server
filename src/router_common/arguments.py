@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     26/02/2024
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -33,9 +33,7 @@ def init_options(default_base_dir: str, parser_def=_parser):
     opts = parser.parse_args()
     if opts.working_dir is not None:
         os.chdir(opts.working_dir)
-    else:
-        if os.getcwd() != default_base_dir:
-            os.chdir(default_base_dir)
+        # new in version 2.2 keep the current dir if no working dir argument
     return opts
 
 

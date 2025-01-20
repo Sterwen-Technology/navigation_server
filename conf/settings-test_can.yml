@@ -25,7 +25,7 @@ log_module:
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
   can_interface.nmea2k_can_coupler: INFO
-  nmea2000_devices.nmea2000_device: INFO
+  nmea2000_devices.nmea2000_device: DEBUG
 
 features:
   - router_core
@@ -56,7 +56,8 @@ servers:
 - NMEANetwork:
       class: NMEA2KActiveController
       trace: false
-      channel: can0
+      mac_source: end0
+      channel: can1
       max_silent: 60.0
       applications: [CANCoupler, APEmulator]
 
@@ -82,7 +83,7 @@ publishers:
     class: N2KStatisticPublisher
     couplers: [CANCoupler]
     # filters: [NMEAOutput, AIS]
-    active: false
+    active: true
     flexible_decode: false
 
 applications:

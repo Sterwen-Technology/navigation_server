@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     08/01/2022 - new version with features 20/03/2024
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -213,10 +213,12 @@ class NavigationConfiguration:
     def build_configuration(self, settings_file):
 
         MessageServerGlobals.global_variables = self
+        print(settings_file)
         try:
             fp = open(settings_file, 'r')
-        except IOError as e:
+        except (IOError, FileNotFoundError) as e:
             _logger.error("Settings file %s error %s" % (settings_file, e))
+            _logger.error(f"Current directory is {os.getcwd()}")
             raise
         try:
             self._configuration = yaml.load(fp, yaml.FullLoader)
