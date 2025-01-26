@@ -6,7 +6,7 @@ import warnings
 import generated.navigation_data_pb2 as navigation__data__pb2
 
 
-GRPC_GENERATED_VERSION = '1.70.0'
+GRPC_GENERATED_VERSION = '1.66.2'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 

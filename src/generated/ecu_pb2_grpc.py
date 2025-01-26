@@ -7,7 +7,7 @@ import generated.ecu_pb2 as ecu__pb2
 
 import nmea2000_pb2 as nmea2000__pb2
 
-GRPC_GENERATED_VERSION = '1.70.0'
+GRPC_GENERATED_VERSION = '1.66.2'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
