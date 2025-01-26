@@ -214,12 +214,16 @@ class NavigationConfiguration:
         self._main = None
         self._main_server = None
         self._settings_file = None
+        self._server_purpose = None
         NavigationConfiguration._instance = self
         MessageServerGlobals.configuration = self
         self.init_server_globals()
 
     def build_configuration(self, settings_file):
-
+        """
+        Build the full server configuration from the Yaml settings file
+        raise Exceptions if the configuration fails
+        """
         MessageServerGlobals.global_variables = self
         # print(settings_file)
         try:
@@ -251,6 +255,7 @@ class NavigationConfiguration:
             server_purpose = 'Unknown'
             self._configuration['function'] = 'Unknown (missing "function" keyword)'
         _logger.info(f"Server function {server_purpose}")
+        self._server_purpose = server_purpose
         try:
             data_directory = self._configuration['data_dir']
         except KeyError:
@@ -362,6 +367,14 @@ class NavigationConfiguration:
     @property
     def main_server(self):
         return self._main_server
+
+    @property
+    def settings_file(self) -> str:
+        return self._settings_file
+
+    @property
+    def server_purpose(self) -> str:
+        return self._server_purpose
 
     def add_class(self, class_object):
         self._class_dict[class_object.__name__] = class_object

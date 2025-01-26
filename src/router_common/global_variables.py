@@ -23,7 +23,7 @@ class MessageServerGlobals:
     version = None
     configuration = None
     global_variables = None
-    server_name = None
+    server_name: str = None
     data_dir = None
     thread_controller = None
     profiling_controller = None

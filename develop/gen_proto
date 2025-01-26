@@ -8,11 +8,12 @@ fi
 
 input_dir="$NAVIGATION_HOME/src/protobuf"
 output_dir="$NAVIGATION_HOME/src/generated"
+cd "$NAVIGATION_HOME/develop" || exit
 
 gen_protobuf() {
   echo "processing:$1"
   input_file=${input_dir}/"$1.proto"
-  python -m grpc_tools.protoc -I ./${input_dir} --python_out=./${output_dir} --grpc_python_out=./${output_dir} ${input_file}
+  python -m grpc_tools.protoc -I ${input_dir} --python_out=${output_dir} --grpc_python_out=${output_dir} ${input_file}
   output_file=${output_dir}/"$1_pb2_grpc.py"
   if [ -e ${output_file} ]
   then
