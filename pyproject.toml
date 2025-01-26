@@ -6,9 +6,7 @@ description = "Navigation Server Full Install"
 authors = [{name="Laurent Carré", email="<laurent.carre@sterwen-technology.eu>"}]
 readme = "README.md"
 requires-python = "^3.12"
-packages = [
-    {include = "src"},
-]
+
 include = [
     {path = "def", format = ["sdist", "wheel"] },
     {path = "conf", format = ["sdist", "wheel"] },
@@ -27,6 +25,12 @@ dependencies = [
 [project.scripts]
 navigation_server = "navigation-server.server_main:main"
 code_generator = "navigation-server.code_generator:main"
+
+[tool.poetry]
+packages = [
+    {include = "src"},
+]
+
 
 [build-system]
 requires = ["poetry-core"]

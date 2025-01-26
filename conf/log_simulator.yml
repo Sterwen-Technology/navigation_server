@@ -1,11 +1,11 @@
 #-------------------------------------------------------------------------------
-# Name:        settings.yml
+# Name:        log_simulator.yml
 # Purpose:     Settings file for the navigation server
 #
 # Author:      Laurent Carré
 #
 # Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 function: Log replay server

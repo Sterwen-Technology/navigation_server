@@ -105,8 +105,14 @@ class Parameters:
 
 
 class Feature:
+    """
+    The Feature class loads a software feature (a Python package)
+    """
 
-    def __init__(self, name,  package, configuration, package_items):
+    def __init__(self, name: str,  package, configuration, package_items):
+        """
+
+        """
         self._name = name
         self._package = package
         self._configuration = configuration
@@ -161,6 +167,7 @@ class NavigationServerObject:
         return self._object
 
     def build_object(self):
+
         if self._class is None:
             try:
                 self._class = NavigationConfiguration.get_conf().get_class(self._class_name)
@@ -206,6 +213,7 @@ class NavigationConfiguration:
         self._hooks = {}
         self._main = None
         self._main_server = None
+        self._settings_file = None
         NavigationConfiguration._instance = self
         MessageServerGlobals.configuration = self
         self.init_server_globals()
@@ -213,7 +221,7 @@ class NavigationConfiguration:
     def build_configuration(self, settings_file):
 
         MessageServerGlobals.global_variables = self
-        print(settings_file)
+        # print(settings_file)
         try:
             fp = open(settings_file, 'r')
         except (IOError, FileNotFoundError) as e:
@@ -307,6 +315,7 @@ class NavigationConfiguration:
         if profiler_conf is not None:
             MessageServerGlobals.profiling_controller.configure(self, profiler_conf)
         _logger.info("Finished analyzing settings file:%s " % settings_file)
+        self._settings_file = settings_file
         return self
 
     @staticmethod
