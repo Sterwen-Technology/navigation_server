@@ -15,7 +15,7 @@ from generated.console_pb2_grpc import *
 from socket import gethostname
 import logging
 
-from router_common import MessageServerGlobals
+from router_common import MessageServerGlobals, get_global_var
 from router_common import GrpcService
 # from nmea2000.nmea2k_controller import NMEA2000Device
 from router_common import protob_to_dict, dict_to_protob
@@ -111,11 +111,15 @@ class ConsoleServicer(NavigationConsoleServicer):
         _logger.debug("Console server status ")
         resp = NavigationServerMsg(id=request.id)
         server = self._console.main_server()
-        resp.name = server.name
+        resp.name = MessageServerGlobals.server_name
         resp.version = server.version()
         resp.start_time = server.start_time_str()
         resp.state = State.RUNNING
+        # some information are independent of the main server
         resp.hostname = gethostname()
+        resp.purpose = MessageServerGlobals.configuration.server_purpose
+        resp.settings = MessageServerGlobals.configuration.settings_file
+
         for sr in self._console.get_servers():
             _logger.debug("server record %s" % sr.name)
             sub_serv = Server()
