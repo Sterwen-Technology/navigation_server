@@ -68,7 +68,7 @@ class SocketCANInterface(NavThread):
     """
     (BUS_NOT_CONNECTED, BUS_CONNECTED, BUS_READY, BUS_SENS_ALLOWED) = range(0, 4)
 
-    def __init__(self, channel: str, out_queue, trace=False):
+    def __init__(self, channel: str, out_queue: queue.Queue, trace=False):
 
         try:
             check_can_device(channel)
@@ -287,7 +287,7 @@ class SocketCANInterface(NavThread):
 
     def put_can_msg(self, can_id: int, data: bytearray) -> bool:
         """
-
+        Send a CAN message to the sending queue
         """
         msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.time(), data=data)
         try:
@@ -303,6 +303,10 @@ class SocketCANInterface(NavThread):
         return True
 
     def send(self, n2k_msg: NMEA2000Msg, force_send=False) -> bool:
+        """
+        Send a NMEA2000 message to the CAN bus
+        Message will be split if FastPacket and send to the sending queue
+        """
 
         if not self._allowed_send.is_set() and not force_send:
             _logger.error("Trying to send messages on the CAN BUS while no address claimed")
@@ -341,6 +345,8 @@ class SocketCANInterface(NavThread):
     def stop_trace(self):
         if self._trace is not None:
             self._trace.stop_trace()
+
+
 
 
 

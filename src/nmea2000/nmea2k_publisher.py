@@ -170,23 +170,33 @@ class N2KStatisticPublisher(ExternalPublisher):
 
 
 class N2KSourceDispatcher(ExternalPublisher):
-    '''
+    """
     That class is used to dispatch NMEA2000 messages towards subscribers based on the PGN
     It can work in 3 modes:
     transparent mode: assuming CAN message in - can message out - no Fast Packet processing
     message mode: fast packet reassembly is performed
     decoded mode: message is fully decoded according to SA
-    '''
+    """
 
     def __init__(self, opts):
         super().__init__(opts)
         self._mode = opts.get_choice('mode',['transparent', 'message', 'decoded'], 'message')
         self._process_msg = {'transparent': self._transparent, 'message': self._message, 'decoded': self._decoded}[self._mode]
         self._subscribers = {}
+        self._direct_vector = None
 
     def subscribe(self, source, vector):
+        if source == 255:
+            # all messages are routed no vector per PGN
+            self._subscribers = None
+            self._direct_vector = vector
+            self._process_msg = self._direct_transparent
+            return
+        if self._subscribers is None:
+            _logger.error(f"N2KDispatcher in ALL source mode source {source} ignored")
+            return
         if source in self._subscribers:
-            _logger.error("N2KDispatcher duplicate source %d subscription => ignored" % source)
+            _logger.error(f"N2KDispatcher duplicate source {source} subscription => ignored")
             return
         self._subscribers[source] = vector
 
@@ -194,11 +204,11 @@ class N2KSourceDispatcher(ExternalPublisher):
         return self._process_msg(msg)
 
     def _transparent(self, msg: NavGenericMsg):
-        '''
+        """
         Transparent processing for the CAN Frame
         Input is the hex str frame from the log file
         Only SA is extracted, then the can_id and data are sent to the subscriber
-        '''
+        """
         frame = msg.raw
         try:
             can_id = int(frame[:8], 16)
@@ -213,6 +223,19 @@ class N2KSourceDispatcher(ExternalPublisher):
         except KeyError:
             _logger.debug("N2KDispatcher => no subscriber for source %d" % source)
         return True
+
+    def _direct_transparent(self, msg: NavGenericMsg):
+        """
+        All messages are forwarded for all sources
+        """
+        frame = msg.raw
+        try:
+            can_id = int(frame[:8], 16)
+            data = bytearray.fromhex(frame[9:])
+        except ValueError:
+            _logger.error("Log coupler => erroneous frame:%s" % frame)
+            return True
+        self._direct_vector(can_id, data)
 
     def _message(self, msg: NavGenericMsg):
         raise NotImplementedError

@@ -8,7 +8,8 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
-function: Log replay server to serial
+function: Log replay server to gRPC
+server_name: LogReplayServer
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 debug_configuration: false

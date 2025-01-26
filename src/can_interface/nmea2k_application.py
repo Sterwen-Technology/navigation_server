@@ -399,7 +399,7 @@ class DeviceReplaySimulator(NMEA2000Application):
         self._publisher.subscribe(self._source, self.input_message)
 
     def input_message(self, can_id, data):
-        # _logger.debug("DeviceReplaySimulator message %4X %s" % (can_id, data.hex()))
+        _logger.debug("DeviceReplaySimulator message %4X %s" % (can_id, data.hex()))
         if self._app_state != self.ACTIVE:
             _logger.warning(f"Application {self._name} not ready to take messages")
             return
