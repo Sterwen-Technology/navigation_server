@@ -26,12 +26,14 @@ The project is entirely written in Python 3 and has been tested with Python 3.7 
 *note: from version 2.1.1 on Python version 3.12 is preferred*
 Installation on Windows 10 or 11 is working with some limitations on TCP sockets and no support on Direct CAN connection.
 
-Current installation is based on a tar file or clone of the git repo. 
-The tar file (**navigationVXXX.tar**) is in the **dist** directory of the git repo. Select a version (in many case only the one corresponding the branch is available)
-Create the directory where you want to locate the package and extract the tar
-**new in version 2.1.1: dependency management is made by poetry and a python wheel is also available for installation**
-It is recommended (not to say mandatory) to set up a Python virtual environment before the installation, but in that case you will not be able to run the system via systemd. The support of virtual environments is planned in future releases.
-In that case, the best solution is to use 'apt' instead of 'pip' to install system-wide packages to easily run the servers with systemd
+### Installation from distribution
+
+The full application distribution can be found as tarball or python wheel on the [Sterwen Technloogy site](http://sterwen-technology.eu/).
+
+
+The simplest solution is to install the wheel using pip.
+
+
 
 ### Running automatically with systemd
 In the **system** directory there are sample files to install several services to run the servers automatically. They can be reused, but you have to make sure that the files and locations are corresponding.

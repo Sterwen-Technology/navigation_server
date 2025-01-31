@@ -16,7 +16,7 @@ debug_configuration: false
 
 
 log_module:
-  nmea2000.nmea2k_publisher: DEBUG
+  nmea2000.nmea2k_publisher: INFO
   router_core.coupler: INFO
   router_common.nav_threading: INFO
   router_common.configuration: INFO
@@ -44,6 +44,11 @@ servers:
 - Main:
     class: NavigationMainServer
 
+- NmeaServer:
+    class: NMEAServer
+    port: 4500
+    nmea2000: dyfmt
+
 - gRPCMain:
       class: GrpcServer
       port: 4502
@@ -51,8 +56,9 @@ servers:
 - NMEANetwork:
       class: NMEA2KActiveController
       channel: can0
+      mac_source: end0
       # applications: [STInput, GPS, AIS, Engine, Pressure, Pilot]
-      application: [ReplayAll]
+      applications: [ReplayAll]
 
 
 couplers:

@@ -13,9 +13,9 @@ import sys
 import os
 from argparse import ArgumentParser
 
-from router_core.nmea2000_msg import *
-from nmea2000_datamodel.nmea2k_pgndefs import *
-from nmea2000_datamodel.nmea2k_manufacturers import Manufacturers
+from navigation_server.router_core.nmea2000_msg import *
+from navigation_server.nmea2000_datamodel.nmea2k_pgndefs import *
+from navigation_server.nmea2000_datamodel.nmea2k_manufacturers import Manufacturers
 
 _logger = logging.getLogger("ShipDataServer")
 
