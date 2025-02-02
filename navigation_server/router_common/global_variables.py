@@ -41,13 +41,14 @@ def set_root_package(root_object):
     root_module=root_object.__module__
     dot = root_module.find(".")
     MessageServerGlobals.root_package = root_module[:dot]
-    source_file = inspect.getfile(root_object)
-    # print(source_file)
-    base_dir = os.path.dirname(source_file)
-    # print(base_dir)
-    home_dir = os.path.split(base_dir)
-    # print(home_dir[0])
-    MessageServerGlobals.home_dir = home_dir[0]
+    if os.getenv("NAVIGATION_HOME", None) is not None:
+        home = os.getenv("NAVIGATION_HOME")
+        MessageServerGlobals.home_dir = home
+    else:
+        source_file = inspect.getfile(root_object)
+        base_dir = os.path.dirname(source_file)
+        home_dir = os.path.split(base_dir)
+        MessageServerGlobals.home_dir = home_dir[0]
 
 
 def find_pgn(pgn: int, mfg_id: int = 0):

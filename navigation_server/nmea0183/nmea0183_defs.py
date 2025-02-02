@@ -91,7 +91,7 @@ class NMEA0183Field:
 
 
 def main():
-    tree = NMEA0183Definitions("../../def/N0183Defns.N0183Dfn.xml")
+    tree = NMEA0183Definitions("../../navigation_definitions/N0183Defns.N0183Dfn.xml")
     for s in tree.sentences():
         s.check_field_indexes()
 

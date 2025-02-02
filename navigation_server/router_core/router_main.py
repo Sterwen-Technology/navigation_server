@@ -59,7 +59,7 @@ class NavigationMainServer(GenericTopServer):
 
     def start(self) -> bool:
         '''
-        def start_publisher(pub):
+        navigation_definitions start_publisher(pub):
             for coupler in self._couplers:
                 coupler.register(pub)
             pub.start()

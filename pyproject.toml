@@ -21,14 +21,15 @@ dependencies = [
 ]
 
 [project.scripts]
-navigation_server = "navigation-server:server_main"
+navigation_server = "navigation-server.server_main:server_main"
 
 [tool.poetry]
 
 include = [
-    {path = "def", format = ["sdist", "wheel"] },
+    {path = "navigation_definitions", format = ["sdist", "wheel"] },
     {path = "conf", format = ["sdist"] },
-    {path = "system", format = ["sdist"] }
+    {path = "system", format = ["sdist"] },
+    "run_server", "run_server.py", "setrunenv"
 ]
 
 [build-system]

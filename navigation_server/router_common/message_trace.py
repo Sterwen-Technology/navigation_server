@@ -69,7 +69,7 @@ class NMEAMsgTrace:
             _logger.error("Coupler %s attempt closing inactive trace" % self._name)
 
     '''
-    def start_trace_raw(self):
+    navigation_definitions start_trace_raw(self):
         if not self.is_alive():
             _logger.error("Coupler %s attempt to start traces while not running")
             return

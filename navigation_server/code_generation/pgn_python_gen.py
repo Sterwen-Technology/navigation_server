@@ -44,7 +44,7 @@ class PythonPGNGenerator:
         # generate imports
         self.write("import struct\n")
         self.write("\nfrom navigation_server.router_common import N2KInvalidMessageException, get_global_enum\n")
-        self.write(f"from navigation_server.nmea2000.generated_base import *\n")
+        self.write(f"from navigation_server.nmea2000_datamodel import *\n")
         self.write("from navigation_server.generated.nmea2000_pb2 import nmea2000_decoded_pb\n")
         # self.write("from navigation_server.nmea2000.nmea2000_msg import NMEA2000Msg\n")
         # self._of.write("from navigation_server.router_common.global_variables import MessageServerGlobals\n")

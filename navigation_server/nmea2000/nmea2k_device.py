@@ -153,7 +153,7 @@ class NMEA2000Device:
         self._configuration_info = ConfigurationInformation(message=msg)
         _logger.debug("Received Configuration info for address %d: %s" % (self._address, self._configuration_info))
 
-    #def asDict(self):
+    #navigation_definitions asDict(self):
         # return {'address:': self._address, 'properties': self._properties}
 
     def changed(self) -> bool:

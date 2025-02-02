@@ -14,7 +14,7 @@ import logging
 import sys
 
 from navigation_server.router_common import (NavigationConfiguration, NavigationLogSystem, MessageServerGlobals,
-                                             init_options, set_root_package)
+                                             init_options, set_root_package, ConfigurationException, ObjectCreationError)
 
 MessageServerGlobals.version = "2.2"
 default_base_dir = "/"
@@ -39,13 +39,19 @@ def server_main():
     # set log for the configuration phase
     NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2024")
     # build the configuration from the file
-    config = NavigationConfiguration().build_configuration(opts.settings)
+    try:
+        config = NavigationConfiguration().build_configuration(opts.settings)
+    except (FileNotFoundError, IOError) as err:
+        return
     NavigationLogSystem.finalize_log(config)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     # dynamically import modules declared in the configuration file
     config.initialize_features(config)
     # create all server or service objects
-    config.build_objects()
+    try:
+        config.build_objects()
+    except (ConfigurationException, ObjectCreationError):
+        return
 
     if config.get_option('decode_definition_only', False):
         _logger.info("Decode only mode -> no active server")

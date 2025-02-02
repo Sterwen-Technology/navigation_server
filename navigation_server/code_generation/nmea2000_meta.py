@@ -13,9 +13,9 @@ import logging
 import struct
 
 
-from navigation_server.nmea2000 import NMEA2000DecodedMsg
 from navigation_server.nmea2000_datamodel import (FIXED_LENGTH_BYTES, FIXED_LENGTH_NUMBER, VARIABLE_LENGTH_BYTES, EnumField,
-                                                 REPEATED_FIELD_SET, Field, PGNDef, BitField, BitFieldDef)
+                                                 REPEATED_FIELD_SET, Field, PGNDef, BitField, BitFieldDef,
+                                                  NMEA2000DecodedMsg)
 from navigation_server.router_common import MessageServerGlobals, manufacturer_name, find_pgn
 
 

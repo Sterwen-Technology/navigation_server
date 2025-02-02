@@ -18,8 +18,6 @@ from navigation_server.generated.nmea_messages_pb2 import server_resp
 from navigation_server.router_core import NMEA2000Msg, nmea0183msg_from_protobuf
 from navigation_server.router_common import GrpcService, GrpcServerError
 from .nmea2k_decode_dispatch import get_n2k_object_from_protobuf, get_n2k_decoded_object
-from .generated_base import NMEA2000DecodedMsg
-
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 

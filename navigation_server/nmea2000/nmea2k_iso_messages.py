@@ -15,8 +15,7 @@ from collections import namedtuple
 
 from navigation_server.router_common import N2KUnknownPGN, find_pgn, NavGenericMsg, N2K_MSG
 from navigation_server.router_core import NMEA2000Msg
-from navigation_server.nmea2000_datamodel import NMEA2000Name, PGNDef
-from .generated_base import extract_var_str
+from navigation_server.nmea2000_datamodel import NMEA2000Name, PGNDef,extract_var_str
 from navigation_server.generated.nmea2000_classes_iso_gen import Pgn126996Class, Pgn126998Class, Pgn126993Class
 
 _logger = logging.getLogger("ShipDataServer." + __name__)

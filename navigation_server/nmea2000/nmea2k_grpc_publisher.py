@@ -15,7 +15,7 @@ import logging
 from navigation_server.router_core import ExternalPublisher, NMEA0183Msg, NMEA2000Msg, NMEAInvalidFrame
 from .nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
 from navigation_server.router_common import NavGenericMsg, N2K_MSG, N0183_MSG
-from .generated_base import NMEA2000DecodedMsg, N2K_DECODED
+from navigation_server.nmea2000_datamodel import NMEA2000DecodedMsg, N2K_DECODED
 from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter
 
 from navigation_server.generated.nmea_messages_pb2 import nmea_msg, server_cmd

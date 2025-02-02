@@ -114,8 +114,8 @@ def main():
     _logger.addHandler(loghandler)
     _logger.setLevel(opts.trace_level)
 
-    MessageServerGlobals.manufacturers = Manufacturers('../def/Manufacturers.N2kDfn.xml')
-    MessageServerGlobals.pgn_definitions = PGNDefinitions('../def/PGNDefns.N2kDfn.xml')
+    MessageServerGlobals.manufacturers = Manufacturers('../navigation_definitions/Manufacturers.N2kDfn.xml')
+    MessageServerGlobals.pgn_definitions = PGNDefinitions('../navigation_definitions/PGNDefns.N2kDfn.xml')
 
     # create stub
     if opts.server is not None:

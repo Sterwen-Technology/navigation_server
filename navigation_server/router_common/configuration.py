@@ -226,6 +226,9 @@ class NavigationConfiguration:
         """
         MessageServerGlobals.global_variables = self
         # print(settings_file)
+        if not os.path.exists(settings_file):
+            # we merge with the home dir
+            settings_file = os.path.join(MessageServerGlobals.home_dir, "conf", settings_file)
         try:
             fp = open(settings_file, 'r')
         except (IOError, FileNotFoundError) as e:

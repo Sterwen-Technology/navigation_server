@@ -21,7 +21,7 @@ gen_protobuf() {
   if [ -e ${output_file} ]
   then
     shift
-    python mod_pb2.py ${output_file} "$PACKAGE.generated" $*
+    python mod_pb2.py ${output_file} "$PACKAGE.generated" "$@"
   fi
 }
 
@@ -29,7 +29,7 @@ adjust_protobuf() {
   echo "adjusting:$1"
   process_file=${output_dir}/"$1_pb2.py"
   shift
-  python mod_pb2.py "${process_file}" "$PACKAGE.generated" $*
+  python mod_pb2.py "${process_file}" "$PACKAGE.generated" "$@"
 }
 
 gen_protobuf energy

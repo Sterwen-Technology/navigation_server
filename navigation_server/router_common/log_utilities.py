@@ -37,7 +37,8 @@ class NavigationLogSystem:
             return
         # print(modules)
         for module, level in modules.items():
-            mod_log = _logger.getChild(module)
+            module_full_name = f"{MessageServerGlobals.root_package}.{module}"
+            mod_log = _logger.getChild(module_full_name)
             # print(module, level, mod_log.level)
             if mod_log is not None:
                 mod_log.setLevel(level)
@@ -54,6 +55,10 @@ class NavigationLogSystem:
         _logger.setLevel('INFO')
         NavigationLogSystem.start_string = start_string
         _logger.info("Initializing log system")
+
+    @staticmethod
+    def log_start_string():
+        _logger.info(NavigationLogSystem.start_string)
 
     @staticmethod
     def finalize_log(config):

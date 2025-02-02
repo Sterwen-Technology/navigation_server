@@ -10,20 +10,17 @@
 #-------------------------------------------------------------------------------
 
 import datetime
-import time
 import os
-import io
 import sys
 import logging
 import threading
 
 from navigation_server.router_core import ExternalPublisher, NMEAInvalidFrame
-from .generated_base import FormattingOptions
+from navigation_server.nmea2000_datamodel import FormattingOptions
 from .nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
 from navigation_server.nmea_data import N2KStatistics, NMEA183Statistics
-# from navigation_server.router_common import *
 from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter
-from navigation_server.router_common import get_global_option, NavGenericMsg, N2K_MSG, find_pgn, N2KDecodeException, N0183_MSG, \
+from navigation_server.router_common import get_global_option, NavGenericMsg, N2K_MSG, N2KDecodeException, N0183_MSG, \
     N2KInvalidMessageException
 
 _logger = logging.getLogger("ShipDataServer" + "." + __name__)

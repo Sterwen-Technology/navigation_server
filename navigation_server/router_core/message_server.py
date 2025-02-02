@@ -138,7 +138,7 @@ class NMEAServer(NavTCPServer):
         else:
             _logger.warning("Client remove client lock acquire failed")
 
-    #def remove_sender(self):
+    #navigation_definitions remove_sender(self):
     #   self._sender = None
 
     def remove_coupler(self, coupler):

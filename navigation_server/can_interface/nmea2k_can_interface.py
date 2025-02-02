@@ -147,7 +147,7 @@ class SocketCANInterface(NavThread):
         return self._channel
 
 #   @property
-#  def access_lock(self):
+#  navigation_definitions access_lock(self):
 #     return self._access_lock
 
     def total_msg_raw(self):

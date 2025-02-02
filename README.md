@@ -26,6 +26,10 @@ The project is entirely written in Python 3 and has been tested with Python 3.7 
 *note: from version 2.1.1 on Python version 3.12 is preferred*
 Installation on Windows 10 or 11 is working with some limitations on TCP sockets and no support on Direct CAN connection.
 
+### Setting up the Python environment
+
+
+
 ### Installation from distribution
 
 The full application distribution can be found as tarball or python wheel on the [Sterwen Technloogy site](http://sterwen-technology.eu/).

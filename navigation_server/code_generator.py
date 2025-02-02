@@ -14,9 +14,9 @@ import os
 import logging
 from argparse import ArgumentParser
 
-from navigation_server.nmea2000_datamodel import Manufacturers
-from navigation_server.nmea2000_datamodel import PGNDefinitions
-from navigation_server.router_common.global_variables import MessageServerGlobals
+
+from navigation_server.nmea2000_datamodel import initialize_feature
+from navigation_server.router_common import set_root_package, init_options, NavigationLogSystem, N2KDefinitionError
 from navigation_server.code_generation import nmea2000_gen_meta, ProtobufPGNGenerator, PythonPGNGenerator
 
 _version = "V2.2"
@@ -37,39 +37,28 @@ def _parser():
     p.add_argument('-c', '--category', action='store', type=str, choices=['iso', 'data', 'all'],
                    default='all', help="generate a specific category (iso/data/all)")
     p.add_argument('-o', '--output', action='store', type=str, default=None, help="output file name without extension")
+    p.add_argument('-wd', '--working_dir', action='store', type=str, default=None)
 
     return p
 
 
-parser = _parser()
 _logger = logging.getLogger("ShipDataServer")
-
-
-class Options(object):
-    def __init__(self, p):
-        self.parser = p
-        self.options = None
-
-    def __getattr__(self, name):
-        if self.options is None:
-            self.options = self.parser.parse_args()
-        try:
-            return getattr(self.options, name)
-        except AttributeError:
-            raise AttributeError(name)
 
 
 def code_generator():
 
-    opts = parser.parse_args()
-    loghandler = logging.StreamHandler()
-    logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
-    loghandler.setFormatter(logformat)
-    _logger.addHandler(loghandler)
-    _logger.setLevel(logging.INFO)
+    opts = init_options(".", parser_def=_parser)
+    set_root_package(code_generator)
+    # set log for the configuration phase
+    NavigationLogSystem.create_log("NMEA2000 Code generator version %s - copyright Sterwen Technology 2021-2025" % _version)
+    NavigationLogSystem.log_start_string()
+    try:
+        _logger.setLevel(logging.ERROR)
+        initialize_feature()
+    except N2KDefinitionError as err:
+        _logger.error(f"Error reading NMEA2000 definition: {err}")
+        return
 
-    MessageServerGlobals.manufacturers = Manufacturers('./def/Manufacturers.N2kDfn.xml')
-    MessageServerGlobals.pgn_definitions = PGNDefinitions('./def/PGNDefns.N2kDfn.xml')
     if opts.pgn != 0:
         output_file_base = f"nmea2000_{opts.pgn}class_gen"
         _logger.setLevel(logging.DEBUG)
@@ -79,7 +68,7 @@ def code_generator():
             output_file_base = "nmea2000_classes_gen"
         else:
             output_file_base = opts.output
-
+    _logger.setLevel(logging.INFO)
     _logger.info("Generating NMEA2000 meta model")
     class_list = nmea2000_gen_meta(opts.category, pgn=opts.pgn)
     _logger.info(f"Generated meta model for {len(class_list)} PGN")

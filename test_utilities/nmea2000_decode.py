@@ -115,9 +115,9 @@ def main():
         print("Missing XML definitions")
         return
 
-    def_file = os.path.join("../def", opts.xml)
+    def_file = os.path.join("../navigation_definitions", opts.xml)
     print("analyzing file:", def_file)
-    Manufacturers.build_manufacturers(os.path.join("../def", "Manufacturers.N2kDfn.xml"))
+    Manufacturers.build_manufacturers(os.path.join("../navigation_definitions", "Manufacturers.N2kDfn.xml"))
     defs = PGNDefinitions.build_definitions(def_file)
     if opts.print == 'ALL':
         defs.print_summary()
