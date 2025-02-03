@@ -28,14 +28,16 @@ Installation on Windows 10 or 11 is working with some limitations on TCP sockets
 
 ### Setting up the Python environment
 
-
+Please refer to the specific documentation:
 
 ### Installation from distribution
 
 The full application distribution can be found as tarball or python wheel on the [Sterwen Technloogy site](http://sterwen-technology.eu/).
+For all details refer to the python environment document.
+
+#### Installation from wheel in virtual environment
 
 
-The simplest solution is to install the wheel using pip.
 
 
 
@@ -48,6 +50,8 @@ The script *install_server* creates 4 services:
 - **navigation_data**: data server, currently mostly some custom processing
 
 So the script is to be customized as well as the service files in the *systemd* subdirectory to match actual installation.
+
+**Warning: starting services in Python requires either to fully work without virtual environment or to be able to refer to the virtual environment from the service file**
 
 Another service is the **can** service that is initializing the CAN bus on boot. It is to be installed to avoid having to initialize manually the CAN upon boot. Again path to scripts is to be modified in the service file.
 

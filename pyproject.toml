@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-navigation_server = "navigation-server.server_main:server_main"
+navigation_server = "navigation_server:server_main"
 
 [tool.poetry]
 

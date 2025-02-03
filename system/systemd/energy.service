@@ -5,7 +5,7 @@ Requires=network.target
 [Service]
 Type=simple
 User=solidsense
-ExecStart=/usr/bin/python3  /data/solidsense/navigation/src/server_main.py --settings /data/solidsense/config/energy_management.yml -d /data/solidsense/navigation/
+ExecStart=/home/solidsense/navigation/run_server /home/solidsense/config/energy_management.yml
 Restart=on-failure
 RestartSec=6
 
