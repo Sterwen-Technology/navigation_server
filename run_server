@@ -13,6 +13,6 @@ else
 fi
 
 echo "running $PYTHON"
-${PYTHON} src/server_main.py --settings conf/"$1"
+${PYTHON} run_server.py --settings "$1"
 
 

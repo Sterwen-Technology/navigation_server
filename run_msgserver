@@ -1,3 +1,0 @@
-#!/bin/bash
-python3 src/navigation_message_server.py --settings /data/solidsense/config/navigation_settings.yml -d /data/solidsense/navigation
-

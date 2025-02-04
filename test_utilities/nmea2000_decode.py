@@ -13,9 +13,9 @@ import sys
 import os
 from argparse import ArgumentParser
 
-from router_core.nmea2000_msg import *
-from nmea2000_datamodel.nmea2k_pgndefs import *
-from nmea2000_datamodel.nmea2k_manufacturers import Manufacturers
+from navigation_server.router_core.nmea2000_msg import *
+from navigation_server.nmea2000_datamodel.nmea2k_pgndefs import *
+from navigation_server.nmea2000_datamodel.nmea2k_manufacturers import Manufacturers
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -115,9 +115,9 @@ def main():
         print("Missing XML definitions")
         return
 
-    def_file = os.path.join("../def", opts.xml)
+    def_file = os.path.join("../navigation_definitions", opts.xml)
     print("analyzing file:", def_file)
-    Manufacturers.build_manufacturers(os.path.join("../def", "Manufacturers.N2kDfn.xml"))
+    Manufacturers.build_manufacturers(os.path.join("../navigation_definitions", "Manufacturers.N2kDfn.xml"))
     defs = PGNDefinitions.build_definitions(def_file)
     if opts.print == 'ALL':
         defs.print_summary()

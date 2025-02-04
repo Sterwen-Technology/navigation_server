@@ -1,3 +1,64 @@
+<!-- TOC -->
+  * [Description](#description)
+    * [Servers](#servers)
+      * [NavigationMainServer class](#navigationmainserver-class)
+      * [GenericTopServer class](#generictopserver-class)
+      * [NMEAServer class](#nmeaserver-class)
+      * [NMEASenderServer class](#nmeasenderserver-class)
+      * [GrpcServer class](#grpcserver-class)
+      * [ShipModulConfig server](#shipmodulconfig-server)
+      * [NMEA2KController server](#nmea2kcontroller-server)
+      * [NMEA2KActiveController server](#nmea2kactivecontroller-server)
+    * [Couplers](#couplers)
+      * [Coupler generic parameters](#coupler-generic-parameters)
+      * [NMEASerialPort(Coupler)](#nmeaserialportcoupler)
+      * [IPCoupler(Coupler)](#ipcouplercoupler)
+      * [NMEATCPReader (IPCoupler)](#nmeatcpreader-ipcoupler)
+      * [ShipmodulInterface (IPCoupler)](#shipmodulinterface-ipcoupler)
+      * [YDCoupler (IPCoupler)](#ydcoupler-ipcoupler)
+      * [iKonvert(Coupler)](#ikonvertcoupler)
+      * [InternalGps (Coupler)](#internalgps-coupler)
+      * [VEDirectCoupler(Coupler)](#vedirectcouplercoupler)
+      * [DirectCANCoupler(Coupler)](#directcancouplercoupler)
+      * [GrpcNmeaCoupler(Coupler)](#grpcnmeacouplercoupler)
+    * [Services](#services)
+      * [Console service](#console-service)
+      * [AgentService](#agentservice)
+      * [DataDispatchService](#datadispatchservice)
+      * [Energy management service](#energy-management-service)
+        * [MPPTService](#mpptservice)
+    * [Publishers](#publishers)
+      * [Generic Publisher (Abstract class)](#generic-publisher-abstract-class)
+      * [GrpcPublisher](#grpcpublisher)
+      * [N2KJsonPublisher](#n2kjsonpublisher)
+      * [N2KTracePublisher](#n2ktracepublisher)
+      * [PrintPublisher](#printpublisher)
+      * [Injector (Publisher)](#injector-publisher)
+    * [N2KSourceDispatcher (Publisher)](#n2ksourcedispatcher-publisher)
+    * [Applications](#applications)
+      * [NMEA2000Application](#nmea2000application)
+      * [GrpcInputApplication(GrpcDataService, NMEA2000Application)](#grpcinputapplicationgrpcdataservice-nmea2000application)
+    * [Filters](#filters)
+    * [Filter classes](#filter-classes)
+      * [NMEAFilter](#nmeafilter)
+      * [NMEA0183filter (NMEAFilter)](#nmea0183filter-nmeafilter)
+      * [NMEA2000Filter (NMEAFilter)](#nmea2000filter-nmeafilter)
+      * [NMEA2000TimeFilter (NMEA2000Filter)](#nmea2000timefilter-nmea2000filter)
+  * [Tracing and replay](#tracing-and-replay)
+    * [RawLogCoupler (Coupler)](#rawlogcoupler-coupler)
+    * [TransparentCanLogCoupler (RawLogCoupler)](#transparentcanlogcoupler-rawlogcoupler)
+    * [DeviceReplaySimulator (NMEA2000Application)](#devicereplaysimulator-nmea2000application)
+  * [Organizing the processes](#organizing-the-processes)
+  * [Configuration files](#configuration-files)
+    * [Messages server configuration file](#messages-server-configuration-file)
+      * [Features concept and Python modules](#features-concept-and-python-modules)
+      * [Exemple configuration files](#exemple-configuration-files)
+      * [Profiling](#profiling)
+    * [Default port assignments for servers / services](#default-port-assignments-for-servers--services)
+  * [Implementation structure](#implementation-structure)
+    * [Root directory](#root-directory)
+    * [Launching a message server process](#launching-a-message-server-process)
+<!-- TOC -->
 ## Description
 The navigation server-router aggregate and distribute navigation and other operational data aboard recreational or small professional vessels.
 It is a focal point and server for all kind of data needed to control the course and operational condition of the boat.
@@ -279,7 +340,7 @@ This coupler is intended to be used by the energy management agent, rather than 
 
 #### DirectCANCoupler(Coupler)
 This coupler class works when a CAN bus interface with socketcan driver is installed on the system. Obviously, only NMEA2000 messages can be processed.
-The CAN bus the coupler must be declared as **application** with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters and the coupler is considered as a specific device (CA) on the CAN bus. 
+The CAN bus coupler must be declared as **application** with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters and the coupler is considered as a specific device (CA) on the CAN bus. 
 
 #### GrpcNmeaCoupler(Coupler)
 
@@ -445,17 +506,27 @@ Applications are functionally Controller Applications as per J1939, they appear 
 They must be linked to an **Active CAN Controller** (NMEA2KActiveController) that is managing access to the bus and internal dispatching.
 To be active, applications needs to be declared in the Active controller definition (parameter *applications*)
 
-There is currently only one pre-defined application, that is used to inject on the NMEA2000 (CAN) bus messages coming on  gRPC/Protobuf 
+There is currently only one pre-defined application, that is used to inject on the NMEA2000 (CAN) bus messages coming on  gRPC/Protobuf
+
+#### NMEA2000Application
+
+This is the abstract super class for all NMEA2000 applications.
+
+| Name    | Type | Default | Signification                                                                                                |
+|---------|------|---------|--------------------------------------------------------------------------------------------------------------|
+| address | int  | none    | If this parameter is present and in the range [0, 253] the value will tentatively used as the device address |
+
+If no address is given, it will be allocated from the pool associated with the system (ECU)
+
 
 #### GrpcInputApplication(GrpcDataService, NMEA2000Application)
 
 That application implements a **service** as defined in the input_server.proto. It accepts both decoded and non decoded NMEA2000 messages (protobuf). It shall be associated with the gRPC server of the process.
+All messages received on the gRPC interface are forwarded to the NMEA2000 CAN bus.
 
 | Name             | Type   | Default | Signification                                                                  |
 |------------------|--------|---------|--------------------------------------------------------------------------------|
 | server           | string | None    | gRPC server associated. This is a mandatory parameter                          |
-
-
 
 
 
@@ -549,15 +620,19 @@ To keep the message timing, the whole file is read and messages stored in memory
 ### TransparentCanLogCoupler (RawLogCoupler)
 
 This is variant of the RawLogCoupler working only on CAN level traces. Its purpose is to inject the NMEA2000 CAN frames in the system to create a simulator based on existing traces by using the N2KSourceDispatcher as publisher on this coupler.
+**Note: with that coupler, no message is sent towards the server for distribution to clients due to the specific format**
 
 ### DeviceReplaySimulator (NMEA2000Application)
 
-That application act as Controller Application and simulate a NMEA2000 devices based on messages read from a log. Only one device per object, so to simulate multiple devices, multiple objects must be instantiated.
+That application act as Controller Application and simulate a NMEA2000 devices on the **NMEA2000 CAN bus** based on messages read from a log. Only one device per object, so to simulate multiple devices, multiple objects must be instantiated.
+
+If the source is set to 255 the application takes all the messages, thus a single device is forwarding all messages to the CAN bus. All other applications are not receiving any message and are disabled.
+
 
 | Name      | Type | Default | Signification                                                          |
 |-----------|------|---------|------------------------------------------------------------------------|
-| source    | int  | none    | source address of the device in the logs                               |
-| publisher | str  | none    | Nmea of the publisher dispatching messages (N2KSourceDispatcher class) |
+| source    | int  | none    | source address to select a device in the logs  (255 select all)        |
+| publisher | str  | none    | Name of the publisher dispatching messages (N2KSourceDispatcher class) |
 | model_id  | str  | none    | String defining the simulated device for display                       |
 
 
