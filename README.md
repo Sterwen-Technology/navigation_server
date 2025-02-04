@@ -31,7 +31,7 @@ Installation on Windows 10 or 11 is working with some limitations on TCP sockets
 
 ### Setting up the Python environment and running servers
 
-Please refer to the specific documentation: [Python installation](https://github.com/Sterwen-Technology/navigation_server/blob/develop/doc/python_environment.md)
+Please refer to the specific documentation: [Python installation](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/python_environment.md)
 
 
 
@@ -91,11 +91,11 @@ For production the system should be run through *systemd*. Services that can be 
 
 The documentation is located in the *doc* directory.
 
-[message_server documentation](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/Navigation%20message%20server.md)
+[message_server documentation](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/Navigation%20message%20server.md)
 
-[System API](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/Navigation%20system%20API.md)
+[System API](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/Navigation%20system%20API.md)
 
-[NMEA2000 support](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/NMEA2000.md)
+[NMEA2000 support](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/NMEA2000.md)
 
 
 ## Development
