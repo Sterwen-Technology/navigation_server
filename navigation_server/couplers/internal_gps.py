@@ -11,7 +11,7 @@
 
 import serial
 import logging
-import json
+import os
 import time
 import threading
 
@@ -31,11 +31,7 @@ class InternalGps(Coupler):
         _logger.debug("Internal GPS coupler - connecting to Quectel modem")
         self._separator = b'\r\n'
         self._separator_len = 2
-        fp = open("/data/solidsense/modem_gps/parameters.json")
-        self._params = json.load(fp)
-        fp.close()
-        _logger.debug("modem control file:%s" % self._params['modem_ctrl'])
-        self._modem = QuectelModem(self._params['modem_ctrl'])
+        self._modem = QuectelModem(filepath=os.getenv("HOME"))
         status = self._modem.getGpsStatus()
         _logger.info("Internal GPS status:%s" % status)
         if status['state'] == 'off':
@@ -44,7 +40,7 @@ class InternalGps(Coupler):
             status = self._modem.getGpsStatus()
             _logger.info("Internal GPS status after GPS on:%s", status)
 
-        self._nmea_if = self._params['nmea_tty']
+        self._nmea_if = self._modem.nmea_tty
         self._tty = None
         self._fix = status['fix']
         self._fix_event = threading.Event()

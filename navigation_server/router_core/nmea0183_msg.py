@@ -245,7 +245,7 @@ class ZDA(NMEA0183Sentences):
 
     def __init__(self, timestamp=0):
         if timestamp == 0:
-            timestamp = datetime.datetime.now(datetime.UTC)
+            timestamp = datetime.datetime.now()
 
         hms = timestamp.strftime("%H%M%S")
         cs = int(timestamp.microsecond / 1e4)

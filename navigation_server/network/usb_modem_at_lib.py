@@ -133,21 +133,26 @@ class UsbATModem:
         :return: path to be used
         :rtype: str
         """
+        env_path = os.getenv("MODEM_DIR")
+        user_name = os.getenv("SUDO_USER")
         if option_path is not None:
             if os.path.exists(option_path):
                 return option_path
-        elif (env_path := os.getenv("MODEM_DIR")) is not None:
+        elif env_path is not None:
             if os.path.exists(env_path):
                 return env_path
         # ok, nothing from the environment let's go to defaults
         if os.getuid() == 0:
-            if (user_name := os.getenv("SUDO_USER")) is not None:
+            if user_name is not None:
                 # ok in sudo we have the original user
                 r = subprocess.run(f"getent passwd {user_name}", capture_output=True, shell=True)
                 if r.returncode == 0:
                     lines = r.stdout.decode('utf-8').split('\n')
                     fields = lines[0].split(':')
                     env_path = fields[5]
+                elif user_name == "solidsense" and os.path.exists("/data/solidsense"):
+                    # for compatibility with IN6 Yocto
+                    return "/data/solidsense"
                 else:
                     modem_log.error(f"Error retrieving home directory for user {user_name} {r.stderr}")
                     raise ValueError
@@ -295,6 +300,10 @@ class UsbATModem:
     @property
     def filepath(self) -> str:
         return self._filepath
+
+    @property
+    def nmea_tty(self) -> str:
+        return self._nmea_tty
 
     # low level I/O methods
     # send AT command and return the responses
