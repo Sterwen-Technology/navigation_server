@@ -16,7 +16,7 @@ import datetime
 import time
 from argparse import ArgumentParser
 
-from .usb_modem_at_lib import *
+from navigation_server.network import *
 
 log = logging.getLogger('ShipDataServer.' + __name__)
 

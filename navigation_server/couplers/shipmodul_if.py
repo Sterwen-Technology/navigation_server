@@ -207,7 +207,7 @@ class ShipModulInterface(BufferedIPCoupler):
         if coupler.fast_packet_handler.is_pgn_active(pgn, source_addr, data):
             _logger.debug("Shipmodul PGN %d on address %d fast packet active" % (pgn, source_addr))
             try:
-                data = coupler.fast_packet_handler.process_frame(pgn, source_addr, data, coupler.add_event_trace)
+                data = coupler.fast_packet_handler.process_frame(pgn, source_addr, data)
             except FastPacketException as e:
                 _logger.error("Shipmodul Fast packet error %s pgn %d data %s" % (e, pgn, data.hex()))
                 coupler.add_event_trace(str(e))
@@ -217,7 +217,7 @@ class ShipModulInterface(BufferedIPCoupler):
         elif check_pgn():
             _logger.debug("Shipmodul PGN %d is fast packet" % pgn)
             try:
-                data = coupler.fast_packet_handler.process_frame(pgn, source_addr, data, coupler.add_event_trace)
+                data = coupler.fast_packet_handler.process_frame(pgn, source_addr, data)
             except FastPacketException as e:
                 _logger.error("Shipmodul Fast packet error %s on initial frame pgn %d data %s" % (e, pgn, data.hex()))
                 coupler.add_event_trace(str(e))
