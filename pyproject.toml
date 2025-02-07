@@ -1,24 +1,24 @@
 [project]
 name = "navigation-server"
 package-mode = true
-version = "2.2.0"
+version = "2.2.0a"
 description = "Navigation Server Full Install"
 authors = [{name="Laurent Carré", email="<laurent.carre@sterwen-technology.eu>"}]
 readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE"}
 
-
-
 dependencies = [
     "pyserial>=3.5",
     "protobuf==5.27.2",
     "grpcio==1.66.2",
-    "grpcio-tools==1.66.2",
     "pyyaml>=6.0.1",
-    "python-can>=4.0",
-    "gpiod>=2.0"
+    "python-can>=4.0"
 ]
+
+[project.optional-dependencies]
+gpio = ["gpiod>=2.0"]
+develop = ["grpcio-tools==1.66.2"]
 
 [project.scripts]
 navigation_server = "navigation_server:server_main"
