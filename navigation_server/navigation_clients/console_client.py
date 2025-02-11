@@ -108,16 +108,28 @@ class DeviceProxy(ProtobufProxy):
 
 class ConsoleClient:
 
+    (NOT_CONNECTED, CONNECTING, CONNECTED) = range(10, 13)
+
     def __init__(self, address):
-        self._channel = grpc.insecure_channel(address)
-        self._stub = NavigationConsoleStub(self._channel)
+        self._channel = None
+        self._stub = None
+        self._state = self.NOT_CONNECTED
         self._address = address
         self._req_id = 0
         _logger.info("Console on navigation server %s" % address)
 
+    def connect(self):
+        self._channel = grpc.insecure_channel(self._address)
+        self._stub = NavigationConsoleStub(self._channel)
+        self._state = self.CONNECTING
+
     @property
     def address(self):
         return self._address
+
+    @property
+    def state(self):
+        return self._state
 
     def get_couplers(self):
         couplers = []
@@ -166,10 +178,13 @@ class ConsoleClient:
             return None
 
     def server_status(self):
+        if self._state == self.NOT_CONNECTED:
+            self.connect()
         req = Request(id=self._req_id)
         self._req_id += 1
         try:
             server_msg = self._stub.ServerStatus(req)
+            self._state = self.CONNECTED
             return ServerProxy(server_msg)
         except grpc.RpcError as err:
             # print(err.code(), err.details())
@@ -177,6 +192,7 @@ class ConsoleClient:
                 _logger.error("Server Status - Error accessing server:%s" % err)
             else:
                 _logger.info("Server not accessible")
+            self._state = self.NOT_CONNECTED
             raise ConsoleAccessException
 
     def server_cmd(self, cmd, target=None):
