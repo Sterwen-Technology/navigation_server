@@ -42,6 +42,7 @@ def server_main():
     try:
         config = NavigationConfiguration().build_configuration(opts.settings)
     except (FileNotFoundError, IOError) as err:
+        _logger.critical("Error on configuration file => STOP")
         return
     NavigationLogSystem.finalize_log(config)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
@@ -51,6 +52,7 @@ def server_main():
     try:
         config.build_objects()
     except (ConfigurationException, ObjectCreationError):
+        _logger.critical("Error in configuration during build => STOP")
         return
 
     if config.get_option('decode_definition_only', False):
