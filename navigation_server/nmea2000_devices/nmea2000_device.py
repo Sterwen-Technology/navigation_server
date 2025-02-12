@@ -12,13 +12,14 @@
 
 import logging
 from collections import namedtuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from math import isnan
 
 from navigation_server.can_interface import NMEA2000Application
 from navigation_server.router_core import NMEA2000Msg
 from navigation_server.router_common import N2KInvalidMessageException, nautical_mille, n2ktime_to_datetime, mps_to_knots, radian_to_deg
-from navigation_server.generated.nmea2000_classes_gen import Pgn129283Class, Pgn129284Class, Pgn129285Class, Pgn129026Class, Pgn129029Class
+from navigation_server.generated.nmea2000_classes_gen import (Pgn129283Class, Pgn129284Class, Pgn129285Class,
+                                                              Pgn129026Class, Pgn129029Class, Pgn126992Class)
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -149,3 +150,47 @@ class AutoPilotEmulator(NMEA2000DeviceImplementation):
         _logger.info(f"PGN129039 payload length{len(msg.payload)}: {msg.payload.hex()}")
 
 
+class SystemClockDevice(NMEA2000Application):
+
+    jan1970 = date(1970,1, 1).toordinal()
+
+    def __init__(self, opts):
+        self._name = opts['name']
+        self._requested_address = opts.get('address', int, -1)
+        self._model_id = "SystemClock"
+        self._period = opts.get("period", int, 1)
+        self._period_count = 0
+        self._sequence_id = 0
+        self._controller = None
+
+    def init_product_information(self):
+        super().init_product_information()
+        self._product_information.model_id = self._model_id
+
+    def set_controller(self, controller):
+        super().__init__(controller, self._requested_address)
+        self._controller = controller
+        controller.timer_subscribe(self)
+
+    def wake_up(self):
+        # triggered by the controller every sec
+        self._period_count += 1
+        if self._period_count == self._period:
+            # ok we need to something
+            msg = Pgn126992Class()
+            msg.sequence_id = self._sequence_id
+            msg.source = 5
+            msg.sa = self._address
+            ts = datetime.utcnow()
+            date_val = ts.toordinal() - self.jan1970
+            seconds = (ts.hour * 3600 + ts.minute * 60 + ts.second) + (ts.microsecond / 1e6)
+            msg.date = date_val
+            msg.time = seconds
+            self._controller.CAN_interface.send(msg.message())
+            self._sequence_id += 1
+            if self._sequence_id == 254:
+                self._sequence_id = 0
+            self._period_count = 0
+
+    def stop_request(self):
+        self._controller.timer_unsubscribe(self)
