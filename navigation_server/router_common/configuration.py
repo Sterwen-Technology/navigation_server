@@ -444,7 +444,11 @@ class NavigationConfiguration:
                 continue
         _logger.debug("Filters created")
         for inst_descr in self._applications.values():
-            inst_descr.build_object()
+            try:
+                inst_descr.build_object()
+            except ConfigurationException as e:
+                _logger.error(str(e))
+                continue
         _logger.debug("Applications created")
         # create the servers
         for server_descr in self._servers.values():

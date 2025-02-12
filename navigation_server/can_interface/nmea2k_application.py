@@ -115,6 +115,7 @@ class NMEA2000Application(NMEA2000Device):
 
         _logger.info("Controller Application ECU:%s ISO Name=%08X address=%d type:%s" %
                      (controller.name, self._iso_name.name_value, self._address, self._application_type_name))
+        self._name = f"{self._application_type_name}@{self._address}"
         self._claim_timer = None
         self._heartbeat_timer = None
         self._heartbeat_interval = 60.0  # can be adjusted in subclasses
@@ -147,6 +148,10 @@ class NMEA2000Application(NMEA2000Device):
     @property
     def id(self) -> int:
         return self._id
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     def stop_request(self):
         self._app_state = self.STOP_IN_PROGRESS
@@ -363,6 +368,10 @@ class NMEA2000Application(NMEA2000Device):
                                                                 group_function.parameters, acknowledge)
         else:
             _logger.error("Command Group Function PGN %d not supported" % group_function.function_pgn)
+
+    def wake_up(self):
+        # wake up call every second
+        pass
 
 
 class DeviceReplaySimulator(NMEA2000Application):
