@@ -74,23 +74,27 @@ class NMEA2KActiveController(NMEA2KController):
         self.start_applications()
         # start timer
         self._app_timer = threading.Timer(1.0, self._timer_lapse)
+        self._app_timer.start()
 
     def _timer_lapse(self):
-        self._start_application_lock.acquire()
+        _logger.debug("Active Controller entering timer scheduling with %d apps" % len(self._timer_vector))
+        # self._start_application_lock.acquire()
         for app in self._timer_vector:
             app.wake_up()
-        self._start_application_lock.release()
+        # self._start_application_lock.release()
         self._app_timer = threading.Timer(1.0, self._timer_lapse)
+        self._app_timer.start()
 
     def timer_subscribe(self, application):
-        self._start_application_lock.acquire()
+        _logger.debug("ActiveController timer subscribe:%s" % application.name)
+        # self._start_application_lock.acquire()
         self._timer_vector.append(application)
-        self._start_application_lock.release()
+        # self._start_application_lock.release()
 
     def timer_unsubscribe(self, application):
-        self._start_application_lock.acquire()
+        # self._start_application_lock.acquire()
         self._timer_vector.remove(application)
-        self._start_application_lock.release()
+        # self._start_application_lock.release()
 
     def stop(self):
         if self._timer_vector is not None:

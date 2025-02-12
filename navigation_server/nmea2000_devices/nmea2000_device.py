@@ -174,6 +174,7 @@ class SystemClockDevice(NMEA2000Application):
 
     def wake_up(self):
         # triggered by the controller every sec
+        _logger.debug("SystemClock wake up period count=%d" % self._period_count)
         self._period_count += 1
         if self._period_count == self._period:
             # ok we need to something
