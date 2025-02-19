@@ -1,0 +1,13 @@
+#!/bin/bash
+if [ -f $NAVIGATION_HOME/.navigationenv ]
+then
+  # shellcheck disable=SC2006
+  source $NAVIGATION_HOME/.navigationenv
+else
+  PYTHON=python3
+fi
+
+echo "running $PYTHON $*"
+${PYTHON} "$#"
+
+

@@ -35,7 +35,7 @@ class GpioLine:
                                   config={self._offset: LineSettings(direction=Direction.INPUT)}) as request:
             value = request.get_value(self._offset)
             _logger.info(f"GPIO chip {self._chip_path}:{self._offset}= {value}")
-            return value
+            return bool(value)
 
 
     def set(self, value: int):
@@ -60,7 +60,7 @@ class GpioGroup:
     def name(self) -> str:
         return self._name
 
-    def get_line_value(self, line_name):
+    def get_line_value(self, line_name) -> bool:
         _logger.debug("GpioGroup %s line %s get" % (self._name, line_name))
         try:
             line = self._lines[line_name]
@@ -68,7 +68,8 @@ class GpioGroup:
         except KeyError:
             _logger.error(f"Group {self._name}: Unknown GPIO line {line_name}")
             raise
-        _logger.debug("GpioGroup %s line %s get value=%d" % (self._name, line_name, value))
+
+        _logger.debug("GpioGroup %s line %s get value=%s" % (self._name, line_name, value))
         return value
 
     def set_line_value(self, line_name, value: int):
