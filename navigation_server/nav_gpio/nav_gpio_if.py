@@ -48,7 +48,51 @@ class GpioLine:
             request.set_value(self._offset, val_set)
 
 
+class GpioGroup:
+    """
+    All GPIO lines that control a device
+    """
+    def __init__(self, name: str, lines: dict):
+        self._name = name
+        self._lines = lines
 
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def get_line_value(self, line_name):
+        _logger.debug("GpioGroup %s line %s get" % (self._name, line_name))
+        try:
+            line = self._lines[line_name]
+            value = line.get()
+        except KeyError:
+            _logger.error(f"Group {self._name}: Unknown GPIO line {line_name}")
+            raise
+        _logger.debug("GpioGroup %s line %s get value=%d" % (self._name, line_name, value))
+        return value
+
+    def set_line_value(self, line_name, value: int):
+        _logger.debug("GpioGroup %s line %s set=%d" % (self._name, line_name, value))
+        try:
+            line = self._lines[line_name]
+            line.set(value)
+        except KeyError:
+            _logger.error(f"Group {self._name}: Unknown GPIO line {line_name}")
+            raise
+
+class GpioSet:
+
+    def __init__(self):
+        self._groups = {}
+
+    def add_group(self, group: GpioGroup):
+        self._groups[group.name] = group
+
+    def get_line_value(self, group_name, line_name):
+        return self._groups[group_name].get_line_value(line_name)
+
+    def set_line_value(self, group_name, line_name, value):
+        self._groups[group_name].set_line_value(line_name, value)
 
 
 

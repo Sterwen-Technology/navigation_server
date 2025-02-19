@@ -9,4 +9,5 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-from .nav_gpio_if import GpioLine
+from .nav_gpio_if import GpioLine, GpioGroup, GpioSet
+from .stnc_gpio_conf import STNC_Gpio_Set
