@@ -16,15 +16,15 @@ trace_dir: /mnt/meaban/Bateau/tests
 log_module:
   router_core.coupler: INFO
   nmea2000.nmea2000_msg: INFO
-  can_interface.nmea2k_controller: INFO
+  can_interface.nmea2k_controller: DEBUG
   nmea2000.nmea2k_active_controller: INFO
   nmea2000.nmea2k_device: INFO
   can_interface.nmea2k_application: INFO
   nmea2000.n2k_name: INFO
-  can_interface.nmea2k_can_interface: INFO
+  can_interface.nmea2k_can_interface: DEBUG
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
-  can_interface.nmea2k_can_coupler: INFO
+  can_interface.nmea2k_can_coupler: DEBUG
   nmea2000_devices.nmea2000_device: DEBUG
 
 features:
@@ -57,7 +57,7 @@ servers:
       class: NMEA2KActiveController
       trace: false
       mac_source: end0
-      channel: can1
+      channel: can0
       max_silent: 60.0
       applications: [CANCoupler, APEmulator]
 
@@ -88,15 +88,10 @@ publishers:
 
 applications:
 
-- APSimulator:
-    class: DeviceSimulator
-    address: 10
-    pgn_list: [129283, 129284, 129285]
-    model_id: Auto Pilot
 
 - APEmulator:
     class: AutoPilotEmulator
-    address: 10
+    address: 12
     model_id: Auto Pilot Emulator
 
 
