@@ -264,8 +264,24 @@ class NavigationConfiguration:
         except KeyError:
             base_directory, app_dir = os.path.split(os.getcwd())
             data_directory = os.path.join(base_directory, 'data')
-        MessageServerGlobals.data_dir = data_directory
-        _logger.info(f"Data directory:{data_directory}")
+        if os.path.isdir(data_directory):
+            if os.access(data_directory,os.R_OK | os.W_OK | os.X_OK):
+                MessageServerGlobals.data_dir = data_directory
+                _logger.info(f"Data directory:{data_directory}")
+            else:
+                _logger.error(f"Not enough permissions for data_directory:{data_directory}")
+        else:
+            _logger.error(f"Non existent data directory {data_directory} - some features will not work")
+
+        try:
+            trace_dir = self._configuration['trace_dir']
+        except KeyError:
+            trace_dir = '/var/log'
+        if not os.access(trace_dir, os.R_OK | os.W_OK | os.X_OK):
+            _logger.warning(f"Trace directory {trace_dir} not existing => switching to /var/log")
+            trace_dir = '/var/log'
+        MessageServerGlobals.trace_dir = trace_dir
+
         # create entries for allways included classes
         self.import_internal()
         for feature in self.object_descr_iter('features'):

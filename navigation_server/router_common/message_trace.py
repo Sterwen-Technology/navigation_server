@@ -15,6 +15,7 @@ import os
 import threading
 
 from .configuration import NavigationConfiguration
+from .global_variables import MessageServerGlobals
 from .generic_msg import NavGenericMsg, NULL_MSG
 from .date_time_utilities import format_timestamp
 
@@ -31,10 +32,9 @@ class NMEAMsgTrace:
 
     def __init__(self, name, trace_type):
         self._name = name
-        trace_dir = NavigationConfiguration.get_conf().get_option('trace_dir', '/var/log')
         date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
         filename = "TRACE-%s-%s.log" % (name, date_stamp)
-        filepath = os.path.join(trace_dir, filename)
+        filepath = os.path.join(MessageServerGlobals.trace_dir, filename)
         _logger.info("Opening trace file %s" % filepath)
         try:
             self._trace_fd = open(filepath, "w")
