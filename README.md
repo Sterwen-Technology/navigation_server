@@ -29,6 +29,8 @@ The project is entirely written in Python 3 and has been tested with Python 3.7 
 *note: from version 2.1.1 on Python version 3.12 is preferred*
 Installation on Windows 10 or 11 is working with some limitations on TCP sockets and no support on Direct CAN connection.
 
+Installations files are available here (tar and wheel): [Sterwen Technology download page](https://sterwen-technology.eu/softwares/)
+
 ### Setting up the Python environment and running servers
 
 Please refer to the specific documentation: [Python installation](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/python_environment.md)

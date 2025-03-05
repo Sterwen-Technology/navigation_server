@@ -187,6 +187,7 @@ class EngineData:
         # self._status_file = os.path.join(root_dir, engine_dir, f'eng#{engine_id}-current_state')
         self._engine_dir = None
         self._current_date = None
+        self._event_file = None
         # self._event_file = os.path.join(root_dir, engine_dir, event_file)
         if engine_dir is None:
             self._state = self.OFF
@@ -261,6 +262,7 @@ class EngineData:
         if self._current_date is None or actual_date != self._current_date:
             self._current_date = actual_date
             event_file = f"eng#{self._id}-events-{self._current_date.year}-{self._current_date.month}-{self._current_date.day}"
+            _logger.info(f"Engine data - creating new event file:{event_file}")
             self._event_file = os.path.join(self._root_dir, self._engine_dir, event_file)
 
     def as_dict(self):
