@@ -14,13 +14,9 @@ from navigation_server.generated.energy_pb2 import *
 from navigation_server.generated.energy_pb2_grpc import *
 import logging
 from navigation_server.router_common.protobuf_utilities import *
+from .client_common import GrpcClient, GrpcAccessException
 
-_logger = logging.getLogger("MPPTDataClient"+"."+__name__)
-
-
-class GrpcAccessException(Exception):
-    pass
-
+_logger = logging.getLogger("ShipDataClient." + __name__)
 
 class MPPT_device_proxy:
 
@@ -79,41 +75,11 @@ class MPPT_output_proxy:
 
 
 
-class MPPT_Client:
+class MPPT_Client(GrpcClient):
 
-    (NOT_CONNECTED, CONNECTING, CONNECTED) = range(10, 13)
 
     def __init__(self, server):
-        self._server = server
-        self._channel = None
-        self._stub = None
-        self._state = self.NOT_CONNECTED
-        _logger.info("MPPT server stub created on %s" % self._server)
-        self._req_id = 0
-
-    def connect(self):
-        self._channel = grpc.insecure_channel(self._server)
-        self._stub = solar_mpptStub(self._channel)
-        self._state = self.CONNECTING
-
-    def _server_call(self, rpc_func, req, response_class):
-        _logger.debug("MPPT Client server call")
-        self._req_id += 1
-        req.id = self._req_id
-        try:
-            response = rpc_func(req)
-            if response_class is not None:
-                return response_class(response)
-            else:
-                return response
-        except grpc.RpcError as err:
-            if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info(f"Server error:{err.details()}")
-                # self._state = self.NOT_CONNECTED
-            else:
-                _logger.error(f"Error accessing server:{err.details()}")
-                self._state = self.NOT_CONNECTED
-            raise GrpcAccessException
+        super().__init__(server, solar_mpptStub)
 
     def getDeviceInfo(self) -> MPPT_device_proxy:
         _logger.debug("Client GetDeviceInfo")
