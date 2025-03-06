@@ -16,96 +16,45 @@ import grpc
 from navigation_server.generated.agent_pb2 import *
 from navigation_server.generated.agent_pb2_grpc import *
 from navigation_server.router_common import GrpcAccessException
+from .client_common import GrpcClient
 
 _logger = logging.getLogger("ShipDataClient." + __name__)
 
 
-class AgentClient:
+class AgentClient(GrpcClient):
 
     def __init__(self, address):
-        self._channel = grpc.insecure_channel(address)
-        self._stub = AgentStub(self._channel)
-        self._address = address
-        self._req_id = 0
+        super().__init__(address, AgentStub)
         _logger.info("Console on agent server %s" % address)
 
     def send_cmd_multiple_resp(self, cmd):
         request = AgentMsg()
-        request.id = self._req_id
-        self._req_id += 1
         request.cmd = cmd
-        try:
-            for resp in self._stub.SendCmdMultipleResp(request):
-                yield resp.resp
-        except grpc.RpcError as err:
-            if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info("Server %s not accessible" % self._address)
-            else:
-                _logger.error("SendCmd - Error accessing server:%s" % err)
-            raise GrpcAccessException
+        for resp in self._server_call_multiple(self._stub.SendCmdMultipleResp, request, None):
+            yield resp.resp
 
     def send_cmd_single_resp(self, cmd):
         request = AgentMsg()
-        request.id = self._req_id
-        self._req_id += 1
         request.cmd = cmd
-        try:
-            resp = self._stub.SendCmdSingleResp(request)
-            return resp.resp
-        except grpc.RpcError as err:
-            if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info("Server %s not accessible" % self._address)
-            else:
-                _logger.error("SendCmd - Error accessing server:%s" % err)
-            raise GrpcAccessException
+        return self._server_call(self._stub.SendCmdSingleResp, request, None).resp
 
     def send_cmd_no_resp(self, cmd):
         request = AgentMsg()
-        request.id = self._req_id
-        self._req_id += 1
         request.cmd = cmd
-        try:
-            resp = self._stub.SendCmdNoResp(request)
-            return resp.resp
-        except grpc.RpcError as err:
-            if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info("Server %s not accessible" % self._address)
-            else:
-                _logger.error("SendCmd - Error accessing server:%s" % err)
-            raise GrpcAccessException
+        return self._server_call(self._stub.SendCmdNoResp, request, None).resp
 
     def systemd_cmd(self, cmd, service):
         request = SystemdCmdMsg()
-        request.id = self._req_id
-        self._req_id += 1
         request.cmd = cmd
         request.service = service
-        try:
-            resp = self._stub.SystemdCmd(request)
-            return resp.lines
-        except grpc.RpcError as err:
-            if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info("Server %s not accessible error:%s" % (self._address, err))
-            else:
-                _logger.error("SystemdCmd - Error accessing server:%s" % err)
-            raise GrpcAccessException
+        return self._server_call(self._stub.SystemdCmd, request, None).lines
 
     def network_cmd(self, cmd, interface):
         request = NetworkCmdMsg()
-        request.id = self._req_id
-        self._req_id += 1
         request.cmd = cmd
         request.interface = interface
         _logger.info(f"Agent client network cmd {cmd} on {interface}")
-        try:
-            resp = self._stub.NetworkCmd(request)
-            return resp.resp
-        except grpc.RpcError as err:
-            if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info("Server %s not accessible error:%s" % (self._address, err))
-            else:
-                _logger.error("SystemdCmd - Error accessing server:%s" % err)
-            raise GrpcAccessException
+        return self._server_call(self._stub.NetworkCmd, request, None).resp
 
 
 def main():

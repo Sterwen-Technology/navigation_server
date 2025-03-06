@@ -14,9 +14,9 @@ from navigation_server.generated.energy_pb2 import *
 from navigation_server.generated.energy_pb2_grpc import *
 import logging
 from navigation_server.router_common.protobuf_utilities import *
+from .client_common import GrpcClient, GrpcAccessException
 
-_logger = logging.getLogger("MPPTDataClient"+"."+__name__)
-
+_logger = logging.getLogger("ShipDataClient." + __name__)
 
 class MPPT_device_proxy:
 
@@ -74,55 +74,30 @@ class MPPT_output_proxy:
         return self._output.panel_power
 
 
-class MPPT_Client:
+
+class MPPT_Client(GrpcClient):
+
 
     def __init__(self, server):
-        self._server = server
-        self._channel = grpc.insecure_channel(self._server)
-        self._stub = solar_mpptStub(self._channel)
-        _logger.info("MPPT server stub created on %s" % self._server)
-        self._req_id = 0
+        super().__init__(server, solar_mpptStub)
 
     def getDeviceInfo(self) -> MPPT_device_proxy:
         _logger.debug("Client GetDeviceInfo")
-        try:
-            self._req_id += 1
-            req = request()
-            req.id = self._req_id
-            device = self._stub.GetDeviceInfo(req)
-            # print(device)
-            return MPPT_device_proxy(device)
-        except grpc.RpcError as err:
-            _logger.error(err)
-            return None
+        return self._server_call(self._stub.GetDeviceInfo, request(), MPPT_device_proxy)
 
     def getOutput(self) -> MPPT_output_proxy:
         _logger.debug("Client GetOutput")
-        try:
-            self._req_id += 1
-            req = request()
-            req.id = self._req_id
-            output = self._stub.GetOutput(req)
-            # print(output)
-            return MPPT_output_proxy(output)
-        except grpc.RpcError as err:
-            _logger.error(err)
-            return None
+        return self._server_call(self._stub.GetOutput, request(),  MPPT_output_proxy)
 
     def getTrend(self):
         _logger.debug("Client GetTrend")
-        try:
-            self._req_id += 1
-            req = trend_request()
-            req.id = self._req_id
-            trend = self._stub.GetTrend(req)
-        except grpc.RpcError as err:
-            _logger.error(err)
-            return None
+        trend = self._server_call(self._stub.GetTrend, trend_request(), None)
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 
     def server_status(self):
+        if self._state == self.NOT_CONNECTED:
+            self.connect()
         return self.getDeviceInfo()
 
 

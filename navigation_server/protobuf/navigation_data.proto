@@ -29,12 +29,14 @@ message engine_data {
 }
 
 message engine_response {
+    uint32 id=4;
     string error_message=1;
     engine_data data=2;
     repeated engine_event events=3;
 }
 
 message engine_request {
+  uint32 id = 2;
   uint32 engine_id=1;
 }
 

@@ -5,6 +5,8 @@ Virtual environment can isolate the application at 2 levels:
 - Running a specific Python version independently of the one installed at system level
 - Install the required package for the application without impacting requirements from other applications
 
+Installation files are available here: [Sterwen Technology download page](https://sterwen-technology.eu/softwares/)
+
 There are many existing solutions to achieve the same results. I am proposing a configuration that have been able to fully tested and is based on 2 well known Python tools:
 - **[pyenv](https://github.com/pyenv/pyenv#readme)** to install specific Python version and possibly virtual environments for execution
 - **[poetry](https://python-poetry.org/)** to manage dependencies and create associated virtual environment

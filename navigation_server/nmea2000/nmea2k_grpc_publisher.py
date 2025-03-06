@@ -42,16 +42,24 @@ class GrpcPublisher(ExternalPublisher):
         # we consider that by default filters are select not discard => can be overridden by configuration
         self._filter_select = opts.get('filter_select', bool, True)
         self._address = "%s:%d" % (opts.get('address', str, '127.0.0.1'), opts.get('port', int, 4502))
-        _logger.info("Creating client for data server at %s" % self._address)
-        self._channel = grpc.insecure_channel(self._address)
-        self._channel.subscribe(self.channel_callback)
-        self._stub = NMEAInputServerStub(self._channel)
+        self._channel = None
+        self._stub = None
+        self.open_channel()
         self._ready = True
         self._timer = None
         self._nb_retry = 0
         self._nb_lost_msg = 0
         self._retry_in_progress = False
 
+    def open_channel(self):
+        """
+        Open channel at object creation and during retries
+        Introduced in 2.2.1
+        """
+        _logger.info("Creating client for data server at %s" % self._address)
+        self._channel = grpc.insecure_channel(self._address)
+        self._channel.subscribe(self.channel_callback)
+        self._stub = NMEAInputServerStub(self._channel)
 
     def process_msg(self, gen_msg):
         if not self._ready:
@@ -191,7 +199,9 @@ class GrpcPublisher(ExternalPublisher):
         self._timer = None
         self._retry_in_progress = False
         _logger.debug("Retry timer for Grpc connection")
-        # check first
+        # reopen the channel
+        self.open_channel()
+        # then check
         if self.check_status():
             if not self._ready:
                 _logger.info("GrpcPublisher %s => GRPC server %s back on line" % (self._name, self._address))

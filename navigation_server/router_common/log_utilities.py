@@ -64,13 +64,14 @@ class NavigationLogSystem:
     def finalize_log(config):
         log_file = config.get_option("log_file", None)
         if log_file is not None:
-            log_dir = config.get_option('trace_dir', None)
+            log_dir = MessageServerGlobals.trace_dir
             date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
-            log_file_name = log_file + '_' + date_stamp + '.log'
+            log_file_name = f"{log_file}_{date_stamp}.log"
             if log_dir is not None:
                 log_fullname = os.path.join(log_dir, log_file_name)
             else:
-                log_fullname = log_file_name
+                _logger.error("Invalid directory for logging - keeping stderr")
+                return
             _logger.info("Logging redirected into:%s" % log_fullname)
             try:
                 fp = open(log_fullname, 'w')
