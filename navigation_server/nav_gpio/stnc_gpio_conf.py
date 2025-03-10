@@ -13,12 +13,12 @@ from navigation_server.nav_gpio import GpioLine, GpioGroup, GpioSet
 
 STNC_Gpio_Set = GpioSet()
 
-STNC_Gpio_Set.add_group(GpioGroup("relay1", {"open": GpioLine("/dev/gpiochip0", 13),
-                                                        "close": GpioLine("/dev/gpiochip0", 5),
+STNC_Gpio_Set.add_group(GpioGroup("relay1", {"close": GpioLine("/dev/gpiochip0", 13),
+                                                        "open": GpioLine("/dev/gpiochip0", 5),
                                                         "sense": GpioLine("/dev/gpiochip4", 0)}))
 
-STNC_Gpio_Set.add_group(GpioGroup("relay2", {"open": GpioLine("/dev/gpiochip0", 12),
-                                                        "close": GpioLine("/dev/gpiochip3", 22),
+STNC_Gpio_Set.add_group(GpioGroup("relay2", {"close": GpioLine("/dev/gpiochip0", 12),
+                                                        "open": GpioLine("/dev/gpiochip3", 22),
                                                         "sense": GpioLine("/dev/gpiochip4", 1)}))
 
 STNC_Gpio_Set.add_group(GpioGroup("CAN1", {"standby": GpioLine("/dev/gpiochip2", 28),
