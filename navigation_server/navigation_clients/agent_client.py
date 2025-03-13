@@ -16,16 +16,15 @@ import grpc
 from navigation_server.generated.agent_pb2 import *
 from navigation_server.generated.agent_pb2_grpc import *
 from navigation_server.router_common import GrpcAccessException
-from .client_common import GrpcClient
+from .client_common import GrpcClient, ServiceClient
 
 _logger = logging.getLogger("ShipDataClient." + __name__)
 
 
-class AgentClient(GrpcClient):
+class AgentClient(ServiceClient):
 
-    def __init__(self, address):
-        super().__init__(address, AgentStub)
-        _logger.info("Console on agent server %s" % address)
+    def __init__(self):
+        super().__init__(AgentStub)
 
     def send_cmd_multiple_resp(self, cmd):
         request = AgentMsg()
