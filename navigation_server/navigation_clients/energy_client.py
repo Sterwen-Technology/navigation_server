@@ -14,7 +14,7 @@ from navigation_server.generated.energy_pb2 import *
 from navigation_server.generated.energy_pb2_grpc import *
 import logging
 from navigation_server.router_common.protobuf_utilities import *
-from .client_common import GrpcClient, GrpcAccessException
+from .client_common import GrpcClient, GrpcAccessException, ServiceClient
 
 _logger = logging.getLogger("ShipDataClient." + __name__)
 
@@ -75,11 +75,11 @@ class MPPT_output_proxy:
 
 
 
-class MPPT_Client(GrpcClient):
+class MPPT_Client(ServiceClient):
 
 
-    def __init__(self, server):
-        super().__init__(server, solar_mpptStub)
+    def __init__(self):
+        super().__init__(solar_mpptStub)
 
     def getDeviceInfo(self) -> MPPT_device_proxy:
         _logger.debug("Client GetDeviceInfo")
@@ -96,8 +96,8 @@ class MPPT_Client(GrpcClient):
         return trend
 
     def server_status(self):
-        if self._state == self.NOT_CONNECTED:
-            self.connect()
+        if self.server_state() == GrpcClient.NOT_CONNECTED:
+            self._server.connect()
         return self.getDeviceInfo()
 
 

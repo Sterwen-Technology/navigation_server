@@ -15,6 +15,7 @@ from navigation_server.generated.navigation_data_pb2 import *
 from navigation_server.generated.navigation_data_pb2_grpc import *
 
 from navigation_server.router_common import pb_enum_string, ProtobufProxy, GrpcAccessException
+from .client_common import GrpcClient, ServiceClient
 
 _logger = logging.getLogger("ShipDataClient." + __name__)
 
@@ -54,22 +55,15 @@ class EngineEventProxy(ProtobufProxy):
         return pb_enum_string(self._msg, 'previous_state', self._msg.previous_state)
 
 
-class EngineClient:
+class EngineClient(ServiceClient):
 
-    def __init__(self, channel):
-        self._stub = EngineDataStub(channel)
+    def __init__(self):
+        super().__init__(EngineDataStub)
 
     def get_data(self, engine_instance):
         request = engine_request()
         request.engine_id = engine_instance
-        try:
-            result = self._stub.GetEngineData(request)
-        except grpc.RpcError as err:
-            if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.error("GetEngineData - Server not accessible")
-            else:
-                _logger.error("GetEngineData - Error accessing server:%s" % err)
-            raise GrpcAccessException
+        result = self._server_call(self._stub.GetEngineData, request)
         if result.error_message == 'NO_ERROR':
             return EngineProxy(result.data)
         else:
@@ -79,14 +73,7 @@ class EngineClient:
     def get_events(self, engine_instance):
         request = engine_request()
         request.engine_id = engine_instance
-        try:
-            result = self._stub.GetEngineEvents(request)
-        except grpc.RpcError as err:
-            if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.error("GetEngineEvents - Server not accessible:%s" % err)
-            else:
-                _logger.error("GetEngineEvents - Error accessing server:%s" % err)
-            raise GrpcAccessException
+        result = self._server_call(self._stub.GetEngineEvents, request)
         if result.error_message == 'NO_ERROR':
             events = []
             for e_pb in result.events:
@@ -95,17 +82,6 @@ class EngineClient:
         else:
             _logger.error(f"EngineData => No engine instance #{engine_instance}")
             return None
-
-
-class NavigationDataServerProxy:
-
-    def __init__(self, address):
-        self._address = address
-        self._channel = grpc.insecure_channel(address)
-
-    @property
-    def channel(self):
-        return self._channel
 
 
 

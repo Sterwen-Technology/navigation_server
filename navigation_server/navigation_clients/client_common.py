@@ -22,26 +22,36 @@ class GrpcClient:
 
     (NOT_CONNECTED, CONNECTING, CONNECTED) = range(10, 13)
 
-    def __init__(self, server, stub_class):
+    def __init__(self, server):
         self._server = server
         self._channel = None
-        self._stub = None
-        self._stub_class = stub_class
+        self._services = []
         self._state = self.NOT_CONNECTED
 
         self._req_id = 0
 
     def connect(self):
         self._channel = grpc.insecure_channel(self._server)
-        self._stub = self._stub_class(self._channel)
+        for service in self._services:
+            service.create_stub(self._channel)
         self._state = self.CONNECTING
         _logger.info("Server stub created on %s => connecting" % self._server)
+
+    def add_service(self, service):
+        self._services.append(service)
+        service.attach_server(self)
+        if self._state in (self.CONNECTING, self.CONNECTED):
+            service.create_stub(self._channel)
 
     @property
     def state(self):
         return self._state
 
-    def _server_call(self, rpc_func, req, response_class):
+    @property
+    def address(self):
+        return self._server
+
+    def server_call(self, rpc_func, req, response_class):
         _logger.debug("gRPC Client server call")
         self._req_id += 1
         req.id = self._req_id
@@ -60,7 +70,7 @@ class GrpcClient:
                 self._state = self.NOT_CONNECTED
             raise GrpcAccessException
 
-    def _server_call_multiple(self, rpc_func, req, response_class):
+    def server_call_multiple(self, rpc_func, req, response_class):
         _logger.debug("gRPC Client server call with multiple responses")
         self._req_id += 1
         req.id = self._req_id
@@ -78,3 +88,35 @@ class GrpcClient:
                 _logger.error(f"Error accessing server:{err.details()}")
                 self._state = self.NOT_CONNECTED
             raise GrpcAccessException
+
+
+class ServiceClient:
+
+    def __init__(self, stub_class):
+        self._stub_class = stub_class
+        self._stub = None
+        self._server: GrpcClient = None
+
+    def attach_server(self, server:GrpcClient):
+        self._server = server
+
+    def create_stub(self, channel):
+        self._stub = self._stub_class(channel)
+
+    def _server_call(self, rpc_func, request, response_class):
+        if self._server is not None:
+            return self._server.server_call(rpc_func, request, response_class)
+        else:
+            _logger.error("Attempt to call a service not attached to a server")
+            raise GrpcAccessException
+
+    def _server_call_multiple(self, rpc_func, request, response_class):
+        if self._server is not None:
+            for response in self._server.server_call_multiple(rpc_func, request, response_class):
+                yield response
+        else:
+            _logger.error("attempt to call a service not attached to a server")
+            raise GrpcAccessException
+
+    def server_state(self):
+        return self._server.state
