@@ -14,8 +14,8 @@ import grpc
 from argparse import ArgumentParser
 import sys
 
-from generated.console_pb2 import *
-from generated.console_pb2_grpc import *
+from navigation_server.generated.console_pb2 import *
+from navigation_server.generated.console_pb2_grpc import *
 
 
 def _parser():

@@ -1,3 +1,18 @@
 #!/bin/bash
-python3 src/server_main.py --settings conf/"$1" -d "$PWD"
+NAVIGATION_RUN_SCRIPT="$(realpath "${BASH_SOURCE}")"
+echo "Script location is: $NAVIGATION_RUN_SCRIPT"
+export NAVIGATION_HOME="$(dirname "$NAVIGATION_RUN_SCRIPT")"
+echo "$NAVIGATION_HOME"
+cd "$NAVIGATION_HOME"
+if [ -f .navigationenv ]
+then
+  # shellcheck disable=SC2006
+  source .navigationenv
+else
+  PYTHON=python3
+fi
+
+echo "running $PYTHON"
+${PYTHON} run_server.py --settings "$1"
+
 

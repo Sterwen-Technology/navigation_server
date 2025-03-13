@@ -1,0 +1,38 @@
+
+//-------------------------------------------------------------------------------
+// Name:        nmea2000.proto
+// Purpose:     nmea2000 messages protobuf definition file
+//
+// Author:      Laurent Carré
+//
+// Created:     27/10/2021
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+// generic NMEA2000 message with all fast packets concatenated
+// so the payload length can be > 8 bytes
+
+message nmea2000pb {
+  uint32 pgn=1;
+  uint32 priority=2;
+  uint32 sa=3; // source address
+  uint32 da =4; // destination address
+  float timestamp = 5; // seconds from the epoch
+  bytes payload = 6; // fast packets concatenated
+}
+
+message nmea2000_decoded_pb {
+  uint32 pgn=1;
+  uint32 priority=2;
+  uint32 sa=3; // source address
+  uint32 da =4; // destination address
+  float timestamp = 5; // seconds from the epoch
+  uint32 manufacturer_id = 6; // manufacturer ID for proprietary messages
+  google.protobuf.Any payload = 7;
+}
+

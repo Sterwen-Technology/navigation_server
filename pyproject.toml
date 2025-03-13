@@ -1,28 +1,36 @@
-[tool.poetry]
+[project]
 name = "navigation-server"
-version = "2.0.0"
-description = ""
-authors = ["laurent <laurent.carre@sterwen-technology.eu>"]
+package-mode = true
+version = "2.2.1"
+description = "Navigation Server Full Install"
+authors = [{name="Laurent Carré", email="<laurent.carre@sterwen-technology.eu>"}]
 readme = "README.md"
-packages = [
-    {include = "src"},
+requires-python = ">=3.12"
+license = { file = "LICENSE"}
+
+dependencies = [
+    "pyserial>=3.5",
+    "protobuf==5.27.2",
+    "grpcio==1.66.2",
+    "pyyaml>=6.0.1"
 ]
+
+[project.optional-dependencies]
+gpio = ["gpiod>=2.0"]
+develop = ["grpcio-tools==1.66.2"]
+can = ["python-can>=4.0"]
+
+[project.scripts]
+navigation_server = "navigation_server:server_main"
+
+[tool.poetry]
+
 include = [
-    {path = "def", format = ["sdist", "wheel"] },
-    {path = "conf", format = ["sdist", "wheel"] }
+    {path = "navigation_definitions", format = ["sdist", "wheel"] },
+    {path = "conf", format = ["sdist"] },
+    {path = "system", format = ["sdist"] },
+    "run_server", "run_server.py", "setrunenv"
 ]
-
-[tool.poetry.dependencies]
-python = "^3.12"
-pyserial = "^3.5"
-protobuf = "5.27.2"
-grpcio = "1.66.1"
-pyyaml = "^6.0.1"
-python-can = "^4.0"
-
-[tool.poetry.scripts]
-navigation_server = "navigation-server.server_main:main"
-code_generator = "navigation-server.code_generator:main"
 
 [build-system]
 requires = ["poetry-core"]

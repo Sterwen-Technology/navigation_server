@@ -1,19 +1,20 @@
 #-------------------------------------------------------------------------------
-# Name:        settings.yml
+# Name:        log_simulator.yml
 # Purpose:     Settings file for the navigation server
 #
 # Author:      Laurent Carré
 #
-# Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Created:     26/01/2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 function: Log replay server
+server_name: CANReplayInjector
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 debug_configuration: false
 
-# log_file: test_fast_packet
+
 log_module:
   nmea2000.nmea2k_publisher: INFO
   router_core.coupler: INFO
@@ -43,10 +44,10 @@ servers:
 - Main:
     class: NavigationMainServer
 
-- NMEAServer:
-      class: NMEAServer
-      port: 4500
-      nmea2000: dyfmt
+- NmeaServer:
+    class: NMEAServer
+    port: 4500
+    nmea2000: dyfmt
 
 - gRPCMain:
       class: GrpcServer
@@ -55,7 +56,9 @@ servers:
 - NMEANetwork:
       class: NMEA2KActiveController
       channel: can0
-      applications: [STInput, GPS, AIS, Engine, Pressure, Pilot]
+      mac_source: end0
+      # applications: [STInput, GPS, AIS, Engine, Pressure, Pilot]
+      applications: [ReplayAll]
 
 
 couplers:
@@ -65,7 +68,6 @@ couplers:
     # logfile: C:\Users\laure\Laurent-Drive\Logiciel bateau\tests\TRACE-CAN-if-can0-231101-Corrigee.log
     logfile: /mnt/meaban/Bateau/tests/TRACE-CAN-if-can0-240823-1304.log
     # logfile: /mnt/meaban/Bateau/tests/TRACE-MiniPlex3-230720-0644.log
-
     autostart: true
     nmea2000_controller: NMEANetwork
     protocol: non_nmea
@@ -116,6 +118,12 @@ publishers:
 
 applications:
 
+  - ReplayAll:
+      class: DeviceReplaySimulator
+      source: 255 # replay all
+      publisher: Dispatcher
+      model_id: Replay Input
+
   - STInput:
       class: DeviceReplaySimulator
       source: 1
@@ -151,5 +159,4 @@ applications:
       source: 7
       publisher: Dispatcher
       model_id: Autopilot
-
 

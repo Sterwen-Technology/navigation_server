@@ -7,12 +7,15 @@ The Navigation Messages & Data Server toolbox is a set of software that can run 
 It is built around several Python application running independently and communicating via various messaging systems. The preferred internal system is based on Google RPC or [gPRC](https://grpc.io/) and [Protobuf](https://protobuf.dev/).
 Other possibility is to use NMEA0183 type streams on pseudo NMEA0183 streams encapsulating NMEA2000 (see documentation on NMEA2000 and data formats)
 
-**The toolbox** is focusing on NMEA2000 messages and data, whatever is the format. NMEA0183 messages are also carried but with a minimum of semantic analysis.
+**The toolbox** is focusing on NMEA2000 messages and data, whatever is the format. NMEA0183 messages are also carried but with a minimum of semantic analysis. All applications are using the same Python program.
 
-These applications are:
-   - **navigation_message_server** that acts as a router/concentrator/proxy between NMEA0183/NMEA2000 instrumentation buses with possibly some adhoc interface to be added for energy systems. There can be several **navigation_message_servers** running in the system and communicating. **navigation_message_server** can be configured to perform data processing and conversion.
-   - **vedirect** application reading the VE direct protocol from the RS485 stream and convert it into gRPC messages (it can be accessed directly or via a message server)
-   - **local_agent** this is a local service controlling other services via systemd through commands sent via gRPC, it can also act on the system network and operation (reboot)
+Based on the configuration file (using YamL syntax), all type of application can be launched:
+   - **message server** that acts as a router/concentrator/proxy between NMEA0183/NMEA2000 instrumentation buses with possibly some adhoc interface to be added for energy systems.
+   - **energy management** application interfaced with energy system (controllers, MPPT, Converters,...) via NMEA2000 or specific protocols
+   - **local agent** this is a local service controlling other services via systemd through commands sent via gRPC, it can also act on the system network and operation (reboot)
+   - **data manager** collecting messages and creating datasets like engine start and stop. That is a big area for future development
+
+The above list is not limitative and either by combining existing building block or creating new one in Python, there is no limit on what can be done with our **Navigation Message Server**.
 
 The navigation application is outside the scope of the project and most of the tests have been performed using [Scannav](https://www.scannav.com/).
 
@@ -23,14 +26,16 @@ A sample GUI application for the control of the various server is also available
 
 ## Installation
 The project is entirely written in Python 3 and has been tested with Python 3.7 - 3.12. It is intended to run on Linux based system. Is has been tested on Debian, Yocto and Ubuntu.
+*note: from version 2.1.1 on Python version 3.12 is preferred*
 Installation on Windows 10 or 11 is working with some limitations on TCP sockets and no support on Direct CAN connection.
 
-Current installation is based on a tar file or clone of the git repo. 
-The tar file (**navigationVXXX.tar**) is in the **dist** directory of the git repo. Select a version (in many case only the one corresponding the branch is available)
-Create the directory where you want to locate the package and extract the tar
-Then you can install all the required packages: `pip install -r requirements.txt`.
-It is recommended (not to say mandatory) to set up a Python virtual environment before the installation, but in that case you will not be able to run the system via systemd. The support of virtual environments is planned in future releases.
-In that case, the best solution is to use 'apt' instead of 'pip' to install system-wide packages to easily run the servers with systemd
+Installations files are available here (tar and wheel): [Sterwen Technology download page](https://sterwen-technology.eu/softwares/)
+
+### Setting up the Python environment and running servers
+
+Please refer to the specific documentation: [Python installation](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/python_environment.md)
+
+
 
 ### Running automatically with systemd
 In the **system** directory there are sample files to install several services to run the servers automatically. They can be reused, but you have to make sure that the files and locations are corresponding.
@@ -42,6 +47,8 @@ The script *install_server* creates 4 services:
 
 So the script is to be customized as well as the service files in the *systemd* subdirectory to match actual installation.
 
+**Warning: starting services in Python requires either to fully work without virtual environment or to be able to refer to the virtual environment from the service file**
+
 Another service is the **can** service that is initializing the CAN bus on boot. It is to be installed to avoid having to initialize manually the CAN upon boot. Again path to scripts is to be modified in the service file.
 
 
@@ -49,7 +56,7 @@ Another service is the **can** service that is initializing the CAN bus on boot.
  - ARM 32 bits systems: NXP iMX6 Dual or Quad core running Debian or Yocto; Raspberry Pi2
  - ARM 64 bits systems: RPi3 or 4 (1GB RAM is enough), NXP iMX8 running Debian or Yocto
  - AMD64 systems: Running Ubuntu or Debian
- - AMD64 systems with Windows 10: partial support only.
+ - AMD64 systems with Windows 10 or 11: partial support only.
 
 ### Supported BUS and instrumentation interfaces
  - Shipmodul Miniplex3 using IP host interface (NMEA0183 and NMEA2000)
@@ -86,11 +93,11 @@ For production the system should be run through *systemd*. Services that can be 
 
 The documentation is located in the *doc* directory.
 
-[message_server documentation](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/Navigation%20message%20server.md)
+[message_server documentation](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/Navigation%20message%20server.md)
 
-[System API](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/Navigation%20system%20API.md)
+[System API](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/Navigation%20system%20API.md)
 
-[NMEA2000 support](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/NMEA2000.md)
+[NMEA2000 support](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/NMEA2000.md)
 
 
 ## Development
@@ -101,13 +108,12 @@ To overcome the problem a specific Python script has been developed (mod_pb2.py)
 
 ## Support
 
-For any problem encountered, please open an issue in this repository.
+For any problem encountered, please open an issue in this GitHub repository.
 
 ## Roadmap
-The current stable version is V2.1. Documentation is aligned on this version.
+The current stable version is V2.2. Documentation is aligned on this version.
 
-The version 2.1 includes various corrections and Digital Yacht iKonvert and Yachting Digital improved support
-
+The version 2.2 is focusing on installation and import optimization
 
 ## Contributing
 

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# create a file that contains the python location for execution
+echo "PYTHON=$VIRTUAL_ENV/bin/python3" > .navigationenv
+echo "NAVIGATION_HOME=$PWD" >> .navigationenv

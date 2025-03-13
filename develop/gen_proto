@@ -1,23 +1,27 @@
 #!/bin/bash
 # nmea_router protobuf and gRPC
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Licence:     Eclipse Public License 2.0
+
 if [ ! -v NAVIGATION_HOME ]
 then
   echo "Environment variable NAVIGATION_HOME is missing"
   exit
 fi
-
-input_dir="$NAVIGATION_HOME/src/protobuf"
-output_dir="$NAVIGATION_HOME/src/generated"
+PACKAGE="navigation_server"
+input_dir="$NAVIGATION_HOME/$PACKAGE/protobuf"
+output_dir="$NAVIGATION_HOME/$PACKAGE/generated"
+cd "$NAVIGATION_HOME/develop" || exit
 
 gen_protobuf() {
   echo "processing:$1"
   input_file=${input_dir}/"$1.proto"
-  python -m grpc_tools.protoc -I ./${input_dir} --python_out=./${output_dir} --grpc_python_out=./${output_dir} ${input_file}
+  python -m grpc_tools.protoc -I ${input_dir} --python_out=${output_dir} --grpc_python_out=${output_dir} ${input_file}
   output_file=${output_dir}/"$1_pb2_grpc.py"
   if [ -e ${output_file} ]
   then
     shift
-    python mod_pb2.py ${output_file} generated $*
+    python mod_pb2.py ${output_file} "$PACKAGE.generated" "$@"
   fi
 }
 
@@ -25,7 +29,7 @@ adjust_protobuf() {
   echo "adjusting:$1"
   process_file=${output_dir}/"$1_pb2.py"
   shift
-  python mod_pb2.py "${process_file}" generated $*
+  python mod_pb2.py "${process_file}" "$PACKAGE.generated" "$@"
 }
 
 gen_protobuf energy

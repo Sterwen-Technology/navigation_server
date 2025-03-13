@@ -14,8 +14,8 @@ import grpc
 from argparse import ArgumentParser
 import sys
 
-from generated.energy_pb2 import *
-from generated.energy_pb2_grpc import *
+from navigation_server.generated.energy_pb2 import *
+from navigation_server.generated.energy_pb2_grpc import *
 
 
 def _parser():

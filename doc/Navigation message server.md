@@ -1,3 +1,64 @@
+<!-- TOC -->
+  * [Description](#description)
+    * [Servers](#servers)
+      * [NavigationMainServer class](#navigationmainserver-class)
+      * [GenericTopServer class](#generictopserver-class)
+      * [NMEAServer class](#nmeaserver-class)
+      * [NMEASenderServer class](#nmeasenderserver-class)
+      * [GrpcServer class](#grpcserver-class)
+      * [ShipModulConfig server](#shipmodulconfig-server)
+      * [NMEA2KController server](#nmea2kcontroller-server)
+      * [NMEA2KActiveController server](#nmea2kactivecontroller-server)
+    * [Couplers](#couplers)
+      * [Coupler generic parameters](#coupler-generic-parameters)
+      * [NMEASerialPort(Coupler)](#nmeaserialportcoupler)
+      * [IPCoupler(Coupler)](#ipcouplercoupler)
+      * [NMEATCPReader (IPCoupler)](#nmeatcpreader-ipcoupler)
+      * [ShipmodulInterface (IPCoupler)](#shipmodulinterface-ipcoupler)
+      * [YDCoupler (IPCoupler)](#ydcoupler-ipcoupler)
+      * [iKonvert(Coupler)](#ikonvertcoupler)
+      * [InternalGps (Coupler)](#internalgps-coupler)
+      * [VEDirectCoupler(Coupler)](#vedirectcouplercoupler)
+      * [DirectCANCoupler(Coupler)](#directcancouplercoupler)
+      * [GrpcNmeaCoupler(Coupler)](#grpcnmeacouplercoupler)
+    * [Services](#services)
+      * [Console service](#console-service)
+      * [AgentService](#agentservice)
+      * [DataDispatchService](#datadispatchservice)
+      * [Energy management service](#energy-management-service)
+        * [MPPTService](#mpptservice)
+    * [Publishers](#publishers)
+      * [Generic Publisher (Abstract class)](#generic-publisher-abstract-class)
+      * [GrpcPublisher](#grpcpublisher)
+      * [N2KJsonPublisher](#n2kjsonpublisher)
+      * [N2KTracePublisher](#n2ktracepublisher)
+      * [PrintPublisher](#printpublisher)
+      * [Injector (Publisher)](#injector-publisher)
+    * [N2KSourceDispatcher (Publisher)](#n2ksourcedispatcher-publisher)
+    * [Applications](#applications)
+      * [NMEA2000Application](#nmea2000application)
+      * [GrpcInputApplication(GrpcDataService, NMEA2000Application)](#grpcinputapplicationgrpcdataservice-nmea2000application)
+    * [Filters](#filters)
+    * [Filter classes](#filter-classes)
+      * [NMEAFilter](#nmeafilter)
+      * [NMEA0183filter (NMEAFilter)](#nmea0183filter-nmeafilter)
+      * [NMEA2000Filter (NMEAFilter)](#nmea2000filter-nmeafilter)
+      * [NMEA2000TimeFilter (NMEA2000Filter)](#nmea2000timefilter-nmea2000filter)
+  * [Tracing and replay](#tracing-and-replay)
+    * [RawLogCoupler (Coupler)](#rawlogcoupler-coupler)
+    * [TransparentCanLogCoupler (RawLogCoupler)](#transparentcanlogcoupler-rawlogcoupler)
+    * [DeviceReplaySimulator (NMEA2000Application)](#devicereplaysimulator-nmea2000application)
+  * [Organizing the processes](#organizing-the-processes)
+  * [Configuration files](#configuration-files)
+    * [Messages server configuration file](#messages-server-configuration-file)
+      * [Features concept and Python modules](#features-concept-and-python-modules)
+      * [Exemple configuration files](#exemple-configuration-files)
+      * [Profiling](#profiling)
+    * [Default port assignments for servers / services](#default-port-assignments-for-servers--services)
+  * [Implementation structure](#implementation-structure)
+    * [Root directory](#root-directory)
+    * [Launching a message server process](#launching-a-message-server-process)
+<!-- TOC -->
 ## Description
 The navigation server-router aggregate and distribute navigation and other operational data aboard recreational or small professional vessels.
 It is a focal point and server for all kind of data needed to control the course and operational condition of the boat.
@@ -186,6 +247,7 @@ on hold
 | autostart           | boolean                                | True          | The coupler is started automatically when the service starts, if False it needs to be started via the Console                                            |
 | nmea2000_controller | string                                 | None          | Name of the server of class NMEA2KController associated with the coupler                                                                                 |
 | nmea0183_convert    | boolean                                | False         | Convert NMEA0183 to NMEA2000, if protocol is specified as *nmea2000* then non converted messages are discarded, otherwise they are forwarded as NMEA0183 |
+| stop_system         | boolean                                | False         | When true stop the whole executable when the coupler stops. Useful for log_replay and tests                                                              |
 
 
 Remarks on protocol behavior:
@@ -238,7 +300,7 @@ Instantiable class to manage Ethernet or Wi-Fi interface for Shipmodul Miniplex3
 
 The class instance has 2 possible behavior depending on the protocol selected.
 - nmea0183: all frames are transparently transmitted as NMEA0183
-- nmea2000: All $MXPGN frames are interpreted as NMEA2000 and interpreted as such, including Fast Packet reassembly. Further processing on NMEA2000 frames is explained in the dedicated paragraph.
+- nmea2000: All $MXPGN frames are interpreted as NMEA2000 and processed as such, including Fast Packet reassembly. Further processing on NMEA2000 frames is explained in the dedicated paragraph.
 - nmea_mixed: Only the NMEA2000 bus PGN are reassembled and decoded to be sent to a NMEA2000 Controller, other messages are transmitted transparently
 
 The class is allowing the pass through of configuration messages sent by the MPXconfig utility. This is requiring that a ShipModulConfig server class is set up in the configuration. During the connection of the MPXConfig utility, all messages are directed to it, so no messages sent to clients.
@@ -262,7 +324,7 @@ The device connection and initialisation logic is directly managed by the couple
 
 #### InternalGps (Coupler)
 
-No additional parameters in this version. The coupler connects to the modem via a USB port. All parameters are given with the modem control.
+No additional parameters in this version. The coupler connects to the GNSS receiver via a TTY port. For that coupler class, it is assumed that the GNSS is integrated in a cellular modem. For isolated GNSS receiver the NMEASerialPort class shall be used.
 
 
 #### VEDirectCoupler(Coupler)
@@ -278,7 +340,7 @@ This coupler is intended to be used by the energy management agent, rather than 
 
 #### DirectCANCoupler(Coupler)
 This coupler class works when a CAN bus interface with socketcan driver is installed on the system. Obviously, only NMEA2000 messages can be processed.
-The CAN bus the coupler must be declared as **application** with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters and the coupler is considered as a specific device (CA) on the CAN bus. 
+The CAN bus coupler must be declared as **application** with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters and the coupler is considered as a specific device (CA) on the CAN bus. 
 
 #### GrpcNmeaCoupler(Coupler)
 
@@ -321,12 +383,13 @@ Messages with no subscription are simply ignored.
 
 #### Energy management service
 
-The service provides a global control for several services linked to energy management. The interface is described in **energy.proto**
+The service provides a global control for several services linked to energy management. The interface is described in **energy.proto**.
+Currently, only the **MPPTService** is available, the team is working on the implementation of new services, for batteries and chargers.
 
 ##### MPPTService
 
 This service receive the MPPT info via a VEDirectCoupler and keeps track of data and trends from the solar panel and MPPT output.
-The service can also be used to forward NMEA0183 or NMEA2000 messages via a *gRPCNMEAPublisher*
+The service can also be used to forward NMEA0183 or NMEA2000 messages via a **GrpcPublisher** towards another server.
 Interface is part of **energy.proto**
 
 Additional parameters
@@ -382,7 +445,23 @@ NMEA0183 processing flags:
 * **convert_strict**: messages are converted to NMEA2000 when possible and are discarded otherwise
 * **convert_pass**: messages are converted to NMEA2000 when possible or are forwarded as-is when not possible
 
-#### N2KTRacePublisher
+#### N2KJsonPublisher
+
+The publisher is serializing NMEA2000 messages using JSON syntax. Messages are separated by a newline character (ASCII 10)
+That output syntax is compatible with the one used by the [canboat analyzer](https://github.com/canboat). The fields names are used for the Json keywords.
+
+| Name           | Type         | Default | Signification                                                     |
+|----------------|--------------|---------|-------------------------------------------------------------------|
+| output         | stdout, file | stdout  | Where the Json is to be written                                   |
+| filename       | str          | None    | If no filename is given, an automatic name is generated           |
+| resolve_enum   | bool         | false   | replaces the enum integer value by the corresponding text         |
+| remove_invalid | bool         | false   | remove fields with invalid value from the output                  |
+| trace_invalid  | bool         | false   | Write an error message on stderr for any invalid NMEA2000 message |
+
+Only PGN that have an associated Python class (that have the <Scope> tag defined as **Generate**) are processed for output. Meaning that all frequent PGN used in Navigation systems are included.
+If some PGN in the user network are not in Scope, then the PGN XML definition file needs to be updated and the code generated.
+
+#### N2KTracePublisher
 
 Traces decoded NMEA2000 messages on stdout and/or in a file.
 
@@ -408,7 +487,18 @@ The injector is collecting the messages coming from one or more coupler and inje
 |--------|------------------|---------|--------------------------------------------------------------------------------|
 | target | string           | none    | Name of the coupler that will receive the messages and send them to the device |
 
+### N2KSourceDispatcher (Publisher)
 
+This publisher dispatch messages based on the NMEA2000 source address. Objects need to subscribe internally to receive the messages in three possible modes.
+
+| Name | Type             | Default | Signification                                                               |
+|------|------------------|---------|-----------------------------------------------------------------------------|
+| mode | string           | message | Format in which the message is passed to the application object (see below) |
+
+Messages modes definition:
+- **transparent** : The content of the message is not interpreted and the raw format from the coupler is passed to the application
+- **message** : NMEA2000 binary message format with Fast packet reassembly
+- **decoded** : NMEA2000 fully decoded (Python object)
 
 ### Applications
 
@@ -416,17 +506,27 @@ Applications are functionally Controller Applications as per J1939, they appear 
 They must be linked to an **Active CAN Controller** (NMEA2KActiveController) that is managing access to the bus and internal dispatching.
 To be active, applications needs to be declared in the Active controller definition (parameter *applications*)
 
-There is currently only one pre-defined application, that is used to inject on the NMEA2000 (CAN) bus messages coming on  gRPC/Protobuf 
+There is currently only one pre-defined application, that is used to inject on the NMEA2000 (CAN) bus messages coming on  gRPC/Protobuf
+
+#### NMEA2000Application
+
+This is the abstract super class for all NMEA2000 applications.
+
+| Name    | Type | Default | Signification                                                                                                |
+|---------|------|---------|--------------------------------------------------------------------------------------------------------------|
+| address | int  | none    | If this parameter is present and in the range [0, 253] the value will tentatively used as the device address |
+
+If no address is given, it will be allocated from the pool associated with the system (ECU)
+
 
 #### GrpcInputApplication(GrpcDataService, NMEA2000Application)
 
 That application implements a **service** as defined in the input_server.proto. It accepts both decoded and non decoded NMEA2000 messages (protobuf). It shall be associated with the gRPC server of the process.
+All messages received on the gRPC interface are forwarded to the NMEA2000 CAN bus.
 
 | Name             | Type   | Default | Signification                                                                  |
 |------------------|--------|---------|--------------------------------------------------------------------------------|
 | server           | string | None    | gRPC server associated. This is a mandatory parameter                          |
-
-
 
 
 
@@ -517,16 +617,38 @@ All Coupler parameters are applicable, and some must be set like the *nmea2000* 
 
 To keep the message timing, the whole file is read and messages stored in memory before the messages start to be sent in the system. By consequence, the LogReplayCoupler must be used on machines with enough RAM capacity. Recommendation is minimum 4GB of RAM to use the LogReplayCoupler.
 
+### TransparentCanLogCoupler (RawLogCoupler)
+
+This is variant of the RawLogCoupler working only on CAN level traces. Its purpose is to inject the NMEA2000 CAN frames in the system to create a simulator based on existing traces by using the N2KSourceDispatcher as publisher on this coupler.
+**Note: with that coupler, no message is sent towards the server for distribution to clients due to the specific format**
+
+### DeviceReplaySimulator (NMEA2000Application)
+
+That application act as Controller Application and simulate a NMEA2000 devices on the **NMEA2000 CAN bus** based on messages read from a log. Only one device per object, so to simulate multiple devices, multiple objects must be instantiated.
+
+If the source is set to 255 the application takes all the messages, thus a single device is forwarding all messages to the CAN bus. All other applications are not receiving any message and are disabled.
+
+
+| Name      | Type | Default | Signification                                                          |
+|-----------|------|---------|------------------------------------------------------------------------|
+| source    | int  | none    | source address to select a device in the logs  (255 select all)        |
+| publisher | str  | none    | Name of the publisher dispatching messages (N2KSourceDispatcher class) |
+| model_id  | str  | none    | String defining the simulated device for display                       |
 
 
 
-## Energy Management gRPC server
-This service is permanently reading the VEDirect (RS485 over USB) of the MPPT device in the current version and is intended to move to additional energy management features in the future.
-Data are available via the gRPC interface.
+## Organizing the processes
 
+All the building blocks needs to be organized in several processes for the overall system reliability and processing distribution across CPU (local multiple cores or multiple CPU).
 
+Here are some recommendations based on experience:
 
+1) for reliability reason the Agent service is to be implemented in a specific process. This will allow that process to monitor other processes.
+2) Connectivity to NMEA devices (via Coupler) as well as server for NMEA messages. For further processing, like NMEA2000 full decoding, a **GrpcPublisher** can be used to push the NMEA messages.
+3) It is recommended to locate energy management devices without NMEA2000 interface in a dedicated server that is instantiating the **MpptService**. This service can be associated to a Publisher that will forward NMEA messages translated from the native interface.
+4) The data server is another type of server that will hold data representing the current state of the yacht control system. It can be regularly polled by GUI type of applications. The first version is limited to engine data management but will be extended in the next versions. The data service is expected to receive NMEA messages via a **GrpcInputService**
 
+Many distributions are possible, they can even be spread across several physical machines. Some practical examples are available in the conf directory.
 
 ## Configuration files
 
@@ -566,6 +688,7 @@ The per object section includes a list oh object and each object as the followin
 The following sections are recognized:
 
 - features
+- profiling
 - servers
 - couplers
 - publishers
@@ -583,7 +706,7 @@ Here are the features included with the current version
 
 | feature name  | includes                      | needed for                             |
 |---------------|-------------------------------|----------------------------------------|
-| router_common | Message router basic features |                                        |
+| router_core   | Message router basic features |                                        |
 | nmea2000      | NMEA2000 Handling             |                                        |
 | nmea0183      | NMEA0183 handling             |                                        |
 | couplers      | Non CAN couplers              |                                        |  
@@ -744,8 +867,27 @@ filters:
     action: select
 
 ```
+#### Profiling
+
+To tackle performance problems, it is possible to enable profiling on specific threads.
+A profiling summary is printed on stdout when the server stops
+
+Exemple profiling section
+
+```
+profiling:
+  enable: true
+  symbols:
+    - N2KSourceDispatcher
+    - NMEA2KActiveController
+    - SocketCANInterface
+    - SocketCANWriter
+```
 
 ### Default port assignments for servers / services
+
+In the current version, the port assignment shall be managed manually. In most of the cases that is not an issue as the configuration for one application is rather static.
+However, having the system agent allocating the ports can be envisaged in future releases.
 
 | service                       | port | transport protocol | application protocol      |
 |-------------------------------|------|--------------------|---------------------------|

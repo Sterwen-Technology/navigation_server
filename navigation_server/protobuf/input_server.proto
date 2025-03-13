@@ -1,0 +1,22 @@
+//-------------------------------------------------------------------------------
+// Name:        server.proto
+// Purpose:     protobuf and grpc for navigation server data streams
+//
+// Author:      Laurent Carré
+//
+// Created:     12/06/2022
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+import "nmea2000.proto";
+import "nmea_messages.proto";
+
+service NMEAInputServer {
+  rpc status (server_cmd) returns (server_resp) {}
+  rpc pushNMEA( nmea_msg ) returns (server_resp) {}
+  rpc pushDecodedNMEA2K (nmea2000_decoded_pb) returns (server_resp) {}
+}
+

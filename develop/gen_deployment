@@ -9,7 +9,7 @@ then
   exit
 fi
 
-cd "$NAVIGATION_HOME/src"
+cd "$NAVIGATION_HOME/navigation_server"
 
 # removing all __pycache__ directories
 rm -rf __pycache__
@@ -18,5 +18,6 @@ rm -rf */__pycache__
 version=$(python server_main.py --version)
 
 cd ..
-tar cvf "$NAVIGATION_HOME/dist/navigation$version.tar" src/*.py src/*/*.py conf/*.yml def/* system/* LICENSE README.md run_server \
+
+tar cvf "$NAVIGATION_HOME/dist/navigation$version.tar" /*.py src/*/*.py conf/*.yml def/* system/* LICENSE README.md run_server \
   requirements.txt

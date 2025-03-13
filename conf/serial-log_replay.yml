@@ -1,0 +1,84 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     02/11/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+function: Log replay server to serial
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+debug_configuration: false
+decode_definition_only: false
+# log_file: test_fast_packet
+log_module:
+  nmea2000.nmea2k_grpc_publisher: INFO
+  router_common.configuration: INFO
+
+
+features:
+  - router_core
+  - nmea2000
+  - nmea0183
+  - log_replay
+  - couplers:
+      - NMEATCPReader
+      - NMEASerialPort
+
+
+servers:
+
+- Main:
+    class: NavigationMainServer
+
+- NMEAServer:
+      class: NMEAServer
+      port: 4500
+      nmea2000: dyfmt
+
+- gRPCMain:
+      class: GrpcServer
+      port: 4502
+
+- NMEANetwork:
+      class: NMEA2KController
+
+
+couplers:
+
+- ScannavReplay:
+    class: NMEATCPReader
+    address: 192.168.1.21
+    port: 3555
+    autostart: true
+    protocol: nmea0183
+
+
+- SerialCoupler:
+    class: NMEASerialPort
+    device: /dev/ttyUSB1
+    baudrate: 57600
+    autostart: true
+
+
+filters:
+
+services:
+
+- Console:
+      class: Console
+      server: gRPCMain
+
+publishers:
+
+- SerialFeed:
+    class: Injector
+    target: SerialCoupler
+    couplers: [ScannavReplay]
+    active: true
+    queue_size: 60
+    max_lost: 10
+
