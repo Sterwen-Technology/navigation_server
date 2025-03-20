@@ -132,7 +132,7 @@ class ShipModulInterface(BufferedIPCoupler):
         priow = msg.prio << 12
         rdata = bytearray(8)
 
-        def encode(data):
+        def encode(data) -> NavGenericMsg:
             l = len(data)
             id = 7
             for b in data[:l]:
