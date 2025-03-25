@@ -28,7 +28,25 @@ message Waypoint {
   string symbol=2;
 }
 
+message Route {
+  repeated Waypoint points=1;
+}
+
+message Area {
+  Point upper_left=1;
+  Point lower_left=2;
+  Point upper_right=3;
+  Point lower_right=4;
+  string area_type=5;
+}
+
 message NavigationObject {
   ObjectId id=1;
   string name=2;
-}
+  reserved 3, 4, 5;
+  oneof object {
+    Waypoint waypoint=6;
+    Route route=7;
+    Area area=8;
+    }
+  }

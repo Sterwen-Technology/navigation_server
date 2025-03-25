@@ -12,13 +12,15 @@ dependencies = [
     "pyserial>=3.5",
     "protobuf==5.27.2",
     "grpcio==1.66.2",
-    "pyyaml>=6.0.1"
+    "pyyaml>=6.0.1",
+    "pyubx2 (>=1.2.50,<2.0.0)"
 ]
 
 [project.optional-dependencies]
 gpio = ["gpiod>=2.0"]
 develop = ["grpcio-tools==1.66.2"]
 can = ["python-can>=4.0"]
+i2c = ["pylibi2c"]
 
 [project.scripts]
 navigation_server = "navigation_server:server_main"

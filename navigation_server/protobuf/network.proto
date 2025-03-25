@@ -1,0 +1,34 @@
+//-------------------------------------------------------------------------------
+// Name:        network.proto
+// Purpose:     protobuf and grpc for remote agent network aspects
+//
+// Author:      Laurent Carré
+//
+// Created:     24/03/2025
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+enum ConnectionStatus {
+  NOT_CONNECTED=0;
+  LAN_CONNECTED=1; // means that the connection is controlling a sub-LAN
+  WAN_CONNECTED=2; // means connected to WAN or upper layer LAN
+}
+
+message EthernetPort {
+
+}
+
+message WiFi {
+
+}
+
+message Cellular {
+
+}
+
+message NetworkDevice {
+
+}
