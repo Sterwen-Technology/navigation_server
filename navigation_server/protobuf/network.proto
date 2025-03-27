@@ -11,10 +11,31 @@
 
 syntax = "proto3";
 
+import "uuid.proto";
+
 enum ConnectionStatus {
   NOT_CONNECTED=0;
   LAN_CONNECTED=1; // means that the connection is controlling a sub-LAN
   WAN_CONNECTED=2; // means connected to WAN or upper layer LAN
+}
+
+enum DeviceType {
+  UNKNOWN=0;
+  ETHERNET=1;
+  WIFI=2;
+  CELLULAR=3;
+}
+
+message NetworkDevice {
+  string name=1;
+  DeviceType type=3;
+  ConnectionStatus status=4;
+}
+
+message Connection {
+  string name=1;
+  ObjectId uuid=2;  // optional, used only with NetworkManager
+  NetworkDevice device=3;
 }
 
 message EthernetPort {

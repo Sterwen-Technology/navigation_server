@@ -1,22 +1,17 @@
 //-------------------------------------------------------------------------------
-// Name:        console.proto
-// Purpose:     protobuf and grpc for remote control of navigation server
+// Name:        navigation_objects.proto
+// Purpose:     protobuf and grpc for navigation objects exchange
 //
 // Author:      Laurent Carré
 //
-// Created:     05/07/2022
-// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+// Created:     25/03/2025
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 // Licence:     Eclipse Public License 2.0
 //-------------------------------------------------------------------------------
 
 syntax = "proto3";
 
-
-message ObjectId {
-  uint32 time_stamp=1;
-  uint32 source=2;
-  uint32 serial=3;
-}
+import "uuid.proto";
 
 message Point {
   float latitude=1;
@@ -50,3 +45,40 @@ message NavigationObject {
     Area area=8;
     }
   }
+
+enum ObjectIdFormat {
+  UNKNOWN=0;
+  HEX_STRING=1;
+  BINARY=2;
+}
+
+message NavigationObjectsQuery {
+  string object_types=1;  // None or one or more object type separated by comma
+  string name_matching=2;  // regular expression on object names
+  ObjectIdFormat uuid_format=3;  // UUID format in the reply
+  Area inside=4; // Clipping area for the results
+}
+
+message NavigationObjectRequest {
+  ObjectId requested_object=1;
+  string name=2;
+}
+
+message NavigationObjectReply {
+  int32 execution_error=1;
+  repeated NavigationObject objects=2;
+}
+
+message CurrentNavigation {
+  bool navigation_active=1;
+  NavigationObject target_waypoint=2;
+  NavigationObject active_route=3;
+}
+
+
+service NavigationService {
+  rpc CreateObject(NavigationObject) returns(NavigationObjectReply) {}
+  rpc GetObject(NavigationObjectRequest) returns (NavigationObjectReply) {}
+  rpc QueryObjects(NavigationObjectsQuery) returns (NavigationObjectReply) {}
+}
+
