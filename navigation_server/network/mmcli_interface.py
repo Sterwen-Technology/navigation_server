@@ -16,6 +16,7 @@ import sys
 
 _logger = logging.getLogger('ShipDataServer.' + __name__)
 
+
 def mmcli_request(command: list) -> dict:
     args = ['mmcli', '-J'] + command
     result = subprocess.run(args, capture_output=True, encoding="utf-8")

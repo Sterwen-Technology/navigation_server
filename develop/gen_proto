@@ -41,14 +41,17 @@ gen_protobuf input_server nmea_messages nmea2000
 gen_protobuf nmea_server
 gen_protobuf agent
 gen_protobuf arguments
+gen_protobuf uuid
 gen_protobuf ecu
 gen_protobuf nmea2000_classes_iso_gen
 gen_protobuf nmea2000_classes_gen
 gen_protobuf iso_name
 gen_protobuf navigation_data
+gen_protobuf navigation_objects
 adjust_protobuf input_server nmea_messages
 adjust_protobuf nmea_messages nmea0183 nmea2000
 adjust_protobuf nmea_server nmea_messages
 adjust_protobuf console arguments iso_name nmea2000_classes_iso_gen
 adjust_protobuf ecu nmea2000
 adjust_protobuf energy arguments
+adjust_protobuf navigation_objects uuid
