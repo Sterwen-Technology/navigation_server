@@ -14,3 +14,4 @@ from .console_client import *
 from .agent_client import AgentClient
 from .energy_client import MPPT_Client, MPPT_device_proxy, MPPT_output_proxy
 from .navigation_data_client import EngineClient, EngineData, EngineProxy, EngineEventProxy
+from .nmea_server_client import GrpcNmeaServerClient
