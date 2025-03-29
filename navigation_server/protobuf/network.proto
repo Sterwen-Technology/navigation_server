@@ -36,7 +36,7 @@ message Connection {
   string name=1;
   ObjectId uuid=2;  // optional, used only with NetworkManager
   string device_name=3;  //index to device
-  
+
 }
 
 message EthernetPort {
