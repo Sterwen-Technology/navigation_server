@@ -1,4 +1,7 @@
 #!/bin/bash
+# pull the CAN1 silent and CAN2 standby pins
+gpioset --mode=wait gpiochip2 26=0 &
+gpioset --mode=wait gpiochip2 27=0 &
 # perform can initialisation commands - assumed to be run a root
 # on STNC hard setup for GPIO
 gpioset --mode=wait gpiochip2 26=0 &
