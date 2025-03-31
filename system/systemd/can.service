@@ -5,7 +5,7 @@ Requires=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/home/solidsense/navigation/system/can_setup
+ExecStart=/home/laurent/system/can_setup
 Restart=no
 
 

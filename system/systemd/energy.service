@@ -5,7 +5,7 @@ Requires=network.target
 [Service]
 Type=simple
 User=solidsense
-ExecStart=/home/solidsense/navigation/run_server /home/solidsense/config/energy_management.yml
+ExecStart=/home/laurent/navigation_server/run_server /home/laurent/config/energy_management.yml
 Restart=on-failure
 RestartSec=6
 
