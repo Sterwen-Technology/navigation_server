@@ -13,6 +13,6 @@ else
 fi
 
 echo "running $PYTHON $*"
-${PYTHON} "$*"
+${PYTHON} $*
 
 

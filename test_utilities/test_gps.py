@@ -20,9 +20,9 @@ from argparse import ArgumentParser
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
     p.add_argument("-i", "--input", action="store", type=str,
-        default='/dev/ttyUSB1', help="Serial port for the NMEA Input")
+        default='/dev/ttyUSB0', help="Serial port for the NMEA Input")
     p.add_argument("-b", "--baudrate", action="store", type=int,
-        default=9600,
+        default=38400,
         help="Baud rate for the NMEA output, usually 4800, which is also the default")
 
     return p

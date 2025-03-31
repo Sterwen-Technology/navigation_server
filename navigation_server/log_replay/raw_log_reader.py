@@ -121,7 +121,7 @@ class RawLogFile:
             if i_sup == -1:
                 raise ValueError
             date_str = l[ih+1:i_sup]
-            message = l[i_sup+1:len(l)-1]  # removing trailing LF
+            message = l[i_sup+1:-1]  # removing trailing LF
             timestamp = datetime.datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f")
             return timestamp, message
 
@@ -247,7 +247,7 @@ class RawLogFile:
         if self._first_record:
             self._first_record = False
             self._lock.release()
-            return self._previous_record.message
+            return self._previous_record
         self._index += 1
         try:
             record = self._records[self._index]
@@ -264,7 +264,7 @@ class RawLogFile:
             time.sleep(wait_time)
         self._current_replay_time = time.time() - self._start_replay_time
         self._lock.release()
-        return record.message
+        return record
 
     def get_current_log_date(self):
         return self._records[self._index].timestamp

@@ -3,7 +3,8 @@
 import grpc
 import warnings
 
-import nmea_messages_pb2 as nmea__messages__pb2
+import navigation_server.generated.nmea_messages_pb2 as nmea__messages__pb2
+
 
 GRPC_GENERATED_VERSION = '1.66.2'
 GRPC_VERSION = grpc.__version__

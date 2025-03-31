@@ -14,7 +14,7 @@ output_dir="$NAVIGATION_HOME/$PACKAGE/generated"
 cd "$NAVIGATION_HOME/develop" || exit
 
 gen_protobuf() {
-  echo "processing:$1"
+  echo "generating protobuf for:$1"
   input_file=${input_dir}/"$1.proto"
   python -m grpc_tools.protoc -I ${input_dir} --python_out=${output_dir} --grpc_python_out=${output_dir} ${input_file}
   output_file=${output_dir}/"$1_pb2_grpc.py"
@@ -38,7 +38,7 @@ gen_protobuf nmea0183
 gen_protobuf nmea2000
 gen_protobuf nmea_messages
 gen_protobuf input_server nmea_messages nmea2000
-gen_protobuf nmea_server
+gen_protobuf nmea_server nmea_messages
 gen_protobuf agent
 gen_protobuf arguments
 gen_protobuf uuid
