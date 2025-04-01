@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import any_pb2 as google_dot_protobuf_dot_any__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enmea2000.proto\x1a\x19google/protobuf/any.proto\"g\n\nnmea2000pb\x12\x0b\n\x03pgn\x18\x01 \x01(\r\x12\x10\n\x08priority\x18\x02 \x01(\r\x12\n\n\x02sa\x18\x03 \x01(\r\x12\n\n\x02\x64\x61\x18\x04 \x01(\r\x12\x11\n\ttimestamp\x18\x05 \x01(\x02\x12\x0f\n\x07payload\x18\x06 \x01(\x0c\"\xb8\x01\n\x13nmea2000_decoded_pb\x12\x0b\n\x03pgn\x18\x01 \x01(\r\x12\x10\n\x08priority\x18\x02 \x01(\r\x12\n\n\x02sa\x18\x03 \x01(\r\x12\n\n\x02\x64\x61\x18\x04 \x01(\r\x12\x11\n\ttimestamp\x18\x05 \x01(\x02\x12\x1c\n\x0fmanufacturer_id\x18\x06 \x01(\rH\x00\x88\x01\x01\x12%\n\x07payload\x18\x07 \x01(\x0b\x32\x14.google.protobuf.AnyB\x12\n\x10_manufacturer_idb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enmea2000.proto\x1a\x19google/protobuf/any.proto\"g\n\nnmea2000pb\x12\x0b\n\x03pgn\x18\x01 \x01(\r\x12\x10\n\x08priority\x18\x02 \x01(\r\x12\n\n\x02sa\x18\x03 \x01(\r\x12\n\n\x02\x64\x61\x18\x04 \x01(\r\x12\x11\n\ttimestamp\x18\x05 \x01(\x02\x12\x0f\n\x07payload\x18\x06 \x01(\x0c\"\x9f\x01\n\x13nmea2000_decoded_pb\x12\x0b\n\x03pgn\x18\x01 \x01(\r\x12\x10\n\x08priority\x18\x02 \x01(\r\x12\n\n\x02sa\x18\x03 \x01(\r\x12\n\n\x02\x64\x61\x18\x04 \x01(\r\x12\x11\n\ttimestamp\x18\x05 \x01(\x02\x12\x17\n\x0fmanufacturer_id\x18\x06 \x01(\r\x12%\n\x07payload\x18\x07 \x01(\x0b\x32\x14.google.protobuf.Anyb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,5 +35,5 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_NMEA2000PB']._serialized_start=45
   _globals['_NMEA2000PB']._serialized_end=148
   _globals['_NMEA2000_DECODED_PB']._serialized_start=151
-  _globals['_NMEA2000_DECODED_PB']._serialized_end=335
+  _globals['_NMEA2000_DECODED_PB']._serialized_end=310
 # @@protoc_insertion_point(module_scope)

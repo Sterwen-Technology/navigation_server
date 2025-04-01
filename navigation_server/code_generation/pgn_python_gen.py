@@ -714,7 +714,7 @@ class PythonPGNGenerator:
         self.dec_indent()
 
     def gen_item_adder(self, field_def: RepeatAttributeDef):
-        self.write(f"def add_{field_def.class_name.removesuffix('Class')}(self, item: {field_def.class_name}):\n")
+        self.write(f"def add_{field_def.class_name[:-5]}(self, item: {field_def.class_name}):\n")
         self.inc_indent()
         self.write(f"if self.{field_def.variable} is None:\n")
         self.inc_indent()

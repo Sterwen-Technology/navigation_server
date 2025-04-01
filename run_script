@@ -1,4 +1,9 @@
 #!/bin/bash
+NAVIGATION_RUN_SCRIPT="$(realpath "${BASH_SOURCE}")"
+echo "Script location is: $NAVIGATION_RUN_SCRIPT"
+export NAVIGATION_HOME="$(dirname "$NAVIGATION_RUN_SCRIPT")"
+echo "$NAVIGATION_HOME"
+cd "$NAVIGATION_HOME"
 if [ -f $NAVIGATION_HOME/.navigationenv ]
 then
   # shellcheck disable=SC2006
@@ -8,6 +13,6 @@ else
 fi
 
 echo "running $PYTHON $*"
-${PYTHON} "$#"
+${PYTHON} "$*"
 
 

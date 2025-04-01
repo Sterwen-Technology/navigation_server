@@ -1,0 +1,19 @@
+//-------------------------------------------------------------------------------
+// Name:        navigation_objects.proto
+// Purpose:     protobuf UUID per RFC4122
+//
+// Author:      Laurent Carré
+//
+// Created:     25/03/2025
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+message ObjectId {
+  oneof uuid {
+    string urn=1;  // URN hexadecimal string as per RFC 4122
+    bytes bin128bits=2; // 16bytes to encode the 128bits UUID
+  }
+}

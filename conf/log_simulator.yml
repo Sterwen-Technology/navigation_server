@@ -19,7 +19,7 @@ log_module:
   nmea2000.nmea2k_publisher: INFO
   router_core.coupler: INFO
   router_common.nav_threading: INFO
-  router_common.configuration: INFO
+  router_common.configuration: DEBUG
   can_interface.nmea2k_application: INFO
   can_interface.nmea2k_active_controller: INFO
 
