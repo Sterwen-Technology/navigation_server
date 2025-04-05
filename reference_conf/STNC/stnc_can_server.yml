@@ -71,6 +71,10 @@ couplers:
 
 filters:
 
+- Engine:
+    class: NMEA2000Filter
+    pgn: [127488, 127489]
+    type: select
 
 services:
 
@@ -79,6 +83,18 @@ services:
       server: gRPCMain
 
 publishers:
+
+- SendNMEA2000:
+    class: GrpcPublisher
+    active: true
+    decode_nmea2000: false
+    nmea0183: convert_strict
+    address: 127.0.0.1
+    port: 4508
+    max_retry: 0
+    filters: [Engine]
+    couplers: [CANCoupler]
+
 
 - TraceOutput:
     class: N2KStatisticPublisher
