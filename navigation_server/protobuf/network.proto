@@ -1,0 +1,56 @@
+//-------------------------------------------------------------------------------
+// Name:        network.proto
+// Purpose:     protobuf and grpc for remote agent network aspects
+//
+// Author:      Laurent Carré
+//
+// Created:     24/03/2025
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+import "uuid.proto";
+
+enum ConnectionStatus {
+  NOT_CONNECTED=0;
+  LAN_CONNECTED=1; // means that the connection is controlling a sub-LAN
+  WAN_CONNECTED=2; // means connected to WAN or upper layer LAN
+}
+
+enum DeviceType {
+  UNKNOWN=0;
+  ETHERNET=1;
+  WIFI=2;
+  CELLULAR=3;
+}
+
+message NetworkDevice {
+  string name=1;
+  DeviceType type=3;
+  ConnectionStatus status=4;
+}
+
+message Connection {
+  string name=1;
+  ObjectId uuid=2;  // optional, used only with NetworkManager
+  string device_name=3;  //index to device
+
+}
+
+message EthernetPort {
+
+}
+
+message WiFi {
+
+}
+
+message Cellular {
+
+}
+
+message NetworkDevice {
+
+}

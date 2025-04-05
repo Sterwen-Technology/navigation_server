@@ -212,7 +212,9 @@ class NMEA2000Msg:
         self._payload = pb_msg.payload
 
     def serialize(self):
-        return MessageToJson(self.as_protobuf())
+        msg_pb = nmea2000pb()
+        self.as_protobuf(msg_pb)
+        return MessageToJson(msg_pb, preserving_proto_field_name=True, indent=2).encode('utf-8')
 
     def decode(self):
         try:

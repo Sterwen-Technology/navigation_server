@@ -115,7 +115,7 @@ class NMEA2000Application(NMEA2000Device):
 
         _logger.info("Controller Application ECU:%s ISO Name=%08X address=%d type:%s" %
                      (controller.name, self._iso_name.name_value, self._address, self._application_type_name))
-        self._name = f"{self._application_type_name}@{self._address}"
+        self._app_name = f"{self._application_type_name}@{self._address}"
         self._claim_timer = None
         self._heartbeat_timer = None
         self._heartbeat_interval = 60.0  # can be adjusted in subclasses
@@ -151,7 +151,7 @@ class NMEA2000Application(NMEA2000Device):
 
     @property
     def name(self) -> str:
-        return self._name
+        return self._app_name
 
     def stop_request(self):
         self._app_state = self.STOP_IN_PROGRESS
@@ -377,15 +377,15 @@ class NMEA2000Application(NMEA2000Device):
 class DeviceReplaySimulator(NMEA2000Application):
 
     def __init__(self, opts):
-        self._name = opts['name']
+        self._app_name = opts['name']
         self._source = opts.get('source', int, 255)
         if self._source in (253, 254):
             raise ValueError
-        _logger.info(f"Starting DeviceReplaySimulator {self._name} with source {self._source}")
+        _logger.info(f"Starting DeviceReplaySimulator {self._app_name} with source {self._source}")
         self._publisher_name = opts.get('publisher', str, None)
         self._publisher = None
         if self._publisher_name is None:
-            _logger.error(f"DeviceReplaySimulator {self._name} missing publisher")
+            _logger.error(f"DeviceReplaySimulator {self._app_name} missing publisher")
             raise ValueError
         self._model_id = opts.get('model_id', str, 'Replay Simulator')
 
@@ -400,16 +400,16 @@ class DeviceReplaySimulator(NMEA2000Application):
         try:
             self._publisher = resolve_ref(self._publisher_name)
         except KeyError:
-            _logger.error(f"DeviceReplaySimulator {self._name} incorrect publisher {self._publisher_name}")
+            _logger.error(f"DeviceReplaySimulator {self._app_name} incorrect publisher {self._publisher_name}")
             return
         assert self._publisher is not None
-        _logger.info(f"DeviceReplaySimulator {self._name} subscribing on published {self._publisher.name}")
+        _logger.info(f"DeviceReplaySimulator {self._app_name} subscribing on published {self._publisher.name}")
         self._publisher.subscribe(self._source, self.input_message)
 
     def input_message(self, can_id, data):
         _logger.debug("DeviceReplaySimulator message %4X %s" % (can_id, data.hex()))
         if self._app_state != self.ACTIVE:
-            _logger.warning(f"Application {self._name} not ready to take messages")
+            _logger.warning(f"Application {self._app_name} not ready to take messages")
             return
         pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
         # need to avoid all protocol pgn
@@ -427,12 +427,12 @@ class DeviceSimulator(NMEA2000Application):
     '''
 
     def __init__(self, opts):
-        self._name = opts['name']
+        self._app_name = opts['name']
         self._requested_address = opts.get('address', int, -1)
         self._model_id = opts.get('model_id', str, 'Device Simulator')
         self._processed_pgn = opts.getlist('pgn_list',int, None)
         if self._processed_pgn is None:
-            _logger.error(f"Device Simulator {self._name} must have a set of pgn assigned")
+            _logger.error(f"Device Simulator {self._app_name} must have a set of pgn assigned")
             raise ValueError
 
     def init_product_information(self):
@@ -442,7 +442,7 @@ class DeviceSimulator(NMEA2000Application):
     def set_controller(self, controller):
         super().__init__(controller, self._requested_address)
         # here we assume that the publisher has been instantiated as well
-        _logger.info(f"Device Simulator {self._name} ready")
+        _logger.info(f"Device Simulator {self._app_name} ready")
         controller.set_pgn_vector(self, self._processed_pgn)
 
     def receive_data_msg(self, msg: NMEA2000Msg):

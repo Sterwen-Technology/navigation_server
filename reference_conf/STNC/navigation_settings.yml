@@ -10,21 +10,25 @@
 #-------------------------------------------------------------------------------
 #
 function: Navigation message server
-server_name: navigation
 log_level: INFO
-trace_dir: /data/traces
+trace_dir: /data/solidsense
 log_module:
+    nmea2000.nmea2k_filters: INFO
+    router_core.filters: INFO
+    router_core.publisher: INFO
+    couplers.shipmodul_if: INFO
+
 
 features:
     - router_core
     - nmea2000
     - nmea0183
-    - can_interface
-    - nmea2000_devices
-    - log_replay
     - couplers:
+          - ShipModulConfig
+          - ShipModulInterface
+          - InternalGps
+          - MpptCoupler
           - NMEATCPReader
-          - NMEASerialPort
 
 servers:
 
@@ -35,55 +39,55 @@ servers:
     class: NMEAServer
     port: 4500
     nmea2000: dyfmt
+    filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K, Barometer]
     
 - gRPCMain:
     class: GrpcServer
     port: 4502
+
+- ShipModulConfig:
+    class: ShipModulConfig
+    port: 4501
+    coupler: MiniPlex3
     
 - NMEASender:
     class: NMEASenderServer
     port: 4503
-    coupler: CANCoupler
+    coupler: MiniPlex3
     max_silent: 10
     # master: 172.16.0.100
     timeout: 8.0
+    nmea2000: dyfmt
     
 - NMEANetwork:
-    class: NMEA2KActiveController
-    trace: false
-    channel: can0
-    max_silent: 60.0
-    applications: [ CANCoupler, APEmulator ]
+    class: NMEA2KController
+    max_silent: 70.0
 
 
 couplers:
 
-- CANCoupler:
-    class: DirectCANCoupler
+- MiniPlex3:
+    class: ShipModulInterface
+    address: 172.16.2.100
+    port: 10110
+    transport: TCP
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
+    autostart: true
+    trace_raw: false
+    
 
+
+- Gps:
+   class: InternalGps
+   autostart: false
+    
 - ScannavReplay:
     class: NMEATCPReader
-    address: 192.168.1.21
-    port: 3555
+    address: 172.16.1.103
+    port: 2000
     autostart: false
-    protocol: nmea2000
-    nmea0183_convert: true
-
-- SerialCoupler:
-    class: NMEASerialPort
-    device: /dev/ttyS0
-    baudrate: 57600
-    autostart: false
-
-- LogReader:
-      class: RawLogCoupler
-      logfile: /data/solidsense/logs/TRACE-CAN-if-can0-240823-1304.log
-      autostart: false
-      nmea2000_controller: NMEANetwork
-      protocol: nmea2000
-      direction: read_only
-      stop_system: false
-
+    
 services:
 
 - Console:
@@ -93,22 +97,16 @@ services:
 
 publishers:
 
-- TraceOutput:
-    class: N2KTracePublisher
-    couplers: [CANCoupler]
-    # filters: [NMEAOutput]
-    filter_select: true
-    active: false
-    flexible_decode: false
-
-- CanFeed:
-    class: Injector
-    target: CANCoupler
-    couplers: [ScannavReplay, SerialCoupler, LogReader]
+- SendNMEA2000:
+    class: GrpcPublisher
     active: true
-    queue_size: 60
-    max_lost: 10
-
+    decode_nmea2000: false
+    nmea0183: convert_strict
+    address: 127.0.0.1
+    port: 4508
+    max_retry: 0
+    filters: [Engine]
+    couplers: [MiniPlex3]
 
 filters:
 
@@ -141,9 +139,3 @@ filters:
     pgn: [127488, 127489]
     type: select
       
-applications:
-
-- APEmulator:
-    class: AutoPilotEmulator
-    address: 10
-    model_id: Auto Pilot Emulator

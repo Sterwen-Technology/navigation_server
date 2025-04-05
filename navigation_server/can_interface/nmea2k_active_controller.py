@@ -16,7 +16,7 @@ from navigation_server.router_core import NMEA2000Msg
 from navigation_server.nmea2000 import NMEA2KController
 from .nmea2k_application import NMEA2000Application, NMEA2000ApplicationPool
 from .nmea2k_can_interface import SocketCANInterface, SocketCanError
-from navigation_server.router_common import ObjectCreationError
+from navigation_server.router_common import ObjectCreationError, set_global_var
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -44,6 +44,7 @@ class NMEA2KActiveController(NMEA2KController):
         self._app_timer = None
         self._timer_vector = []
         self._catch_all = []
+        set_global_var("NMEA2K_ECU", self)
 
     @property
     def min_queue_size(self):

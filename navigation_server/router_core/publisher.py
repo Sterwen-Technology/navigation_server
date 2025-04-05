@@ -217,3 +217,24 @@ class PrintPublisher(ExternalPublisher):
     def process_msg(self, msg):
         print(msg)
         return True
+
+
+class PullPublisher(Publisher):
+
+    def __init__(self, couplers=None, name=None):
+        super().__init__(None, internal=True, couplers=couplers, name=name)
+        self._wait_queue = queue.SimpleQueue()
+
+    def process_msg(self, msg):
+        try:
+            self._wait_queue.put(msg, block=False)
+            return True
+        except queue.Full:
+            _logger.error("Pull publisher %s queue full" % self._name)
+            return False
+
+    def pull_msg(self, timeout=None):
+        try:
+            return self._wait_queue.get(timeout=timeout)
+        except queue.Empty:
+            return None

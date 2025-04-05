@@ -277,6 +277,51 @@ files = [
 ]
 
 [[package]]
+name = "pylibi2c"
+version = "0.2.1"
+description = "Linux userspace i2c operation library"
+optional = true
+python-versions = ">=2.7"
+groups = ["main"]
+markers = "extra == \"i2c\""
+files = [
+    {file = "pylibi2c-0.2.1-cp39-cp39-linux_armv7l.whl", hash = "sha256:9313474d935e3356038d3b2884dfbcbe819383d155ac6b522710758f522dfa5f"},
+    {file = "pylibi2c-0.2.1.tar.gz", hash = "sha256:7f7b9e8d1c7adf79ba8c5fdccbcb5c116e4c0f873fcf99b48f78bb765bec09e4"},
+]
+
+[[package]]
+name = "pynmeagps"
+version = "1.0.46"
+description = "NMEA protocol parser and generator"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "pynmeagps-1.0.46-py3-none-any.whl", hash = "sha256:4162700a2328a924cba01d7abd3ced3ccc5687a05096e71fb9ceafc356e63968"},
+    {file = "pynmeagps-1.0.46.tar.gz", hash = "sha256:ac06d612bbd8a4cfdfb46d3bdd158efe56d1579a87a88589f1fb10f608e0f4f4"},
+]
+
+[package.extras]
+deploy = ["build", "pip", "setuptools (>=66.0)", "wheel"]
+test = ["Sphinx", "bandit", "black", "isort", "pylint", "pytest", "pytest-cov", "sphinx-rtd-theme"]
+
+[[package]]
+name = "pyrtcm"
+version = "1.1.4"
+description = "RTCM3 protocol parser"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "pyrtcm-1.1.4-py3-none-any.whl", hash = "sha256:37a36a500c5f8902b976d04c73756de35f578aceb2aa079d9bfeb418422ca4b7"},
+    {file = "pyrtcm-1.1.4.tar.gz", hash = "sha256:a1932edf36f6f57edaef96b4022d957b251334252c0576caa01a1370ffeaa32c"},
+]
+
+[package.extras]
+deploy = ["build", "pip", "setuptools (>=66.0)", "wheel"]
+test = ["Sphinx", "bandit", "black", "pylint", "pytest", "pytest-cov", "sphinx-rtd-theme"]
+
+[[package]]
 name = "pyserial"
 version = "3.5"
 description = "Python Serial Port Extension"
@@ -328,6 +373,26 @@ serial = ["pyserial (>=3.0,<4.0)"]
 sontheim = ["python-can-sontheim (>=0.1.2)"]
 viewer = ["windows-curses"]
 zlgcan = ["zlgcan-driver-py"]
+
+[[package]]
+name = "pyubx2"
+version = "1.2.50"
+description = "UBX protocol parser and generator"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "pyubx2-1.2.50-py3-none-any.whl", hash = "sha256:084c2fe015c744d961a2ce8d26db4419c57fb9fd75f85978551e8e027c177f89"},
+    {file = "pyubx2-1.2.50.tar.gz", hash = "sha256:57262859621e9a159d2698ac504cde4c0c248692472129bb0e1a09ae2ae19b20"},
+]
+
+[package.dependencies]
+pynmeagps = ">=1.0.44"
+pyrtcm = ">=1.1.4"
+
+[package.extras]
+deploy = ["build", "pip", "setuptools (>=66.0)", "wheel"]
+test = ["Sphinx", "bandit", "black", "isort", "pylint", "pytest", "pytest-cov", "sphinx-rtd-theme"]
 
 [[package]]
 name = "pyyaml"
@@ -521,8 +586,9 @@ files = [
 can = ["python-can"]
 develop = ["grpcio-tools"]
 gpio = ["gpiod"]
+i2c = ["pylibi2c"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12"
-content-hash = "5adb760a990fea1908c1b1b0d2a71f6de6228dbfb26aa3a8ec3d83bcc339f5ff"
+content-hash = "d37d0a237b392162c0cec795b1fc06cfcf6912bc193bcb7f78c9091f13a55a4d"
