@@ -126,7 +126,7 @@ class ConsoleClient(ServiceClient):
         req = Request(target=target, cmd=command)
         if args is not None:
             dict_to_protob(args, req.kwargs)
-        resp = self._server_call(self._stub.CouplerCmd, req)
+        resp = self._server_call(self._stub.CouplerCmd, req,None)
         if resp.HasField('response_values'):
             return protob_to_dict(resp.response_values.arguments)
         else:
@@ -143,7 +143,7 @@ class ConsoleClient(ServiceClient):
         req.cmd = cmd
         if target is not None:
             req.target = target
-        response = self._server_call(self._stub.ServerCmd, req)
+        response = self._server_call(self._stub.ServerCmd, req, None)
         return response.status
 
     def get_devices(self, command=None):
