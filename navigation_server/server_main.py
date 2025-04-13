@@ -16,7 +16,7 @@ import sys
 from navigation_server.router_common import (NavigationConfiguration, NavigationLogSystem, MessageServerGlobals,
                                              init_options, set_root_package, ConfigurationException, ObjectCreationError)
 
-MessageServerGlobals.version = "2.2.2"
+MessageServerGlobals.version = "2.3.0"
 default_base_dir = "/"
 _logger = logging.getLogger("ShipDataServer.main")
 

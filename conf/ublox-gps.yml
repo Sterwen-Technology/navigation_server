@@ -1,0 +1,69 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/12/2021
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+trace: DEBUG
+trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+  nmea_routing.coupler: INFO
+  nmea0183.nmea0183_to_nmea2k: INFO
+
+features:
+    - router_core
+    - nmea2000
+    - nmea0183
+    - gnss
+
+servers:
+
+- Main:
+    class: NavigationMainServer
+
+- gRPCMain:
+    class: GrpcServer
+    port: 4502
+
+couplers:
+
+- GPS:
+    class: GNSSCoupler
+    device: /dev/ttyUSB4
+    trace_messages: false
+    trace_raw: true
+    autostart: true
+    # nmea0183_convert: true
+    # protocol: nmea2000
+
+
+publishers:
+
+- GpsN2K:
+      class: N2KTracePublisher
+      couplers: [GPS]
+      active: false
+      flexible_decode: false
+- GNSS0183:
+    class: PrintPublisher
+    couplers: [GPS]
+    active: true
+
+services:
+
+- Console:
+    class: Console
+    server: gRPCMain
+
+
+
+
+
+
+
+

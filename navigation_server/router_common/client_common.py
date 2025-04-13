@@ -15,7 +15,7 @@ import logging
 from navigation_server.router_common import GrpcAccessException
 
 
-_logger = logging.getLogger("ShipDataClient." + __name__)
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class GrpcClient:
@@ -34,9 +34,12 @@ class GrpcClient:
     """
     (NOT_CONNECTED, CONNECTING, CONNECTED) = range(10, 13)
 
-    def __init__(self, server):
+    def __init__(self, server: str, use_request_id:bool = True):
         """
         Represents a client connection handler for a server.
+
+        Parameters:
+            server: this is a string in the form Address(or URL):port
 
         This class is responsible for managing the connection and communication
         with a server. It initializes essential attributes required to maintain
@@ -60,6 +63,7 @@ class GrpcClient:
         self._services = []
         self._state = self.NOT_CONNECTED
         self._req_id = 0
+        self._use_req_id = use_request_id
 
     def connect(self):
         """
@@ -72,6 +76,7 @@ class GrpcClient:
 
         """
         self._channel = grpc.insecure_channel(self._server)
+        self._channel.subscribe(self.channel_callback)
         for service in self._services:
             service.create_stub(self._channel)
         self._state = self.CONNECTING
@@ -137,7 +142,8 @@ class GrpcClient:
         """
         _logger.debug("gRPC Client server call")
         self._req_id += 1
-        req.id = self._req_id
+        if self._use_req_id:
+            req.id = self._req_id
         try:
             response = rpc_func(req)
             if response_class is not None:
@@ -180,7 +186,8 @@ class GrpcClient:
         """
         _logger.debug("gRPC Client server call with multiple responses")
         self._req_id += 1
-        req.id = self._req_id
+        if self._use_req_id:
+            req.id = self._req_id
         try:
             for response in rpc_func(req):
                 if response_class is not None:
@@ -195,6 +202,18 @@ class GrpcClient:
                 _logger.error(f"Error accessing server:{err.details()}")
                 self._state = self.NOT_CONNECTED
             raise GrpcAccessException
+
+    def channel_callback(self, connectivity: grpc.ChannelConnectivity):
+        if connectivity == grpc.ChannelConnectivity.READY:
+            _logger.info("GRPC Channel Ready")
+            self._ready = True
+        elif connectivity == grpc.ChannelConnectivity.IDLE:
+            _logger.info("GRPC Channel IDLE")
+            # self._ready = False
+        elif connectivity == grpc.ChannelConnectivity.CONNECTING:
+            _logger.info("GRPC Channel Connecting")
+        elif connectivity == grpc.ChannelConnectivity.SHUTDOWN:
+            _logger.info("GRPC Channel Shutdown")
 
 
 class ServiceClient:

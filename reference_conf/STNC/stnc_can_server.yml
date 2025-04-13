@@ -34,6 +34,9 @@ features:
   - can_interface
   - nmea2000
   - nmea2000_devices
+  - couplers
+  - gnss
+
 
 servers:
 
@@ -57,18 +60,21 @@ servers:
 
 - NMEANetwork:
       class: NMEA2KActiveController
-      trace: false
+      trace: true
       mac_source: end0
       channel: can0
       max_silent: 60.0
-      applications: [CANCoupler]
+      applications: [CANCoupler, GNSS]
 
 couplers:
 
 - CANCoupler:
     class: DirectCANCoupler
 
-
+- GNSSCoupler:
+    class: GNSSInputCoupler
+    gss_input: GNSS
+    
 filters:
 
 - Engine:
@@ -81,6 +87,10 @@ services:
 - Console:
       class: Console
       server: gRPCMain
+
+- GNSS:
+      class: GNSSInput
+      address: 16
 
 publishers:
 

@@ -180,7 +180,7 @@ class NavigationServerObject:
             else:
                 self._object = getattr(self._class, factory)(Parameters(self._param))
             return self._object
-        except (TypeError, ObjectCreationError) as e:
+        except (TypeError, ObjectCreationError, ValueError) as e:
             _logger.error("Error building object %s class %s: %s" % (self._name, self._class_name, e))
             raise ObjectCreationError("Error building object %s class %s: %s" % (self._name, self._class_name, e))
 

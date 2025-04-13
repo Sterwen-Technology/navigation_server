@@ -39,21 +39,21 @@ class NMEA2000ApplicationPool:
         self._ap_index = 0
         self._application_count = 0
 
-    def application_ids(self):
+    def application_ids(self, device_class, device_function):
         address = self.get_new_address()
         if address == 254:
             raise IndexError
-        iso_name = self.application_name()
+        iso_name = self.application_name(device_class, device_function)
         return address, iso_name
 
-    def application_name(self) -> NMEA2000MutableName:
+    def application_name(self, device_class, device_function) -> NMEA2000MutableName:
         if self._application_count < self._max_application:
             # create the ISO NAME
             iso_name = NMEA2000MutableName(
                 identity_number=self._unique_id_root | self._application_count,
                 manufacturer_code=self._mfg_code,
-                device_class=25,
-                device_function=130,
+                device_class=device_class,
+                device_function=device_function,
                 industry_group=4,
                 arbitrary_address_capable=1
                 )
@@ -102,16 +102,18 @@ class NMEA2000Application(NMEA2000Device):
 
         self._controller = controller
         self._application_type_name = "Generic NMEA2000 CA"
+        # get class and function
+        device_class, device_function = self.device_class_function()
         # get address and create ISO Name
         if address < 0 or address > 253:
-            self._address, self._iso_name = controller.app_pool.application_ids()
+            self._address, self._iso_name = controller.app_pool.application_ids(device_class, device_function)
         else:
             # check that the address has not been allocated locally
             if address is controller.network_addresses():
                 _logger.error(f"CAN bus address {address} already allocated")
                 raise IndexError
             self._address = address
-            self._iso_name = controller.app_pool.application_name()
+            self._iso_name = controller.app_pool.application_name(device_class, device_function)
 
         _logger.info("Controller Application ECU:%s ISO Name=%08X address=%d type:%s" %
                      (controller.name, self._iso_name.name_value, self._address, self._application_type_name))
@@ -152,6 +154,10 @@ class NMEA2000Application(NMEA2000Device):
     @property
     def name(self) -> str:
         return self._app_name
+
+    def device_class_function(self):
+        # to be overloaded if specific class and function have to be defined for the device
+        return 25, 130
 
     def stop_request(self):
         self._app_state = self.STOP_IN_PROGRESS
