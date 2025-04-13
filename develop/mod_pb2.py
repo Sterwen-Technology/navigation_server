@@ -34,6 +34,7 @@ def main():
     # print(full_filename, keywords)
     output_filename = os.path.join(rel_dir, "tmpFile")
     of = open(output_filename, "w")
+    print("keywords=", keywords)
     with open(full_filename, "r") as input_f:
         for line in input_f:
             if line.startswith('import'):

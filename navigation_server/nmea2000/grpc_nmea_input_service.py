@@ -41,9 +41,9 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
         self._total_n183_msg = 0
 
     def pushNMEA(self, request, context):
-        '''
-
-        '''
+        """
+        receive NMEA2000 or NMEA0183 messages
+        """
         resp = server_resp()
         resp.reportCode = 0
         if not self._accept_messages:
@@ -90,6 +90,15 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
                 return resp
             #print(n2k_object)
             self._callback_pb(n2k_object)
+        return resp
+
+    def pushNMEA2K(self, request, context):
+        resp = server_resp()
+        resp.reportCode = 0
+        if not self._accept_messages:
+            _logger.debug("GrpcNmeaService not ready")
+            return resp
+        resp.reportCode, resp.status = self.incoming_n2k(request)
         return resp
 
     def incoming_n2k(self, msg):
@@ -188,11 +197,11 @@ ProcessVector = namedtuple('ProcessVector', ['subscriber', 'msg_id', 'vector'])
 
 
 class DataDispatchService(GrpcService):
-    '''
+    """
     This class process all input NMEA messages and dispatch them towards the data services that have subscribed
     to specific PGN. Messages are decoded before being forwarded.
     Messages without subscription are just discarded
-    '''
+    """
 
     def __init__(self, opts):
         super().__init__(opts)

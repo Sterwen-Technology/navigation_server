@@ -11,10 +11,9 @@
 
 import logging
 
-from navigation_server.navigation_clients.client_common import GrpcClient, GrpcAccessException, ServiceClient
+from router_common.client_common import GrpcClient, GrpcAccessException, ServiceClient
 from navigation_server.generated.nmea_messages_pb2 import nmea_msg, server_cmd, server_resp
 from navigation_server.generated.nmea_server_pb2_grpc import NMEAServerStub
-from navigation_server.router_core.nmea2000_msg import NMEA2000Msg
 
 
 class GrpcNmeaServerClient(ServiceClient):
