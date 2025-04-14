@@ -9,12 +9,10 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-import grpc
-from navigation_server.generated.energy_pb2 import *
 from navigation_server.generated.energy_pb2_grpc import *
 import logging
 from navigation_server.router_common.protobuf_utilities import *
-from .client_common import GrpcClient, GrpcAccessException, ServiceClient
+from router_common.client_common import GrpcClient, ServiceClient
 
 _logger = logging.getLogger("ShipDataClient." + __name__)
 

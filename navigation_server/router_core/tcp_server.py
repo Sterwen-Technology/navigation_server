@@ -27,6 +27,7 @@ class NavTCPServer(NavigationServer, NavThread):
     def __init__(self, options):
         super().__init__(options)
         if self._port == 0:
+            _logger.error(f"Server {self._name} must have a TCP port defined")
             raise ValueError
         NavThread.__init__(self, name=self._name)
         self._max_connections = options.get('max_connections', int, 10)

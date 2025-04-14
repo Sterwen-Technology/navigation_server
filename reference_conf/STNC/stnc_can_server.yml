@@ -4,34 +4,39 @@
 #
 # Author:      Laurent Carré
 #
-# Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Created:     02/04/2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 #
-function: trace CAN
+function: CAN and coupler interfaces server
+server_name: STNC_CAN_Server
 log_level: INFO
-trace_dir: /mnt/meaban/Bateau/tests
+trace_dir: /data/navigation/traces
+data_dir: /data/navigation/data
 # log_file: test_fast_packet
 log_module:
   router_core.coupler: INFO
   nmea2000.nmea2000_msg: INFO
-  can_interface.nmea2k_controller: DEBUG
+  can_interface.nmea2k_controller: INFO
   nmea2000.nmea2k_active_controller: INFO
   nmea2000.nmea2k_device: INFO
   can_interface.nmea2k_application: INFO
   nmea2000.n2k_name: INFO
-  can_interface.nmea2k_can_interface: DEBUG
+  can_interface.nmea2k_can_interface: INFO
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
-  can_interface.nmea2k_can_coupler: DEBUG
-  nmea2000_devices.nmea2000_device: DEBUG
+  can_interface.nmea2k_can_coupler: INFO
+  nmea2000_devices.nmea2000_device: INFO
 
 features:
   - router_core
   - can_interface
   - nmea2000
   - nmea2000_devices
+  - couplers
+  - gnss
+
 
 servers:
 
@@ -55,21 +60,27 @@ servers:
 
 - NMEANetwork:
       class: NMEA2KActiveController
-      trace: false
+      trace: true
       mac_source: end0
       channel: can0
       max_silent: 60.0
-      applications: [CANCoupler, APEmulator]
+      applications: [CANCoupler, GNSS]
 
 couplers:
 
 - CANCoupler:
     class: DirectCANCoupler
 
-
+- GNSSCoupler:
+    class: GNSSInputCoupler
+    gss_input: GNSS
+    
 filters:
 
-
+- Engine:
+    class: NMEA2000Filter
+    pgn: [127488, 127489]
+    type: select
 
 services:
 
@@ -77,7 +88,23 @@ services:
       class: Console
       server: gRPCMain
 
+- GNSS:
+      class: GNSSInput
+      address: 16
+
 publishers:
+
+- SendNMEA2000:
+    class: GrpcPublisher
+    active: true
+    decode_nmea2000: false
+    nmea0183: convert_strict
+    address: 127.0.0.1
+    port: 4508
+    max_retry: 0
+    filters: [Engine]
+    couplers: [CANCoupler]
+
 
 - TraceOutput:
     class: N2KStatisticPublisher
@@ -88,11 +115,6 @@ publishers:
 
 applications:
 
-
-- APEmulator:
-    class: AutoPilotEmulator
-    address: 12
-    model_id: Auto Pilot Emulator
 
 
 

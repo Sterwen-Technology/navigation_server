@@ -530,7 +530,7 @@ class DblField(Field):
                 _logger.error(f"PGN {pgn.id} Float field {self._name} must have a unit associated")
                 self.set_unit('default')
             else:
-                _logger.info(f"PGN {pgn.id} Float field {self._name}  have no unit associated")
+                _logger.debug(f"PGN {pgn.id} Float field {self._name}  have no unit associated")
 
     def decode_value(self, payload, specs):
         res = self.extract_value(payload, specs)
@@ -583,7 +583,7 @@ class UDblField(Field):
                 _logger.error(f"PGN {pgn.id} Float field {self._name} must have a unit associated")
                 self.set_unit('default')
             else:
-                _logger.info(f"PGN {pgn.id} Float field {self._name}  have no unit associated")
+                _logger.debug(f"PGN {pgn.id} Float field {self._name}  have no unit associated")
 
     def decode_value(self, payload, specs):
         res = self.extract_value(payload, specs)

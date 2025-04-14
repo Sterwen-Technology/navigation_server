@@ -33,14 +33,14 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
         self._controller_set = False
 
     def set_controller(self, controller):
-        _logger.debug("DirectCANCoupler initializing controller")
+        _logger.debug("Direct CAN coupler %s initializing controller" % self.object_name())
         NMEA2000Application.__init__(self, controller)
         self._controller_set = True
         set_global_var(f'{self.object_name()}.controller', controller)
         controller.set_pgn_vector(self, -1) # catch all
 
     def restart(self):
-        _logger.debug("DirectCANCoupler restart")
+        _logger.debug("DirectCANCoupler %s restart" % self.object_name())
         controller = get_global_var(f'{self.object_name()}.controller')
         if controller is not None:
             self.set_controller(controller)
@@ -81,7 +81,7 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
         now it is a generator that is emptying the queue
         """
         def process_msg(m) -> NavGenericMsg:
-            _logger.debug("Direct CAN read %s" % m.format1())
+            # _logger.debug("Direct CAN read %s" % m.format1())
             gen_msg = NavGenericMsg(N2K_MSG, msg=m)
             self.trace(self.TRACE_IN, gen_msg)
             return gen_msg

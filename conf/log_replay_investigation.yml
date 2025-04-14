@@ -1,0 +1,110 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     02/11/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+function: Log replay server to gRPC
+server_name: LogReplayServer
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+debug_configuration: false
+decode_definition_only: false
+# log_file: test_fast_packet
+log_module:
+  nmea2000.nmea2k_publisher: DEBUG
+  router_common.configuration: INFO
+
+
+features:
+  - router_core
+  - nmea2000
+  - nmea0183
+  - log_replay
+
+
+servers:
+
+- Main:
+    class: NavigationMainServer
+
+- NMEAServer:
+      class: NMEAServer
+      port: 4500
+      nmea2000: dyfmt
+
+- gRPCMain:
+      class: GrpcServer
+      port: 4502
+
+- NMEANetwork:
+      class: NMEA2KController
+
+
+couplers:
+
+- LogReader:
+    class: RawLogCoupler
+    logfile: /mnt/meaban/Bateau/tests/TRACE-CAN-if-can0-250404-0757.log
+    autostart: true
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
+    direction: read_only
+    stop_system: true
+    # pgn_white_list: [129026, 129540]
+    # pgn_white_list: [130842]
+
+filters:
+
+- FastPacket:
+    class: NMEA2000Filter
+    pgn: [129029, 126996, 129540]
+    type: select
+
+- RaymarineProprietary:
+    class: NMEA2000Filter
+    pgn: [126720]
+    type: select
+
+- GPS_output:
+    class: NMEA2000Filter
+    pgn: [129029]
+    type: select
+
+services:
+
+- Console:
+      class: Console
+      server: gRPCMain
+
+publishers:
+
+- TraceAll:
+    class: N2KTracePublisher
+    file: gps_investigation
+    output: ALL
+    active: true
+    flexible_decode: false
+    couplers: [LogReader]
+    filters: [GPS_output]
+    filter_select: true
+
+- Stats:
+    class: N2KStatisticPublisher
+    couplers: [LogReader]
+    active: true
+
+- DataSender:
+      class: GrpcPublisher
+      address: 127.0.0.1
+      decode_nmea2000: false
+      stop_on_error: true
+      port: 4508
+      active: false
+      couplers: [LogReader]
+
+

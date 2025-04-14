@@ -13,7 +13,7 @@ from collections import namedtuple
 from socket import gethostname
 import logging
 
-from navigation_server.router_common import MessageServerGlobals, GrpcService, protob_to_dict, dict_to_protob
+from navigation_server.router_common import MessageServerGlobals, GrpcService, protob_to_dict, dict_to_protob, get_global_var
 from navigation_server.generated.console_pb2 import *
 from navigation_server.generated.console_pb2_grpc import *
 
@@ -216,11 +216,16 @@ class Console(GrpcService):
         self._couplers = {}
         self._injectors = {}
         self._main_server = None
+        self._nmea2k_ECU = None  # reference to active CAN controller
 
     def finalize(self):
         super().finalize()
         add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self.grpc_server)
         self._main_server = MessageServerGlobals.configuration.main_server
+        try:
+            self._nmea2k_ECU = get_global_var("NMEA2K_ECU")
+        except KeyError:
+            pass
 
     def add_server(self, server):
         record = ServerRecord(server, server.name, server.class_name())

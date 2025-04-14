@@ -39,21 +39,21 @@ class NMEA2000ApplicationPool:
         self._ap_index = 0
         self._application_count = 0
 
-    def application_ids(self):
+    def application_ids(self, device_class, device_function):
         address = self.get_new_address()
         if address == 254:
             raise IndexError
-        iso_name = self.application_name()
+        iso_name = self.application_name(device_class, device_function)
         return address, iso_name
 
-    def application_name(self) -> NMEA2000MutableName:
+    def application_name(self, device_class, device_function) -> NMEA2000MutableName:
         if self._application_count < self._max_application:
             # create the ISO NAME
             iso_name = NMEA2000MutableName(
                 identity_number=self._unique_id_root | self._application_count,
                 manufacturer_code=self._mfg_code,
-                device_class=25,
-                device_function=130,
+                device_class=device_class,
+                device_function=device_function,
                 industry_group=4,
                 arbitrary_address_capable=1
                 )
@@ -102,20 +102,22 @@ class NMEA2000Application(NMEA2000Device):
 
         self._controller = controller
         self._application_type_name = "Generic NMEA2000 CA"
+        # get class and function
+        device_class, device_function = self.device_class_function()
         # get address and create ISO Name
         if address < 0 or address > 253:
-            self._address, self._iso_name = controller.app_pool.application_ids()
+            self._address, self._iso_name = controller.app_pool.application_ids(device_class, device_function)
         else:
             # check that the address has not been allocated locally
             if address is controller.network_addresses():
                 _logger.error(f"CAN bus address {address} already allocated")
                 raise IndexError
             self._address = address
-            self._iso_name = controller.app_pool.application_name()
+            self._iso_name = controller.app_pool.application_name(device_class, device_function)
 
         _logger.info("Controller Application ECU:%s ISO Name=%08X address=%d type:%s" %
                      (controller.name, self._iso_name.name_value, self._address, self._application_type_name))
-        self._name = f"{self._application_type_name}@{self._address}"
+        self._app_name = f"{self._application_type_name}@{self._address}"
         self._claim_timer = None
         self._heartbeat_timer = None
         self._heartbeat_interval = 60.0  # can be adjusted in subclasses
@@ -151,7 +153,11 @@ class NMEA2000Application(NMEA2000Device):
 
     @property
     def name(self) -> str:
-        return self._name
+        return self._app_name
+
+    def device_class_function(self):
+        # to be overloaded if specific class and function have to be defined for the device
+        return 25, 130
 
     def stop_request(self):
         self._app_state = self.STOP_IN_PROGRESS
@@ -377,15 +383,15 @@ class NMEA2000Application(NMEA2000Device):
 class DeviceReplaySimulator(NMEA2000Application):
 
     def __init__(self, opts):
-        self._name = opts['name']
+        self._app_name = opts['name']
         self._source = opts.get('source', int, 255)
         if self._source in (253, 254):
             raise ValueError
-        _logger.info(f"Starting DeviceReplaySimulator {self._name} with source {self._source}")
+        _logger.info(f"Starting DeviceReplaySimulator {self._app_name} with source {self._source}")
         self._publisher_name = opts.get('publisher', str, None)
         self._publisher = None
         if self._publisher_name is None:
-            _logger.error(f"DeviceReplaySimulator {self._name} missing publisher")
+            _logger.error(f"DeviceReplaySimulator {self._app_name} missing publisher")
             raise ValueError
         self._model_id = opts.get('model_id', str, 'Replay Simulator')
 
@@ -400,16 +406,16 @@ class DeviceReplaySimulator(NMEA2000Application):
         try:
             self._publisher = resolve_ref(self._publisher_name)
         except KeyError:
-            _logger.error(f"DeviceReplaySimulator {self._name} incorrect publisher {self._publisher_name}")
+            _logger.error(f"DeviceReplaySimulator {self._app_name} incorrect publisher {self._publisher_name}")
             return
         assert self._publisher is not None
-        _logger.info(f"DeviceReplaySimulator {self._name} subscribing on published {self._publisher.name}")
+        _logger.info(f"DeviceReplaySimulator {self._app_name} subscribing on published {self._publisher.name}")
         self._publisher.subscribe(self._source, self.input_message)
 
     def input_message(self, can_id, data):
         _logger.debug("DeviceReplaySimulator message %4X %s" % (can_id, data.hex()))
         if self._app_state != self.ACTIVE:
-            _logger.warning(f"Application {self._name} not ready to take messages")
+            _logger.warning(f"Application {self._app_name} not ready to take messages")
             return
         pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
         # need to avoid all protocol pgn
@@ -427,12 +433,12 @@ class DeviceSimulator(NMEA2000Application):
     '''
 
     def __init__(self, opts):
-        self._name = opts['name']
+        self._app_name = opts['name']
         self._requested_address = opts.get('address', int, -1)
         self._model_id = opts.get('model_id', str, 'Device Simulator')
         self._processed_pgn = opts.getlist('pgn_list',int, None)
         if self._processed_pgn is None:
-            _logger.error(f"Device Simulator {self._name} must have a set of pgn assigned")
+            _logger.error(f"Device Simulator {self._app_name} must have a set of pgn assigned")
             raise ValueError
 
     def init_product_information(self):
@@ -442,7 +448,7 @@ class DeviceSimulator(NMEA2000Application):
     def set_controller(self, controller):
         super().__init__(controller, self._requested_address)
         # here we assume that the publisher has been instantiated as well
-        _logger.info(f"Device Simulator {self._name} ready")
+        _logger.info(f"Device Simulator {self._app_name} ready")
         controller.set_pgn_vector(self, self._processed_pgn)
 
     def receive_data_msg(self, msg: NMEA2000Msg):

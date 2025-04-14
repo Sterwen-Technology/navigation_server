@@ -11,12 +11,9 @@
 
 import logging
 
-import grpc
-
 from navigation_server.router_common import ProtobufProxy, pb_enum_string, dict_to_protob, protob_to_dict
-from navigation_server.generated.console_pb2 import *
 from navigation_server.generated.console_pb2_grpc import *
-from .client_common import ServiceClient, GrpcClient
+from router_common.client_common import ServiceClient, GrpcClient
 
 _logger = logging.getLogger("ShipDataClient." + __name__)
 
@@ -126,7 +123,7 @@ class ConsoleClient(ServiceClient):
         req = Request(target=target, cmd=command)
         if args is not None:
             dict_to_protob(args, req.kwargs)
-        resp = self._server_call(self._stub.CouplerCmd, req)
+        resp = self._server_call(self._stub.CouplerCmd, req,None)
         if resp.HasField('response_values'):
             return protob_to_dict(resp.response_values.arguments)
         else:
@@ -143,7 +140,7 @@ class ConsoleClient(ServiceClient):
         req.cmd = cmd
         if target is not None:
             req.target = target
-        response = self._server_call(self._stub.ServerCmd, req)
+        response = self._server_call(self._stub.ServerCmd, req, None)
         return response.status
 
     def get_devices(self, command=None):

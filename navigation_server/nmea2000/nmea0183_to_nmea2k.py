@@ -121,7 +121,7 @@ class NMEA0183ToNMEA2000Converter:
     def get_next_sequence(self, seq: str) -> int:
         try:
             seq_id = self._sequences[seq]
-            if seq_id == 255:
+            if seq_id == 253:
                 seq_id = 0
             else:
                 seq_id += 1
@@ -135,7 +135,7 @@ class NMEA0183ToNMEA2000Converter:
         if fields[1] != b'A':
             raise NMEAInvalidFrame("RMC message not valid")
         pgn129025 = Pgn129025Class()
-        pgn129025.latitude = convert_latitude(fields[2], fields[2])
+        pgn129025.latitude = convert_latitude(fields[3], fields[2])
         pgn129025.longitude = convert_longitude(fields[5], fields[4])
         pgn129026 = Pgn129026Class()
         pgn129026.sequence_id = self.get_next_sequence('GPS')
