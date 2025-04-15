@@ -20,6 +20,7 @@ from navigation_server.router_core import NMEA0183Msg
 from navigation_server.nmea2000_datamodel import NMEA2000DecodedMsg
 from navigation_server.generated.nmea2000_classes_gen import (Pgn129025Class, Pgn129026Class, Pgn129029Class,
                                              Pgn129539Class, Pgn129540Class)
+from navigation_server.generated.gnss_pb2 import GNSS_Status, ConstellationStatus, SatellitesInView
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -59,6 +60,13 @@ def convert_longitude(ew_indicator, longitude_bytes) -> float:
     if ew_indicator == b'W':
         long = -long
     return long
+
+def convert_float(field: bytearray, coefficient: float, field_name: str) -> float:
+    if len(field) == 0:
+        _logger.debug("Missing field %s" % field_name)
+        return float('nan')
+    else:
+        return float(field) * coefficient
 
 
 @dataclass
@@ -150,13 +158,14 @@ class GNSSDataManager:
 
     def __init__(self):
         """
-        All units herebelow are the one from NMEA2000 so ISO standard
+        All units here below are the one from NMEA2000 so ISO standard
         """
         self._fix = False
         self._fix_quality = None
         self._mode = 0
         self._signal_id = 0         # signal ID (constellation for the fix)
-        self._fix_time = 0.0
+        self._fix_time = 0.0    # datetime from system
+        self._start_time = datetime.datetime.now(datetime.UTC)
         self._latitude = 0.0    # decimal degree
         self._longitude = 0.0   # decimal degree
         self._utc_time = 0.0    # seconds since midnight
@@ -180,6 +189,17 @@ class GNSSDataManager:
         self._sequence = 0
 
 
+    def set_fix(self):
+        if not self._fix:
+            self._fix_time = datetime.datetime.now(datetime.UTC)
+            self._fix = True
+            _logger.info(f"GNSS is becoming fixed")
+
+    def lost_fix(self):
+        if not self._fix:
+            _logger.info("GNSS lost fix")
+            self._fix = False
+
     def process_nmea0183(self, msg: NMEA0183Msg, forwarder):
         fmt = msg.formatter().decode()
         talker = msg.talker().decode()
@@ -189,7 +209,10 @@ class GNSSDataManager:
             _logger.debug("GNSS data no process for %s" % fmt)
             return
         _logger.debug("GNSS_data: %s", str(msg))
-        func(talker, msg.fields(), forwarder)
+        try:
+            func(talker, msg.fields(), forwarder)
+        except Exception as err:
+            _logger.error(f"GNSS data error:{err} for {msg}")
 
 
     def get_constellation(self, talker:str) -> Constellation:
@@ -297,9 +320,9 @@ class GNSSDataManager:
         assert (talker == 'GN')
         self._mode = int(fields[1])
         if int(fields[1]) >= 2:
-            self._fix = True
+            self.set_fix()
         else:
-            self._fix = False
+            self.lost_fix()
             return   # nothing meaningful here
 
         self._nb_sats_in_fix = 0
@@ -339,10 +362,10 @@ class GNSSDataManager:
         assert(talker == 'GN')
         if fields[5] == b'0':
             # no fix
-            self._fix = False
+            self.lost_fix()
             return
         else:
-            self._fix = True
+            self.set_fix()
         current_time = convert_time(fields[0])
         self.adjust_sequence(current_time)
         self._latitude = convert_latitude(fields[2], fields[1])
@@ -374,14 +397,14 @@ class GNSSDataManager:
 
     def processRMC(self, talker, fields, forwarder):
         if fields[1] != b'A':
-            self._fix = False
+            self.lost_fix()
             return
         current_time = convert_time(fields[0])
         self.adjust_sequence(current_time)
         self._latitude = convert_latitude(fields[3], fields[2])
         self._longitude = convert_longitude(fields[5], fields[4])
         self._SOG = float(fields[6]) * knots_to_ms
-        self._COG = float(fields[7]) * deg_to_radian
+        self._COG = convert_float(fields[7], deg_to_radian, 'COG')
         self._date = convert_date(fields[8])
         if forwarder.pgn_in_set(129025):
             pgn129025 = Pgn129025Class()
@@ -396,6 +419,11 @@ class GNSSDataManager:
             pgn129026.COG = self._COG
             forwarder.push(pgn129026)
 
+    def get_status(self, cmd) -> GNSS_Status:
+        """
+        Return a Protobuf object that includes the fields corresponding to keywords in cmd
+        """
+        resp = GNSS_Status()
 
 
 
