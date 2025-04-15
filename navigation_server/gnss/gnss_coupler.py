@@ -13,7 +13,8 @@ import logging
 import queue
 
 from navigation_server.router_core import Coupler, NMEA0183Msg, CouplerTimeOut
-from navigation_server.router_common import NavThread, NavGenericMsg
+from navigation_server.router_common import NavGenericMsg, resolve_ref
+from navigation_server.gnss.gnss_service import N0183Subscriber
 
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
@@ -25,30 +26,41 @@ class GNSSCoupler(Coupler):
 
         super().__init__(opts)
 
-        self._formatters = opts.getlist('formatters', str, ['RMC', 'GLL'])
-        self._constellations = opts.getlist('constellations', str, None)
-        self._pgn_output = opts.getlist('pgn_output', int, [129025, 129026, 129029])
-        self._fixed = False
-        self._reader = None
-        self._fp = None
-        self._input_queue = queue.SimpleQueue()
+        self._formatters = opts.getlist('formatters', str, ['RMC', 'GGA'])
+        self._formatters = list(fmt.encode() for fmt in self._formatters)
+        self._service_name = opts.get('gnss_service', str, None)
+        if self._service_name is None:
+            raise ValueError
+        self._service = None
+        self._mode = self.NMEA0183
+        self._direction = self.READ_ONLY
+        self._input_queue = queue.Queue(10)
 
 
     def open(self) -> bool:
         """
         Open the link and start the reading flow
         """
-        return False
+        try:
+            self._service = resolve_ref(self._service_name)
+        except KeyError:
+            _logger.error(f"GNSSCoupler unknown service {self._service_name}")
+            return False
+        self._service.add_n0183_subscriber(N0183Subscriber(self._formatters, self._input_queue))
+        return True
 
     def stop(self):
         super().stop()
 
-
     def close(self):
-        pass
+        self._service.clear_n0183_subscriber()
 
     def _read(self) -> NavGenericMsg:
-        pass
+        try:
+            return self._input_queue.get(block=True, timeout=1.0)
+        except queue.Empty:
+            _logger.debug("GNSS Coupler time out")
+            raise CouplerTimeOut
 
 
 

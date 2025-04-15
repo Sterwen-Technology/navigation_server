@@ -26,6 +26,21 @@ _logger = logging.getLogger("ShipDataServer."+__name__)
 gnss_data = GNSSDataManager()
 
 
+class N0183Subscriber:
+
+    def __init__(self, formatters: list, push_queue: queue.Queue):
+        _logger.debug("GNSS Creating NMEA0183 Subscriber with formatters:%s" % formatters)
+        self._formatters = formatters
+        self._queue = push_queue
+
+    def push(self, msg: NMEA0183Msg):
+        if msg.formatter() in self._formatters:
+            try:
+                _logger.debug("NMEA0183 Subscriber push:%s" % msg)
+                self._queue.put(msg, block=True, timeout=0.2)
+            except queue.Full:
+                _logger.error("GNSS NMEA0183 subscriber queue full discarding message")
+
 class GNSSSerialReader(NavThread):
 
     def __init__(self, name, fp, trace):
@@ -71,6 +86,12 @@ class GNSSSerialReader(NavThread):
 
     def set_n2k_subscriber(self, n2k_subscriber: N2KForwarder):
         self._n2k_subscriber = n2k_subscriber
+
+    def set_n0183_subscriber(self, subscriber: N0183Subscriber):
+        self._n0183_subscriber = subscriber
+
+    def clear_n0183_subscriber(self):
+        self._n0183_subscriber = None
 
     def stop(self):
         self._stop_flag = True
@@ -152,6 +173,12 @@ class GNSSService(GrpcService):
             self._fp.close()
             self._fp = None
         super().stop_service()
+
+    def add_n0183_subscriber(self, subscriber):
+        self._reader.set_n0183_subscriber(subscriber)
+
+    def clear_n0183_subscriber(self):
+        self._reader.clear_n0183_subscriber()
 
 
 class GNSSPushClient(ServiceClient, NavThread):

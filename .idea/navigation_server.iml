@@ -5,7 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/navigation_server" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.12 virtualenv at C:\Users\laure\AppData\Local\pypoetry\Cache\virtualenvs\navigation-server-399QZ9Kb-py3.12" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Poetry (navigation_server)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

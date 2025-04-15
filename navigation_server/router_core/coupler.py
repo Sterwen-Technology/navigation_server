@@ -451,7 +451,7 @@ class Coupler(NavThread):
     def is_suspended(self) -> bool:
         return self._suspend_flag
 
-    def read(self) -> NavGenericMsg:
+    def read(self):
         """
         Generic Read function with specific intercept
         NMEA2000 protocol messages are redirected towards the NMEA2000 Controller
