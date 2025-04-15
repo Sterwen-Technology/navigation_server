@@ -14,7 +14,7 @@ import serial
 import queue
 
 from navigation_server.router_core import NMEA0183Msg
-from navigation_server.router_common import NavThread
+from navigation_server.router_common import NavThread, NMEAMsgTrace
 from navigation_server.gnss.gnss_data import GNSSDataManager, N2KForwarder
 from navigation_server.generated.gnss_pb2 import SatellitesInView, ConstellationStatus, GNSS_Status
 from navigation_server.generated.gnss_pb2_grpc import GNSSServiceServicer, add_GNSSServiceServicer_to_server, GNSS_InputStub
@@ -28,13 +28,17 @@ gnss_data = GNSSDataManager()
 
 class GNSSSerialReader(NavThread):
 
-    def __init__(self, name, fp):
+    def __init__(self, name, fp, trace):
         super().__init__(name, daemon=True)
         self._fp = fp
         self._stop_flag = False
         self._n0183_subscriber = None
-        self._n2k_subscriber = N2KForwarder((), None)
+        self._n2k_subscriber = N2KForwarder(set(), None)
         self._n2k_decoded_subscriber = None
+        if trace:
+            self._trace = NMEAMsgTrace(name, "GNSS")
+        else:
+            self._trace = None
 
     def nrun(self) -> None:
         while not self._stop_flag:
@@ -50,7 +54,7 @@ class GNSSSerialReader(NavThread):
             if frame[0] != ord('$'):
                 _logger.debug("Invalid GNSS frame:%s" % frame)
                 continue
-            _logger.debug("GNSS:%s" % frame.removesuffix(b'\r\n'))
+            # _logger.debug("GNSS:%s" % frame.removesuffix(b'\r\n'))
             formatter = frame[3:6]
             talker = frame[1:3]
             if talker not in (b'GN', b'GP', b'GA'):
@@ -58,9 +62,12 @@ class GNSSSerialReader(NavThread):
                 # shall be configurable in the future
                 continue
             msg = NMEA0183Msg(frame)
+            if self._trace is not None:
+                self._trace.trace(NMEAMsgTrace.TRACE_IN, msg)
             if self._n0183_subscriber is not None:
                 self._n0183_subscriber.push(msg)
             gnss_data.process_nmea0183(msg, self._n2k_subscriber)
+        self._trace.stop_trace()
 
     def set_n2k_subscriber(self, n2k_subscriber: N2KForwarder):
         self._n2k_subscriber = n2k_subscriber
@@ -76,6 +83,13 @@ class GNSSServiceServicerImpl(GNSSServiceServicer):
 
     def __init__(self):
         pass
+
+    def gnss_status(self, request, context):
+        """
+        return GNSS status and all data
+        several format are possible depending on the request
+        """
+
 
 
 class GNSSService(GrpcService):
@@ -95,6 +109,7 @@ class GNSSService(GrpcService):
         self._push_port = opts.get('port', int, 4502)
         self._push = opts.get('push_to_server', bool, False)
         self._push_server = GrpcClient(f"{self._push_address}:{self._push_port}")
+        self._trace = opts.get('trace', bool, False)
 
 
     def finalize(self):
@@ -106,10 +121,10 @@ class GNSSService(GrpcService):
             _logger.info("Adding service %s to server" % self._name)
             self._servicer = GNSSServiceServicerImpl()
             add_GNSSServiceServicer_to_server(self._servicer, self.grpc_server)
-            self._reader = GNSSSerialReader(f"{self._name}:reader", self._fp)
+            self._reader = GNSSSerialReader(f"{self._name}:reader", self._fp, self._trace)
             self._reader.start()
             if self._push:
-                self._pusher = GNSSPushClient(self._reader)
+                self._pusher = GNSSPushClient(self._reader, self._push_server)
                 self._pusher.start()
         else:
             _logger.error("GNSS Service cannot open device -> service will not start")
@@ -153,7 +168,7 @@ class GNSSPushClient(ServiceClient, NavThread):
 
     def start(self):
         self._server.add_service(self)
-        self._reader.set_n2k_subscriber(N2KForwarder((129025, 129026, 129029), self._input_queue))
+        self._reader.set_n2k_subscriber(N2KForwarder({129025, 129026, 129029}, self._input_queue))
         self._server.connect()
         super().start()
 
