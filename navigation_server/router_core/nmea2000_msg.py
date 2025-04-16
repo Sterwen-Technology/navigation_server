@@ -74,9 +74,9 @@ class NMEA2000Msg:
             #   Fast packet mode whatever is the length
 
             self._payload = payload
-            self._check_fast_packet()
         else:
             self.from_protobuf(protobuf)
+        self._check_fast_packet()
         # define if the PGN is part of ISO and base protocol (do not carry navigation data)
         self._check_protocol()
 

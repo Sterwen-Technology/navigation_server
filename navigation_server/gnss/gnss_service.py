@@ -129,7 +129,7 @@ class GNSSService(GrpcService):
         self._push_address = opts.get('address', str, '127.0.0.1')
         self._push_port = opts.get('port', int, 4502)
         self._push = opts.get('push_to_server', bool, False)
-        self._push_server = GrpcClient(f"{self._push_address}:{self._push_port}")
+        self._push_server = GrpcClient(f"{self._push_address}:{self._push_port}", use_request_id=False)
         self._trace = opts.get('trace', bool, False)
 
 

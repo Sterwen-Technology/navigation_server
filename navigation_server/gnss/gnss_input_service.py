@@ -14,6 +14,7 @@ import queue
 
 from navigation_server.generated.gnss_pb2_grpc import add_GNSS_InputServicer_to_server, GNSS_InputServicer
 from navigation_server.generated.nmea_messages_pb2 import server_resp
+from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 from navigation_server.router_core import NMEA2000Msg, Coupler, CouplerTimeOut, CouplerOpenRefused
 from navigation_server.can_interface import NMEA2000Application
 from navigation_server.router_common import GrpcService, GrpcServerError, NavGenericMsg, N2K_MSG
@@ -59,27 +60,28 @@ class GNSSInput(NMEA2000Application, GrpcService):
         except GrpcServerError:
             return
         _logger.info("Adding service %s to server" % self._name)
-        self._servicer = GNSS_InputServicerImpl(self.receive_msg)
+        self._servicer = GNSS_InputServicerImpl(self.receive_input_msg)
         add_GNSS_InputServicer_to_server(self._servicer, self.grpc_server)
 
     def set_controller(self, controller):
         super().__init__(controller, self._requested_address)
         self._can_controller = controller
 
-    def receive_msg(self, msg):
+    def receive_input_msg(self, msg: nmea2000pb):
         """
         Receive a protobuf message and send it to the CAN bus
         Messages received before the CAN is ready are discarded
         """
         n2k_msg = None
+        _logger.debug("GNSSInput receive_msg %d %d %d" % (msg.pgn, msg.priority, msg.sa))
         if self._can_controller is not None:
-            n2k_msg = NMEA2000Msg(msg.pgn, prio=msg.priority, sa=msg.sa, da=msg.da, payload=msg.payload,
-                                       timestamp=msg.timestamp)
+            n2k_msg = NMEA2000Msg(msg.pgn, protobuf=msg)
+            n2k_msg.sa = self._address
             self._can_controller.CAN_interface.send(n2k_msg)
         if self._output_queue is not None:
             if n2k_msg is None:
-                n2k_msg = NMEA2000Msg(msg.pgn, prio=msg.priority, sa=msg.sa, da=msg.da, payload=msg.payload,
-                                      timestamp=msg.timestamp)
+                n2k_msg = NMEA2000Msg(msg.pgn, protobuf=msg)
+                n2k_msg.sa = self._address
             try:
                 self._output_queue.put(n2k_msg, block=True, timeout=1.0)
                 self._lost_msg = 0

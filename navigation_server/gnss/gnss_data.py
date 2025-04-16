@@ -97,6 +97,8 @@ class Constellation:
     satellites: dict
     gsv_nb_seq: int
     gsv_seq_recv: list
+    satellites_in_fix: list = None
+    nb_sats_in_fix: int = 0
     gsv_in_progress: bool = False
 
     def __init__(self, gnss):
@@ -137,7 +139,7 @@ class N2KForwarder:
 
 
 gnss_systems = ( GNSSSystem('GPS', 'GP', 1, 0, 1),
-                   GNSSSystem('SBAS', 'GP', 1, 1, 1),
+                   GNSSSystem('GPS-SBAS', 'GP', 1, 1, 1),
                    GNSSSystem('Galileo', 'GA', 3, 2, 8),
                    GNSSSystem('Beidou', 'GB',4, 3, 0),
                    GNSSSystem('QZSS', 'GQ',5, 5, 0),
@@ -146,7 +148,7 @@ gnss_systems = ( GNSSSystem('GPS', 'GP', 1, 0, 1),
                    )
 
 gnss_sys_dict = dict([(s.talker, s) for s in gnss_systems])
-signal_id_table = dict([(s.systemId, s.talker) for s in gnss_systems])
+signal_id_table = dict([(s.systemId, s) for s in gnss_systems])
 
 class GNSSDataManager:
     """
@@ -163,7 +165,7 @@ class GNSSDataManager:
         self._fix = False
         self._fix_quality = None
         self._mode = 0
-        self._signal_id = 0         # signal ID (constellation for the fix)
+        self._const_in_fix = []         # signal ID (constellation for the fix)
         self._fix_time = 0.0    # datetime from system
         self._start_time = datetime.datetime.now(datetime.UTC)
         self._latitude = 0.0    # decimal degree
@@ -199,6 +201,8 @@ class GNSSDataManager:
         if not self._fix:
             _logger.info("GNSS lost fix")
             self._fix = False
+            self._const_in_fix = []
+            self._nb_sats_in_fix = 0
 
     def process_nmea0183(self, msg: NMEA0183Msg, forwarder):
         fmt = msg.formatter().decode()
@@ -216,14 +220,23 @@ class GNSSDataManager:
 
 
     def get_constellation(self, talker:str) -> Constellation:
+        gnss = gnss_sys_dict[talker]
         try:
-            const = self._constellations[talker]
+            const = self._constellations[gnss.systemId]
         except KeyError:
             # we create a new constellation view
-            gnss = gnss_sys_dict[talker]
             const = Constellation(gnss=gnss)
-            self._constellations[talker] = const
+            self._constellations[gnss.systemId] = const
         return const
+
+    def get_constellation_from_id(self, signal_id:int):
+        try:
+            return self._constellations[signal_id]
+        except KeyError:
+            gnss = signal_id_table[signal_id]
+            const = Constellation(gnss=gnss)
+            self._constellations[gnss.systemId] = const
+            return const
 
     def adjust_sequence(self, current_time):
         if current_time != self._utc_time:
@@ -252,7 +265,7 @@ class GNSSDataManager:
         field_idx = 3
         sat_timestamp = time.time()
         nb_fields = len(fields) - 1
-        _logger.debug("Process GCV sequence %d for GNSS %s nb_fields=%d" % (seq_num, const.gnss.name, nb_fields))
+        _logger.debug("Process GSV sequence %d for GNSS %s nb_fields=%d" % (seq_num, const.gnss.name, nb_fields))
         for count in range(4):
             # print("start field=", field_idx)
             if field_idx >= nb_fields:
@@ -291,7 +304,7 @@ class GNSSDataManager:
             # the sequence is not over
             return
         # ok go
-        _logger.debug("End GSV analysis for constellation %s" % gnss_sys_dict[talker].name)
+        _logger.debug("End GSV analysis for constellation %s" % const.gnss.name)
         const.gsv_in_progress = False
         if forwarder.pgn_in_set(129540):
             pgn129540 = Pgn129540Class()
@@ -324,27 +337,31 @@ class GNSSDataManager:
         else:
             self.lost_fix()
             return   # nothing meaningful here
-
-        self._nb_sats_in_fix = 0
-        self._satellites_in_fix = []
+        if len(fields[17]) > 0:
+            signal_id = int(fields[17])
+        else:
+            return
+        _logger.debug("GSA signal id %d" % signal_id)
+        const = self.get_constellation_from_id(signal_id)
+        nb_sats_in_fix = 0
+        satellites_in_fix = []
         for f in fields[2:14]:
             if len(f) != 0:
-                self._nb_sats_in_fix += 1
-                self._satellites_in_fix.append(int(f))
+                nb_sats_in_fix += 1
+                satellites_in_fix.append(int(f))
+        if nb_sats_in_fix == 0:
+            return
+        # now we update the list for the fix
+        if const not in self._const_in_fix:
+            self._const_in_fix.append(const)
+        const.nb_sats_in_fix = nb_sats_in_fix
+        const.satellites_in_fix = satellites_in_fix
         self._PDOP = float(fields[14])
         self._HDOP = float(fields[15])
         self._VDOP = float(fields[16])
-        if len(fields[17]) > 0:
-            self._signal_id = int(fields[17])
-        else:
-            self._signal_id = 0
-        _logger.debug("GSA nb sats:%d signal %d sats %s" % (self._nb_sats_in_fix, self._signal_id, self._satellites_in_fix))
-        try:
-            const = self._constellations[signal_id_table[self._signal_id]]
-        except KeyError:
-            _logger.debug("Missing constellation for systemId %d" % self._signal_id)
-            return
-        const.update_status(self._satellites_in_fix)
+
+        _logger.debug("GSA const %s nb sats:%d sats %s" % (const.gnss.name, nb_sats_in_fix, satellites_in_fix))
+        const.update_status(satellites_in_fix)
         if forwarder.pgn_in_set(129539):
             pgn129539 = Pgn129539Class()
             pgn129539.sequence_id = self._sequence
@@ -372,8 +389,11 @@ class GNSSDataManager:
         self._longitude = convert_longitude(fields[4], fields[3])
         self._altitude = float(fields[8])
         self._geoidal_separation = float(fields[10])
-
-        if forwarder.pgn_in_set(129029) and self._nb_sats_in_fix > 0:
+        _logger.debug("GGA processing lat %f long %f nb constellations %d" % (self._latitude, self._longitude, len(self._const_in_fix)))
+        self._nb_sats_in_fix = 0
+        for const in self._const_in_fix:
+            self._nb_sats_in_fix += const.nb_sats_in_fix
+        if forwarder.pgn_in_set(129029):
             # we must also have received a GSA message for that
             pgn129029 = Pgn129029Class()
             pgn129029.sequence_id = self._sequence
@@ -386,13 +406,14 @@ class GNSSDataManager:
             else:
                 pgn129029.date = self._date
             pgn129029.time = self._utc_time
-            pgn129029.GNSS_type = self._constellations[signal_id_table[self._signal_id]].n2k_fix
+            pgn129029.GNSS_type = 0
             pgn129029.method = int(fields[5])
             pgn129029.integrity = 0
             pgn129029.HDOP = float(fields[7])
             pgn129029.geoidal_separation = self._geoidal_separation
             pgn129029.PDOP = self._PDOP
             pgn129029.nb_ref_stations = 0
+            _logger.debug("GGA pushing PGN 129029")
             forwarder.push(pgn129029)
 
     def processRMC(self, talker, fields, forwarder):
@@ -410,6 +431,7 @@ class GNSSDataManager:
             pgn129025 = Pgn129025Class()
             pgn129025.latitude = convert_latitude(fields[3], fields[2])
             pgn129025.longitude = convert_longitude(fields[5], fields[4])
+            _logger.debug("RMC pushing PGN 129025")
             forwarder.push(pgn129025)
         if forwarder.pgn_in_set(129026):
             pgn129026 = Pgn129026Class()
@@ -417,6 +439,7 @@ class GNSSDataManager:
             pgn129026.COG_reference = 0
             pgn129026.SOG = self._SOG
             pgn129026.COG = self._COG
+            _logger.debug("RMC pushing PGN 129026")
             forwarder.push(pgn129026)
 
     def get_status(self, cmd) -> GNSS_Status:
