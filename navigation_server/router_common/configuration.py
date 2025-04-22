@@ -229,6 +229,12 @@ class NavigationConfiguration:
         if not os.path.exists(settings_file):
             # we merge with the home dir
             settings_file = os.path.join(MessageServerGlobals.home_dir, "conf", settings_file)
+        # keep the configuration path
+        settings_path = os.path.dirname(settings_file)
+        self.set_global('settings_path', settings_path)
+        _logger.info(
+            "Building configuration from settings file %s in path %s" % (settings_file, settings_path)
+        )
         try:
             fp = open(settings_file, 'r')
         except (IOError, FileNotFoundError) as e:
@@ -236,7 +242,7 @@ class NavigationConfiguration:
             _logger.error(f"Current directory is {os.getcwd()}")
             raise
         try:
-            self._configuration = yaml.load(fp, yaml.FullLoader)
+            self._configuration = yaml.safe_load(fp)
         except yaml.YAMLError as e:
             _logger.error("Settings file decoding error %s" % str(e))
             fp.close()

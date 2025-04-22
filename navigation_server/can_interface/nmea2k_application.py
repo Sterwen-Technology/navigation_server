@@ -109,7 +109,7 @@ class NMEA2000Application(NMEA2000Device):
             self._address, self._iso_name = controller.app_pool.application_ids(device_class, device_function)
         else:
             # check that the address has not been allocated locally
-            if address is controller.network_addresses():
+            if address in controller.network_addresses():  # correction 2025-04-19
                 _logger.error(f"CAN bus address {address} already allocated")
                 raise IndexError
             self._address = address

@@ -32,17 +32,10 @@ message SystemdCmdMsg {
   string service=3;
 }
 
-message NetworkCmdMsg {
-  uint32 id=1;
-  string interface=2;
-  string cmd=3;
-}
-
 
 service Agent {
   rpc SendCmdMultipleResp(AgentMsg) returns (stream AgentResponse){}
   rpc SendCmdSingleResp(AgentMsg) returns (AgentResponse) {}
   rpc SendCmdNoResp(AgentMsg) returns (AgentResponse) {}
   rpc SystemdCmd(SystemdCmdMsg) returns (AgentResponseML) {}
-  rpc NetworkCmd(NetworkCmdMsg) returns (AgentResponse) {}
 }

@@ -12,8 +12,8 @@
 import logging
 
 from navigation_server.generated.agent_pb2_grpc import *
-from navigation_server.router_common import GrpcAccessException
-from router_common.client_common import ServiceClient, GrpcClient
+from navigation_server.generated.agent_pb2 import AgentMsg, SystemdCmdMsg
+from navigation_server.router_common import GrpcAccessException, ServiceClient, GrpcClient
 
 _logger = logging.getLogger("ShipDataClient." + __name__)
 

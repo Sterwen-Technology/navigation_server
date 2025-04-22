@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import navigation_server.generated.agent_pb2 as agent__pb2
+import navigation_server.generated.network_pb2 as network__pb2
 
 
 GRPC_GENERATED_VERSION = '1.66.2'
@@ -19,14 +19,14 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in agent_pb2_grpc.py depends on'
+        + f' but the generated code in network_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
 
 
-class AgentStub(object):
+class NetworkServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -35,118 +35,91 @@ class AgentStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.SendCmdMultipleResp = channel.unary_stream(
-                '/Agent/SendCmdMultipleResp',
-                request_serializer=agent__pb2.AgentMsg.SerializeToString,
-                response_deserializer=agent__pb2.AgentResponse.FromString,
+        self.set_configuration = channel.unary_unary(
+                '/NetworkService/set_configuration',
+                request_serializer=network__pb2.NetworkCommand.SerializeToString,
+                response_deserializer=network__pb2.NetworkReply.FromString,
                 _registered_method=True)
-        self.SendCmdSingleResp = channel.unary_unary(
-                '/Agent/SendCmdSingleResp',
-                request_serializer=agent__pb2.AgentMsg.SerializeToString,
-                response_deserializer=agent__pb2.AgentResponse.FromString,
+        self.get_configuration = channel.unary_unary(
+                '/NetworkService/get_configuration',
+                request_serializer=network__pb2.NetworkCommand.SerializeToString,
+                response_deserializer=network__pb2.NetworkReply.FromString,
                 _registered_method=True)
-        self.SendCmdNoResp = channel.unary_unary(
-                '/Agent/SendCmdNoResp',
-                request_serializer=agent__pb2.AgentMsg.SerializeToString,
-                response_deserializer=agent__pb2.AgentResponse.FromString,
+        self.set_global_configuration = channel.unary_unary(
+                '/NetworkService/set_global_configuration',
+                request_serializer=network__pb2.NetworkCommand.SerializeToString,
+                response_deserializer=network__pb2.NetworkStatus.FromString,
                 _registered_method=True)
-        self.SystemdCmd = channel.unary_unary(
-                '/Agent/SystemdCmd',
-                request_serializer=agent__pb2.SystemdCmdMsg.SerializeToString,
-                response_deserializer=agent__pb2.AgentResponseML.FromString,
+        self.get_network_status = channel.unary_unary(
+                '/NetworkService/get_network_status',
+                request_serializer=network__pb2.NetworkCommand.SerializeToString,
+                response_deserializer=network__pb2.NetworkStatus.FromString,
                 _registered_method=True)
 
 
-class AgentServicer(object):
+class NetworkServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def SendCmdMultipleResp(self, request, context):
+    def set_configuration(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def SendCmdSingleResp(self, request, context):
+    def get_configuration(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def SendCmdNoResp(self, request, context):
+    def set_global_configuration(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def SystemdCmd(self, request, context):
+    def get_network_status(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_AgentServicer_to_server(servicer, server):
+def add_NetworkServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'SendCmdMultipleResp': grpc.unary_stream_rpc_method_handler(
-                    servicer.SendCmdMultipleResp,
-                    request_deserializer=agent__pb2.AgentMsg.FromString,
-                    response_serializer=agent__pb2.AgentResponse.SerializeToString,
+            'set_configuration': grpc.unary_unary_rpc_method_handler(
+                    servicer.set_configuration,
+                    request_deserializer=network__pb2.NetworkCommand.FromString,
+                    response_serializer=network__pb2.NetworkReply.SerializeToString,
             ),
-            'SendCmdSingleResp': grpc.unary_unary_rpc_method_handler(
-                    servicer.SendCmdSingleResp,
-                    request_deserializer=agent__pb2.AgentMsg.FromString,
-                    response_serializer=agent__pb2.AgentResponse.SerializeToString,
+            'get_configuration': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_configuration,
+                    request_deserializer=network__pb2.NetworkCommand.FromString,
+                    response_serializer=network__pb2.NetworkReply.SerializeToString,
             ),
-            'SendCmdNoResp': grpc.unary_unary_rpc_method_handler(
-                    servicer.SendCmdNoResp,
-                    request_deserializer=agent__pb2.AgentMsg.FromString,
-                    response_serializer=agent__pb2.AgentResponse.SerializeToString,
+            'set_global_configuration': grpc.unary_unary_rpc_method_handler(
+                    servicer.set_global_configuration,
+                    request_deserializer=network__pb2.NetworkCommand.FromString,
+                    response_serializer=network__pb2.NetworkStatus.SerializeToString,
             ),
-            'SystemdCmd': grpc.unary_unary_rpc_method_handler(
-                    servicer.SystemdCmd,
-                    request_deserializer=agent__pb2.SystemdCmdMsg.FromString,
-                    response_serializer=agent__pb2.AgentResponseML.SerializeToString,
+            'get_network_status': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_network_status,
+                    request_deserializer=network__pb2.NetworkCommand.FromString,
+                    response_serializer=network__pb2.NetworkStatus.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'Agent', rpc_method_handlers)
+            'NetworkService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('Agent', rpc_method_handlers)
+    server.add_registered_method_handlers('NetworkService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class Agent(object):
+class NetworkService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def SendCmdMultipleResp(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_stream(
-            request,
-            target,
-            '/Agent/SendCmdMultipleResp',
-            agent__pb2.AgentMsg.SerializeToString,
-            agent__pb2.AgentResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def SendCmdSingleResp(request,
+    def set_configuration(request,
             target,
             options=(),
             channel_credentials=None,
@@ -159,9 +132,9 @@ class Agent(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/Agent/SendCmdSingleResp',
-            agent__pb2.AgentMsg.SerializeToString,
-            agent__pb2.AgentResponse.FromString,
+            '/NetworkService/set_configuration',
+            network__pb2.NetworkCommand.SerializeToString,
+            network__pb2.NetworkReply.FromString,
             options,
             channel_credentials,
             insecure,
@@ -173,7 +146,7 @@ class Agent(object):
             _registered_method=True)
 
     @staticmethod
-    def SendCmdNoResp(request,
+    def get_configuration(request,
             target,
             options=(),
             channel_credentials=None,
@@ -186,9 +159,9 @@ class Agent(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/Agent/SendCmdNoResp',
-            agent__pb2.AgentMsg.SerializeToString,
-            agent__pb2.AgentResponse.FromString,
+            '/NetworkService/get_configuration',
+            network__pb2.NetworkCommand.SerializeToString,
+            network__pb2.NetworkReply.FromString,
             options,
             channel_credentials,
             insecure,
@@ -200,7 +173,7 @@ class Agent(object):
             _registered_method=True)
 
     @staticmethod
-    def SystemdCmd(request,
+    def set_global_configuration(request,
             target,
             options=(),
             channel_credentials=None,
@@ -213,9 +186,36 @@ class Agent(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/Agent/SystemdCmd',
-            agent__pb2.SystemdCmdMsg.SerializeToString,
-            agent__pb2.AgentResponseML.FromString,
+            '/NetworkService/set_global_configuration',
+            network__pb2.NetworkCommand.SerializeToString,
+            network__pb2.NetworkStatus.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def get_network_status(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/NetworkService/get_network_status',
+            network__pb2.NetworkCommand.SerializeToString,
+            network__pb2.NetworkStatus.FromString,
             options,
             channel_credentials,
             insecure,

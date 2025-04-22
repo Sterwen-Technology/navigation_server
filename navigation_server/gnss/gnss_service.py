@@ -10,6 +10,8 @@
 #-------------------------------------------------------------------------------
 
 import logging
+import time
+
 import serial
 import queue
 
@@ -110,6 +112,7 @@ class GNSSServiceServicerImpl(GNSSServiceServicer):
         return GNSS status and all data
         several format are possible depending on the request
         """
+        return gnss_data.get_status(request.cmd)
 
 
 
@@ -191,29 +194,44 @@ class GNSSPushClient(ServiceClient, NavThread):
         self._input_queue = queue.Queue(20)
         self._reader = reader
         self._server = server
+        self._forwarder = N2KForwarder({129025, 129026, 129029}, self._input_queue)
         self._stop_flag = False
 
     def start(self):
         self._server.add_service(self)
-        self._reader.set_n2k_subscriber(N2KForwarder({129025, 129026, 129029}, self._input_queue))
+        self._reader.set_n2k_subscriber(self._forwarder)
         self._server.connect()
         super().start()
 
     def nrun(self) -> None:
 
+        grpc_connected = True
+        time_disconnect = 0.0
         while not self._stop_flag:
             # get the message from reader
             try:
                 msg = self._input_queue.get(block=True, timeout=1.0)
             except queue.Empty:
                 continue
-            # convert to protobuf
-            pb_msg = nmea2000pb()
-            msg.as_protobuf(pb_msg)
-            try:
-                resp = self._server_call(self._stub.gnss_message, pb_msg, None)
-            except GrpcAccessException:
-                continue
+            if grpc_connected:
+                # we are connected or want to try the connection
+                # convert to protobuf
+                pb_msg = nmea2000pb()
+                msg.as_protobuf(pb_msg)
+                try:
+                    resp = self._server_call(self._stub.gnss_message, pb_msg, None)
+                except GrpcAccessException:
+                    self._forwarder.suspend()
+                    grpc_connected = False
+                    time_disconnect = time.time()
+                    continue
+            else:
+                t = time.time()
+                if t - time_disconnect > 10.0:
+                    self._forwarder.resume()
+                    grpc_connected = True
+                    time_disconnect = t
+
 
     def stop(self):
         self._stop_flag = True

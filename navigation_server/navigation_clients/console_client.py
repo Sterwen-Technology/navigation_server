@@ -11,9 +11,10 @@
 
 import logging
 
-from navigation_server.router_common import ProtobufProxy, pb_enum_string, dict_to_protob, protob_to_dict
-from navigation_server.generated.console_pb2_grpc import *
-from router_common.client_common import ServiceClient, GrpcClient
+from navigation_server.router_common import (ProtobufProxy, pb_enum_string, dict_to_protob, protob_to_dict,
+                                             ServiceClient, GrpcClient)
+from navigation_server.generated.console_pb2 import CouplerMsg, Request, N2KDeviceMsg
+from navigation_server.generated.console_pb2_grpc import NavigationConsoleStub
 
 _logger = logging.getLogger("ShipDataClient." + __name__)
 

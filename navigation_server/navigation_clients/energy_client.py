@@ -9,10 +9,12 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-from navigation_server.generated.energy_pb2_grpc import *
 import logging
-from navigation_server.router_common.protobuf_utilities import *
-from router_common.client_common import GrpcClient, ServiceClient
+
+from navigation_server.generated.energy_pb2_grpc import solar_mpptStub
+from navigation_server.generated.energy_pb2 import MPPT_device, request, trend_request
+from navigation_server.router_common import GrpcClient, ServiceClient, pb_enum_string
+
 
 _logger = logging.getLogger("ShipDataClient." + __name__)
 

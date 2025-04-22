@@ -13,10 +13,11 @@ syntax = "proto3";
 
 import "uuid.proto";
 
-enum ConnectionStatus {
+enum InterfaceStatus {
   NOT_CONNECTED=0;
-  LAN_CONNECTED=1; // means that the connection is controlling a sub-LAN
-  WAN_CONNECTED=2; // means connected to WAN or upper layer LAN
+  LAN_CONTROLLER=1; // means that the connection is controlling a sub-LAN
+  WAN_INTERFACE=2; // means connected to WAN or upper layer LAN
+  LAN_INTERFACE=3; // Connected to a LAN as client (DHCP or fixed address)
 }
 
 enum DeviceType {
@@ -26,31 +27,48 @@ enum DeviceType {
   CELLULAR=3;
 }
 
-message NetworkDevice {
+message NetParameter {
+  string name=1;
+  string value=2;
+}
+
+message NetInterface {
   string name=1;
   DeviceType type=3;
-  ConnectionStatus status=4;
+  InterfaceStatus status=4;
+  NetConnection conn=5;
+  string device_name=6;
 }
 
-message Connection {
+message NetConnection {
   string name=1;
-  ObjectId uuid=2;  // optional, used only with NetworkManager
-  string device_name=3;  //index to device
-
+  ObjectId uuid=2;                     // optional, used only with NetworkManager
+  repeated NetParameter parameters=4;  // set of parameters depending on the connection type
 }
 
-message EthernetPort {
-
+message NetworkCommand {
+  uint32 id=1;
+  string cmd=2;
+  NetInterface if=3;
+  NetConnection conn=4;
 }
 
-message WiFi {
-
+message NetworkReply {
+  uint32 id=1;
+  NetInterface if=2;
+  NetConnection conn=3;
 }
 
-message Cellular {
-
+message NetworkStatus {
+  uint32 id=1;
+  bool nm_running = 2;
+  repeated NetInterface if_list=3;
 }
 
-message NetworkDevice {
-
+service NetworkService {
+  rpc set_configuration(NetworkCommand) returns (NetworkReply) {}
+  rpc get_configuration(NetworkCommand) returns (NetworkReply) {}
+  rpc set_global_configuration(NetworkCommand) returns (NetworkStatus) {}
+  rpc get_network_status (NetworkCommand) returns (NetworkStatus) {}
 }
+

@@ -125,17 +125,26 @@ class N2KForwarder:
     def __init__(self, pgn_set: set, output_queue: queue.Queue):
         self._pgn_set = pgn_set
         self._output_queue = output_queue
+        self._suspend_flag = False
 
     def push(self, msg:NMEA2000DecodedMsg):
+        if self._suspend_flag:
+            return
         if msg.pgn in self._pgn_set:
             n2k_msg = msg.message()
             try:
                 self._output_queue.put(n2k_msg, block=True, timeout=0.5)
             except queue.Full:
-                _logger.error("N2KForwarder queue Full")
+                _logger.error("N2KForwarder queue Full - message discarded")
 
     def pgn_in_set(self, pgn:int) -> bool:
         return pgn in self._pgn_set
+
+    def suspend(self):
+        self._suspend_flag = True
+
+    def resume(self):
+        self._suspend_flag = False
 
 
 gnss_systems = ( GNSSSystem('GPS', 'GP', 1, 0, 1),
@@ -193,7 +202,7 @@ class GNSSDataManager:
 
     def set_fix(self):
         if not self._fix:
-            self._fix_time = datetime.datetime.now(datetime.UTC)
+            self._fix_time = time.time()
             self._fix = True
             _logger.info(f"GNSS is becoming fixed")
 
@@ -447,6 +456,15 @@ class GNSSDataManager:
         Return a Protobuf object that includes the fields corresponding to keywords in cmd
         """
         resp = GNSS_Status()
+        resp.fixed = self._fix
+        if self._fix:
+            # ok we can fill additional info
+            resp.fix_time = self._fix_time
+            resp.gnss_time = (datetime.datetime.fromordinal(self._date + jan170)
+                              + datetime.timedelta(seconds=self._utc_time)).isoformat()
+            resp.nb_satellites_in_fix = self._nb_sats_in_fix
+        return resp
+
 
 
 

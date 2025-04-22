@@ -516,7 +516,7 @@ This is the abstract super class for all NMEA2000 applications.
 |---------|------|---------|--------------------------------------------------------------------------------------------------------------|
 | address | int  | none    | If this parameter is present and in the range [0, 253] the value will tentatively used as the device address |
 
-If no address is given, it will be allocated from the pool associated with the system (ECU)
+If no address is given, it will be allocated from the pool associated with the system (ECU, see NMEA2KActiveController)
 
 
 #### GrpcInputApplication(GrpcDataService, NMEA2000Application)
@@ -695,7 +695,7 @@ The following sections are recognized:
 - services
 - filters
 
-Sections are not mandatory, but if no *features* only the default Python packages are loaded and not all needed classes will be present
+Sections are not mandatory, but if no *features* are declared, only the default Python packages are loaded and not all needed classes will be present
 
 #### Features concept and Python modules
 
@@ -704,14 +704,15 @@ If no list is specified after the feature, then the full feature (package) is im
 
 Here are the features included with the current version
 
-| feature name  | includes                      | needed for                             |
-|---------------|-------------------------------|----------------------------------------|
-| router_core   | Message router basic features |                                        |
-| nmea2000      | NMEA2000 Handling             |                                        |
-| nmea0183      | NMEA0183 handling             |                                        |
-| couplers      | Non CAN couplers              |                                        |  
-| can_interface | direct CAN interface          | NMEA2000 Active controller, CANCoupler |
-| agent         | Linux agent service           | Implementation of the Linux Agent      |
+| feature name  | includes                      | needed for                                   |
+|---------------|-------------------------------|----------------------------------------------|
+| router_core   | Message router basic features |                                              |
+| nmea2000      | NMEA2000 Handling             |                                              |
+| nmea0183      | NMEA0183 handling             |                                              |
+| couplers      | Non CAN couplers              |                                              |  
+| can_interface | direct CAN interface          | NMEA2000 Active controller, CANCoupler       |
+| agent         | Linux agent service           | Implementation of the Linux Agent            |
+| gnss          | GNSS service                  | STNC800 GNSS module interface and management |
 
 
 

@@ -13,6 +13,9 @@ import os
 import logging
 import sys
 
+from navigation_server.set_logging_root import set_server_root
+set_server_root()
+
 from navigation_server.router_common import (NavigationConfiguration, NavigationLogSystem, MessageServerGlobals,
                                              init_options, set_root_package, ConfigurationException, ObjectCreationError)
 
@@ -37,7 +40,7 @@ def server_main():
         return
 
     # set log for the configuration phase
-    NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2024")
+    NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2025")
     # build the configuration from the file
     try:
         config = NavigationConfiguration().build_configuration(opts.settings)

@@ -11,3 +11,4 @@
 from .usb_modem_at_lib import UsbATModem, VisibleOperator, ModemException
 from .quectel_modem import QuectelModem
 from .modem_command import main
+from .network_service import NetworkService

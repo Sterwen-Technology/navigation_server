@@ -31,7 +31,7 @@ include = [
     {path = "navigation_definitions", format = ["sdist", "wheel"] },
     {path = "conf", format = ["sdist"] },
     {path = "system", format = ["sdist"] },
-    "run_server", "run_server.py", "setrunenv"
+    "run_server", "run_server.py", "setrunenv", "run_script"
 ]
 
 [build-system]

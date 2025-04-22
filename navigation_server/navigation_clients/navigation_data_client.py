@@ -11,10 +11,11 @@
 
 import logging
 
-from navigation_server.generated.navigation_data_pb2_grpc import *
+from navigation_server.generated.navigation_data_pb2_grpc import EngineDataStub
+from navigation_server.generated.navigation_data_pb2 import engine_data, engine_request
 
-from navigation_server.router_common import pb_enum_string, ProtobufProxy
-from router_common.client_common import ServiceClient
+from navigation_server.router_common import pb_enum_string, ProtobufProxy, ServiceClient
+
 
 _logger = logging.getLogger("ShipDataClient." + __name__)
 
