@@ -253,6 +253,11 @@ class NMEA2000Application(NMEA2000Device):
                     return
                 # now we need to swap addresses
                 self.change_address(address)
+            elif iso_name.name_value == self._iso_name.name_value:
+                _logger.critical("Duplicate name %8X on network suspect network loop => Emergency stop" % self._iso_name.name_value)
+                self._controller.stop()
+                _logger.critical("CAN Interface is becoming ineffective")
+                return
             else:
                 _logger.warning("Local application name %8X keeps address %d" % (self._iso_name.name_value, self._address))
                 # need to send an Address Claimed response

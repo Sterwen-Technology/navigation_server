@@ -66,6 +66,11 @@ servers:
       max_silent: 60.0
       applications: [CANCoupler, GNSS]
 
+- ShipModulConfig:
+    class: ShipModulConfig
+    port: 4501
+    coupler: MiniPlex3
+
 couplers:
 
 - CANCoupler:
@@ -73,7 +78,17 @@ couplers:
 
 - GNSSCoupler:
     class: GNSSInputCoupler
-    gss_input: GNSS
+    gnss_input: GNSS
+
+- MiniPlex3:
+    class: ShipModulInterface
+    address: 172.16.2.48
+    port: 10110
+    transport: TCP
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
+    autostart: false
+    trace_raw: false
     
 filters:
 
@@ -90,6 +105,7 @@ services:
 
 - GNSS:
       class: GNSSInput
+      server: gRPCMain
       address: 16
 
 publishers:

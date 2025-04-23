@@ -212,7 +212,9 @@ class GNSSPushClient(ServiceClient, NavThread):
             try:
                 msg = self._input_queue.get(block=True, timeout=1.0)
             except queue.Empty:
-                continue
+                if grpc_connected:
+                    continue
+            _logger.debug("GNSSPushClient connected %s input_queue:%d" % (grpc_connected, msg.pgn))
             if grpc_connected:
                 # we are connected or want to try the connection
                 # convert to protobuf
@@ -228,6 +230,8 @@ class GNSSPushClient(ServiceClient, NavThread):
             else:
                 t = time.time()
                 if t - time_disconnect > 10.0:
+                    _logger.debug("GNSSPushClient reconnecting")
+                    self._server.connect()
                     self._forwarder.resume()
                     grpc_connected = True
                     time_disconnect = t

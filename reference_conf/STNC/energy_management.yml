@@ -1,0 +1,82 @@
+#-------------------------------------------------------------------------------
+# Name:        energy management.yml
+# Purpose:     Settings file for the local agent
+#
+# Author:      Laurent Carré
+#
+# Created:     08/07/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+#
+function: Energy management server
+log_level: INFO
+trace_dir: /data/navigation/traces
+data_dir: /data/navigation/data
+log_module:
+    energy_mgmt.mppt_service: INFO
+
+features:
+    - router_core
+    - energy_mgmt
+    - nmea2000
+    - couplers:
+          VEDirectCoupler
+
+servers:
+
+- Main:
+      class: NavigationMainServer
+
+- gRPCMain:
+    class: GrpcServer
+    port: 4505
+
+couplers:
+
+- MPPTVEDirect:
+    class: VEDirectCoupler
+    device: /dev/ttyUSB0
+    interface: simulation
+    logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
+    protocol: non_nmea
+    max_attempt: 1
+
+services:
+
+- Agent:
+    class: MPPTService
+    coupler: MPPTVEDirect
+    server: gRPCMain
+    publisher: NMEAPush
+    protocol: nmea0183
+    talker: EM
+
+- Console:
+    class: Console
+    server: gRPCMain
+
+publishers:
+
+- NMEAPrint:
+      class: N2KTracePublisher
+      active: true
+      flexible_decode: false
+      output: PRINT
+
+- NMEAPush:
+    class: GrpcPublisher
+    active: true
+    decode_nmea2000: false
+    nmea0183: pass_thru
+    address: 127.0.0.1
+    port: 4502
+
+
+
+
+
+
+
+

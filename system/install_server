@@ -5,6 +5,7 @@ cp systemd/navigation.service /lib/systemd/system
 cp systemd/energy.service /lib/systemd/system
 cp systemd/navigation_agent.service /lib/systemd/system
 cp systemd/navigation_data.service /lib/systemd/system
+cp systemd/gnss.service /lib/systemd/systemœ
 
 systemctl daemon-reload
 
@@ -12,12 +13,13 @@ systemctl enable navigation
 systemctl enable energy
 systemctl enable navigation_agent
 systemctl enable navigation_data
+systemctl enable gnss
 
 systemctl start navigation
 systemctl start energy
 systemctl start navigation_agent
 systemctl start navigation_data
-
+systemctl start gnss:wq
 
 systemctl status navigation
 systemctl status energy
