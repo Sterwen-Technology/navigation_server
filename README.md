@@ -114,9 +114,9 @@ To overcome the problem a specific Python script has been developed (mod_pb2.py)
 For any problem encountered, please open an issue in this GitHub repository.
 
 ## Roadmap
-The current stable version is V2.2. Documentation is aligned on this version.
+The current stable version is V2.3. Documentation is aligned on this version.
 
-The version 2.2 is focusing on installation and import optimization
+The version 2.3 is the version supporting the new STNC800 hardware
 
 ## Contributing
 
