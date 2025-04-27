@@ -15,7 +15,7 @@ import time
 import serial
 import queue
 
-from navigation_server.router_core import NMEA0183Msg
+from navigation_server.router_core import NMEA0183Msg, NMEAInvalidFrame
 from navigation_server.router_common import NavThread, NMEAMsgTrace
 from navigation_server.gnss.gnss_data import GNSSDataManager, N2KForwarder
 from navigation_server.generated.gnss_pb2 import SatellitesInView, ConstellationStatus, GNSS_Status
@@ -78,7 +78,10 @@ class GNSSSerialReader(NavThread):
                 # temporary => limit the talkers to the one that really matters
                 # shall be configurable in the future
                 continue
-            msg = NMEA0183Msg(frame)
+            try:
+                msg = NMEA0183Msg(frame)
+            except NMEAInvalidFrame:
+                continue
             if self._trace is not None:
                 self._trace.trace(NMEAMsgTrace.TRACE_IN, msg)
             if self._n0183_subscriber is not None:

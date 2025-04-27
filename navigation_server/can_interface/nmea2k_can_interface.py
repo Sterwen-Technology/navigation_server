@@ -205,19 +205,28 @@ class SocketCANInterface(NavThread):
             return
 
         # Fast packet handling
-        if self._fp_handler.is_pgn_active(pgn, sa, data):
+        try:
+            fp_active = self._fp_handler.is_pgn_active(pgn, sa, data)
+        except FastPacketException:
+            return None
+
+        if fp_active:
             try:
                 data = self._fp_handler.process_frame(pgn, sa, data)
+                if data is None:
+                    return None
             except FastPacketException as e:
-                _logger.error("CAN interface Fast packet error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
-                return None
-            if data is None:
+                _logger.error("CAN interface Fast packet (active) error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
                 return None
         else:
             if PGNDef.fast_packet_check(pgn):
-                data = self._fp_handler.process_frame(pgn, sa, data)
-            if data is None:
-                return None
+                try:
+                    data = self._fp_handler.process_frame(pgn, sa, data)
+                    if data is None:
+                        return None
+                except FastPacketException as e:
+                    _logger.error("CAN interface Fast packet (start) error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
+                    return None
         # end fast packet handling
         n2k_msg = NMEA2000Msg(pgn, prio, sa, da, data)
         if n2k_msg is not None:
@@ -397,12 +406,14 @@ class SocketCANWriter(NavThread):
         #  Run loop
         last_write_time = time.monotonic()
         nberr = 0
+        retry = False
         while not self._stop_flag:
 
-            try:
-                msg = self._in_queue.get(timeout=1.0)
-            except queue.Empty:
-                continue
+            if not retry:
+                try:
+                    msg = self._in_queue.get(timeout=1.0)
+                except queue.Empty:
+                    continue
             # 2024-09-07 change the pacing algorithm
             msg_pace = time.monotonic() - last_write_time
             # each ECU is allowed to a max bandwidth% of the bus, so a minimum interval is setup
@@ -431,12 +442,17 @@ class SocketCANWriter(NavThread):
                     self._bus.send(msg, 5.0)
                     last_write_time = time.monotonic()
                     nberr = 0
+                    retry = False
                 except ValueError:
                     # can happen if the thread was blocked while the CAN interface is closed
                     raise SocketCanError(f"SocketCANWriter {self.name} CAN access closed during write => STOP")
                 except CanError as e:
-                    _logger.error("Error writing message to channel %s: %s" % (self._can_interface.channel, e))
                     nberr += 1
+                    _logger.error("SocketCANWriter: Error writing message to channel %s: %s retry:%d" %
+                                  (self._can_interface.channel, e, nberr))
+                    burst = 1 # we stop burst
+                    retry = True
+                    last_write_time = time.monotonic()
                     if nberr > 20:
                         # more than 20 consecutive error no need to continue
                         _logger.critical("CAN Write too many errors stopping")
@@ -444,7 +460,8 @@ class SocketCANWriter(NavThread):
                 burst -= 1
                 if burst > 0:
                     # in case of burst limit anyway to 1000 msg/sec
-                    time.sleep(0.001)
+                    # decrease to 500msg/sec 25-04-2025
+                    time.sleep(0.002)
                     # then get one more message
                     try:
                         msg = self._in_queue.get(block=False)

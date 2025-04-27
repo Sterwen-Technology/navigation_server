@@ -155,15 +155,22 @@ class FastPacketHandler:
             return l_handle
 
         if handle is None:
+            if counter != 0:
+                raise FastPacketException(f"Fast packet PGN {pgn} from address {addr} wrong first packet {counter}")
             handle = allocate_handle()
 
         if counter == 0:
             handle.first_packet(frame)
         else:
-            handle.add_packet(frame)
+            try:
+                handle.add_packet(frame)
+            except FastPacketException:
+                del self._sequences[key]
+                raise
+
         if handle.check_complete():
+            del self._sequences[key]
             result = handle.total_frame()
-            self._sequences[key] = None
             _logger.debug("Fast packet ==> end sequence on PGN %d from address %d sequence %d" % (pgn, addr, seq))
             return result
         else:
