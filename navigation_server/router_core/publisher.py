@@ -52,11 +52,13 @@ class Publisher(NavThread):
             self._opts = opts
             self._queue_size = opts.get('queue_size', int, 20)
             self._max_lost = opts.get('max_lost', int, 5)
+            self._service = opts.get('service', str, None)
             inst_list = opts.getlist('couplers', str, [])
             if len(inst_list) == 0:
-                # we must have a coupler here
-                _logger.error(f"Publisher {object_name} has no couplers defined")
-                raise ValueError
+                if self._service is None:
+                    # we must have a coupler here
+                    _logger.error(f"Publisher {object_name} has no couplers defined")
+                    raise ValueError
             self._active = opts.get('active', bool, True)
             self._couplers = {}
             for inst_name in inst_list:

@@ -107,6 +107,7 @@ class RawLogFile:
         self._lock = threading.Lock()  # to prevent race conditions while moving around in the logs
         self._records = []
         self._tick_index = []
+        self._type = None
 
     def load_file(self):
 
@@ -210,6 +211,9 @@ class RawLogFile:
 
     @property
     def file_type(self):
+        if self._type is None:
+            _logger.error(f"RawLogReader => file {self._logfile} must be loaded before processing")
+            raise ValueError
         return self._type
 
     def abort_read(self):

@@ -277,6 +277,7 @@ class VEDirectLogReader(threading.Thread):
             self._log_reader = RawLogFile(self._log_file)
         except IOError:
             return False
+        self._log_reader.load_file()
         if not self._log_reader.file_type.startswith('VEDirect'):
             _logger.error('VEDirectLogReader => wrong file type')
             return False
@@ -305,8 +306,8 @@ class VEDirectLogReader(threading.Thread):
                 self._output_queue.put(NavGenericMsg(NULL_MSG))
                 break
             # now let's decode
-            msg = msg.rstrip('\n')
-            buffer = bytearray.fromhex(msg)
+            # msg = msg.message.rstrip('\n')
+            buffer = bytearray.fromhex(msg.message)
             msg_dec = {}
             fields = buffer.split(b'\r\n')
             for f in fields:

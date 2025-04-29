@@ -63,13 +63,15 @@ publishers:
       active: true
       flexible_decode: false
       output: PRINT
+      couplers: [MPPTVEDirect]
 
 - NMEAPush:
     class: GrpcPublisher
     active: true
     decode_nmea2000: false
+    service: Agent
     nmea0183: pass_thru
-    address: 192.168.1.49
+    address: 127.0.0.1
     port: 4502
 
 
