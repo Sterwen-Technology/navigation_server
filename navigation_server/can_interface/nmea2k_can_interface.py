@@ -150,11 +150,11 @@ class SocketCANInterface(NavThread):
 #  navigation_definitions access_lock(self):
 #     return self._access_lock
 
-    def total_msg_raw(self):
+    def total_msg_raw(self) -> int:
         return self._total_msg_in
 
-    def total_msg_raw_out(self):
-        self._writer.total_msg()
+    def total_msg_raw_out(self) -> int:
+        return self._writer.total_msg()
 
     def wait_for_bus_ready(self):
         self._bus_ready.wait()
@@ -386,7 +386,7 @@ class SocketCANWriter(NavThread):
     def stop(self):
         self._stop_flag = True
 
-    def total_msg(self):
+    def total_msg(self) -> int:
         return self._total_msg
 
     def change_bandwidth(self, bandwidth: float):

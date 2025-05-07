@@ -135,7 +135,7 @@ class GNSSService(GrpcService):
         self._push_address = opts.get('address', str, '127.0.0.1')
         self._push_port = opts.get('port', int, 4502)
         self._push = opts.get('push_to_server', bool, False)
-        self._push_server = GrpcClient(f"{self._push_address}:{self._push_port}", use_request_id=False)
+        self._push_server = GrpcClient.get_client(f"{self._push_address}:{self._push_port}", use_request_id=False)
         self._trace = opts.get('trace', bool, False)
 
 
@@ -204,7 +204,7 @@ class GNSSPushClient(ServiceClient, NavThread):
         self._server.add_service(self)
         self._reader.set_n2k_subscriber(self._forwarder)
         self._server.connect()
-        super().start()
+        NavThread.start(self)
 
     def nrun(self) -> None:
 
@@ -217,7 +217,17 @@ class GNSSPushClient(ServiceClient, NavThread):
             except queue.Empty:
                 if grpc_connected:
                     continue
-            _logger.debug("GNSSPushClient connected %s input_queue:%d" % (grpc_connected, msg.pgn))
+
+            m_lost = self._forwarder.percentage_lost()
+            _logger.debug("GNSSPushClient connected %s losses %3.1f input_queue:%d" % (grpc_connected, m_lost, msg.pgn))
+            if m_lost  > .1 :
+                _logger.warning(f"GNSSPushClient high level of messages lost: {m_lost}")
+                if m_lost > .2 :
+                    # over 20% we just give up
+                    self._forwarder.suspend()
+                    _logger.critical("GNSSPush stops")
+                    break
+
             if grpc_connected:
                 # we are connected or want to try the connection
                 # convert to protobuf
@@ -225,6 +235,7 @@ class GNSSPushClient(ServiceClient, NavThread):
                 msg.as_protobuf(pb_msg)
                 try:
                     resp = self._server_call(self._stub.gnss_message, pb_msg, None)
+                    _logger.debug("GNSSPush client pushed succesfully msg:%d" % msg.pgn)
                 except GrpcAccessException:
                     self._forwarder.suspend()
                     grpc_connected = False

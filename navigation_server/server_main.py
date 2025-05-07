@@ -13,13 +13,12 @@ import os
 import logging
 import sys
 
-from navigation_server.set_logging_root import set_server_root
-set_server_root()
 
 from navigation_server.router_common import (NavigationConfiguration, NavigationLogSystem, MessageServerGlobals,
-                                             init_options, set_root_package, ConfigurationException, ObjectCreationError)
+                                             init_options, set_root_package, ConfigurationException, AgentInterface,
+                                             ObjectCreationError, GrpcServer)
 
-MessageServerGlobals.version = "2.3.0"
+MessageServerGlobals.version = "2.4.0"
 default_base_dir = "/"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -32,6 +31,8 @@ def server_main():
     --working_dir: working directory for the service, practically this shall be the head directory of the
                    navigation-server software
     """
+    logging_root.set_server_root()
+    assert logging_root.get_logging_root() == "ShipDataServer."
     # initialise command line arguments
     opts = init_options(default_base_dir)
     set_root_package(server_main)
@@ -63,9 +64,12 @@ def server_main():
         return
 
     assert MessageServerGlobals.main_server is not None
-
+    assert GrpcServer.grpc_server_global is not None
     _logger.debug("Starting the main server")
     if config.main_server.start():
+        # register the process in agent
+        if not config.main_server.is_agent():
+            agent = AgentInterface().send_confirmation()
         if opts.timer is not None:
             # for debug only trace running threads at regular interval
             config.main_server.start_analyser(opts.timer)

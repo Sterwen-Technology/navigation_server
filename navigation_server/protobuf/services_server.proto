@@ -1,0 +1,54 @@
+//-------------------------------------------------------------------------------
+// Name:        services_server.proto
+// Purpose:     protobuf for messages defining
+//
+// Author:      Laurent Carré
+//
+// Created:     28/04/2025
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+enum ProcessState {
+  NOT_STARTED = 0;
+  RUNNING = 1;
+  STOPPED = 2;
+}
+
+// TCP connection description
+message Connection {
+  string remote_ip=1;
+  uint32 remote_port=2;
+  uint32 total_msg=3;
+  float msg_rate=4;
+  float max_delay=5;  // maximum delay in sec for a message through the router
+}
+
+message Server {
+  string server_class=1;
+  string name=2;
+  string server_type=3;
+  bool running=4;
+  uint32 nb_connections=5;
+  uint32 port=6;
+  string protocol=8;
+  repeated Connection connections=7;
+}
+
+message SystemProcessMsg {
+  uint32 id=1;
+  string name=2;
+  ProcessState state=3;
+  uint32 grpc_port = 4;  // port gRPC based communication
+  bool console_present = 13;  //True when console is present
+  string status=5;
+  uint32 error=6;
+  string version=7;
+  string start_time=8;
+  string hostname = 10;
+  string purpose = 11;
+  string settings = 12;
+  repeated Server servers=9;
+}

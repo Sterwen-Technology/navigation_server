@@ -11,8 +11,7 @@
 
 import logging
 
-from navigation_server.set_logging_root import nav_logging_root
-_logger = logging.getLogger(nav_logging_root + __name__)
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 from navigation_server.router_common import ServiceClient, ProtobufProxy, pb_enum_string
 from navigation_server.generated.network_pb2 import (NetInterface, NetParameter, DeviceType, InterfaceStatus,

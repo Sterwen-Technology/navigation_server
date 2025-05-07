@@ -26,17 +26,16 @@ class NavigationMainServer(GenericTopServer):
     def __init__(self, options):
 
         super().__init__(options)
+        MessageServerGlobals.main_server = self
         self._name = 'router_main'
         self._console = None
         self._couplers = {}
         self._publishers = []
         self._applications = []
         self._filters = []
-        self._is_running = False
         self._logfile = None
-        self._start_time = 0
-        self._start_time_s = "Not started"
         self._stop_in_progress = False
+
         self._stop_lock = threading.Lock()
 
     def couplers(self):
@@ -64,24 +63,16 @@ class NavigationMainServer(GenericTopServer):
                 coupler.register(pub)
             pub.start()
             changed in version 1.7 => can run with no couplers - can be only a CAN application
+            changed in version 2.4 => call super class start first
             '''
-
-        for service in self._services:
-            service.finalize()
+        super().start()
         for publisher in self._publishers:
             publisher.start()
-        for server in self._servers:
-            _logger.debug("starting server %s class:%s" % (server.name, server.__class__.__name__))
-            server.start()
         for inst in self._couplers.values():
             inst.request_start()
-        self._is_running = True
-        self._start_time = datetime.datetime.now()
-        self._start_time_s = self._start_time.strftime("%Y/%m/%d-%H:%M:%S")
         return True
 
-    def start_time_str(self):
-        return self._start_time_s
+
 
     def wait(self):
         for server in self._servers:

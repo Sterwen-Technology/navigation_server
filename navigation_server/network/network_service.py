@@ -218,14 +218,14 @@ class NetworkService(GrpcService):
 
         # get the interfaces
         for impl_obj in object_descr_iter('interfaces'):
-            print(impl_obj)
+            # print(impl_obj)
             for items in impl_obj.items():
                 interface = NetworkInterface(items[0], items[1])
             self._interfaces[interface.name] = interface
 
         # now get all connections
         for impl_obj in object_descr_iter('connections'):
-            print(impl_obj)
+            # print(impl_obj)
             for items in impl_obj.items():
                 connection = NetworkInterface(items[0], items[1])
             self._connections[connection.name] = connection

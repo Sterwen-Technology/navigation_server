@@ -8,7 +8,7 @@
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
-from .usb_modem_at_lib import UsbATModem, VisibleOperator, ModemException
-from .quectel_modem import QuectelModem
-from .modem_command import main
+# from .usb_modem_at_lib import UsbATModem, VisibleOperator, ModemException
+# from .quectel_modem import QuectelModem
+# from .modem_command import main
 from .network_service import NetworkService

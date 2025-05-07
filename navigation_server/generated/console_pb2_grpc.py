@@ -5,6 +5,8 @@ import warnings
 
 import navigation_server.generated.console_pb2 as console__pb2
 
+import navigation_server.generated.services_server_pb2 as services__server__pb2
+
 
 GRPC_GENERATED_VERSION = '1.66.2'
 GRPC_VERSION = grpc.__version__
@@ -35,6 +37,16 @@ class NavigationConsoleStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.ServerCmd = channel.unary_unary(
+                '/NavigationConsole/ServerCmd',
+                request_serializer=console__pb2.Request.SerializeToString,
+                response_deserializer=console__pb2.Response.FromString,
+                _registered_method=True)
+        self.ServerStatus = channel.unary_unary(
+                '/NavigationConsole/ServerStatus',
+                request_serializer=console__pb2.Request.SerializeToString,
+                response_deserializer=services__server__pb2.SystemProcessMsg.FromString,
+                _registered_method=True)
         self.GetCouplers = channel.unary_stream(
                 '/NavigationConsole/GetCouplers',
                 request_serializer=console__pb2.Request.SerializeToString,
@@ -50,25 +62,22 @@ class NavigationConsoleStub(object):
                 request_serializer=console__pb2.Request.SerializeToString,
                 response_deserializer=console__pb2.Response.FromString,
                 _registered_method=True)
-        self.ServerStatus = channel.unary_unary(
-                '/NavigationConsole/ServerStatus',
-                request_serializer=console__pb2.Request.SerializeToString,
-                response_deserializer=console__pb2.NavigationServerMsg.FromString,
-                _registered_method=True)
-        self.ServerCmd = channel.unary_unary(
-                '/NavigationConsole/ServerCmd',
-                request_serializer=console__pb2.Request.SerializeToString,
-                response_deserializer=console__pb2.Response.FromString,
-                _registered_method=True)
-        self.GetDevices = channel.unary_stream(
-                '/NavigationConsole/GetDevices',
-                request_serializer=console__pb2.Request.SerializeToString,
-                response_deserializer=console__pb2.N2KDeviceMsg.FromString,
-                _registered_method=True)
 
 
 class NavigationConsoleServicer(object):
     """Missing associated documentation comment in .proto file."""
+
+    def ServerCmd(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ServerStatus(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def GetCouplers(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -88,27 +97,19 @@ class NavigationConsoleServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ServerStatus(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def ServerCmd(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetDevices(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
 
 def add_NavigationConsoleServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'ServerCmd': grpc.unary_unary_rpc_method_handler(
+                    servicer.ServerCmd,
+                    request_deserializer=console__pb2.Request.FromString,
+                    response_serializer=console__pb2.Response.SerializeToString,
+            ),
+            'ServerStatus': grpc.unary_unary_rpc_method_handler(
+                    servicer.ServerStatus,
+                    request_deserializer=console__pb2.Request.FromString,
+                    response_serializer=services__server__pb2.SystemProcessMsg.SerializeToString,
+            ),
             'GetCouplers': grpc.unary_stream_rpc_method_handler(
                     servicer.GetCouplers,
                     request_deserializer=console__pb2.Request.FromString,
@@ -124,21 +125,6 @@ def add_NavigationConsoleServicer_to_server(servicer, server):
                     request_deserializer=console__pb2.Request.FromString,
                     response_serializer=console__pb2.Response.SerializeToString,
             ),
-            'ServerStatus': grpc.unary_unary_rpc_method_handler(
-                    servicer.ServerStatus,
-                    request_deserializer=console__pb2.Request.FromString,
-                    response_serializer=console__pb2.NavigationServerMsg.SerializeToString,
-            ),
-            'ServerCmd': grpc.unary_unary_rpc_method_handler(
-                    servicer.ServerCmd,
-                    request_deserializer=console__pb2.Request.FromString,
-                    response_serializer=console__pb2.Response.SerializeToString,
-            ),
-            'GetDevices': grpc.unary_stream_rpc_method_handler(
-                    servicer.GetDevices,
-                    request_deserializer=console__pb2.Request.FromString,
-                    response_serializer=console__pb2.N2KDeviceMsg.SerializeToString,
-            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
             'NavigationConsole', rpc_method_handlers)
@@ -149,6 +135,60 @@ def add_NavigationConsoleServicer_to_server(servicer, server):
  # This class is part of an EXPERIMENTAL API.
 class NavigationConsole(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def ServerCmd(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/NavigationConsole/ServerCmd',
+            console__pb2.Request.SerializeToString,
+            console__pb2.Response.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ServerStatus(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/NavigationConsole/ServerStatus',
+            console__pb2.Request.SerializeToString,
+            services__server__pb2.SystemProcessMsg.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def GetCouplers(request,
@@ -221,87 +261,6 @@ class NavigationConsole(object):
             '/NavigationConsole/CouplerCmd',
             console__pb2.Request.SerializeToString,
             console__pb2.Response.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def ServerStatus(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/NavigationConsole/ServerStatus',
-            console__pb2.Request.SerializeToString,
-            console__pb2.NavigationServerMsg.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def ServerCmd(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/NavigationConsole/ServerCmd',
-            console__pb2.Request.SerializeToString,
-            console__pb2.Response.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def GetDevices(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_stream(
-            request,
-            target,
-            '/NavigationConsole/GetDevices',
-            console__pb2.Request.SerializeToString,
-            console__pb2.N2KDeviceMsg.FromString,
             options,
             channel_credentials,
             insecure,

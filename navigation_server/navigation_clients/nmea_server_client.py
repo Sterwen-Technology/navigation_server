@@ -41,7 +41,7 @@ if __name__ == "__main__":
     top_logger.addHandler(loghandler)
     top_logger.setLevel('INFO')
     client = GrpcNmeaServerClient()
-    server = GrpcClient("127.0.0.1:4502")
+    server = GrpcClient.get_client("127.0.0.1:4502")
     server.add_service(client)
     server.connect()
     resp = client.status()

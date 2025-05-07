@@ -13,6 +13,7 @@ import logging
 import threading
 import queue
 import time
+from typing import Generator
 
 from .nmea2k_device import NMEA2000Device
 from navigation_server.router_common import NavigationServer, NavThread, set_global_var
@@ -123,7 +124,7 @@ class NMEA2KController(NavigationServer, NavThread):
         if filename is None:
             return
 
-    def get_device(self) -> NMEA2000Device:
+    def get_device(self) -> Generator[NMEA2000Device, None, None]:
         """
         generator for the list of devices known sorted by address
         list is locked to prevent any modification during the generator execution

@@ -10,7 +10,7 @@
 #-------------------------------------------------------------------------------
 #
 function: Data server
-server_name: data_server
+server_name: Data
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data

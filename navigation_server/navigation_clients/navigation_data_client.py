@@ -17,7 +17,7 @@ from navigation_server.generated.navigation_data_pb2 import engine_data, engine_
 from navigation_server.router_common import pb_enum_string, ProtobufProxy, ServiceClient
 
 
-_logger = logging.getLogger("ShipDataClient." + __name__)
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class EngineProxy(ProtobufProxy):
@@ -63,7 +63,7 @@ class EngineClient(ServiceClient):
     def get_data(self, engine_instance):
         request = engine_request()
         request.engine_id = engine_instance
-        result = self._server_call(self._stub.GetEngineData, request)
+        result = self._server_call(self._stub.GetEngineData, request, None)
         if result.error_message == 'NO_ERROR':
             return EngineProxy(result.data)
         else:
@@ -73,7 +73,7 @@ class EngineClient(ServiceClient):
     def get_events(self, engine_instance):
         request = engine_request()
         request.engine_id = engine_instance
-        result = self._server_call(self._stub.GetEngineEvents, request)
+        result = self._server_call(self._stub.GetEngineEvents, request, None)
         if result.error_message == 'NO_ERROR':
             events = []
             for e_pb in result.events:

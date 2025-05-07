@@ -9,8 +9,8 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
-function: GNSS server
-server_name: gnss_server
+function: GNSS interface and data management
+server_name: GNSS
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data

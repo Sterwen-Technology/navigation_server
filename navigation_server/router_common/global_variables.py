@@ -33,6 +33,7 @@ class MessageServerGlobals:
     main_server = None
     root_package = None
     home_dir = None
+    agent_address: str = None
 
 
 def set_root_package(root_object):
@@ -65,6 +66,8 @@ def manufacturer_name(mfg_id: int) -> str:
 
 
 def resolve_ref(name: str):
+    if name is None:
+        raise ValueError
     return MessageServerGlobals.configuration.get_object(name)
 
 

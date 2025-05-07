@@ -16,7 +16,7 @@ from navigation_server.generated.energy_pb2 import MPPT_device, request, trend_r
 from navigation_server.router_common import GrpcClient, ServiceClient, pb_enum_string
 
 
-_logger = logging.getLogger("ShipDataClient." + __name__)
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 class MPPT_device_proxy:
 

@@ -11,7 +11,7 @@
 
 from .ikonvert import iKonvert
 from .shipmodul_if import ShipModulInterface, ShipModulConfig
-from .internal_gps import InternalGps
+# from .internal_gps import InternalGps
 from .serial_nmeaport import NMEASerialPort
 from .grpc_nmea_coupler import GrpcNmeaCoupler
 from .ydn2k_coupler import YDCoupler

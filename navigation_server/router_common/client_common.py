@@ -14,10 +14,7 @@ import logging
 
 from navigation_server.router_common import GrpcAccessException
 
-from navigation_server.set_logging_root import nav_logging_root
-
-_logger = logging.getLogger(nav_logging_root + __name__)
-
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 class GrpcClient:
     """
@@ -35,9 +32,23 @@ class GrpcClient:
     """
     (NOT_CONNECTED, CONNECTING, CONNECTED) = range(10, 13)
 
+    clients = {}  # records all clients to avoid duplicate
+
+    @classmethod
+    def get_client(cls, server, use_request_id:bool = True):
+        try:
+            return cls.clients[server]
+        except KeyError:
+            pass
+        client = GrpcClient(server, use_request_id)
+        cls.clients[server] = client
+        return client
+
+
     def __init__(self, server: str, use_request_id:bool = True):
         """
         Represents a client connection handler for a server.
+        The __init__ method shall not be called directly use GrpcClient.get_client instead
 
         Parameters:
             server: this is a string in the form Address(or URL):port
@@ -65,6 +76,7 @@ class GrpcClient:
         self._state = self.NOT_CONNECTED
         self._req_id = 0
         self._use_req_id = use_request_id
+        self._ready = False
 
     def connect(self):
         """
@@ -109,6 +121,10 @@ class GrpcClient:
     @property
     def address(self):
         return self._server
+
+    @property
+    def connected(self) -> bool:
+        return self._state == self.CONNECTED
 
     def server_call(self, rpc_func, req, response_class):
         """
@@ -208,13 +224,16 @@ class GrpcClient:
         if connectivity == grpc.ChannelConnectivity.READY:
             _logger.info("GRPC Channel Ready")
             self._ready = True
+            self._state = self.CONNECTED
         elif connectivity == grpc.ChannelConnectivity.IDLE:
             _logger.info("GRPC Channel IDLE")
-            # self._ready = False
+            self._ready = False
+            self._state = self.NOT_CONNECTED
         elif connectivity == grpc.ChannelConnectivity.CONNECTING:
             _logger.info("GRPC Channel Connecting")
         elif connectivity == grpc.ChannelConnectivity.SHUTDOWN:
             _logger.info("GRPC Channel Shutdown")
+            self._state = self.NOT_CONNECTED
 
 
 class ServiceClient:
@@ -308,3 +327,10 @@ class ServiceClient:
 
     def server_state(self):
         return self._server.state
+
+    @property
+    def server_connected(self) -> bool:
+        return self._server.connected
+
+    def server_connect(self):
+        self._server.connect()
