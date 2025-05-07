@@ -54,8 +54,8 @@ services:
 
 couplers:
 
-- NMEAGNSS:
-    class: GNSSCoupler
-    gnss_service: GNSS
+#- NMEAGNSS:
+#    class: GNSSCoupler
+#    gnss_service: GNSS
     
  

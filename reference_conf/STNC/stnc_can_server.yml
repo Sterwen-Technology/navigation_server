@@ -28,6 +28,7 @@ log_module:
   nmea2000.nmea2k_iso_messages: INFO
   can_interface.nmea2k_can_coupler: INFO
   nmea2000_devices.nmea2000_device: INFO
+  can_interface.nmea2k_can_service: DEBUG
 
 features:
   - router_core
@@ -107,6 +108,11 @@ services:
       class: GNSSInput
       server: gRPCMain
       address: 16
+      
+- NMEA2000_CAN:
+      class: N2KCanService
+      server: gRPCMain
+      
 
 publishers:
 

@@ -31,8 +31,6 @@ def server_main():
     --working_dir: working directory for the service, practically this shall be the head directory of the
                    navigation-server software
     """
-    logging_root.set_server_root()
-    assert logging_root.get_logging_root() == "ShipDataServer."
     # initialise command line arguments
     opts = init_options(default_base_dir)
     set_root_package(server_main)
