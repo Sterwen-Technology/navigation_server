@@ -211,6 +211,7 @@ class NavigationConfiguration:
         self._globals = {}
         self._features = {}
         self._hooks = {}
+        self._processes = {} # new in version 2.4 only for the main agent
         self._main = None
         self._main_server = None
         self._settings_file = None
@@ -288,6 +289,12 @@ class NavigationConfiguration:
             trace_dir = '/var/log'
         MessageServerGlobals.trace_dir = trace_dir
 
+        try:
+            MessageServerGlobals.agent_address = self._configuration['agent_address']
+        except KeyError:
+            MessageServerGlobals.agent_address = "127.0.0.1:4545"
+            _logger.warning(f"Missing agent address, defaulting to {MessageServerGlobals.agent_address}")
+
         # create entries for allways included classes
         self.import_internal()
         for feature in self.object_descr_iter('features'):
@@ -304,41 +311,21 @@ class NavigationConfiguration:
             _logger.error("The 'Main' server is missing -> invalid configuration")
             raise ConfigurationException
 
-        try:
-            for obj in self.object_descr_iter('couplers'):
-                nav_obj = NavigationServerObject(obj)
-                self._obj_dict[nav_obj.name] = nav_obj
-                self._couplers[nav_obj.name] = nav_obj
-        except KeyError:
-            _logger.info("No couplers")
-        try:
-            for obj in self.object_descr_iter('publishers'):
-                nav_obj = NavigationServerObject(obj)
-                self._obj_dict[nav_obj.name] = nav_obj
-                self._publishers[nav_obj.name] = nav_obj
-        except KeyError:
-            _logger.info("No publishers")
-        try:
-            for obj in self.object_descr_iter('services'):
-                nav_obj = NavigationServerObject(obj)
-                self._obj_dict[nav_obj.name] = nav_obj
-                self._services[nav_obj.name] = nav_obj
-        except KeyError:
-            _logger.info("No data clients")
-        try:
-            for obj in self.object_descr_iter('filters'):
-                nav_obj = NavigationServerObject(obj)
-                self._obj_dict[nav_obj.name] = nav_obj
-                self._filters[nav_obj.name] = nav_obj
-        except KeyError:
-            _logger.info("No filters")
-        try:
-            for obj in self.object_descr_iter('applications'):
-                nav_obj = NavigationServerObject(obj)
-                self._obj_dict[nav_obj.name] = nav_obj
-                self._applications[nav_obj.name] = nav_obj
-        except KeyError:
-            _logger.info("No applications")
+        def read_objects(category, holding_dict):
+            try:
+                for obj in self.object_descr_iter(category):
+                    nav_obj = NavigationServerObject(obj)
+                    self._obj_dict[nav_obj.name] = nav_obj
+                    holding_dict[nav_obj.name] = nav_obj
+            except KeyError:
+                _logger.info(f"No {category} in configuration")
+
+        read_objects('processes', self._processes)
+        read_objects('couplers', self._couplers)
+        read_objects('publishers', self._publishers)
+        read_objects('services', self._services)
+        read_objects('filters', self._filters)
+        read_objects('applications', self._applications)
 
         # configure profiling
         profiler_conf = self._configuration.get('profiling', None)
@@ -388,6 +375,9 @@ class NavigationConfiguration:
 
     def applications(self):
         return self._applications.values()
+
+    def processes(self):
+        return self._processes.values()
 
     @property
     def main_server(self):
@@ -512,6 +502,17 @@ class NavigationConfiguration:
                 _logger.error(str(e))
                 continue
         _logger.debug("Publishers created")
+        # create the processes - only in agent
+        if self._main_server.is_agent():
+            self._main_server.pre_build()
+        for proc_descr in self._processes.values():
+            try:
+                process = proc_descr.build_object()
+                self._main_server.add_process(process)
+            except ConfigurationException as e:
+                _logger.error(str(e))
+                continue
+
 
 
 def main():

@@ -11,11 +11,10 @@
 
 import logging
 
-from navigation_server.set_logging_root import nav_logging_root
 from navigation_server.generated.gnss_pb2_grpc import GNSSServiceStub, GNSS_Status, request
 from router_common.client_common import GrpcClient, ServiceClient
 
-_logger = logging.getLogger(nav_logging_root + __name__)
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 class GNSSStatusProxy:
 

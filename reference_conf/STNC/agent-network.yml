@@ -17,6 +17,10 @@ data_dir: /data/navigation/data
 log_module:
   network.nmcli_interface: DEBUG
   network.network_service: DEBUG
+  agent.agent_service: INFO
+  router_common.agent_interface: INFO
+
+decode_definition_only: False
 
 features:
     - agent
@@ -25,11 +29,11 @@ features:
 servers:
 
 - Main:
-      class: GenericTopServer
+      class: AgentTopServer
 
 - gRPCMain:
     class: GrpcServer
-    port: 4506
+    port: 4545
 
 services:
 
@@ -41,6 +45,29 @@ services:
     class: NetworkService
     server: gRPCMain
     configuration: network_conf.yml
+
+processes:
+
+  - STNC_CAN_Server:
+      class: SystemdProcess
+      service: navigation
+
+  - CAN:
+      class: SystemdProcess
+      service: can
+      controlled: false
+
+  - GNSS:
+      class: SystemdProcess
+      service: gnss
+
+  - Data:
+      class: SystemdProcess
+      service: navigation_data
+
+  - Energy:
+      class: SystemdProcess
+      service: energy
 
 
 

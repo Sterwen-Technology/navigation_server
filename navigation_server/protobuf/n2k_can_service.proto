@@ -1,0 +1,41 @@
+//-------------------------------------------------------------------------------
+// Name:        nmea_server.proto
+// Purpose:     protobuf and grpc for navigation server data streams
+//
+// Author:      Laurent Carré
+//
+// Created:     12/06/2022
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+import "iso_name.proto";
+import "nmea2000_classes_iso_gen.proto";
+
+message N2KDeviceMsg {
+  uint32 address=1;
+  bool changed=2;
+  float last_time_seen=3;
+  ISOName iso_name=4;
+  Pgn126996ClassPb product_information=5;
+  Pgn126998ClassPb configuration_information=6;
+}
+
+message CAN_ControllerMsg {
+  string channel=1;
+  string status = 2;
+  float incoming_rate = 3;
+  float outgoing_rate = 4;
+  repeated N2KDeviceMsg devices=5;
+}
+
+message CANRequest{
+  uint32 id = 1;
+  string cmd = 2;
+}
+
+service CAN_ControllerService {
+  rpc GetStatus(CANRequest) returns (CAN_ControllerMsg) {}
+}

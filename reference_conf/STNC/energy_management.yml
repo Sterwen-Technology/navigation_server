@@ -11,6 +11,7 @@
 #
 #
 function: Energy management server
+server_name: Energy
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
@@ -37,7 +38,7 @@ couplers:
 
 - MPPTVEDirect:
     class: VEDirectCoupler
-    device: /dev/ttyUSB0
+    device: /dev/ttyUSB4
     interface: simulation
     logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
     protocol: non_nmea
@@ -45,7 +46,7 @@ couplers:
 
 services:
 
-- Agent:
+- EnergyService:
     class: MPPTService
     coupler: MPPTVEDirect
     server: gRPCMain
@@ -64,11 +65,13 @@ publishers:
       active: true
       flexible_decode: false
       output: PRINT
+      couplers: [MPPTVEDirect]
 
 - NMEAPush:
     class: GrpcPublisher
     active: true
     decode_nmea2000: false
+    service: EnergyService
     nmea0183: pass_thru
     address: 127.0.0.1
     port: 4502

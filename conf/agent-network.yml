@@ -17,6 +17,8 @@ log_module:
   network.nmcli_interface: DEBUG
   network.network_service: DEBUG
 
+decode_definition_only: True
+
 features:
     - agent
     - network
@@ -24,7 +26,7 @@ features:
 servers:
 
 - Main:
-      class: GenericTopServer
+      class: AgentTopServer
 
 - gRPCMain:
     class: GrpcServer
@@ -40,6 +42,12 @@ services:
     class: NetworkService
     server: gRPCMain
     configuration: network_conf.yml
+
+processes:
+
+  - NavigationServer:
+      class: SystemdProcess
+      service: navigation
 
 
 

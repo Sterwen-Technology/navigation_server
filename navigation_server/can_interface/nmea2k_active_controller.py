@@ -50,6 +50,10 @@ class NMEA2KActiveController(NMEA2KController):
     def min_queue_size(self):
         return 60
 
+    @property
+    def channel(self) -> str:
+        return self._channel
+
     def start(self):
         _logger.info("CAN active controller start")
         if self._application_names is not None:

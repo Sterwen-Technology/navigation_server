@@ -126,16 +126,20 @@ class N2KForwarder:
         self._pgn_set = pgn_set
         self._output_queue = output_queue
         self._suspend_flag = False
+        self._messages_lost = 0
+        self._total_messages = 1    # to avoid any division by 0 in boundary cases
 
     def push(self, msg:NMEA2000DecodedMsg):
         if self._suspend_flag:
             return
         if msg.pgn in self._pgn_set:
             n2k_msg = msg.message()
+            self._total_messages += 1
             try:
                 self._output_queue.put(n2k_msg, block=True, timeout=0.5)
             except queue.Full:
-                _logger.error("N2KForwarder queue Full - message discarded")
+                _logger.error("N2KForwarder queue Full - message discarded - PGN %d" % msg.pgn)
+                self._messages_lost += 1
 
     def pgn_in_set(self, pgn:int) -> bool:
         return pgn in self._pgn_set
@@ -145,6 +149,9 @@ class N2KForwarder:
 
     def resume(self):
         self._suspend_flag = False
+
+    def percentage_lost(self) -> float:
+        return self._messages_lost / self._total_messages
 
 
 gnss_systems = ( GNSSSystem('GPS', 'GP', 1, 0, 1),

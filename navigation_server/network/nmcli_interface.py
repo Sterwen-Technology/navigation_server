@@ -16,7 +16,6 @@ import sys
 import time
 from dataclasses import dataclass
 import io
-from lib2to3.btm_utils import reduce_tree
 
 _logger = logging.getLogger('ShipDataServer.' + __name__)
 

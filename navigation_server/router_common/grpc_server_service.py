@@ -32,6 +32,7 @@ class GrpcServer(NavigationServer):
     grpc_server_global = None
     @staticmethod
     def get_grpc_server():
+        # print(__name__, "get grpc server", GrpcServer.grpc_server_global)
         return GrpcServer.grpc_server_global.grpc_server
 
     def __init__(self, options):
@@ -49,9 +50,10 @@ class GrpcServer(NavigationServer):
         address = "0.0.0.0:%d" % self._port
         self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=nb_threads))
         self._grpc_server.add_insecure_port(address)
-        self.grpc_server_global = self
+        GrpcServer.grpc_server_global = self
         self._running = False
         self._services = []
+        # print(__name__, "Building GrpcServer", self.name)
 
     def server_type(self):
         return "gRPCServer"
@@ -84,6 +86,11 @@ class GrpcServer(NavigationServer):
     @property
     def grpc_server(self):
         return self._grpc_server
+
+    @staticmethod
+    def grpc_port() -> int:
+        # print(__name__, "GrpcServer get port", GrpcServer.grpc_server_global)
+        return GrpcServer.grpc_server_global.port
 
     def running(self) -> bool:
         return self._running

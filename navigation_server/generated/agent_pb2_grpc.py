@@ -5,6 +5,8 @@ import warnings
 
 import navigation_server.generated.agent_pb2 as agent__pb2
 
+import navigation_server.generated.services_server_pb2 as services__server__pb2
+
 
 GRPC_GENERATED_VERSION = '1.66.2'
 GRPC_VERSION = grpc.__version__
@@ -35,50 +37,39 @@ class AgentStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.SendCmdMultipleResp = channel.unary_stream(
-                '/Agent/SendCmdMultipleResp',
-                request_serializer=agent__pb2.AgentMsg.SerializeToString,
+        self.AgentCmd = channel.unary_unary(
+                '/Agent/AgentCmd',
+                request_serializer=agent__pb2.AgentCmdMsg.SerializeToString,
                 response_deserializer=agent__pb2.AgentResponse.FromString,
                 _registered_method=True)
-        self.SendCmdSingleResp = channel.unary_unary(
-                '/Agent/SendCmdSingleResp',
-                request_serializer=agent__pb2.AgentMsg.SerializeToString,
+        self.AgentSystemCmd = channel.unary_unary(
+                '/Agent/AgentSystemCmd',
+                request_serializer=agent__pb2.AgentCmdMsg.SerializeToString,
                 response_deserializer=agent__pb2.AgentResponse.FromString,
                 _registered_method=True)
-        self.SendCmdNoResp = channel.unary_unary(
-                '/Agent/SendCmdNoResp',
-                request_serializer=agent__pb2.AgentMsg.SerializeToString,
+        self.RegisterProcess = channel.unary_unary(
+                '/Agent/RegisterProcess',
+                request_serializer=services__server__pb2.SystemProcessMsg.SerializeToString,
                 response_deserializer=agent__pb2.AgentResponse.FromString,
-                _registered_method=True)
-        self.SystemdCmd = channel.unary_unary(
-                '/Agent/SystemdCmd',
-                request_serializer=agent__pb2.SystemdCmdMsg.SerializeToString,
-                response_deserializer=agent__pb2.AgentResponseML.FromString,
                 _registered_method=True)
 
 
 class AgentServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def SendCmdMultipleResp(self, request, context):
+    def AgentCmd(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def SendCmdSingleResp(self, request, context):
+    def AgentSystemCmd(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def SendCmdNoResp(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def SystemdCmd(self, request, context):
+    def RegisterProcess(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -87,25 +78,20 @@ class AgentServicer(object):
 
 def add_AgentServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'SendCmdMultipleResp': grpc.unary_stream_rpc_method_handler(
-                    servicer.SendCmdMultipleResp,
-                    request_deserializer=agent__pb2.AgentMsg.FromString,
+            'AgentCmd': grpc.unary_unary_rpc_method_handler(
+                    servicer.AgentCmd,
+                    request_deserializer=agent__pb2.AgentCmdMsg.FromString,
                     response_serializer=agent__pb2.AgentResponse.SerializeToString,
             ),
-            'SendCmdSingleResp': grpc.unary_unary_rpc_method_handler(
-                    servicer.SendCmdSingleResp,
-                    request_deserializer=agent__pb2.AgentMsg.FromString,
+            'AgentSystemCmd': grpc.unary_unary_rpc_method_handler(
+                    servicer.AgentSystemCmd,
+                    request_deserializer=agent__pb2.AgentCmdMsg.FromString,
                     response_serializer=agent__pb2.AgentResponse.SerializeToString,
             ),
-            'SendCmdNoResp': grpc.unary_unary_rpc_method_handler(
-                    servicer.SendCmdNoResp,
-                    request_deserializer=agent__pb2.AgentMsg.FromString,
+            'RegisterProcess': grpc.unary_unary_rpc_method_handler(
+                    servicer.RegisterProcess,
+                    request_deserializer=services__server__pb2.SystemProcessMsg.FromString,
                     response_serializer=agent__pb2.AgentResponse.SerializeToString,
-            ),
-            'SystemdCmd': grpc.unary_unary_rpc_method_handler(
-                    servicer.SystemdCmd,
-                    request_deserializer=agent__pb2.SystemdCmdMsg.FromString,
-                    response_serializer=agent__pb2.AgentResponseML.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -119,34 +105,7 @@ class Agent(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def SendCmdMultipleResp(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_stream(
-            request,
-            target,
-            '/Agent/SendCmdMultipleResp',
-            agent__pb2.AgentMsg.SerializeToString,
-            agent__pb2.AgentResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def SendCmdSingleResp(request,
+    def AgentCmd(request,
             target,
             options=(),
             channel_credentials=None,
@@ -159,8 +118,8 @@ class Agent(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/Agent/SendCmdSingleResp',
-            agent__pb2.AgentMsg.SerializeToString,
+            '/Agent/AgentCmd',
+            agent__pb2.AgentCmdMsg.SerializeToString,
             agent__pb2.AgentResponse.FromString,
             options,
             channel_credentials,
@@ -173,7 +132,7 @@ class Agent(object):
             _registered_method=True)
 
     @staticmethod
-    def SendCmdNoResp(request,
+    def AgentSystemCmd(request,
             target,
             options=(),
             channel_credentials=None,
@@ -186,8 +145,8 @@ class Agent(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/Agent/SendCmdNoResp',
-            agent__pb2.AgentMsg.SerializeToString,
+            '/Agent/AgentSystemCmd',
+            agent__pb2.AgentCmdMsg.SerializeToString,
             agent__pb2.AgentResponse.FromString,
             options,
             channel_credentials,
@@ -200,7 +159,7 @@ class Agent(object):
             _registered_method=True)
 
     @staticmethod
-    def SystemdCmd(request,
+    def RegisterProcess(request,
             target,
             options=(),
             channel_credentials=None,
@@ -213,9 +172,9 @@ class Agent(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/Agent/SystemdCmd',
-            agent__pb2.SystemdCmdMsg.SerializeToString,
-            agent__pb2.AgentResponseML.FromString,
+            '/Agent/RegisterProcess',
+            services__server__pb2.SystemProcessMsg.SerializeToString,
+            agent__pb2.AgentResponse.FromString,
             options,
             channel_credentials,
             insecure,
