@@ -11,7 +11,7 @@
 
 import logging
 import time
-
+import threading
 import serial
 import queue
 
@@ -56,6 +56,8 @@ class GNSSSerialReader(NavThread):
             self._trace = NMEAMsgTrace(name, "GNSS")
         else:
             self._trace = None
+        self._nb_msg = 0
+        self._nb_msg_err = 0
 
     def nrun(self) -> None:
         while not self._stop_flag:
@@ -70,10 +72,12 @@ class GNSSSerialReader(NavThread):
                 continue
             if frame[0] != ord('$'):
                 _logger.debug("Invalid GNSS frame:%s" % frame)
+                self._nb_msg_err += 1
                 continue
             # _logger.debug("GNSS:%s" % frame.removesuffix(b'\r\n'))
             formatter = frame[3:6]
             talker = frame[1:3]
+            self._nb_msg += 1
             if talker not in (b'GN', b'GP', b'GA'):
                 # temporary => limit the talkers to the one that really matters
                 # shall be configurable in the future
@@ -81,6 +85,7 @@ class GNSSSerialReader(NavThread):
             try:
                 msg = NMEA0183Msg(frame)
             except NMEAInvalidFrame:
+                self._nb_msg_err += 1
                 continue
             if self._trace is not None:
                 self._trace.trace(NMEAMsgTrace.TRACE_IN, msg)
@@ -103,6 +108,9 @@ class GNSSSerialReader(NavThread):
 
     def process_gnss(self, msg):
         gnss_data.process_nmea0183(msg)
+
+    def counters(self):
+        return self._nb_msg, self._nb_msg_err
 
 
 class GNSSServiceServicerImpl(GNSSServiceServicer):
@@ -137,6 +145,7 @@ class GNSSService(GrpcService):
         self._push = opts.get('push_to_server', bool, False)
         self._push_server = GrpcClient.get_client(f"{self._push_address}:{self._push_port}", use_request_id=False)
         self._trace = opts.get('trace', bool, False)
+        self._timer = None
 
 
     def finalize(self):
@@ -153,6 +162,8 @@ class GNSSService(GrpcService):
             if self._push:
                 self._pusher = GNSSPushClient(self._reader, self._push_server)
                 self._pusher.start()
+            self._timer = threading.Timer(10., self.timer_elapse)
+            self._timer.start()
         else:
             _logger.error("GNSS Service cannot open device -> service will not start")
 
@@ -169,6 +180,7 @@ class GNSSService(GrpcService):
         return True
 
     def stop_service(self):
+        self._timer.cancel()
         if self._pusher is not None:
             self._pusher.stop()
         if self._reader is not None:
@@ -186,6 +198,15 @@ class GNSSService(GrpcService):
     def clear_n0183_subscriber(self):
         self._reader.clear_n0183_subscriber()
 
+    def timer_elapse(self):
+        reader_msg, reader_err = self._reader.counters()
+        pusher_run = self._pusher.is_alive()
+        pusher_msg= self._pusher.counter()
+        _logger.info(f"GNSS Service msg in:{reader_msg} msg err:{reader_err} pusher alive {pusher_run} msg:{pusher_msg}")
+        self._timer = threading.Timer(10., self.timer_elapse)
+        self._timer.start()
+
+
 
 class GNSSPushClient(ServiceClient, NavThread):
     """
@@ -199,6 +220,7 @@ class GNSSPushClient(ServiceClient, NavThread):
         self._server = server
         self._forwarder = N2KForwarder({129025, 129026, 129029}, self._input_queue)
         self._stop_flag = False
+        self._pushed_msg = 0
 
     def start(self):
         self._server.add_service(self)
@@ -221,7 +243,7 @@ class GNSSPushClient(ServiceClient, NavThread):
             m_lost = self._forwarder.percentage_lost()
             _logger.debug("GNSSPushClient connected %s losses %3.1f input_queue:%d" % (grpc_connected, m_lost, msg.pgn))
             if m_lost  > .1 :
-                _logger.warning(f"GNSSPushClient high level of messages lost: {m_lost}")
+                _logger.warning(f"GNSSPushClient high level of messages lost: {m_lost} %")
                 if m_lost > .2 :
                     # over 20% we just give up
                     self._forwarder.suspend()
@@ -236,6 +258,7 @@ class GNSSPushClient(ServiceClient, NavThread):
                 try:
                     resp = self._server_call(self._stub.gnss_message, pb_msg, None)
                     _logger.debug("GNSSPush client pushed succesfully msg:%d" % msg.pgn)
+                    self._pushed_msg += 1
                 except GrpcAccessException:
                     self._forwarder.suspend()
                     grpc_connected = False
@@ -253,6 +276,9 @@ class GNSSPushClient(ServiceClient, NavThread):
 
     def stop(self):
         self._stop_flag = True
+
+    def counter(self):
+        return self._pushed_msg
 
 
 

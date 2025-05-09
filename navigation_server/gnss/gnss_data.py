@@ -412,6 +412,7 @@ class GNSSDataManager:
         if forwarder.pgn_in_set(129029):
             # we must also have received a GSA message for that
             pgn129029 = Pgn129029Class()
+            pgn129029.priority = 3
             pgn129029.sequence_id = self._sequence
             pgn129029.latitude = self._latitude
             pgn129029.longitude = self._longitude
@@ -445,12 +446,14 @@ class GNSSDataManager:
         self._date = convert_date(fields[8])
         if forwarder.pgn_in_set(129025):
             pgn129025 = Pgn129025Class()
+            pgn129025.priority = 2
             pgn129025.latitude = convert_latitude(fields[3], fields[2])
             pgn129025.longitude = convert_longitude(fields[5], fields[4])
             _logger.debug("RMC pushing PGN 129025")
             forwarder.push(pgn129025)
         if forwarder.pgn_in_set(129026):
             pgn129026 = Pgn129026Class()
+            pgn129026.priority = 3
             pgn129026.sequence_id = self._sequence
             pgn129026.COG_reference = 0
             pgn129026.SOG = self._SOG
