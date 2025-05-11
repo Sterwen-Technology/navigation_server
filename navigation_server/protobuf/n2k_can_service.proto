@@ -28,7 +28,8 @@ message CAN_ControllerMsg {
   string status = 2;
   float incoming_rate = 3;
   float outgoing_rate = 4;
-  repeated N2KDeviceMsg devices=5;
+  bool traces_on=5;
+  repeated N2KDeviceMsg devices=6;
 }
 
 message CANRequest{
@@ -38,4 +39,6 @@ message CANRequest{
 
 service CAN_ControllerService {
   rpc GetStatus(CANRequest) returns (CAN_ControllerMsg) {}
+  rpc StartTrace(CANRequest) returns (CAN_ControllerMsg) {}
+  rpc StopTraces(CANRequest) returns (CAN_ControllerMsg) {}
 }

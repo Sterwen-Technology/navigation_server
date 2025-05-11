@@ -441,15 +441,17 @@ class SocketCANWriter(NavThread):
                     self._total_msg += 1
                     self._bus.send(msg, 5.0)
                     last_write_time = time.monotonic()
-                    nberr = 0
+                    if retry:
+                        _logger.info("SocketCANWriter success after retry (%4X) attempt:%d" % (msg.arbitration_id, nberr))
                     retry = False
+                    nberr = 0
                 except ValueError:
                     # can happen if the thread was blocked while the CAN interface is closed
                     raise SocketCanError(f"SocketCANWriter {self.name} CAN access closed during write => STOP")
                 except CanError as e:
                     nberr += 1
-                    _logger.error("SocketCANWriter: Error writing message to channel %s: %s retry:%d" %
-                                  (self._can_interface.channel, e, nberr))
+                    _logger.error("SocketCANWriter: Error writing message (%4X) to channel %s: %s retry:%d" %
+                                  (msg.arbitration_id, self._can_interface.channel, e, nberr))
                     burst = 1 # we stop burst
                     retry = True
                     last_write_time = time.monotonic()
