@@ -62,6 +62,11 @@ processes:
       service: gnss
       autostart: false
 
+  - GNSSConfig:
+      class: SystemdProcess
+      service: gnss_config
+      controlled: false
+
   - Data:
       class: SystemdProcess
       service: navigation_data

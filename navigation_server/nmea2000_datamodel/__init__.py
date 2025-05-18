@@ -20,5 +20,5 @@ from .nmea2k_encode_decode import BitField, BitFieldDef
 from .generated_base import (NMEA2000DecodedMsg, GenericFormatter, FloatFormatter, FormattingOptions, EnumFormatter,
                              RepeatedFormatter, TextFormatter, check_valid, check_convert_float, convert_to_int,
                              insert_string, insert_var_str, clean_string, resolve_global_enum, extract_var_str,
-                             N2K_DECODED)
+                             N2K_DECODED, NMEA2000EncodeDecodeError)
 

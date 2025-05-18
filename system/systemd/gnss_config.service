@@ -1,0 +1,26 @@
+[Unit]
+# A short human readable title of the unit
+Description=GNSS Configuration at startup
+# A list of units whose activations will wait until after this unit has completed.
+Before=gnss.service
+# A list of units whose activations will occur before this unit starts.
+After=network.target
+
+
+[Service]
+# Configures the process start-up type for this service unit, one of:
+# simple - The process defined in ExecStart= will stay in the foreground while the unit is activated.
+# forking - The process defined in ExecStart= will fork a background process and exit right away.
+# oneshot - The process will exit right away, use with RemainAfterExit= to ensure the serice is marked as active.
+# Consult the documentantion for types (https://www.freedesktop.org/software/systemd/man/systemd.service.html#Type=) other options.
+Type=simple
+user=root
+# Command with arguments to invoke when the unit is activated.
+ExecStart=/home/laurent/navigation_server/run_script /home/laurent/navigation_server/navigation_server/gnss/gnss_config.py --start
+# Configures under what conditions the unit will be restarted.
+Restart=on-failure
+
+[Install]
+# A list of units who when activated will try and activate this unit
+WantedBy=multi-user.target
+

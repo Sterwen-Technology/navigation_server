@@ -1,0 +1,13 @@
+[Unit]
+Description=GNSS management Server
+Requires=network.target
+
+[Service]
+Type=simple
+User=laurent
+ExecStart=/home/laurent/navigation_server/run_server /data/navigation/config/gnss_server.yml
+Restart=on-failure
+RestartSec=6
+
+[Install]
+WantedBy=multi-user.target

@@ -10,6 +10,7 @@
 
 import logging
 import datetime
+from calendar import firstweekday
 from dataclasses import dataclass
 import math
 import time
@@ -17,7 +18,7 @@ import queue
 
 
 from navigation_server.router_core import NMEA0183Msg
-from navigation_server.nmea2000_datamodel import NMEA2000DecodedMsg
+from navigation_server.nmea2000_datamodel import NMEA2000DecodedMsg, NMEA2000EncodeDecodeError
 from navigation_server.generated.nmea2000_classes_gen import (Pgn129025Class, Pgn129026Class, Pgn129029Class,
                                              Pgn129539Class, Pgn129540Class)
 from navigation_server.generated.gnss_pb2 import GNSS_Status, ConstellationStatus, SatellitesInView
@@ -120,20 +121,58 @@ class Constellation:
                 sats.status = 0
 
 
+class GNSSInputStat:
+
+    def __init__(self, formatter):
+        self._formatter = formatter
+        self._count = 0
+        self._last_time = time.monotonic()
+        self._first_time = self._last_time
+        self._interval = 0.0
+
+
+    def seen(self):
+        self._count += 1
+        t = time.monotonic()
+        self._interval = t - self._last_time
+        self._last_time = t
+
+    @property
+    def formatter(self):
+        return self._formatter
+
+    @property
+    def interval(self) -> float:
+        return self._interval
+
+    @property
+    def average_interval(self) -> float:
+        return (time.monotonic() - self._first_time) / self._count
+
+
+
+
 class N2KForwarder:
 
-    def __init__(self, pgn_set: set, output_queue: queue.Queue):
+    def __init__(self, pgn_set: set, output_queue: queue.Queue, constellation: str = None):
         self._pgn_set = pgn_set
         self._output_queue = output_queue
         self._suspend_flag = False
         self._messages_lost = 0
         self._total_messages = 1    # to avoid any division by 0 in boundary cases
+        self._gnss_system = None
+        if constellation is not None:
+            self._gnss_system = gnss_dict.get(constellation, None)
 
     def push(self, msg:NMEA2000DecodedMsg):
         if self._suspend_flag:
             return
         if msg.pgn in self._pgn_set:
-            n2k_msg = msg.message()
+            try:
+                n2k_msg = msg.message()
+            except NMEA2000EncodeDecodeError:
+                _logger.error(f"GNSS Data error pushing PGN{msg.pgn}:{str(msg)}")
+                return
             self._total_messages += 1
             try:
                 self._output_queue.put(n2k_msg, block=True, timeout=0.5)
@@ -141,8 +180,11 @@ class N2KForwarder:
                 _logger.error("N2KForwarder queue Full - message discarded - PGN %d" % msg.pgn)
                 self._messages_lost += 1
 
-    def pgn_in_set(self, pgn:int) -> bool:
-        return pgn in self._pgn_set
+    def pgn_in_set(self, pgn:int, constellation:Constellation = None) -> bool:
+        if constellation is None:
+            return pgn in self._pgn_set
+        else:
+            return constellation.gnss.systemId == self._gnss_system.systemId and pgn in self._pgn_set
 
     def suspend(self):
         self._suspend_flag = True
@@ -165,6 +207,7 @@ gnss_systems = ( GNSSSystem('GPS', 'GP', 1, 0, 1),
 
 gnss_sys_dict = dict([(s.talker, s) for s in gnss_systems])
 signal_id_table = dict([(s.systemId, s) for s in gnss_systems])
+gnss_dict = dict([(s.name, s)for s in gnss_systems])
 
 class GNSSDataManager:
     """
@@ -202,9 +245,11 @@ class GNSSDataManager:
                                   'GNS': self.processGNS,
                                   'GSA': self.processGSA,
                                   'GGA': self.processGGA,
-                                  'RMC': self.processRMC
+                                  'RMC': self.processRMC,
+                                  'TXT': self.processTXT
                                  }
         self._sequence = 0
+        self._stats = {}
 
 
     def set_fix(self):
@@ -220,9 +265,22 @@ class GNSSDataManager:
             self._const_in_fix = []
             self._nb_sats_in_fix = 0
 
+    @property
+    def fix(self) -> bool:
+        return self._fix
+
+    def stats(self):
+        return list(self._stats.values())
+
     def process_nmea0183(self, msg: NMEA0183Msg, forwarder):
         fmt = msg.formatter().decode()
         talker = msg.talker().decode()
+        try:
+            stat = self._stats[fmt]
+            stat.seen()
+        except KeyError:
+            self._stats[fmt] = GNSSInputStat(fmt)
+
         try:
             func = self._process_vector[fmt]
         except KeyError:
@@ -263,7 +321,9 @@ class GNSSDataManager:
             self._utc_time = current_time
 
     def processGSV(self, talker: str, fields: list, forwarder):
-
+        """
+        Process the GSV NMEA message and generate a 129540 PGN
+        """
         const = self.get_constellation(talker)
         if not const.gsv_in_progress:
             # that is the first msg in sequence
@@ -308,7 +368,7 @@ class GNSSDataManager:
                 sat = const.satellites[sat_id]
                 sat.elevation = elevation
                 sat.azimuth = azimuth
-                sat.snr = snr
+                sat.cno = snr
             except KeyError:
                 sat = SatellitesInView(svn = sat_id, elevation=elevation, azimuth=azimuth,ts=sat_timestamp, cno=snr)
                 const.satellites[sat_id] = sat
@@ -322,20 +382,22 @@ class GNSSDataManager:
         # ok go
         _logger.debug("End GSV analysis for constellation %s" % const.gnss.name)
         const.gsv_in_progress = False
-        if forwarder.pgn_in_set(129540):
+        if forwarder.pgn_in_set(129540, const):
             pgn129540 = Pgn129540Class()
             pgn129540.sequence_id = self._sequence
             pgn129540.mode = 0
             pgn129540.sats_in_view = const.nb_satellites
-            for sat in const.satellites:
+            for sat in const.satellites.values():
                 sat_obj = Pgn129540Class.Satellites_DataClass()
                 sat_obj.satellite_number = sat.svn
                 sat_obj.elevation = sat.elevation * deg_to_radian
                 sat_obj.azimuth = sat.azimuth * deg_to_radian
-                sat_obj.signal_noise_ratio = sat.snr
+                sat_obj.signal_noise_ratio = sat.cno
                 sat_obj.range_residuals = 0x7fffffff
                 sat_obj.status = sat.status
                 pgn129540.satellites_data.append(sat_obj)
+            _logger.debug("Pushing PGN 129540 with total number of satellites=%d constellation:%s" %
+                          (pgn129540.sats_in_view, const.gnss.name))
             forwarder.push(pgn129540)
 
 
@@ -346,6 +408,10 @@ class GNSSDataManager:
         _logger.debug("GNS talker %s posMode %s" % (talker, fields[5]))
 
     def processGSA(self, talker, fields, forwarder):
+        """
+        Process GSA NMEA message =>GNSS DOP and active satellites
+        Generate a 129539 PGN
+        """
         assert (talker == 'GN')
         self._mode = int(fields[1])
         if int(fields[1]) >= 2:
@@ -378,7 +444,7 @@ class GNSSDataManager:
 
         _logger.debug("GSA const %s nb sats:%d sats %s" % (const.gnss.name, nb_sats_in_fix, satellites_in_fix))
         const.update_status(satellites_in_fix)
-        if forwarder.pgn_in_set(129539):
+        if forwarder.pgn_in_set(129539, const):
             pgn129539 = Pgn129539Class()
             pgn129539.sequence_id = self._sequence
             if fields[0] == b'A':
@@ -389,9 +455,14 @@ class GNSSDataManager:
             pgn129539.HDOP = self._HDOP
             pgn129539.VDOP = self._VDOP
             pgn129539.TDOP = self._PDOP
+            _logger.debug("Pushing PGN 129539")
             forwarder.push(pgn129539)
 
     def processGGA(self, talker, fields, forwarder):
+        """
+        Process the GGA NMEA message => Global positioning fix data
+        Generate a 129039 PGN
+        """
         assert(talker == 'GN')
         if fields[5] == b'0':
             # no fix
@@ -412,6 +483,7 @@ class GNSSDataManager:
         if forwarder.pgn_in_set(129029):
             # we must also have received a GSA message for that
             pgn129029 = Pgn129029Class()
+            pgn129029.priority = 3
             pgn129029.sequence_id = self._sequence
             pgn129029.latitude = self._latitude
             pgn129029.longitude = self._longitude
@@ -433,6 +505,10 @@ class GNSSDataManager:
             forwarder.push(pgn129029)
 
     def processRMC(self, talker, fields, forwarder):
+        """
+        process the RMC NMEA message => Recommended minimum data
+        Generate 120025 and 129026 PGN
+        """
         if fields[1] != b'A':
             self.lost_fix()
             return
@@ -445,18 +521,29 @@ class GNSSDataManager:
         self._date = convert_date(fields[8])
         if forwarder.pgn_in_set(129025):
             pgn129025 = Pgn129025Class()
+            pgn129025.priority = 3
             pgn129025.latitude = convert_latitude(fields[3], fields[2])
             pgn129025.longitude = convert_longitude(fields[5], fields[4])
             _logger.debug("RMC pushing PGN 129025")
             forwarder.push(pgn129025)
         if forwarder.pgn_in_set(129026):
             pgn129026 = Pgn129026Class()
+            pgn129026.priority = 3
             pgn129026.sequence_id = self._sequence
             pgn129026.COG_reference = 0
             pgn129026.SOG = self._SOG
             pgn129026.COG = self._COG
             _logger.debug("RMC pushing PGN 129026")
             forwarder.push(pgn129026)
+
+    def processTXT(self, talker, fields, forwarder):
+        """
+        This is here just in case
+        """
+        if int(fields[2]) == 0:
+            _logger.error(f"GNSS Chip is issuing an error: {fields[3].decode()}")
+        else:
+            _logger.info(f"TXT: msg:{fields[3].decode()}")
 
     def get_status(self, cmd) -> GNSS_Status:
         """
