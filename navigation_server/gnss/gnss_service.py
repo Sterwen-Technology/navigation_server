@@ -10,6 +10,7 @@
 #-------------------------------------------------------------------------------
 
 import logging
+import threading
 import time
 
 import serial
@@ -135,6 +136,8 @@ class GNSSService(GrpcService):
         self._push_address = opts.get('address', str, '127.0.0.1')
         self._push_port = opts.get('port', int, 4502)
         self._push = opts.get('push_to_server', bool, False)
+        self._push_pgn = opts.getlist('push_pgn', int, [129025, 129026, 129029])
+        self._push_constellation = opts.get('push_constellation', str, None)
         self._push_server = GrpcClient.get_client(f"{self._push_address}:{self._push_port}", use_request_id=False)
         self._trace = opts.get('trace', bool, False)
 
@@ -150,8 +153,10 @@ class GNSSService(GrpcService):
             add_GNSSServiceServicer_to_server(self._servicer, self.grpc_server)
             self._reader = GNSSSerialReader(f"{self._name}:reader", self._fp, self._trace)
             self._reader.start()
+            t = threading.Timer(60., self.dump_stats)
+            t.start()
             if self._push:
-                self._pusher = GNSSPushClient(self._reader, self._push_server)
+                self._pusher = GNSSPushClient(self._reader, self._push_server, self._push_pgn, self._push_constellation)
                 self._pusher.start()
         else:
             _logger.error("GNSS Service cannot open device -> service will not start")
@@ -168,7 +173,15 @@ class GNSSService(GrpcService):
             return False
         return True
 
+    def dump_stats(self):
+        stats = gnss_data.stats()
+        if len(stats) == 0:
+            _logger.error("No messages statistics recorded => GNSS is not communicating")
+        for stat in stats:
+            _logger.info(f"formatter {stat.formatter} period={stat.average_interval}")
+
     def stop_service(self):
+        self.dump_stats()
         if self._pusher is not None:
             self._pusher.stop()
         if self._reader is not None:
@@ -191,13 +204,14 @@ class GNSSPushClient(ServiceClient, NavThread):
     """
     This class and thread wait input from the reader and push the message towards gRPC
     """
-    def __init__(self, reader, server):
+    def __init__(self, reader, server, pgn_list:list, constellation:str):
         super().__init__(GNSS_InputStub)
         NavThread.__init__(self,name="GNSSPushClient", daemon=True)
         self._input_queue = queue.Queue(20)
         self._reader = reader
         self._server = server
-        self._forwarder = N2KForwarder({129025, 129026, 129029}, self._input_queue)
+        pgn_set = {pgn for pgn in pgn_list}
+        self._forwarder = N2KForwarder(pgn_set, self._input_queue, constellation)
         self._stop_flag = False
 
     def start(self):

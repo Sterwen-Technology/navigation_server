@@ -13,6 +13,7 @@
 import logging
 import time
 import math
+import struct
 from datetime import datetime
 from math import isnan
 
@@ -26,6 +27,10 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 class JsonOptions:
     resolve_enum = 1
+
+
+class NMEA2000EncodeDecodeError(Exception):
+    pass
 
 
 def resolve_global_enum(enum_set: str, enum_value: int):
@@ -200,8 +205,12 @@ class NMEA2000DecodedMsg:
         return MessageToJson(message_pb, preserving_proto_field_name=True)
 
     def message(self) -> NMEA2000Msg:
-        msg = NMEA2000Msg(self.pgn, prio=self._priority, sa=self._sa, da=self._da,
+        try:
+            msg = NMEA2000Msg(self.pgn, prio=self._priority, sa=self._sa, da=self._da,
                           payload=self.encode_payload(), timestamp=self._timestamp)
+        except struct.error as err:
+            _logger.error(f"NMEA2000 payload encoding error for PGN {self.pgn}: {err}")
+            raise NMEA2000EncodeDecodeError(err)
         return msg
 
     @property
