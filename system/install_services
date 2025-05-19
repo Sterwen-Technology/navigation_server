@@ -1,0 +1,22 @@
+#!/bin/bash
+# shell script to perform the installation on systemd
+# shall be run a su
+# $1 => directory where the services are defined
+SOURCE_DIR=$1
+cp "$SOURCE_DIR"/navigation.service /lib/systemd/system
+cp "$SOURCE_DIR"/energy.service /lib/systemd/system
+cp "$SOURCE_DIR"/navigation_agent.service /lib/systemd/system
+cp "$SOURCE_DIR"/navigation_data.service /lib/systemd/system
+cp "$SOURCE_DIR"/gnss.service /lib/systemd/system
+cp "$SOURCE_DIR"/can.service /lib/systemd/system
+cp "$SOURCE_DIR"/gnss_config.service /lib/systemd/system
+
+systemctl daemon-reload
+
+systemctl enable navigation_agent
+systemctl enable can
+systemctl enable gnss_config
+
+systemctl start can
+systemctl start gnss_config
+systemctl start navigation_agent

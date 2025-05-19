@@ -100,13 +100,15 @@ The documentation is located in the *doc* directory.
 
 [NMEA2000 support](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/NMEA2000.md)
 
+[Internal GNSS (STNC) usage and configuration](doc/stnc-gnss.md)
+
 
 
 
 ## Development
 
-The Protobuf files can be modified if needed or by generation of new NMEA2000 supporting messages (see NMEA2000 support), however, the output of the Protobuf compiler into Python needs to be adjusted. This is a known limitation of the grpcio compiler.
-To overcome the problem a specific Python script has been developed (mod_pb2.py) as well as a convenience shell script (gen_proto) that generates the Python files from the protobuf ones.
+The Protobuf files can be modified if needed or by generation of new NMEA2000 supporting messages (see NMEA2000 support). However, the output of the Protobuf compiler into Python needs to be adjusted. This is a known limitation of the grpcio compiler.
+To overcome the problem, a specific Python script has been developed (mod_pb2.py) as well as a convenience shell script (gen_proto) that generates the Python files from the protobuf ones.
 
 
 ## Support
@@ -120,7 +122,7 @@ The version 2.3 is the version supporting the new STNC800 hardware
 
 ## Contributing
 
-All contributions welcome. 
+All contributions are welcome. 
 
 ## Authors and acknowledgment
 Laurent Carré - [Sterwen Technology](http://www.sterwen-technology.eu). 

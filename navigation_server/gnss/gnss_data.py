@@ -181,10 +181,14 @@ class N2KForwarder:
                 self._messages_lost += 1
 
     def pgn_in_set(self, pgn:int, constellation:Constellation = None) -> bool:
-        if constellation is None:
-            return pgn in self._pgn_set
-        else:
+        """
+        Check if the PGN is to be reported
+        """
+        if self._gnss_system is not None and constellation is not None:
             return constellation.gnss.systemId == self._gnss_system.systemId and pgn in self._pgn_set
+        else:
+            return pgn in self._pgn_set
+
 
     def suspend(self):
         self._suspend_flag = True
@@ -196,7 +200,8 @@ class N2KForwarder:
         return self._messages_lost / self._total_messages
 
 
-gnss_systems = ( GNSSSystem('GPS', 'GP', 1, 0, 1),
+gnss_systems = (   GNSSSystem('GNSS', 'GN', 0, 0, 0),  # To avoid errors for GN messages
+                   GNSSSystem('GPS', 'GP', 1, 0, 1),
                    GNSSSystem('GPS-SBAS', 'GP', 1, 1, 1),
                    GNSSSystem('Galileo', 'GA', 3, 2, 8),
                    GNSSSystem('Beidou', 'GB',4, 3, 0),
@@ -325,6 +330,7 @@ class GNSSDataManager:
         Process the GSV NMEA message and generate a 129540 PGN
         """
         const = self.get_constellation(talker)
+        _logger.debug("Start GSV processing for %s" % const.gnss.name)
         if not const.gsv_in_progress:
             # that is the first msg in sequence
             if fields[1] != b'1':

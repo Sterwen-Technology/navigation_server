@@ -63,6 +63,18 @@ class GNSSInput(NMEA2000Application, GrpcService):
         self._servicer = GNSS_InputServicerImpl(self.receive_input_msg)
         add_GNSS_InputServicer_to_server(self._servicer, self.grpc_server)
 
+    def init_product_information(self):
+        '''
+        Specific for GNSS
+        '''
+        self._product_information.nmea2000_version = 2100
+        self._product_information.product_code = 1227
+        self._product_information.set_product_information('STNC800 GNSS',
+                                                          'Version 1.0',
+                                                          'GNSS Sterwen Technology', '00001')
+        self._product_information.certification_level = 1
+        self._product_information.load_equivalency = 1
+
     def set_controller(self, controller):
         super().__init__(controller, self._requested_address)
         self._can_controller = controller

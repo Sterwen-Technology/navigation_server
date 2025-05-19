@@ -1,0 +1,64 @@
+#-------------------------------------------------------------------------------
+# Name:        canlog-replay.yml
+# Purpose:     Settings file to replay raw can log on the can bus
+#
+# Author:      Laurent Carré
+#
+# Created:     19/05/2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+
+function: Log replay server to CAN
+server_name: LogReplayServer
+log_level: INFO
+trace_dir: /data/navigation/traces
+debug_configuration: false
+decode_definition_only: false
+
+features:
+  - router_core
+  - nmea2000
+  - can_interface
+  - log_replay
+
+servers:
+
+- Main:
+    class: NavigationMainServer
+
+- gRPCMainServer:
+      class: GrpcServer
+      port: 4502
+
+- NMEANetwork:
+      class: NMEA2KActiveController
+      trace: false
+      channel: can0
+      mac_source: end0
+      max_silent: 60.0
+      applications: [LogInjector]
+
+couplers:
+
+- LogReader:
+    logfile: /data/navigation/traces/TRACE-CAN-if-can0-250404-0757.log
+    class: TransparentCanLogCoupler
+    autostart: true
+    direction: read_only
+    stop_system: true
+
+
+publishers:
+
+- Dispatcher:
+    class: N2KSourceDispatcher
+    mode: transparent
+    couplers: [LogReader]
+
+applications:
+
+- LogInjector:
+    class: DeviceReplaySimulator
+    source: 255
+    publisher: Dispatcher

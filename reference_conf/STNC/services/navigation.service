@@ -1,0 +1,13 @@
+[Unit]
+Description=Navigation Messages Router
+Requires=network.target
+
+[Service]
+Type=simple
+User=laurent
+ExecStart=/home/laurent/navigation_server/run_server  /data/navigation/config/stnc_can_server.yml
+Restart=always
+RestartSec=6
+
+[Install]
+WantedBy=multi-user.target

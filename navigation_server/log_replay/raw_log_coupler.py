@@ -97,6 +97,7 @@ class RawLogCoupler(Coupler):
         self._filename = opts.get('logfile', str, None)
         self._direction = self.READ_ONLY
         if self._filename is None:
+            _logger.error("RawLogCoupler missing the logfile parameter")
             raise ValueError
         self._logfile = None
 

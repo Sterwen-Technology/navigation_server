@@ -6,7 +6,7 @@ The STNC platform has a high performance GNSS module from Ublox integrated: a MI
 This is a multi-constellation GNSS with a measurement frequency up to 10Hz.
 The chip can be accessed via ttyUSB emulation (ttyUSB0 by default) or I2C.
 
-The NavigationServer platforms provides a set of software components to manage the chip and distribute positioning data in various format/ protocols that are described in the current documentation file.
+The NavigationServer platform provides a set of software components to manage the chip and distribute positioning data in various format/ protocols that are described in the current documentation file.
 
 ## Interface with the GNSS IC and communication
 
@@ -15,18 +15,19 @@ The NavigationServer platforms provides a set of software components to manage t
 The **GNSSService** component is providing both the communication towards the chip and the presentation of the status via gRPC.
 Here are the parameters:
 
-| Name           | Type    | Default      | Signification                                                             |
-|----------------|---------|--------------|---------------------------------------------------------------------------|
-| device         | string  | /dev/ttyUSB0 | serial device for communication                                           |
-| baudrate       | int     | 38400        | data rate, that is the default. Currently no other value is supported     |
-| push_to_server | boolean | false        | indicates that the data must be pushed towards another server (see below) | 
-| address        | string  | 127.0.0.1    | address of a gRPC server                                                  |
-| port           | int     | 4502         | port of the server                                                        |
-| trace          | boolean | false        | If true all data from the GNSS chip atr logged in a file                  |
+| Name           | Type      | Default                  | Signification                                                             |
+|----------------|-----------|--------------------------|---------------------------------------------------------------------------|
+| device         | string    | /dev/ttyUSB0             | serial device for communication                                           |
+| baudrate       | int       | 38400                    | data rate, that is the default. Currently no other value is supported     |
+| push_to_server | boolean   | false                    | indicates that the data must be pushed towards another server (see below) | 
+| push_pgn       | list(int) | [129025, 129026, 129029] | List of NMEA2000 to be pushed                                             |
+| address        | string    | 127.0.0.1                | address of a gRPC server                                                  |
+| port           | int       | 4502                     | port of the server                                                        |
+| trace          | boolean   | false                    | If true all data from the GNSS chip atr logged in a file                  |
 
-The system is pushing NMEA2000 PGN 129025, 129026, 129029 only. To be extended with PGN 129539 and 129540.
+The system is pushing NMEA2000 PGN 129025, 129026, 129029 by default. To be extended with PGN 129539 and 129540.
 
-All satellites and fix data are recorded and made available through the gRPC service. The following GNSS systems are supported by the Ublox device:
+All satellites and fix data are recorded and made available through the gRPC service. The Ublox device supports the following GNSS systems:
 
 - GPS-SBAS
 - Galileo
@@ -35,7 +36,7 @@ All satellites and fix data are recorded and made available through the gRPC ser
 - QZSS
 - NavIC
 
-However, in Europe, only the 2 first are providing meaning positioning data. By consequence, only data from these 2 constellations are processed systematically.
+However, in Europe, only the 2 first are providing meaning positioning data. By consequence, only data from these two constellations are processed systematically.
 
 ### interface for the GNSSService
 
@@ -61,7 +62,7 @@ message GNSS_Status {
   float fix_time=2;     //  time stamp seconds since the Epoch
   repeated string constellations=3; // constellations seen
   repeated string const_in_fix=13;  // installations participating to the fix
-  float gnss_time=4;    //  time stamp seconds since the Epoch - last time received from GNSS
+  float gnss_time=4;    //  time stamp seconds since the Epoch - last UTC time received from GNSS
   uint32 nb_satellites_in_fix=5;
   float latitude=6;     // decimal degree negative south
   float longitude=7;    // decimal degree negative west
@@ -112,3 +113,20 @@ It inherits from all Coupler generic parameters. No conversion to NMEA0183, if N
 |------------|--------|---------|-------------------------------|
 | gnss_input | string | None    | Name of the GNSSInput service |
 
+## gnss_config utility
+
+The chip on board supports a large range of possible configurations, and the default ones are not the one needed for sailing.
+A basic configuration utility has been developed to send the necessary parameters using the UBX protocol to the chip.
+As the current schematic does not allow permanently saving the modified parameters, they need to be sent each time the system is powered up.
+For that, a specific systemd service has been set up: **gnss_config**. It runs once and stops when the configuration is applied.
+
+Here is the configuration applied for the application:
+- measurement rate: 125ms
+- navigation rate (epoch period): 250ms
+- navigation dynamic: SEA
+- UTC reference: EU
+- NMEA messages sent by the GNNS chip (all others are set with a rate of 0)
+  - RMC (every epoch)
+  - GGA (every 4 epoch - 1s)
+  - GSA (every 8 epoch per constellation seen)
+  - GSV (every 16 epoch per constellation seen)
