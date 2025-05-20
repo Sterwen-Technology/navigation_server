@@ -23,6 +23,7 @@ from navigation_server.generated.services_server_pb2 import SystemProcessMsg, Se
 from navigation_server.generated.agent_pb2_grpc import AgentServicer, add_AgentServicer_to_server
 from navigation_server.router_common import (GrpcService, GenericTopServer, resolve_ref, copy_protobuf_data,
                                                 MessageServerGlobals, GrpcServer)
+from navigation_server.nav_gpio import STNC_D7_Led, STNC_Gpio_Set
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -392,11 +393,15 @@ class AgentServicerImpl(AgentServicer):
         return resp
 
     def system_halt(self, resp):
+        STNC_D7_Led.green_brightness(0)
+        STNC_D7_Led.red_brightness(0)
         ex = AgentExecutor('halt')
         ex.start()
         resp.err_code = 0
 
     def system_reboot(self, resp):
+        STNC_D7_Led.green_brightness(0)
+        STNC_D7_Led.red_brightness(0)
         ex = AgentExecutor('reboot')
         ex.start()
         resp.err_code = 0
@@ -444,6 +449,7 @@ class AgentTopServer(GenericTopServer):
     def __init__(self, opts):
         super().__init__(opts)
         self._agent = None
+        STNC_D7_Led.red_brightness(255)
 
     def is_agent(self):
         return True
@@ -458,6 +464,8 @@ class AgentTopServer(GenericTopServer):
     def start(self):
         if super().start():
             self._agent.start_processes()
+            STNC_D7_Led.red_brightness(0)
+            STNC_D7_Led.green_brightness(255)
             return True
         else:
             return False

@@ -12,3 +12,4 @@
 from .nav_gpio_if import GpioLine, GpioGroup, GpioSet
 from .stnc_gpio_conf import STNC_Gpio_Set
 from .relays import LatchingRelay, main
+from .led import STNC_D7_Led
