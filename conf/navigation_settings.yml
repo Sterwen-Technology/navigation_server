@@ -10,8 +10,9 @@
 #-------------------------------------------------------------------------------
 #
 function: Navigation message server
+server_name: STNC_message_server
 log_level: INFO
-trace_dir: /data/solidsense
+trace_dir: /data/navigation/traces
 log_module:
     nmea_routing.console: INFO
     nmea_routing.internal_gps: INFO
@@ -20,15 +21,12 @@ log_module:
 features:
     - router_core
     - nmea2000
-    - nmea0183
     - couplers:
-          - ShipModulConfig
-          - ShipModulInterface
-          - InternalGps
+          - N2KGrpcCoupler
           - MpptCoupler
           - NMEATCPReader
 
-decode_definition_only: true
+decode_definition_only: false
 
 servers:
 
@@ -39,58 +37,28 @@ servers:
     class: NMEAServer
     port: 4500
     nmea2000: dyfmt
-    filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K, Barometer]
+    # filters: [DiscardAISGPS, RemoveGPS, AutoPilotN2K, Barometer]
     
 - gRPCMain:
     class: GrpcServer
     port: 4502
-
-- ShipModulConfig:
-    class: ShipModulConfig
-    port: 4501
-    coupler: MiniPlex3
     
 - NMEASender:
     class: NMEASenderServer
     port: 4503
-    coupler: MiniPlex3
+    coupler: NMEA2000Can
     max_silent: 10
     # master: 172.16.0.100
     timeout: 8.0
-    
-- NMEANetwork:
-    class: NMEA2KController
 
 
 couplers:
 
-- MiniPlex3:
-    class: ShipModulInterface
-    address: 172.16.2.100
-    port: 10110
-    transport: TCP
-    nmea2000_controller: NMEANetwork
-    protocol: nmea2000
-    autostart: true
-    trace_raw: false
-    
-- SolarPanel:
-    class: MpptCoupler
-    port: 4505
-    server: NMEAServer
-    direction: read_only
-    report_timer: 20
+- NMEA2000Can:
+    class: N2KGrpcCoupler
+    server: 127.0.0.1
+    port: 4512
 
-- Gps:
-   class: InternalGps
-   autostart: false
-    
-- ScannavReplay:
-    class: NMEATCPReader
-    address: 172.16.1.103
-    port: 2000
-    autostart: false
-    
 services:
 
 - Console:
@@ -101,30 +69,4 @@ services:
 publishers:
 
 
-
 filters:
-
-- RemoveGPS:
-     class: NMEA0183Filter
-     talker: GP
-     formatter: GSV
-     type: discard
-
-- DiscardAISGPS:
-     class: NMEA2000Filter
-     source: 43
-     pgn: [129025, 129026]
-     type: discard
-
-- AutoPilotN2K:
-    class: NMEA2000Filter
-    source: 7
-    action: discard
-
-- Barometer:
-    class: NMEA2000Filter
-    source: 52
-    pgn: [130310, 130311, 130314]
-    type: select
-    period: 60.0
-

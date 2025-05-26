@@ -5,6 +5,8 @@ import warnings
 
 import navigation_server.generated.n2k_can_service_pb2 as n2k__can__service__pb2
 
+import navigation_server.generated.nmea2000_pb2 as nmea2000__pb2
+
 
 GRPC_GENERATED_VERSION = '1.66.2'
 GRPC_VERSION = grpc.__version__
@@ -40,12 +42,34 @@ class CAN_ControllerServiceStub(object):
                 request_serializer=n2k__can__service__pb2.CANRequest.SerializeToString,
                 response_deserializer=n2k__can__service__pb2.CAN_ControllerMsg.FromString,
                 _registered_method=True)
+        self.ReadNmea2000Msg = channel.unary_stream(
+                '/CAN_ControllerService/ReadNmea2000Msg',
+                request_serializer=n2k__can__service__pb2.CANReadRequest.SerializeToString,
+                response_deserializer=nmea2000__pb2.nmea2000pb.FromString,
+                _registered_method=True)
+        self.SendNmea2000Msg = channel.stream_unary(
+                '/CAN_ControllerService/SendNmea2000Msg',
+                request_serializer=nmea2000__pb2.nmea2000pb.SerializeToString,
+                response_deserializer=n2k__can__service__pb2.CANAck.FromString,
+                _registered_method=True)
 
 
 class CAN_ControllerServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def GetStatus(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReadNmea2000Msg(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SendNmea2000Msg(self, request_iterator, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -58,6 +82,16 @@ def add_CAN_ControllerServiceServicer_to_server(servicer, server):
                     servicer.GetStatus,
                     request_deserializer=n2k__can__service__pb2.CANRequest.FromString,
                     response_serializer=n2k__can__service__pb2.CAN_ControllerMsg.SerializeToString,
+            ),
+            'ReadNmea2000Msg': grpc.unary_stream_rpc_method_handler(
+                    servicer.ReadNmea2000Msg,
+                    request_deserializer=n2k__can__service__pb2.CANReadRequest.FromString,
+                    response_serializer=nmea2000__pb2.nmea2000pb.SerializeToString,
+            ),
+            'SendNmea2000Msg': grpc.stream_unary_rpc_method_handler(
+                    servicer.SendNmea2000Msg,
+                    request_deserializer=nmea2000__pb2.nmea2000pb.FromString,
+                    response_serializer=n2k__can__service__pb2.CANAck.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -87,6 +121,60 @@ class CAN_ControllerService(object):
             '/CAN_ControllerService/GetStatus',
             n2k__can__service__pb2.CANRequest.SerializeToString,
             n2k__can__service__pb2.CAN_ControllerMsg.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReadNmea2000Msg(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/CAN_ControllerService/ReadNmea2000Msg',
+            n2k__can__service__pb2.CANReadRequest.SerializeToString,
+            nmea2000__pb2.nmea2000pb.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SendNmea2000Msg(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_unary(
+            request_iterator,
+            target,
+            '/CAN_ControllerService/SendNmea2000Msg',
+            nmea2000__pb2.nmea2000pb.SerializeToString,
+            n2k__can__service__pb2.CANAck.FromString,
             options,
             channel_credentials,
             insecure,

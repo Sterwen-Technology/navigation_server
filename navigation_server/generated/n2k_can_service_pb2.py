@@ -26,21 +26,27 @@ import navigation_server.generated.iso_name_pb2 as iso__name__pb2
 
 import navigation_server.generated.nmea2000_classes_iso_gen_pb2 as nmea2000__classes__iso__gen__pb2
 
+import navigation_server.generated.nmea2000_pb2 as nmea2000__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15n2k_can_service.proto\x1a\x0eiso_name.proto\x1a\x1enmea2000_classes_iso_gen.proto\"\xca\x01\n\x0cN2KDeviceMsg\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\r\x12\x0f\n\x07\x63hanged\x18\x02 \x01(\x08\x12\x16\n\x0elast_time_seen\x18\x03 \x01(\x02\x12\x1a\n\x08iso_name\x18\x04 \x01(\x0b\x32\x08.ISOName\x12.\n\x13product_information\x18\x05 \x01(\x0b\x32\x11.Pgn126996ClassPb\x12\x34\n\x19\x63onfiguration_information\x18\x06 \x01(\x0b\x32\x11.Pgn126998ClassPb\"\x82\x01\n\x11\x43\x41N_ControllerMsg\x12\x0f\n\x07\x63hannel\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x15\n\rincoming_rate\x18\x03 \x01(\x02\x12\x15\n\routgoing_rate\x18\x04 \x01(\x02\x12\x1e\n\x07\x64\x65vices\x18\x05 \x03(\x0b\x32\r.N2KDeviceMsg\"%\n\nCANRequest\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0b\n\x03\x63md\x18\x02 \x01(\t2G\n\x15\x43\x41N_ControllerService\x12.\n\tGetStatus\x12\x0b.CANRequest\x1a\x12.CAN_ControllerMsg\"\x00\x62\x06proto3')
+
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15n2k_can_service.proto\x1a\x0eiso_name.proto\x1a\x1enmea2000_classes_iso_gen.proto\x1a\x0enmea2000.proto\"\xca\x01\n\x0cN2KDeviceMsg\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\r\x12\x0f\n\x07\x63hanged\x18\x02 \x01(\x08\x12\x16\n\x0elast_time_seen\x18\x03 \x01(\x02\x12\x1a\n\x08iso_name\x18\x04 \x01(\x0b\x32\x08.ISOName\x12.\n\x13product_information\x18\x05 \x01(\x0b\x32\x11.Pgn126996ClassPb\x12\x34\n\x19\x63onfiguration_information\x18\x06 \x01(\x0b\x32\x11.Pgn126998ClassPb\"\x82\x01\n\x11\x43\x41N_ControllerMsg\x12\x0f\n\x07\x63hannel\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x15\n\rincoming_rate\x18\x03 \x01(\x02\x12\x15\n\routgoing_rate\x18\x04 \x01(\x02\x12\x1e\n\x07\x64\x65vices\x18\x05 \x03(\x0b\x32\r.N2KDeviceMsg\"%\n\nCANRequest\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0b\n\x03\x63md\x18\x02 \x01(\t\"/\n\x06\x43\x41NAck\x12\x16\n\x0emessages_count\x18\x01 \x01(\r\x12\r\n\x05\x65rror\x18\x02 \x01(\r\"\x84\x01\n\x0e\x43\x41NReadRequest\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0e\n\x06\x63lient\x18\x02 \x01(\t\x12\x16\n\x0eselect_sources\x18\x03 \x03(\r\x12\x16\n\x0ereject_sources\x18\x04 \x03(\r\x12\x12\n\nselect_pgn\x18\x05 \x03(\r\x12\x12\n\nreject_pgn\x18\x06 \x03(\r2\xa9\x01\n\x15\x43\x41N_ControllerService\x12.\n\tGetStatus\x12\x0b.CANRequest\x1a\x12.CAN_ControllerMsg\"\x00\x12\x33\n\x0fReadNmea2000Msg\x12\x0f.CANReadRequest\x1a\x0b.nmea2000pb\"\x00\x30\x01\x12+\n\x0fSendNmea2000Msg\x12\x0b.nmea2000pb\x1a\x07.CANAck\"\x00(\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'n2k_can_service_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_N2KDEVICEMSG']._serialized_start=74
-  _globals['_N2KDEVICEMSG']._serialized_end=276
-  _globals['_CAN_CONTROLLERMSG']._serialized_start=279
-  _globals['_CAN_CONTROLLERMSG']._serialized_end=409
-  _globals['_CANREQUEST']._serialized_start=411
-  _globals['_CANREQUEST']._serialized_end=448
-  _globals['_CAN_CONTROLLERSERVICE']._serialized_start=450
-  _globals['_CAN_CONTROLLERSERVICE']._serialized_end=521
+  _globals['_N2KDEVICEMSG']._serialized_start=90
+  _globals['_N2KDEVICEMSG']._serialized_end=292
+  _globals['_CAN_CONTROLLERMSG']._serialized_start=295
+  _globals['_CAN_CONTROLLERMSG']._serialized_end=425
+  _globals['_CANREQUEST']._serialized_start=427
+  _globals['_CANREQUEST']._serialized_end=464
+  _globals['_CANACK']._serialized_start=466
+  _globals['_CANACK']._serialized_end=513
+  _globals['_CANREADREQUEST']._serialized_start=516
+  _globals['_CANREADREQUEST']._serialized_end=648
+  _globals['_CAN_CONTROLLERSERVICE']._serialized_start=651
+  _globals['_CAN_CONTROLLERSERVICE']._serialized_end=820
 # @@protoc_insertion_point(module_scope)

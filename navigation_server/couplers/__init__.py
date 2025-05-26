@@ -17,3 +17,4 @@ from .grpc_nmea_coupler import GrpcNmeaCoupler
 from .ydn2k_coupler import YDCoupler
 from .nmea_tcp_coupler import NMEATCPReader
 from .vedirect_coupler import VEDirectCoupler, VEDirectMsg, mppt_nmea0183
+from .nmea2k_grpc_coupler import N2KGrpcCoupler

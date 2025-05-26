@@ -13,6 +13,7 @@ syntax = "proto3";
 
 import "iso_name.proto";
 import "nmea2000_classes_iso_gen.proto";
+import "nmea2000.proto";
 
 message N2KDeviceMsg {
   uint32 address=1;
@@ -36,6 +37,22 @@ message CANRequest{
   string cmd = 2;
 }
 
+message CANAck {
+  uint32 messages_count=1;
+  uint32 error=2;
+}
+
+message CANReadRequest{
+  uint32 id=1;
+  string client=2;  // client identification
+  repeated uint32 select_sources=3; // only the selected sources will be forwarded if empty or equal to 255 all sources are selected
+  repeated uint32 reject_sources=4; // all sources from the list are rejected
+  repeated uint32 select_pgn=5; // only the PGN in the list are forwarded if the list is empty all PGN are forwarded
+  repeated uint32  reject_pgn=6; //PGN in the list are rejected
+}
+
 service CAN_ControllerService {
   rpc GetStatus(CANRequest) returns (CAN_ControllerMsg) {}
+  rpc ReadNmea2000Msg(CANReadRequest) returns (stream nmea2000pb) {}
+  rpc SendNmea2000Msg(stream nmea2000pb) returns (CANAck) {}
 }

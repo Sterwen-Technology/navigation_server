@@ -11,8 +11,15 @@
 
 import grpc
 import logging
+import queue
+import threading
 
-from navigation_server.router_common import GrpcAccessException
+from navigation_server.router_common import GrpcAccessException, NavThread
+from navigation_server.generated.grpc_control_pb2 import GrpcCommand, GrpcAck
+from navigation_server.generated.grpc_control_pb2_grpc import NavigationGrpcControlStub
+
+class GrpcStreamTimeout(Exception):
+    pass
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -70,13 +77,15 @@ class GrpcClient:
             _req_id: A numerical identifier for tracking requests made by the
                 client.
         """
-        self._server = server
+        self._server: str = server
         self._channel = None
         self._services = []
         self._state = self.NOT_CONNECTED
         self._req_id = 0
         self._use_req_id = use_request_id
         self._ready = False
+        self._wait_connect = threading.Event()
+        self._control_stub = None
 
     def connect(self):
         """
@@ -88,12 +97,29 @@ class GrpcClient:
         is created to indicate the connection status.
 
         """
+        if self._state != self.NOT_CONNECTED:
+            _logger.error(f"GrpcClient attempt to connect to {self._server} while already connected")
+            return
         self._channel = grpc.insecure_channel(self._server)
         self._channel.subscribe(self.channel_callback)
+        # create the control stub
+        self._control_stub = NavigationGrpcControlStub(self._channel)
         for service in self._services:
             service.create_stub(self._channel)
         self._state = self.CONNECTING
-        _logger.info("Server stub created on %s => connecting" % self._server)
+        _logger.info(f"Server stub created on {self._server} => connecting")
+        self._wait_connect.clear()
+        # now attempt a first connection
+        request = GrpcCommand()
+        request.id = self._req_id
+        request.command = "TEST"
+        try:
+            self.server_call(self._control_stub.SendCommand, request, None)
+        except GrpcAccessException:
+            _logger.info(f"GrpcClient connect attempt to {self._server} failed")
+
+    def wait_connect(self, timeout:float):
+        return self._wait_connect.wait(timeout=timeout)
 
     def add_service(self, service):
         """
@@ -157,7 +183,7 @@ class GrpcClient:
                 Raised if there is an error accessing the server or if a non-
                 recoverable gRPC error occurs.
         """
-        _logger.debug("gRPC Client server call")
+        _logger.debug("gRPC Client server %s call" % self._server)
         self._req_id += 1
         if self._use_req_id:
             req.id = self._req_id
@@ -222,18 +248,53 @@ class GrpcClient:
 
     def channel_callback(self, connectivity: grpc.ChannelConnectivity):
         if connectivity == grpc.ChannelConnectivity.READY:
-            _logger.info("GRPC Channel Ready")
+            _logger.info(f"GRPC Channel {self._server} Ready")
             self._ready = True
             self._state = self.CONNECTED
+            if not self._wait_connect.is_set():
+                self._wait_connect.set()
         elif connectivity == grpc.ChannelConnectivity.IDLE:
-            _logger.info("GRPC Channel IDLE")
+            _logger.info(f"GRPC Channel {self._server} IDLE")
             self._ready = False
             self._state = self.NOT_CONNECTED
         elif connectivity == grpc.ChannelConnectivity.CONNECTING:
-            _logger.info("GRPC Channel Connecting")
+            _logger.info(f"GRPC Channel {self._server} Connecting")
         elif connectivity == grpc.ChannelConnectivity.SHUTDOWN:
-            _logger.info("GRPC Channel Shutdown")
+            _logger.info(f"GRPC Channel {self._server} Shutdown")
             self._state = self.NOT_CONNECTED
+
+
+class GrpcStreamingReader(NavThread):
+    """
+    Manages the streaming read over gRPC
+    """
+    def __init__(self, grpc_server, rpc_func, request, out_queue:queue.Queue, error_callback):
+        super().__init__(name=request.client, daemon=True)
+        self._request = request
+        self._rpc_func = rpc_func
+        self._out_queue: queue.Queue = out_queue
+        self._stop_flag = False
+        self._grpc_server = grpc_server
+        self._error_callback = error_callback
+
+    def nrun(self):
+        _logger.debug("Starting gRPC stream reading thread %s" % self._request.client)
+        try:
+            for msg in self._rpc_func(self._request):
+                if self._stop_flag:
+                    break
+                self._out_queue.put(msg, block=True)
+        except grpc.RpcError as err:
+            if err.code() != grpc.StatusCode.UNAVAILABLE:
+                _logger.info(f"Server error:{err.details()}")
+                # self._state = self.NOT_CONNECTED
+            else:
+                _logger.error(f"GrpcStreamReader => Error accessing server:{err.details()}")
+        self._error_callback()
+        _logger.info(f"gRPC read stream {self.name} stops")
+
+    def stop(self):
+        self._stop_flag = True
 
 
 class ServiceClient:
@@ -257,6 +318,8 @@ class ServiceClient:
         self._stub_class = stub_class
         self._stub = None
         self._server: GrpcClient = None
+        self._read_queue = queue.Queue(20)
+        self._stream_reader = None
 
     def attach_server(self, server:GrpcClient):
         """
@@ -324,6 +387,49 @@ class ServiceClient:
         else:
             _logger.error("attempt to call a service not attached to a server")
             raise GrpcAccessException
+
+    def _start_read_stream(self, rpc_func, request):
+        """
+        prepare and open the stream
+        """
+        _logger.debug("GrpcClient => Creating Starting gRPC stream reader")
+        if self.stream_is_alive():
+            _logger.error("Grpc Stream reader: attempt to start the stream reader while it is already running")
+            return
+        self._stream_reader = GrpcStreamingReader(self._server, rpc_func, request, self._read_queue, self._stream_error)
+        self._stream_reader.start()
+
+    def _read_stream(self):
+        if self._stream_reader is None:
+            raise GrpcAccessException("StreamReader not started")
+        try:
+            return self._read_queue.get(block=True, timeout=1.0)
+        except queue.Empty:
+            if self._stream_reader is None:
+                # ok the steam is over
+                raise GrpcAccessException("Grpc StreamReader terminated")
+            elif self._stream_reader.is_alive():
+                _logger.debug("Stream time out")
+                raise GrpcStreamTimeout
+            else:
+                _logger.debug("StreamReader gRPC error suspected")
+                raise GrpcAccessException("GrpcError during stream read")
+
+    def _stop_read_stream(self):
+        if self._stream_reader is not None:
+            self._stream_reader.stop()
+            self._stream_reader = None
+
+    def stream_is_alive(self) -> bool:
+        if self._stream_reader is not None and self._stream_reader.is_alive():
+            _logger.debug("gRPC Stream is alive")
+            return True
+        else:
+            return False
+
+    def _stream_error(self):
+        # the stream is signalling that it is stopping
+        self._stream_reader = None # so we forget it
 
     def server_state(self):
         return self._server.state

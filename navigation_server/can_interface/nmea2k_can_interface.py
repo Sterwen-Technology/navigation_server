@@ -128,8 +128,9 @@ class SocketCANInterface(NavThread):
         self._state = self.BUS_READY
 
     def stop(self):
-        self._stop_flag = True
         self._writer.stop()
+        self._writer.join() # change 2025-05-26 => wait until the writer stops before stopping the full service
+        self._stop_flag = True
         if self._trace is not None:
             self._trace.stop_trace()
 

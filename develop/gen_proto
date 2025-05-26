@@ -43,7 +43,7 @@ gen_protobuf nmea_server nmea_messages
 gen_protobuf agent services_server
 gen_protobuf arguments
 gen_protobuf uuid
-gen_protobuf ecu
+gen_protobuf ecu nmea2000
 gen_protobuf nmea2000_classes_iso_gen
 gen_protobuf nmea2000_classes_gen
 gen_protobuf iso_name
@@ -51,7 +51,8 @@ gen_protobuf navigation_data
 gen_protobuf navigation_objects
 gen_protobuf gnss nmea_messages nmea2000
 gen_protobuf network uuid
-gen_protobuf n2k_can_service
+gen_protobuf n2k_can_service nmea2000
+gen_protobuf grpc_control
 adjust_protobuf input_server nmea_messages nmea2000
 adjust_protobuf nmea_messages nmea0183 nmea2000
 adjust_protobuf nmea_server nmea_messages
@@ -61,5 +62,6 @@ adjust_protobuf energy arguments
 adjust_protobuf navigation_objects uuid
 adjust_protobuf gnss nmea_messages nmea2000
 adjust_protobuf network uuid
-adjust_protobuf n2k_can_service iso_name nmea2000_classes_iso_gen
+adjust_protobuf n2k_can_service nmea2000 iso_name nmea2000_classes_iso_gen
 adjust_protobuf agent services_server
+adjust_protobuf grpc_control

@@ -452,7 +452,7 @@ class Coupler(NavThread):
     def is_suspended(self) -> bool:
         return self._suspend_flag
 
-    def read(self):
+    def read(self) -> NavGenericMsg:
         """
         Generic Read function with specific intercept
         NMEA2000 protocol messages are redirected towards the NMEA2000 Controller
@@ -478,7 +478,7 @@ class Coupler(NavThread):
                         for n2k_msg in self._converter.convert_to_n2kmsg(msg):
                             _logger.debug("Read valid N2K:%s", n2k_msg)
                             yield n2k_msg
-                        return
+
                     except NMEAInvalidFrame:
                         if self._mode == self.NMEA2000:
                             fetch_next = True
@@ -494,20 +494,20 @@ class Coupler(NavThread):
         :return: a NMEA message (either NMEA0183 or NMEA2000)
         Must be implemented in all subclasses
         """
-        raise NotImplementedError("Method _read To be implemented in subclass")
+        raise NotImplementedError("coupler._read => Method _read To be implemented in subclass")
 
     def open(self) -> bool:
         """
         Open the communication channel for the coupler
         :return: True if the channel is open and ready to communicate, False otherwise
         """
-        raise NotImplementedError("To be implemented in subclass")
+        raise NotImplementedError("Coupler.open => To be implemented in subclass")
 
     def close(self):
-        raise NotImplementedError("To be implemented in subclass")
+        raise NotImplementedError("Couple.close => To be implemented in subclass")
 
     def send(self, msg: NavGenericMsg):
-        raise NotImplementedError("To be implemented in subclass")
+        raise NotImplementedError("Coupler.send => To be implemented in subclass")
 
     def check_connection(self):
         # raise NotImplementedError("To be implemented in subclass")

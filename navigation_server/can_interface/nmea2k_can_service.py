@@ -13,8 +13,9 @@ import logging
 import time
 
 
-from navigation_server.generated.n2k_can_service_pb2 import N2KDeviceMsg, CAN_ControllerMsg, CANRequest
+from navigation_server.generated.n2k_can_service_pb2 import N2KDeviceMsg, CAN_ControllerMsg, CANRequest, CANReadRequest, CANAck
 from navigation_server.generated.n2k_can_service_pb2_grpc import CAN_ControllerServiceServicer, add_CAN_ControllerServiceServicer_to_server
+from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 from navigation_server.generated.iso_name_pb2 import ISOName
 from navigation_server.router_common import GrpcService, get_global_var, resolve_ref
 from navigation_server.can_interface import NMEA2KActiveController
@@ -76,6 +77,25 @@ class CAN_ControllerServiceServicerImpl(CAN_ControllerServiceServicer):
         _logger.debug("Get NMEA Devices END")
         return resp
 
+    def ReadNmea2000Msg(self, request: CANReadRequest, context):
+        """
+        Start a reading stream of NMEA2000 messages
+        """
+        _logger.debug("NMEA CAN service -> ReadNmea2000Msg from %s" % context.peer())
+        stream_id = f"{request.client}-{context.peer()}"
+        msg_stream = self._controller.add_read_subscriber(stream_id,
+                                                          request.select_sources,
+                                                          request.reject_sources,
+                                                          request.select_pgn,
+                                                          request.reject_pgn,
+                                                          timeout=60.)
+        while True:
+            msg = msg_stream.get_message()
+            msg_pb = nmea2000pb()
+            msg.as_protobuf(msg_pb)
+            _logger.debug("Pushing message with PGN %d" % msg_pb.pgn)
+            yield msg_pb
+
 
 class N2KCanService(GrpcService):
 
@@ -100,3 +120,4 @@ class N2KCanService(GrpcService):
         super().finalize()
         self._servicer = CAN_ControllerServiceServicerImpl(self._nmea2k_ECU)
         add_CAN_ControllerServiceServicer_to_server(self._servicer, self.grpc_server)
+        _logger.debug("N2KCanService %s ready" % self.name)

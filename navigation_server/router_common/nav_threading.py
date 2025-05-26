@@ -35,22 +35,22 @@ class NavThread(threading.Thread):
         return self._name
 
     def _run(self):
-        _logger.debug("Thread %s starts" % self._name)
+        _logger.debug("NavThreading => Thread %s starts" % self._name)
         MessageServerGlobals.thread_controller.record_start(self)
         try:
             self.nrun()
         except Exception as err:
-            _logger.error(f"{__name__}|Fatal error in thread: {self._name}:{err} - stopped")
+            _logger.error(f"NavThreading => {__name__}|Fatal error in thread: {self._name} class{err.__class__.__name__}:{err} - stopped")
         MessageServerGlobals.thread_controller.record_stop(self)
-        _logger.debug("Thread %s stops" % self._name)
+        _logger.debug("NavThreading => Thread %s stops" % self._name)
 
     def _run_profiling(self):
-        _logger.debug("Thread %s start with profiling" % self._name)
+        _logger.debug("NavThreading => Thread %s start with profiling" % self._name)
         self._profile.enable()
         self.nrun()
         self._profile.disable()
         self._profile.create_stats()
-        _logger.debug("Thread %s stopped with profiling" % self._name)
+        _logger.debug("NavThreading => Thread %s stopped with profiling" % self._name)
 
     def nrun(self) -> None:
         raise NotImplementedError
@@ -63,24 +63,25 @@ class NavThreadingController:
         self._running_thread = {}
 
     def register(self, thread: NavThread):
-        _logger.debug("Registering thread %s" % thread.name)
+        _logger.debug("NavThreading => Registering thread %s" % thread.name)
         try:
             thr = self._active_threads[thread.name]
-            _logger.error("Duplicate thread name: %s" % thread.name)
+            _logger.error("NavThreading => Duplicate thread name: %s" % thread.name)
             return
         except KeyError:
             self._active_threads[thread.name] = thread
 
     def record_start(self, thread: NavThread):
-        _logger.debug("Recording Starting thread %s" % thread.name)
+        _logger.debug("NavThreading => Recording Starting thread %s" % thread.name)
         self._running_thread[thread.name] = thread
 
     def record_stop(self, thread: NavThread):
-        _logger.debug("Recording Thread %s stops" % thread.name)
+        _logger.debug("NavThreading => Recording Thread %s stops" % thread.name)
         try:
             del self._running_thread[thread.name]
+            del self._active_threads[thread.name]
         except KeyError:
-            _logger.error("Attempt to stop non running thread %s" % thread.name)
+            _logger.error("NavThreading => Attempt to stop non running thread %s" % thread.name)
 
     def running_threads(self):
         for thread in self._running_thread.values():
