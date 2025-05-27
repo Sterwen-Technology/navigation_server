@@ -50,6 +50,7 @@ class GNSSInput(NMEA2000Application, GrpcService):
         GrpcService.__init__(self, opts)
         self._servicer = None
         self._requested_address = opts.get('address', int, -1)
+        self._forward = opts.get('forward_upstream', bool, True)
         self._can_controller = None
         self._output_queue: queue.Queue = None
         self._lost_msg = 0
@@ -90,6 +91,9 @@ class GNSSInput(NMEA2000Application, GrpcService):
             n2k_msg = NMEA2000Msg(msg.pgn, protobuf=msg)
             n2k_msg.sa = self._address
             self._can_controller.CAN_interface.send(n2k_msg)
+            if self._forward:
+                # if the forward flag is true, the message is also sent for direct local distribution
+                self._can_controller.process_msg(n2k_msg)
         if self._output_queue is not None:
             if n2k_msg is None:
                 n2k_msg = NMEA2000Msg(msg.pgn, protobuf=msg)

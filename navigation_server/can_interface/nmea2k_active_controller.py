@@ -93,6 +93,7 @@ class NMEA2KActiveController(NMEA2KController):
         self._app_index = {}
         self._apool = NMEA2000ApplicationPool(self, opts)
         self._application_names = opts.getlist('applications', str, None)
+        self._create_default_application = opts.get('default_application', bool, True)
         self._address_change_request = None
         self._start_application_lock = threading.Lock()
         self._pgn_vector = {}
@@ -127,7 +128,8 @@ class NMEA2KActiveController(NMEA2KController):
                 else:
                     _logger.error("CAN active controller cannot find application %s" % ap_name)
 
-        if len(self._applications) == 0:
+        if len(self._applications) == 0 or self._create_default_application:
+            # having minimum one application is mandatory
             _logger.info("Creating default application")
             self.add_application(NMEA2000Application(self))
 

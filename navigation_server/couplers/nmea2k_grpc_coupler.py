@@ -42,7 +42,7 @@ class N2KGrpcCoupler(Coupler, ServiceClient):
         self._reject_sources = opts.getlist('reject_sources', int, None)
         self._select_pgn = opts.getlist('select_pgn', int, None)
         self._reject_pgn = opts.getlist('reject_pgn', int, None)
-        self._client:GrpcClient = GrpcClient(f"{self._server}:{self._port}")
+        self._client:GrpcClient = GrpcClient.get_client(f"{self._server}:{self._port}")
         self._client.add_service(self)
         self._can_request = CANReadRequest()
         self._can_request.client = f"{self.object_name()}-reader"

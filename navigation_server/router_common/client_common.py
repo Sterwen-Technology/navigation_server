@@ -100,6 +100,7 @@ class GrpcClient:
         if self._state != self.NOT_CONNECTED:
             _logger.error(f"GrpcClient attempt to connect to {self._server} while already connected")
             return
+        self._wait_connect.clear()
         self._channel = grpc.insecure_channel(self._server)
         self._channel.subscribe(self.channel_callback)
         # create the control stub
@@ -108,15 +109,16 @@ class GrpcClient:
             service.create_stub(self._channel)
         self._state = self.CONNECTING
         _logger.info(f"Server stub created on {self._server} => connecting")
-        self._wait_connect.clear()
         # now attempt a first connection
         request = GrpcCommand()
         request.id = self._req_id
         request.command = "TEST"
         try:
-            self.server_call(self._control_stub.SendCommand, request, None)
+            resp = self.server_call(self._control_stub.SendCommand, request, None)
         except GrpcAccessException:
             _logger.info(f"GrpcClient connect attempt to {self._server} failed")
+        else:
+            _logger.info(f"GrpcClient connect attempt to {self._server} result={resp.response}")
 
     def wait_connect(self, timeout:float):
         return self._wait_connect.wait(timeout=timeout)

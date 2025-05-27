@@ -50,6 +50,10 @@ processes:
 
   - STNC_CAN_Server:
       class: SystemdProcess
+      service: can_server
+
+  - STNC_Message_Server:
+      class: SystemdProcess
       service: navigation
 
   - CAN:
