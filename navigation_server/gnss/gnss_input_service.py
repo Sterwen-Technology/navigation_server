@@ -55,6 +55,9 @@ class GNSSInput(NMEA2000Application, GrpcService):
         self._output_queue: queue.Queue = None
         self._lost_msg = 0
 
+    def device_class_function(self):
+        return 60, 145
+
     def finalize(self):
         try:
             GrpcService.finalize(self)
