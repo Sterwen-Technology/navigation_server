@@ -157,7 +157,7 @@ class N2KForwarder:
     def __init__(self, pgn_set: set, output_queue: queue.Queue, constellation: str = None):
         self._pgn_set = pgn_set
         self._output_queue = output_queue
-        self._suspend_flag = False
+        self._suspend_flag = True       # start in suspended state
         self._messages_lost = 0
         self._total_messages = 1    # to avoid any division by 0 in boundary cases
         self._gnss_system = None

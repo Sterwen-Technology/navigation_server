@@ -17,7 +17,7 @@ from navigation_server.generated.n2k_can_service_pb2 import N2KDeviceMsg, CAN_Co
 from navigation_server.generated.n2k_can_service_pb2_grpc import CAN_ControllerServiceServicer, add_CAN_ControllerServiceServicer_to_server
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 from navigation_server.generated.iso_name_pb2 import ISOName
-from navigation_server.router_common import GrpcService, get_global_var, resolve_ref
+from navigation_server.router_common import GrpcService, get_global_var, resolve_ref, MessageTraceError
 from navigation_server.can_interface import NMEA2KActiveController
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -57,6 +57,8 @@ class CAN_ControllerServiceServicerImpl(CAN_ControllerServiceServicer):
         self._start_in_counter = in_counter
         self._start_out_counter = out_counter
 
+        resp.trace_on = self._controller.CAN_interface.is_trace_active()
+
         for device in self._controller.get_device():
             dev_pb = N2KDeviceMsg()
             dev_pb.address = device.address
@@ -77,6 +79,31 @@ class CAN_ControllerServiceServicerImpl(CAN_ControllerServiceServicer):
         _logger.debug("Get NMEA Devices END")
         return resp
 
+    def StartTrace(self, request, context):
+        _logger.debug("NMEA CAN Service Start trace")
+        resp = CAN_ControllerMsg()
+        resp.channel = self._controller.channel
+        if self._controller.CAN_interface.is_trace_active():
+            resp.status = f"trace already running on channel {resp.channel}"
+            resp.trace_on = True
+        else:
+            try:
+                self._controller.CAN_interface.start_trace(request.cmd)
+                resp.status = f"trace started on channel {resp.channel}"
+                resp.trace_on = True
+            except MessageTraceError:
+                resp.status = f"trace star error on channel {resp.channel}"
+                resp.trace_on = False
+        return resp
+
+    def StopTraces(self, request, context):
+        _logger.debug("NMEA CAN Service stop trace")
+        resp = CAN_ControllerMsg()
+        resp.channel = self._controller.channel
+        self._controller.CAN_interface.stop_trace()
+        resp.trace_on = False
+        return resp
+
     def ReadNmea2000Msg(self, request: CANReadRequest, context):
         """
         Start a reading stream of NMEA2000 messages
@@ -95,6 +122,12 @@ class CAN_ControllerServiceServicerImpl(CAN_ControllerServiceServicer):
             msg.as_protobuf(msg_pb)
             _logger.debug("Pushing message with PGN %d" % msg_pb.pgn)
             yield msg_pb
+
+    def SendNmea2000Msg(self, request_iterator, context):
+        """
+        Send a stream of NMEA2000 messages to the CAN
+        """
+        raise NotImplemented("SendNmea Streams not implemented")
 
 
 class N2KCanService(GrpcService):

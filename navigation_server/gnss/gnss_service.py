@@ -20,7 +20,10 @@ from navigation_server.router_common import NavThread, NMEAMsgTrace
 from navigation_server.gnss.gnss_data import GNSSDataManager, N2KForwarder
 from navigation_server.generated.gnss_pb2 import SatellitesInView, ConstellationStatus, GNSS_Status
 from navigation_server.generated.gnss_pb2_grpc import GNSSServiceServicer, add_GNSSServiceServicer_to_server, GNSS_InputStub
-from navigation_server.router_common import GrpcService, GrpcServerError, GrpcClient, ServiceClient, GrpcAccessException
+from navigation_server.router_common import (GrpcService, GrpcServerError, GrpcClient, ServiceClient,
+                                             GrpcAccessException, GrpcStreamTimeout,
+                                             GrpcSendStreamIterator, GrpcStreamIteratorError)
+
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
@@ -96,6 +99,9 @@ class GNSSSerialReader(NavThread):
 
     def set_n2k_subscriber(self, n2k_subscriber: N2KForwarder):
         self._n2k_subscriber = n2k_subscriber
+
+    def clear_n2k_subscriber(self):
+        self._n2k_subscriber = None
 
     def set_n0183_subscriber(self, subscriber: N0183Subscriber):
         self._n0183_subscriber = subscriber
@@ -238,40 +244,35 @@ class GNSSPushClient(ServiceClient, NavThread):
     def start(self):
         self._server.add_service(self)
         self._reader.set_n2k_subscriber(self._forwarder)
-        self._server.connect()
+
         NavThread.start(self)
 
-    def nrun(self) -> None:
-
-        grpc_connected = True
-        time_disconnect = 0.0
-        while not self._stop_flag:
-            # get the message from reader
+    def get_gnss_nmea(self):
+        while True:
             try:
                 msg = self._input_queue.get(block=True, timeout=1.0)
             except queue.Empty:
-                if grpc_connected:
-                    continue
-
-            m_lost = self._forwarder.percentage_lost()
-            _logger.debug("GNSSPushClient connected %s losses %3.1f input_queue:%d" % (grpc_connected, m_lost, msg.pgn))
-            if m_lost  > .1 :
-                _logger.warning(f"GNSSPushClient high level of messages lost: {m_lost} %")
-                if m_lost > .2 :
-                    # over 20% we just give up
-                    self._forwarder.suspend()
-                    _logger.critical("GNSSPush stops")
-                    break
-
-            if grpc_connected:
-                # we are connected or want to try the connection
-                # convert to protobuf
+                if self._stop_flag:
+                    raise GrpcStreamIteratorError
+            else:
                 pb_msg = nmea2000pb()
                 msg.as_protobuf(pb_msg)
+                self._pushed_msg += 1
+                return pb_msg
+
+    def nrun(self) -> None:
+
+        time_disconnect = 0.0
+        while not self._stop_flag:
+            # First connect to the server
+            self._server.connect()
+            if self._server.wait_connect(10.):
+                self._forwarder.resume()
                 try:
-                    resp = self._server_call(self._stub.gnss_message, pb_msg, None)
-                    _logger.debug("GNSSPush client pushed succesfully msg:%d" % msg.pgn)
-                    self._pushed_msg += 1
+                    resp = self._server_call(self._stub.gnss_message, GrpcSendStreamIterator(self, self.get_gnss_nmea), None)
+                    if resp.reportCode != 0:
+                        _logger.error(f"GNSSPushClient stopped due to remote error:{resp.reportCode}")
+                        break
                 except GrpcAccessException:
                     self._forwarder.suspend()
                     grpc_connected = False
@@ -281,11 +282,11 @@ class GNSSPushClient(ServiceClient, NavThread):
                 t = time.time()
                 if t - time_disconnect > 10.0:
                     _logger.debug("GNSSPushClient reconnecting")
-                    self._server.connect()
-                    self._forwarder.resume()
-                    grpc_connected = True
                     time_disconnect = t
-
+                else:
+                    time.sleep(10. - (t - time_disconnect))
+        self._forwarder.suspend()
+        self._reader.clear_n2k_subcriber()
 
     def stop(self):
         self._stop_flag = True

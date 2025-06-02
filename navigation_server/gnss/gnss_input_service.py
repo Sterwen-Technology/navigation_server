@@ -28,16 +28,19 @@ class GNSS_InputServicerImpl(GNSS_InputServicer):
     def __init__(self, callback):
         self._callback = callback
 
-    def gnss_message(self, request, context):
+    def gnss_message(self, request_iterator, context):
 
         resp = server_resp()
         try:
-            self._callback(request)
-            resp.reportCode = 0
+            for msg in request_iterator:
+                self._callback(msg)
         except Exception as err:
             _logger.error(f"GNSS Input processing error:{err}")
             resp.reportCode = 101
             resp.status = str(err)
+        else:
+            _logger.info("GNSS Input processing stream ends")
+            resp.reportCode = 0
         return resp
 
 

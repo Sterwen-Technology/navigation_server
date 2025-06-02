@@ -42,6 +42,16 @@ class CAN_ControllerServiceStub(object):
                 request_serializer=n2k__can__service__pb2.CANRequest.SerializeToString,
                 response_deserializer=n2k__can__service__pb2.CAN_ControllerMsg.FromString,
                 _registered_method=True)
+        self.StartTrace = channel.unary_unary(
+                '/CAN_ControllerService/StartTrace',
+                request_serializer=n2k__can__service__pb2.CANRequest.SerializeToString,
+                response_deserializer=n2k__can__service__pb2.CAN_ControllerMsg.FromString,
+                _registered_method=True)
+        self.StopTraces = channel.unary_unary(
+                '/CAN_ControllerService/StopTraces',
+                request_serializer=n2k__can__service__pb2.CANRequest.SerializeToString,
+                response_deserializer=n2k__can__service__pb2.CAN_ControllerMsg.FromString,
+                _registered_method=True)
         self.ReadNmea2000Msg = channel.unary_stream(
                 '/CAN_ControllerService/ReadNmea2000Msg',
                 request_serializer=n2k__can__service__pb2.CANReadRequest.SerializeToString,
@@ -58,6 +68,18 @@ class CAN_ControllerServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def GetStatus(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StartTrace(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StopTraces(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -80,6 +102,16 @@ def add_CAN_ControllerServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetStatus': grpc.unary_unary_rpc_method_handler(
                     servicer.GetStatus,
+                    request_deserializer=n2k__can__service__pb2.CANRequest.FromString,
+                    response_serializer=n2k__can__service__pb2.CAN_ControllerMsg.SerializeToString,
+            ),
+            'StartTrace': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartTrace,
+                    request_deserializer=n2k__can__service__pb2.CANRequest.FromString,
+                    response_serializer=n2k__can__service__pb2.CAN_ControllerMsg.SerializeToString,
+            ),
+            'StopTraces': grpc.unary_unary_rpc_method_handler(
+                    servicer.StopTraces,
                     request_deserializer=n2k__can__service__pb2.CANRequest.FromString,
                     response_serializer=n2k__can__service__pb2.CAN_ControllerMsg.SerializeToString,
             ),
@@ -119,6 +151,60 @@ class CAN_ControllerService(object):
             request,
             target,
             '/CAN_ControllerService/GetStatus',
+            n2k__can__service__pb2.CANRequest.SerializeToString,
+            n2k__can__service__pb2.CAN_ControllerMsg.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StartTrace(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/CAN_ControllerService/StartTrace',
+            n2k__can__service__pb2.CANRequest.SerializeToString,
+            n2k__can__service__pb2.CAN_ControllerMsg.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StopTraces(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/CAN_ControllerService/StopTraces',
             n2k__can__service__pb2.CANRequest.SerializeToString,
             n2k__can__service__pb2.CAN_ControllerMsg.FromString,
             options,

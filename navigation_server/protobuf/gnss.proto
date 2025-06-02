@@ -16,7 +16,7 @@ import "nmea_messages.proto";
 
 // specific service to receive NMEA2000 messages coming from the GNSS and to be distributed
 service GNSS_Input {
-  rpc gnss_message(nmea2000pb) returns (server_resp);
+  rpc gnss_message(stream nmea2000pb) returns (server_resp);
 }
 
 

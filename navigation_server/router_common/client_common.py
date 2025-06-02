@@ -121,6 +121,15 @@ class GrpcClient:
             _logger.info(f"GrpcClient connect attempt to {self._server} result={resp.response}")
 
     def wait_connect(self, timeout:float):
+        """
+        Wait until the connection to the server is established
+
+        Parameters:
+            timeout: float  connection timeout in seconds
+
+        Returns True if the connection is established or False if the timeout is exhausted
+
+        """
         return self._wait_connect.wait(timeout=timeout)
 
     def add_service(self, service):
@@ -442,3 +451,25 @@ class ServiceClient:
 
     def server_connect(self):
         self._server.connect()
+
+
+class GrpcStreamIteratorError(Exception):
+    pass
+
+
+class GrpcSendStreamIterator:
+
+    def __init__(self, service, get_next_function):
+        self._get_next_function = get_next_function
+        self._service = service
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            return self._get_next_function()
+        except GrpcStreamIteratorError:
+            raise StopIteration
+
+

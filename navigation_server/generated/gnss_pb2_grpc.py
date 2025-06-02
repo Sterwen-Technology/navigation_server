@@ -40,7 +40,7 @@ class GNSS_InputStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.gnss_message = channel.unary_unary(
+        self.gnss_message = channel.stream_unary(
                 '/GNSS_Input/gnss_message',
                 request_serializer=nmea2000__pb2.nmea2000pb.SerializeToString,
                 response_deserializer=nmea__messages__pb2.server_resp.FromString,
@@ -51,7 +51,7 @@ class GNSS_InputServicer(object):
     """specific service to receive NMEA2000 messages coming from the GNSS and to be distributed
     """
 
-    def gnss_message(self, request, context):
+    def gnss_message(self, request_iterator, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -60,7 +60,7 @@ class GNSS_InputServicer(object):
 
 def add_GNSS_InputServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'gnss_message': grpc.unary_unary_rpc_method_handler(
+            'gnss_message': grpc.stream_unary_rpc_method_handler(
                     servicer.gnss_message,
                     request_deserializer=nmea2000__pb2.nmea2000pb.FromString,
                     response_serializer=nmea__messages__pb2.server_resp.SerializeToString,
@@ -78,7 +78,7 @@ class GNSS_Input(object):
     """
 
     @staticmethod
-    def gnss_message(request,
+    def gnss_message(request_iterator,
             target,
             options=(),
             channel_credentials=None,
@@ -88,8 +88,8 @@ class GNSS_Input(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
+        return grpc.experimental.stream_unary(
+            request_iterator,
             target,
             '/GNSS_Input/gnss_message',
             nmea2000__pb2.nmea2000pb.SerializeToString,

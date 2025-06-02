@@ -209,25 +209,25 @@ class SocketCANInterface(NavThread):
         try:
             fp_active = self._fp_handler.is_pgn_active(pgn, sa, data)
         except FastPacketException:
-            return None
+            return
 
         if fp_active:
             try:
                 data = self._fp_handler.process_frame(pgn, sa, data)
                 if data is None:
-                    return None
+                    return
             except FastPacketException as e:
                 _logger.error("CAN interface Fast packet (active) error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
-                return None
+                return
         else:
             if PGNDef.fast_packet_check(pgn):
                 try:
                     data = self._fp_handler.process_frame(pgn, sa, data)
                     if data is None:
-                        return None
+                        return
                 except FastPacketException as e:
                     _logger.error("CAN interface Fast packet (start) error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
-                    return None
+                    return
         # end fast packet handling
         n2k_msg = NMEA2000Msg(pgn, prio, sa, da, data)
         if n2k_msg is not None:
@@ -237,6 +237,7 @@ class SocketCANInterface(NavThread):
             except queue.Full:
                 _logger.warning("CAN read queue full, message discarded: %s" % n2k_msg.header_str())
                 #  time.sleep(0.02) # remove as we have the timeout
+        return
 
     def read_can(self) -> Message:
         """
@@ -337,7 +338,7 @@ class SocketCANInterface(NavThread):
                     return False
         else:
             return self.put_can_msg(can_id, n2k_msg.payload)
-        return True
+
 
     def send_broadcast_with_iso_tp(self, msg: NMEA2000Msg):
         """
@@ -355,9 +356,22 @@ class SocketCANInterface(NavThread):
                 return False
         return True
 
+    #
+    #   Trace management methods
+    #
     def stop_trace(self):
         if self._trace is not None:
             self._trace.stop_trace()
+            self._trace = None
+
+    def is_trace_active(self) -> bool:
+        return self._trace is not None
+
+    def start_trace(self, file_root:str = None):
+        if file_root is None or len(file_root) == 0:
+            file_root = self.name
+        self._trace  = NMEAMsgTrace(file_root, self.__class__.__name__)
+
 
 
 
