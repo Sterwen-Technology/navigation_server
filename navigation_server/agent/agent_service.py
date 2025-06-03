@@ -352,7 +352,7 @@ class AgentServicerImpl(AgentServicer):
             resp.response = f"Error starting {process.name}"
 
     def get_port(self,process:SystemdProcess, resp):
-        if process.state == SystemdProcess.RUNNING:
+        if process.local_state == SystemdProcess.RUNNING:
             resp.err_code = 0
             resp.response = process.name
             resp.grpc_port = process.grpc_port
@@ -392,6 +392,16 @@ class AgentServicerImpl(AgentServicer):
             resp.system.processes.append(process_pb)
         return resp
 
+    def navigation_restart(self, resp):
+        """
+        Stop all running services, then stop itself
+        Restart to be performed by systemd
+        """
+        _logger.info("Start stopping all processes")
+        self._agent.stop_all_processes()
+        _logger.info("All processes stopped => stopping the agent")
+        MessageServerGlobals.main_server.stop_server()
+
     def system_halt(self, resp):
         STNC_D7_Led.green_brightness(0)
         STNC_D7_Led.red_brightness(0)
@@ -406,8 +416,6 @@ class AgentServicerImpl(AgentServicer):
         ex.start()
         resp.err_code = 0
 
-    def navigation_restart(self, resp):
-        pass
 
 
 class AgentService(GrpcService):
@@ -443,6 +451,10 @@ class AgentService(GrpcService):
     def get_processes(self):
         return self._processes.values()
 
+    def stop_all_processes(self):
+        processes = list(self._processes.values())
+        for process in processes:
+            process.stop()
 
 class AgentTopServer(GenericTopServer):
 

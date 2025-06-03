@@ -32,6 +32,16 @@ class SystemProcessMsgProxy(ProtobufProxy):
     def state(self):
         return pb_enum_string(self._msg, 'state', self._msg.state)
 
+
+class AgentResponseProxy(ProtobufProxy):
+
+    def __init__(self, msg:AgentResponse):
+        super().__init__(msg)
+
+    @property
+    def process_proxy(self) -> SystemProcessMsgProxy:
+        return SystemProcessMsgProxy(self.process)
+
 class NavigationSystemMsgProxy(ProtobufProxy):
 
     def __init__(self, msg:NavigationSystemMsg):
@@ -82,11 +92,7 @@ class AgentClient(ServiceClient):
             return None
         else:
             _logger.info(f"agent process_cmd {cmd} on {process_name}: {response.response}")
-
-        if response.process is not None:
-            return SystemProcessMsgProxy(response.process)
-        else:
-            return None
+        return AgentResponseProxy(response)
 
     def system_cmd(self, cmd: str):
         msg = AgentCmdMsg()
@@ -106,6 +112,13 @@ class AgentClient(ServiceClient):
             return NavigationSystemMsgProxy(response.system)
         else:
             return response.err_code
+
+    def get_port(self, process_name: str) -> int:
+        resp = self.process_cmd('get_port', process_name)
+        if resp is None:
+            return 0
+        else:
+            return resp.grpc_port
 
 
 

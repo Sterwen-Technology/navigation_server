@@ -31,6 +31,7 @@ class GNSS_InputServicerImpl(GNSS_InputServicer):
     def gnss_message(self, request_iterator, context):
 
         resp = server_resp()
+        _logger.info("GNSS Input stream starts")
         try:
             for msg in request_iterator:
                 self._callback(msg)

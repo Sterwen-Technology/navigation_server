@@ -64,6 +64,15 @@ class NMEA2000CanClient(ServiceClient):
         except GrpcAccessException:
             return None
 
+    def stop_trace(self):
+        req = CANRequest()
+        return self._server_call(self._stub.StopTrace, req, NMEA2000CanControllerProxy)
+
+    def start_trace(self, trace_name):
+        req = CANRequest()
+        req.cmd = trace_name
+        return self._server_call(self._stub.StartTrace, req, NMEA2000CanControllerProxy)
+
 
 
 

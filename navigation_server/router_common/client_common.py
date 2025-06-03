@@ -452,6 +452,14 @@ class ServiceClient:
     def server_connect(self):
         self._server.connect()
 
+    def server_connect_wait(self, timeout: float) -> bool:
+        self._server.connect()
+        return self._server.wait_connect(timeout)
+
+    @property
+    def server(self) -> GrpcClient:
+        return self._server
+
 
 class GrpcStreamIteratorError(Exception):
     pass

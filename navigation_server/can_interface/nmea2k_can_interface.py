@@ -363,6 +363,8 @@ class SocketCANInterface(NavThread):
         if self._trace is not None:
             self._trace.stop_trace()
             self._trace = None
+            self._writer.update_trace(None)
+
 
     def is_trace_active(self) -> bool:
         return self._trace is not None
@@ -371,10 +373,7 @@ class SocketCANInterface(NavThread):
         if file_root is None or len(file_root) == 0:
             file_root = self.name
         self._trace  = NMEAMsgTrace(file_root, self.__class__.__name__)
-
-
-
-
+        self._writer.update_trace(self._trace)
 
 
 class SocketCANWriter(NavThread):
@@ -400,6 +399,9 @@ class SocketCANWriter(NavThread):
 
     def stop(self):
         self._stop_flag = True
+
+    def update_trace(self, trace):
+        self._trace = trace
 
     def total_msg(self) -> int:
         return self._total_msg

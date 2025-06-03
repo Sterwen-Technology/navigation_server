@@ -55,7 +55,7 @@ message CANReadRequest{
 service CAN_ControllerService {
   rpc GetStatus(CANRequest) returns (CAN_ControllerMsg) {}
   rpc StartTrace(CANRequest) returns (CAN_ControllerMsg) {}
-  rpc StopTraces(CANRequest) returns (CAN_ControllerMsg) {}
+  rpc StopTrace(CANRequest) returns (CAN_ControllerMsg) {}
   rpc ReadNmea2000Msg(CANReadRequest) returns (stream nmea2000pb) {}
   rpc SendNmea2000Msg(stream nmea2000pb) returns (CANAck) {}
 }

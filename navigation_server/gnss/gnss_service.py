@@ -265,6 +265,7 @@ class GNSSPushClient(ServiceClient, NavThread):
         time_disconnect = 0.0
         while not self._stop_flag:
             # First connect to the server
+            _logger.debug("GNSSPushClient (re)connecting")
             self._server.connect()
             if self._server.wait_connect(10.):
                 self._forwarder.resume()
@@ -274,14 +275,14 @@ class GNSSPushClient(ServiceClient, NavThread):
                         _logger.error(f"GNSSPushClient stopped due to remote error:{resp.reportCode}")
                         break
                 except GrpcAccessException:
+                    _logger.info("GNSSPushClient suspended")
                     self._forwarder.suspend()
-                    grpc_connected = False
                     time_disconnect = time.time()
                     continue
             else:
                 t = time.time()
                 if t - time_disconnect > 10.0:
-                    _logger.debug("GNSSPushClient reconnecting")
+
                     time_disconnect = t
                 else:
                     time.sleep(10. - (t - time_disconnect))

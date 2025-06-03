@@ -47,8 +47,8 @@ class CAN_ControllerServiceStub(object):
                 request_serializer=n2k__can__service__pb2.CANRequest.SerializeToString,
                 response_deserializer=n2k__can__service__pb2.CAN_ControllerMsg.FromString,
                 _registered_method=True)
-        self.StopTraces = channel.unary_unary(
-                '/CAN_ControllerService/StopTraces',
+        self.StopTrace = channel.unary_unary(
+                '/CAN_ControllerService/StopTrace',
                 request_serializer=n2k__can__service__pb2.CANRequest.SerializeToString,
                 response_deserializer=n2k__can__service__pb2.CAN_ControllerMsg.FromString,
                 _registered_method=True)
@@ -79,7 +79,7 @@ class CAN_ControllerServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def StopTraces(self, request, context):
+    def StopTrace(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -110,8 +110,8 @@ def add_CAN_ControllerServiceServicer_to_server(servicer, server):
                     request_deserializer=n2k__can__service__pb2.CANRequest.FromString,
                     response_serializer=n2k__can__service__pb2.CAN_ControllerMsg.SerializeToString,
             ),
-            'StopTraces': grpc.unary_unary_rpc_method_handler(
-                    servicer.StopTraces,
+            'StopTrace': grpc.unary_unary_rpc_method_handler(
+                    servicer.StopTrace,
                     request_deserializer=n2k__can__service__pb2.CANRequest.FromString,
                     response_serializer=n2k__can__service__pb2.CAN_ControllerMsg.SerializeToString,
             ),
@@ -191,7 +191,7 @@ class CAN_ControllerService(object):
             _registered_method=True)
 
     @staticmethod
-    def StopTraces(request,
+    def StopTrace(request,
             target,
             options=(),
             channel_credentials=None,
@@ -204,7 +204,7 @@ class CAN_ControllerService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/CAN_ControllerService/StopTraces',
+            '/CAN_ControllerService/StopTrace',
             n2k__can__service__pb2.CANRequest.SerializeToString,
             n2k__can__service__pb2.CAN_ControllerMsg.FromString,
             options,

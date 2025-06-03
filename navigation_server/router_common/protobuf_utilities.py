@@ -53,9 +53,9 @@ class ProtobufProxy:
 
     def __getattr__(self, item):
         try:
-            return getattr(self._msg, item)
+            return self._msg.__getattribute__(item)
         except AttributeError:
-            raise AttributeError(item)
+            raise
 
 
 class GrpcAccessException(Exception):

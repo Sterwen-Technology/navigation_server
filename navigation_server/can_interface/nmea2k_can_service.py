@@ -57,7 +57,7 @@ class CAN_ControllerServiceServicerImpl(CAN_ControllerServiceServicer):
         self._start_in_counter = in_counter
         self._start_out_counter = out_counter
 
-        resp.trace_on = self._controller.CAN_interface.is_trace_active()
+        resp.traces_on = self._controller.CAN_interface.is_trace_active()
 
         for device in self._controller.get_device():
             dev_pb = N2KDeviceMsg()
@@ -85,23 +85,23 @@ class CAN_ControllerServiceServicerImpl(CAN_ControllerServiceServicer):
         resp.channel = self._controller.channel
         if self._controller.CAN_interface.is_trace_active():
             resp.status = f"trace already running on channel {resp.channel}"
-            resp.trace_on = True
+            resp.traces_on = True
         else:
             try:
                 self._controller.CAN_interface.start_trace(request.cmd)
                 resp.status = f"trace started on channel {resp.channel}"
-                resp.trace_on = True
+                resp.traces_on = True
             except MessageTraceError:
                 resp.status = f"trace star error on channel {resp.channel}"
-                resp.trace_on = False
+                resp.traces_on = False
         return resp
 
-    def StopTraces(self, request, context):
+    def StopTrace(self, request, context):
         _logger.debug("NMEA CAN Service stop trace")
         resp = CAN_ControllerMsg()
         resp.channel = self._controller.channel
         self._controller.CAN_interface.stop_trace()
-        resp.trace_on = False
+        resp.traces_on = False
         return resp
 
     def ReadNmea2000Msg(self, request: CANReadRequest, context):
