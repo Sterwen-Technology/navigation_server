@@ -235,7 +235,7 @@ class SystemdProcess:
 class AgentServicerImpl(AgentServicer):
 
     def __init__(self, agent):
-        self._agent = agent
+        self._agent: AgentService = agent
         self._response_id = 1
         self._vector = {
             'status' : self.status ,
@@ -368,10 +368,10 @@ class AgentServicerImpl(AgentServicer):
         resp.process.name = process.name
         resp.process.state = ProcessState.STOPPED
 
-
-
     def system_status(self, resp):
         _logger.debug("Agent system status")
+        # first refresh all status
+        self._agent.refresh_all_processes_status()
         resp.system.name = MessageServerGlobals.server_name
         resp.system.version = MessageServerGlobals.version
         resp.system.start_time = MessageServerGlobals.main_server.start_time_str()
@@ -455,6 +455,12 @@ class AgentService(GrpcService):
         processes = list(self._processes.values())
         for process in processes:
             process.stop()
+
+    def refresh_all_processes_status(self):
+        processes = list(self._processes.values())
+        for process in processes:
+            if process.status() == 4:
+                del self._processes[process.name]
 
 class AgentTopServer(GenericTopServer):
 

@@ -41,7 +41,8 @@ class NMEA2000Msg:
 
     ts_format = "%H:%M:%S.%f"
     struct_2b = struct.Struct("<H")
-    pgn_service = (59392, 59904, 60928, 65240, 126208, 126464, 126993, 126996, 126998)
+    pgn_service = {59392, 59904, 60928, 65240, 126208, 126464, 126993, 126996, 126998}
+    pgn_in_band_signalling = 0x100
 
     def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytearray = None, timestamp=0.0,
                  protobuf=None):
