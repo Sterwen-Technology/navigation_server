@@ -21,10 +21,13 @@
       * [VEDirectCoupler(Coupler)](#vedirectcouplercoupler)
       * [DirectCANCoupler(Coupler)](#directcancouplercoupler)
       * [GrpcNmeaCoupler(Coupler)](#grpcnmeacouplercoupler)
+      * [N2KGrpcCoupler (Coupler)](#n2kgrpccoupler-coupler)
     * [Services](#services)
+      * [CAN Service](#can-service)
       * [Console service](#console-service)
       * [AgentService](#agentservice)
       * [DataDispatchService](#datadispatchservice)
+      * [NavigationDataService](#navigationdataservice)
       * [Energy management service](#energy-management-service)
         * [MPPTService](#mpptservice)
     * [Publishers](#publishers)
@@ -60,31 +63,31 @@
     * [Launching a message server process](#launching-a-message-server-process)
 <!-- TOC -->
 ## Description
-The navigation server-router aggregate and distribute navigation and other operational data aboard recreational or small professional vessels.
-It is a focal point and server for all kind of data needed to control the course and operational condition of the boat.
-The system is based on the building blocks described here below. These building blocks can be configured in several processes and each 
+The navigation server-router aggregates and distributes navigation and other operational data aboard recreational or small professional vessels.
+It is a focal point and server for all kinds of data needed to control the course and operational condition of the boat.
+The system is based on the building blocks described here below. These building blocks can be configured in several processes, and each 
 The configuration and parameters of the system are described in a Yaml file. See the corresponding section.
-All building blocks are optional, but if there is no Coupler or Publisher nothing will happen.
+All building blocks are optional, but if there is no Coupler or Publisher, nothing will happen.
 
-**IMPORTANT NOTE: Every *navigation_server* process can be configured to perform several kind of tasks, and you can also run several programs communicating via various mechanisms to distribute processing load across several CPU both locals or on remote systems. Hence, the system proposed must be seen as a toolbox to process and route NMEA and other messages**
+**IMPORTANT NOTE: Every *navigation_server* process can be configured to perform some kind of tasks, and you can also run several programs communicating via various mechanisms to distribute a processing load across several CPU both locals or on remote systems. Hence, the system proposed must be seen as a toolbox to process and route NMEA and other messages**
 
 Each *navigation_server* is a single Python process and messages are exchanged internally. That could lead to burst of messages and some delays du to the Python GIL, when the workload starts to be significant. To overcome that problem, the easiest solution is to split the processing between *navigation_server* processes.
 
-Inside the *navigation_server* process the following entities can be configured and instantiated:
+Inside the *navigation_server* process, the following entities can be configured and instantiated:
 
-**Server**: servers can accept incoming connections and then are sending or receiving messages using several application and transport protocols that are described in details in the **Navigation system API** document. In the server category we also find NMEA CAN controllers or pseud-controllers that are not external servers but have a server function versus the CAN network. Some servers can also be purely internal. One server is used as a starting and shall be the "Main" server in the configuration file.
+**Server**: servers can accept incoming connections and then are sending or receiving messages using several application and transport protocols that are described in detail in the **Navigation system API** document. In the server category we also find NMEA CAN controllers or pseud-controllers that are not external servers but have a server function versus the CAN network. Some servers can also be purely internal. One server is used as a starting and shall be the "Main" server in the configuration file.
 
 **Coupler**: couplers are the interfaces for external devices or for incoming messages for communication between processes
 
-**Publisher**: publishers act as messages flows aggregators that they can push towards client with our without processing and transformation. Publishers are automatically created by servers when a new client is opening a new message stream. Publishers with a 
+**Publisher**: publishers act as messages flows aggregators that they can push towards a client with our without processing and transformation. Publishers are automatically created by servers when a new client is opening a new message stream. Publishers with a 
 
-**Service**: A service implements a "service" a defined by the gRPC system that will be installed over a gRPC server
+**Service**: A service implements a "service" defined by the gRPC system that will be installed over a gRPC server
 
 **Application**: an application corresponds to a Controller Application as defined by J1939 and reused by NMEA2000. An application results in a device on a NMEA2000 bus. Applications are relevant only when the process is directly linked to the CAN interface.
 
-**Filters**: filters can be plugged at various point in the messages flows to select or reject certain type of messages that are useless downstream
+**Filters**: filters can be plugged at various points in the message flows to select or reject certain types of messages that are useless downstream
 
-*Note on the parameters tables: Only the parameter attached to the actual class are described in each class. To have the full parameter set that is applicable all superclasses descriptions must also be looked at.*
+*Note on the parameter tables: Only the parameters attached to the actual class are described in each class. To have the full parameter set that is applicable, all superclasses descriptions must also be looked at.*
 
 ![server concepts](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/Nmea_message-server-concept-1.png)
 
@@ -98,7 +101,7 @@ There are 2 server classes with external access: NMEA0183 based protocol over TC
 The NMEA0183 based protocol can be understood and messages starting with '$' or '!' including only printable ASCII characters and separated by the 'CR' and 'LF' characters
 That is not exactly a real protocol over TCP/IP but this is working and the messages (data frames) and directly inherited from the standards NMEA0183 messages.
 Even NMEA2000 data frames are carrier over such messages like it is done for Digital Yacht or Shipmodul miniplex.
-Using efficient binary encoding with Protobuf and a real protocol like gRPC allows an increase in efficiency. THis is particularly true for NMEA2000 that is binary protocol by nature.
+Using efficient binary encoding with Protobuf and a real protocol like gRPC allows an increase in efficiency. THis is particularly true for NMEA2000 that is a binary protocol by nature.
 For more information on [gPRC](https://grpc.io/) and [Protobuf](https://developers.google.com/protocol-buffers/)
 
 #### NavigationMainServer class
@@ -107,7 +110,7 @@ This shall be the **Main** server for a NMEA messages router function.
 
 #### GenericTopServer class
 
-This the generic top level **Main** server that is to be used for non routing function. For instance, it is used for the system agent process and the energy_management process.
+This is the generic top level **Main** server that is to be used for non-routing function. For instance, it is used for the system agent process and the energy_management process.
 
 #### NMEAServer class
 
@@ -135,9 +138,9 @@ When configured in NMEA2000, due to fast packet reassembly, there is no transpar
 
 *stfmt*: NMEA2000 messages are transmitted using the Sterwen Technology !PGNST format
 
-if dyfmt or stfmt is selected all NMEA2000 messages will be translated in the selected format including reassembly of Fast Packet. That implies that the protocol selected in the instruments is 'nmea2000'. NMEA0183 messages are transparently transmitted in any case.
+if dyfmt or stfmt is selected, all NMEA2000 messages will be translated in the selected format, including reassembly of Fast Packet. That implies that the protocol selected in the instruments is 'nmea2000.' NMEA0183 messages are transparently transmitted in any case.
 
-The configuration is also valid for messages sent from the host (client), in that case NMEA0183 like messages encapsulating NMEA2000 messages will be treated internally as NMEA2000.
+The configuration is also valid for messages sent from the host (client); in that case NMEA0183 like messages encapsulating NMEA2000 messages will be treated internally as NMEA2000.
 
 #### NMEASenderServer class
 This server allows sending NMEA0183 messages from the host towards a coupler. This is mostly used to control navigation and send tracking information to autopilot and displays
@@ -159,9 +162,9 @@ This server allows sending NMEA0183 messages from the host towards a coupler. Th
 
 #### GrpcServer class
 
-Server for NMEA information and other navigation information using the gRPC protocol. The server must be unique for a given process but several services can be attached to the server.
+Server for NMEA information and other navigation information using the gRPC protocol. The server must be unique for a given process, but several services can be attached to the server.
 Each of these services corresponds to one *service* in a gRPC/Protobuf definition file (.proto).
-Some services are explicitly defined in the configuration file (Console service for instance), while some others are implicitly defined by Couplers or other entities.
+Some services are explicitly defined in the configuration file (Console service, for instance), while some others are implicitly defined by Couplers or other entities.
 
 | Name      | Type | Default | Signification                                                 |
 |-----------|------|---------|---------------------------------------------------------------|
@@ -172,9 +175,9 @@ Some services are explicitly defined in the configuration file (Console service 
 
 #### ShipModulConfig server
 
-TCP server allowing to bypass the routing function to connect the Shipmodul Miniplex control application to a Miniplex3 device. To use this feature just configure the MPXConfig utility and assign the server IP and the port configured for it.
+TCP server allows bypassing the routing function to connect the Shipmodul Miniplex control application to a Miniplex3 device. To use this feature, just configure the MPXConfig utility and assign the server IP and the port configured for it.
 
-Warning: when the application is connected to the server all traffic is re-routed to it. So no NMEA messages are transmitted to the navigation system.
+Warning: when the application is connected to the server, all traffic is re-routed to it. So no NMEA messages are transmitted to the navigation system.
 
 | Name    | Type   | Default | Signification                                          |
 |---------|--------|---------|--------------------------------------------------------|
@@ -184,7 +187,7 @@ Warning: when the application is connected to the server all traffic is re-route
 #### NMEA2KController server
 
 This is an internal server that has no direct TCP access. All accesses to this server are via the Console. This server maintains the list of devices connected on the NMEA2000 network along with the information they are sending.
-It shall be associated to a coupler by defining the **nmea2000_controller** parameter to capture all relevant messages. This coupler must be configured with **nmea2000** or **nmea_mix** protocol.
+It shall be associated with a coupler by defining the **nmea2000_controller** parameter to capture all relevant messages. This coupler must be configured with **nmea2000** or **nmea_mix** protocol.
 This server is to be used if the access to the NMEA2000 bus is done via an adapter device (see corresponding couplers here below), meaning that the controller has no control on the bus and can only monitor activity.
 
 | Name       | Type   | Default | Signification                                                |
@@ -216,7 +219,7 @@ This controller performs the role of an ECU referring to J1939 standard. It can 
 
 
 ### Couplers
-Couplers classes are connecting to instrumentation bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
+Coupler classes are connecting to an instrumentation bus via direct interfaces or couplers. Direct communication via serial lines is also supported.
 Currently, tested couplers:
 - Shipmodul Miniplex3 Ethernet (or Wi-Fi): NMEA0183 or NMEA2000 via $MXPGN pseudo NMEA0183 messages
 - Digital Yacht iKonvert: NMEA2000 only (mode Raw)
@@ -229,7 +232,7 @@ Currently, tested couplers:
 - GrpcCoupler: allows data flow from a server to another based on gRPC (HTTP/2)
 
 on hold
-- Actisense adapter (NGT-1-USB or NGX-1) - Actisense is not willing to open the documentation of the interface, so development is on hold.
+- Actisense adapter (NGT-1-USB or NGX-1)—Actisense is not willing to open the documentation of the interface, so development is on hold.
 
 #### Coupler generic parameters
 
@@ -252,19 +255,19 @@ on hold
 
 Remarks on protocol behavior:
 
-a) When nmea2000 is selected, NMEA0183 messages are anyway routed transparently when the coupler encodes NMEA2000 frames in pseudo NMEA0183 messages, only NMEA2000 messages (encoded via NMEA0183) are partially decoded in order to reformat them in one of the supported NMEA2000 format. PGN that are part of the ISO protocol are fully decoded and processed locally in the NMEA2KController instance.
+a) When nmea2000 is selected, NMEA0183 messages are anyway routed transparently when the coupler encodes NMEA2000 frames in pseudo NMEA0183 messages, only NMEA2000 messages (encoded via NMEA0183) are partially decoded to reformat them in one of the supported NMEA2000 formats. PGN that are part of the ISO protocol are fully decoded and processed locally in the NMEA2KController instance.
 
 b) When nmea0183 is selected, all messages are routed in NMEA0183 and no decoding of possible NMEA2000 is performed.
 
-c) When nmea_mix is selected, the protocol PGN are decoded and processed in the corresponding NMEA2KController instance to give a view of the network. All other messages are routed internally as NMEA2000, but externally they stay in their input format. That mode is only working if a NMEA2KController has been instanced.
+c) When nmea_mix is selected, the protocol PGN is decoded and processed in the corresponding NMEA2KController instance to give a view of the network. All other messages are routed internally as NMEA2000, but externally they stay in their input format. That mode is only working if a NMEA2KController has been instanced.
 
-d) non_nmea messages are only for internal use within a server, they must be converted to NMEA0183 or NMEA2000 to be routed externally, or exchange through a specific gRPC service
+d) non_nmea messages are only for internal use within a server, they must be converted to NMEA0183 or NMEA2000 to be routed externally or exchange through a specific gRPC service
 
 **When a NMEA2KController is defined, all ISO protocol messages are processed locally and not forwarded to the message server, so they are not visible by the client**
 
 
 #### NMEASerialPort(Coupler)
-This class handle serial or emulated serial line with NMEA0183 based protocols.
+This class handles serial or emulated serial line with NMEA0183 based protocols.
 Specific parameters
 
 | Name     | Type    | Default    | Signification             |
@@ -284,8 +287,8 @@ Specific parameters
 | buffer_size    | integer  | 256        | size in bytes of input buffer     |
 | msg_queue_size | integer  | 50         | size of reading message queue     |
 
-Buffer size is to be adjusted taking into account average message size and number of messages per seconds.
-A large buffer will create some delays for messages through the system while too small buffer size will generate a lot of overhead.
+Buffer size is to be adjusted taking into account average message size and number of messages per second.
+A large buffer will create some delays for messages through the system, while too small buffer size will generate a lot of overhead.
 
 #### NMEATCPReader (IPCoupler)
 Instantiable class to communicate with NMEA0183 based protocol over TCP/IP. It can work in 2 modes: nmea0183 (default) or nmea2000/nmea_mixed.
@@ -298,12 +301,12 @@ The format of transmission to the server shall be either 'dyfmt' or 'stfmt'. Tra
 #### ShipmodulInterface (IPCoupler)
 Instantiable class to manage Ethernet or Wi-Fi interface for Shipmodul Miniplex3. For USB interface, the NMEASerialPort can be used.
 
-The class instance has 2 possible behavior depending on the protocol selected.
+The class instance has two possible behaviors depending on the protocol selected.
 - nmea0183: all frames are transparently transmitted as NMEA0183
 - nmea2000: All $MXPGN frames are interpreted as NMEA2000 and processed as such, including Fast Packet reassembly. Further processing on NMEA2000 frames is explained in the dedicated paragraph.
 - nmea_mixed: Only the NMEA2000 bus PGN are reassembled and decoded to be sent to a NMEA2000 Controller, other messages are transmitted transparently
 
-The class is allowing the pass through of configuration messages sent by the MPXconfig utility. This is requiring that a ShipModulConfig server class is set up in the configuration. During the connection of the MPXConfig utility, all messages are directed to it, so no messages sent to clients.
+The class is allowing the pass-through of configuration messages sent by the MPXconfig utility. This is requiring that a ShipModulConfig server class is set up in the configuration. During the connection of the MPXConfig utility, all messages are directed to it, so no messages are sent to clients.
 
 #### YDCoupler (IPCoupler)
 Instantiable class to manage Yacht Device Ethernet gateway (YD02EN) for the NMEA2000 port, For NMEA0183, the generic NMEA0183TCPReader can be used.
@@ -314,7 +317,7 @@ All frames are converted in internal NMEA2000 format and can then be processed f
 Instantiable class to manage the DigitalYacht iKonvert USB gateway in raw mode. If the device is in MEA0183 mode and configured by the DigitalYacht utility, then the NMEASerialPort is to be used instead.
 The class does not manage the device mode itself that shall be configured via the DY utility.
 
-The device connection and initialisation logic is directly managed by the coupler. The only action needed on the device outside the scope of this coupler is only the configuration in raw mode.
+The coupler directly manages the device connection and initialization logic. The only action needed on the device outside the scope of this coupler is only the configuration in raw mode.
 
 **NMEA sentence !PGDY are converted internally the NMEA2000 sentences when the coupler is set in nmea2000 mode.**
 
@@ -330,7 +333,7 @@ No additional parameters in this version. The coupler connects to the GNSS recei
 #### VEDirectCoupler(Coupler)
 
 This class manages Victron VEDirect serial interface or a VEDirect log file as simulation. As VEDirect is not NMEA, they have a specific internal format by default. If the coupler mode is set to NMEA0183, then a XDR sentence is generated with the current, voltage and power from the panel.
-This coupler is intended to be used by the energy management agent, rather than the global messaging router-server, but if only some measurements are needed for display, it can be integrated like any other coupler but only in NMEA mode (protocol => nmea0183)
+This coupler is intended to be used by the energy management agent, rather than the global messaging router-server. However, if only some measurements are needed for display, it can be integrated like any other coupler but only in NMEA mode (protocol => nmea0183)
 
 | Name      | Type               | Default | Signification                                          |
 |-----------|--------------------|---------|--------------------------------------------------------|
@@ -339,24 +342,37 @@ This coupler is intended to be used by the energy management agent, rather than 
 | logfile   | string             | None    | name of the file to be used for VEDirect simulation    |
 
 #### DirectCANCoupler(Coupler)
-This coupler class works when a CAN bus interface with socketcan driver is installed on the system. Obviously, only NMEA2000 messages can be processed.
-The CAN bus coupler must be declared as **application** with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters and the coupler is considered as a specific device (CA) on the CAN bus. 
+This coupler class works when a CAN bus interface with a socketcan driver is installed on the system. By construction, only NMEA2000 messages can be processed.
+The CAN bus coupler must be declared as **application** with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters, and the coupler is considered as a specific device (CA) on the CAN bus. 
 
 #### GrpcNmeaCoupler(Coupler)
 
 The coupler creates a gRPC service on which NMEA0183 or NMEA2000 can be pushed (see input_server.proto).
-The
 
 | Name             | Type   | Default | Signification                                                                  |
 |------------------|--------|---------|--------------------------------------------------------------------------------|
 | server           | string | None    | gRPC server associated. This is a mandatory parameter                          |
 | decoded_nmea2000 | bool   | False   | Indicates whether the coupler accepts fully decoded protobuf NMEA2000 messages |
 
+#### N2KGrpcCoupler (Coupler)
+
+This coupler is pulling a stream of NMEA2000 messages via gRPC. It can connect to the CAN server, for instance
+
+| Name           | Type      | Default | Signification                                                                    |
+|----------------|-----------|---------|----------------------------------------------------------------------------------|
+| source_server  | string    | None    | ip address or URL for the source                                                 |
+| source_port    | int       | 0       | port on the source server                                                        |
+| select_sources | list[int] | None    | optional: list of all sources (CAN addresses) that will be pushed on the stream  |
+| reject_sources | list[int] | None    | valid only if there is no sources selected. reject all messages from the sources |
+| select_pgn     | list[int] | None    | optional: list all PGN that will be pushed on the stream                         |
+| reject_pgn     | list[int] | None    | valid only if there is no PGN selected. Reject all PGN listed                    |
+
+
 
 ### Services
 
 The services are attached to the gRPC server that is declared and running in the process. If no gRPC server is declared, then all services definition and creation will fail
-All services have a dedicated gRPC interface described in **Protobuf** language. All interfaces description files are located in the src/proto directory.
+All services to have a dedicated gRPC interface described in **Protobuf** language. All interfaces description files are located in the src/proto directory.
 All services must be associated with a gRPC server (one per process)
 
 
@@ -364,22 +380,48 @@ All services must be associated with a gRPC server (one per process)
 |------------------|--------|---------|--------------------------------------------------------------------------------|
 | server           | string | None    | gRPC server associated. This is a mandatory parameter                          |
 
+#### CAN Service
+
+This service handles the control of one CAN channel, it shall be associated with a CAN Controller (NMEA2KActiveController). The association is automatic.
+If several CAN interfaces are available and active, a process/server shall be instantiated for each interface.
+The service interface is defined by **n2k_can_service.proto**
+
 #### Console service
 
 This is a gRPC service used for external monitoring and control of the navigation server process. The protobuf interface is in the **console.proto** file.
 
-
 #### AgentService
 
-The Agent service provides a limited but useful remote control of the Linux system on which some servers are running.
+The Agent service provides a limited but useful remote control of the Linux system on which some servers are running. Protobuf interface is **agent.proto** file.
 
-**Warning: use this service only in controlled environment as in its current version no access control is implemented**
+**Warning: use this service only in a controlled environment as in its current version no access control is implemented**
 
 #### DataDispatchService
 
-This is a **primary** service that is dispatching NMEA messages sent over gRPC using the same interface as the GrpcNmeaCoupler.
+This is a **primary** service dispatching NMEA messages sent over gRPC using the same interface as the GrpcNmeaCoupler.
 The messages are meant to be processed by *secondary* services that subscribe to this service using NMEA2000 PGN or NMEA0183 formatter as subscribing keys.
 Messages with no subscription are simply ignored.
+
+#### NavigationDataService
+
+This service pulls a stream of NMEA2000 messages and dispatches the messages towards all services that use the service as primary ones.
+
+The parameters are the one from the stream:
+
+| Name           | Type      | Default | Signification                                                                    |
+|----------------|-----------|---------|----------------------------------------------------------------------------------|
+| source_server  | string    | None    | ip address or URL for the source                                                 |
+| source_port    | int       | 0       | port on the source server                                                        |
+| select_sources | list[int] | None    | optional: list of all sources (CAN addresses) that will be pushed on the stream  |
+| reject_sources | list[int] | None    | valid only if there is no sources selected. reject all messages from the sources |
+| select_pgn     | list[int] | None    | optional: list all PGN that will be pushed on the stream                         |
+| reject_pgn     | list[int] | None    | valid only if there is no PGN selected. Reject all PGN listed                    |
+
+
+The NavigationDataService can support the following data services:
+
+- EngineService with the **engine_data.proto** interface file
+- PositionDataService (future)
 
 #### Energy management service
 
@@ -388,7 +430,7 @@ Currently, only the **MPPTService** is available, the team is working on the imp
 
 ##### MPPTService
 
-This service receive the MPPT info via a VEDirectCoupler and keeps track of data and trends from the solar panel and MPPT output.
+This service receives the MPPT info via a VEDirectCoupler and keeps track of data and trends from the solar panel and MPPT output.
 The service can also be used to forward NMEA0183 or NMEA2000 messages via a **GrpcPublisher** towards another server.
 Interface is part of **energy.proto**
 
@@ -404,7 +446,7 @@ Additional parameters
 
 
 ### Publishers
-Publishers concentrate messages from several instruments towards consumers. Publishers are implicitly created by Servers when a new client connection is created.
+Publishers concentrate messages from several instruments towards consumers. Servers implicitly create *Publishers* when a new client connection is created.
 Publishers have their own thread and all messages are sent through their input queue.
 There are also specific Publishers for tracing and logging and interprocess communication.
 
@@ -448,7 +490,7 @@ NMEA0183 processing flags:
 #### N2KJsonPublisher
 
 The publisher is serializing NMEA2000 messages using JSON syntax. Messages are separated by a newline character (ASCII 10)
-That output syntax is compatible with the one used by the [canboat analyzer](https://github.com/canboat). The fields names are used for the Json keywords.
+That output syntax is compatible with the one used by the [canboat analyzer](https://github.com/canboat). The field names are used for the JSON keywords.
 
 | Name           | Type         | Default | Signification                                                     |
 |----------------|--------------|---------|-------------------------------------------------------------------|
@@ -481,7 +523,7 @@ Useful for debugging.
 
 #### Injector (Publisher)
 
-The injector is collecting the messages coming from one or more coupler and inject them on the output of the target coupler.
+The injector is collecting the messages coming from one or more couplers and injects them on the output of the target coupler.
 
 | Name   | Type             | Default | Signification                                                                  |
 |--------|------------------|---------|--------------------------------------------------------------------------------|
@@ -489,14 +531,14 @@ The injector is collecting the messages coming from one or more coupler and inje
 
 ### N2KSourceDispatcher (Publisher)
 
-This publisher dispatch messages based on the NMEA2000 source address. Objects need to subscribe internally to receive the messages in three possible modes.
+This publisher dispatches messages based on the NMEA2000 source address. Objects need to subscribe internally to receive the messages in three possible modes.
 
 | Name | Type             | Default | Signification                                                               |
 |------|------------------|---------|-----------------------------------------------------------------------------|
 | mode | string           | message | Format in which the message is passed to the application object (see below) |
 
 Messages modes definition:
-- **transparent** : The content of the message is not interpreted and the raw format from the coupler is passed to the application
+- **transparent** : The content of the message is not interpreted, and the raw format from the coupler is passed to the application
 - **message** : NMEA2000 binary message format with Fast packet reassembly
 - **decoded** : NMEA2000 fully decoded (Python object)
 
@@ -504,9 +546,9 @@ Messages modes definition:
 
 Applications are functionally Controller Applications as per J1939, they appear as a device over the CAN bus and a CAN bus address assigned to them.
 They must be linked to an **Active CAN Controller** (NMEA2KActiveController) that is managing access to the bus and internal dispatching.
-To be active, applications needs to be declared in the Active controller definition (parameter *applications*)
+To be active, applications need to be declared in the Active controller definition (parameter *applications*)
 
-There is currently only one pre-defined application, that is used to inject on the NMEA2000 (CAN) bus messages coming on  gRPC/Protobuf
+There is currently only one pre-defined application that is used to inject on the NMEA2000 (CAN) bus messages coming on gRPC/Protobuf
 
 #### NMEA2000Application
 
@@ -575,7 +617,7 @@ All NMEA2000 Messages are processed through this filter is the Coupler is in nme
 
 #### NMEA2000TimeFilter (NMEA2000Filter)
 
-Select one value for each period to reduce message flow for slow moving values
+Select one value for each period to reduce message flow for slow-moving values
 
 | Name   | Type  | Default | Signification                              |
 |--------|-------|---------|--------------------------------------------|
@@ -586,7 +628,7 @@ The period shall be defined and non-zero, otherwise the filter is disabled
 
 ## Tracing and replay
 
-Every Coupler includes a tracing facility that writes into a file all incoming and outgoing message. The format is very close from the one used on the interface and the format can vary slightly depending on the Coupler.
+Every Coupler includes a tracing facility that writes into a file all incoming and outgoing messages. The format is very close to the one used on the interface, and the format can vary slightly depending on the Coupler.
 Each line is using the following structure:
 1) a letter R or M. R is the raw format and M the internal message format.
 2) A message sequence number
@@ -597,15 +639,15 @@ Each line is using the following structure:
 
 The file is written in the directory defined by the parameter *trace_dir* in the configuration file.
 
-File naming is automatic and is build using the syntax: TRACE-<Coupler Name>-<Timesamp>.log
+File naming is automatic and is built using the syntax: TRACE-<Coupler Name>-<Timesamp>.log
 
-TRace file are useful for troubleshooting, but they can be used also for test and simulation as the files can be fed in a specific Coupler that will inject the content of the file in the **nmea_message_server**.
+Trace files are useful for troubleshooting, but they can be used also for test and simulation as the files can be fed in a specific Coupler that will inject the content of the file in the **nmea_message_server**.
 
 **Warning: File size can rapidly be very significant. So it is not recommended to activate traces for a long period. Traces can be remotely activated and stopped via the Console service**
 
 ### RawLogCoupler (Coupler)
 
-The coupler read and injects the messages from a trace file respecting the timing of the messages. It can be remotely controlled via the Console service.
+The coupler reads and injects the messages from a trace file respecting the timing of the messages. It can be remotely controlled via the Console service.
 
 
 | Name           | Type        | Default | Signification                                                                            |
@@ -615,18 +657,18 @@ The coupler read and injects the messages from a trace file respecting the timin
 
 All Coupler parameters are applicable, and some must be set like the *nmea2000* or *autostart*.
 
-To keep the message timing, the whole file is read and messages stored in memory before the messages start to be sent in the system. By consequence, the LogReplayCoupler must be used on machines with enough RAM capacity. Recommendation is minimum 4GB of RAM to use the LogReplayCoupler.
+To keep the message timing, the whole file is read and messages stored in memory before the messages start to be sent in the system. By consequence, the LogReplayCoupler must be used on machines with enough RAM capacity. Recommendation is a minimum 4GB of RAM to use the LogReplayCoupler.
 
 ### TransparentCanLogCoupler (RawLogCoupler)
 
-This is variant of the RawLogCoupler working only on CAN level traces. Its purpose is to inject the NMEA2000 CAN frames in the system to create a simulator based on existing traces by using the N2KSourceDispatcher as publisher on this coupler.
+This is a variant of the RawLogCoupler working only on CAN level traces. Its purpose is to inject the NMEA2000 CAN frames in the system to create a simulator based on existing traces by using the N2KSourceDispatcher as publisher on this coupler.
 **Note: with that coupler, no message is sent towards the server for distribution to clients due to the specific format**
 
 ### DeviceReplaySimulator (NMEA2000Application)
 
-That application act as Controller Application and simulate a NMEA2000 devices on the **NMEA2000 CAN bus** based on messages read from a log. Only one device per object, so to simulate multiple devices, multiple objects must be instantiated.
+That application acts as Controller Application and simulates NMEA2000 devices on the **NMEA2000 CAN bus** based on messages read from a log. Only one device per object, so to simulate multiple devices, multiple objects must be instantiated.
 
-If the source is set to 255 the application takes all the messages, thus a single device is forwarding all messages to the CAN bus. All other applications are not receiving any message and are disabled.
+If the source is set to 255, the application takes all the messages. Thus, a single device is forwarding all messages to the CAN bus. All other applications are not receiving any message and are disabled.
 
 
 | Name      | Type | Default | Signification                                                          |
@@ -639,29 +681,29 @@ If the source is set to 255 the application takes all the messages, thus a singl
 
 ## Organizing the processes
 
-All the building blocks needs to be organized in several processes for the overall system reliability and processing distribution across CPU (local multiple cores or multiple CPU).
+All the building blocks need to be organized in several processes for the overall system reliability and processing distribution across CPU (local multiple cores or multiple CPU).
 
 Here are some recommendations based on experience:
 
-1) for reliability reason the Agent service is to be implemented in a specific process. This will allow that process to monitor other processes.
+1) for reliability reasons, the Agent service is to be implemented in a specific process. This will allow that process to monitor other processes.
 2) Connectivity to NMEA devices (via Coupler) as well as server for NMEA messages. For further processing, like NMEA2000 full decoding, a **GrpcPublisher** can be used to push the NMEA messages.
-3) It is recommended to locate energy management devices without NMEA2000 interface in a dedicated server that is instantiating the **MpptService**. This service can be associated to a Publisher that will forward NMEA messages translated from the native interface.
-4) The data server is another type of server that will hold data representing the current state of the yacht control system. It can be regularly polled by GUI type of applications. The first version is limited to engine data management but will be extended in the next versions. The data service is expected to receive NMEA messages via a **GrpcInputService**
+3) It is recommended to locate energy management devices without NMEA2000 interface in a dedicated server that is instantiating the **MpptService**. This service can be associated with a Publisher that will forward NMEA messages translated from the native interface.
+4) The data server is another type of server that will hold data representing the current state of the yacht control system. It can be regularly polled by a GUI type of applications. The first version is limited to engine data management but will be extended in the next versions. The data service is expected to receive NMEA messages via a **GrpcInputService**
 
 Many distributions are possible, they can even be spread across several physical machines. Some practical examples are available in the conf directory.
 
 ## Configuration files
 
-All configurations files are using the [Yaml language](https://yaml.org/spec/1.2.2/)
+All configuration files are using the [Yaml language](https://yaml.org/spec/1.2.2/)
 Keywords used and structure(s) are explained here below
 
 ### Messages server configuration file
 
-That is the main file read by the application upon starts and that instanciate all objects that are declared in the file with the corresponding parameters. There are also some global parameters
+That is the main file read by the application upon start, and that instanciate all objects that are declared in the file with the corresponding parameters. There are also some global parameters
 
 
 
-The file is divided in 2 main sections: global section and objects section. The file is read only upon the server startup, so to update the server parameters a restart is needed.
+The file is divided into two main sections: the global section and objects section. The file is read only upon the server startup, so to update the server parameters, a restart is needed.
 
 The global section includes the definition of the following global parameters:
 
@@ -677,9 +719,9 @@ The global section includes the definition of the following global parameters:
 | debug_configuration    | boolean                  | False                          | Allow debug traces during the process configuration phase                                                  |
 | decode_definition_only | boolean                  | False                          | If set true then the process stops once fully configured. To be used to test and debug configuration files |
 
-There is  also a subsection (log_module) allowing to adjust the log level per module for fine grain debugging
+There is also a subsection (log_module) allowing adjusting the log level per module for fine grain debugging
 
-The per object section includes a list oh object and each object as the following syntax:
+The per-object section includes a list of objects and each object as the following syntax:
 
 -<object name>:
    class: <Class name of the object>
@@ -695,7 +737,7 @@ The following sections are recognized:
 - services
 - filters
 
-Sections are not mandatory, but if no *features* are declared, only the default Python packages are loaded and not all needed classes will be present
+Sections are not mandatory, but if no *features* are declared, only the default Python packages are loaded and not all necessary classes will be present
 
 #### Features concept and Python modules
 
@@ -887,7 +929,7 @@ profiling:
 
 ### Default port assignments for servers / services
 
-In the current version, the port assignment shall be managed manually. In most of the cases that is not an issue as the configuration for one application is rather static.
+In the current version, the port assignment shall be managed manually. In most of the cases that is not an issue as the configuration for one application is static at all.
 However, having the system agent allocating the ports can be envisaged in future releases.
 
 | service                       | port | transport protocol | application protocol      |
@@ -906,7 +948,7 @@ However, having the system agent allocating the ports can be envisaged in future
 
 ### Launching a message server process
 
-A generic Python module is used to start any server "server_main.py" and it requires the configuration file that is defining the feature and parameters of the process using the *--settings option*
+A generic Python module is used to start any server "server_main.py" and it requires the configuration file defining the feature and parameters of the process using the *--settings option*
 
 
 

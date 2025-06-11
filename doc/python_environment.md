@@ -43,30 +43,49 @@ Poetry is interesting if you want to work from the tarball or from sources as it
 
 **Note: The application requires poetry 2.0.0 and over**.
 The right Python version must be installed first. If you use the Python version installed by pyenv use
-```pyenv global 3.12.3```
+```shell
+pyenv global 3.12.3
+```
 
-Installation is straightforward: ```curl -sSL https://install.python-poetry.org | python -```
+Installation is straightforward: 
+```shell
+curl -sSL https://install.python-poetry.org | python -
+```
 
 ### Installation from a tarball or from source
 
 In both cases the whole application will be installed in a single subdirectory from the local one.
 
-```tar xvzf navigation_server-2.2.0.tar.gz```
+```shell
+tar xvzf navigation_server-2.2.0.tar.gz
+```
 
 or
 
-```git clone https://github.com/Sterwen-Technology/navigation_server.git```
+```shell
+git clone https://github.com/Sterwen-Technology/navigation_server.git
+```
 
 Will bring you the necessary code locally.
 If you don't want to modify the source and/or to have to bother with git, you can stick with the tarball.
 
-To manage dependencies **poetry** is to be used.
+To manage dependencies, **poetry** is to be used.
 ```shell
 cd navigation_server
-poetry install
+poetry install --all-extras
 poetry run ./setrunenv
 ```
 *setrunenv* stores in the local directory the reference to the virtual environment created by **poetry**.
+
+In case of upgrade for a new release on the same system, here is the usual procedure:
+```shell
+tar xvf navigation_server-V2.5.1
+rm navigation_server
+ln -s navigation_server-V2.5.1 navigation_server
+cd navigation_server
+poetry sync --all-extras
+poetry run ./setrunenv
+```
 
 To launch a server just use: `./run_server <configuration file>`
 
@@ -84,28 +103,36 @@ Here are the steps to be followed to perform that installation:
 ## Running the server in a virtual environment
 
 Virtual environments are local and context dependents. So it is hard to run a Python program with its dependencies in any context on the system.
-In particular for functions that requires superuser privilege or that are launch from systemd. The paragraph covers only the case where the system has been installed from **tar** and dependencies setup via **poetry**.
+In particular for functions that require superuser privilege or that are launched from systemd. The paragraph covers only the case where the system has been installed from **tar** and dependencies setup via **poetry**.
 
-To overcome that problem a convenience script has been developed : **run_server**. That script can be called from any context and is launching the *navigation_server/server_main.py* with the correct environment.
+To overcome that problem, a convenience script has been developed: **run_server**. That script can be called from any context and is launching the *navigation_server/server_main.py* with the correct environment.
 To have this script running properly ```poetry run ./setrunenv``` must have executed after the installation of the dependencies.
 
-Usage: ```run_server <configuration file>```
+Usage: 
+```shell
+run_server <configuration file>
+```
 
 '<configuration file>' can be found in 2 ways:
 
-- The file path is existing then the file is used right away
-- The file path is not existing then the "conf" path is added to NAVIGATION_HOME environment variable or the directory of the **run_server** script itself.
+- The file path is existing, then the file is used right away
+- The file path is not existing, then the "conf" path is added to the NAVIGATION_HOME environment variable or the directory of the **run_server** script itself.
 
 Examples:
 
 Assuming that the navigation_server has been installed in */home/acme/nav*
 
-running locally: ```cd /home/acme/nav; run_server log_simulator.yml```
+running locally: 
+```shell
+cd /home/acme/nav; run_server log_simulator.yml
+```
 That is running the server with the configuration file */home/acme/nav/conf/log_simulator.yml*
 
 running the server from systemd, here is the execution line in the service file
 
-```ExecStart=/data/solidsense/navigation/run_server /data/solidsense/config/energy_management.yml```
+```unit file (systemd)
+ExecStart=/data/solidsense/navigation/run_server /data/solidsense/config/energy_management.yml
+```
 
 
 

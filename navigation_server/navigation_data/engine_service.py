@@ -17,8 +17,8 @@ import os
 import json
 
 from navigation_server.router_common import MessageServerGlobals
-from navigation_server.generated.navigation_data_pb2 import engine_data, engine_request, engine_response, engine_event
-from navigation_server.generated.navigation_data_pb2_grpc import EngineDataServicer, add_EngineDataServicer_to_server
+from navigation_server.generated.engine_data_pb2 import engine_data, engine_request, engine_response, engine_event
+from navigation_server.generated.engine_data_pb2_grpc import EngineDataServicer, add_EngineDataServicer_to_server
 
 from navigation_server.router_common import GrpcSecondaryService
 
@@ -26,7 +26,27 @@ _logger = logging.getLogger("ShipDataServer."+__name__)
 
 
 class EngineDataServicerImpl(EngineDataServicer):
+    """
+    Implementation of the EngineDataServicer interface.
 
+    This class provides methods to interact with engine data and engine events.
+    It acts as a bridge between higher-level services and the underlying engine
+    service implementation. The main purpose of this class is to handle requests
+    for engine data and events, process them with the help of the engine service,
+    and return appropriate responses.
+
+    Attributes:
+        _engine_service: A reference to the engine service instance that provides
+        core functionalities related to engine data and events. This is an
+        internal dependency used to process the requests.
+
+    Methods:
+        GetEngineData(request, context):
+            Handles requests to fetch engine data based on the provided engine ID.
+
+        GetEngineEvents(request, context):
+            Handles requests to fetch engine events based on the provided engine ID.
+    """
     def __init__(self, engine_service):
 
         self._engine_service = engine_service
@@ -57,7 +77,21 @@ class EngineDataServicerImpl(EngineDataServicer):
 
 
 class EngineDataService(GrpcSecondaryService):
+    """
+    Manages engine-related data services and interactions between the system's components, particularly
+    handling communication with engine data, events, and updates.
 
+    This class tracks engine data, processes incoming messages, and organizes storage and retrieval
+    of the engine information. It facilitates operations such as saving status, handling errors,
+    updating engine parameters, and managing engine-specific events. It also ensures periodic
+    checks for inactive engines and restarts timers accordingly.
+
+    Attributes:
+        _servicer: Initialized as None; later assigned an instance handling gRPC service.
+        _engines: A dictionary mapping engine IDs to their corresponding EngineData objects.
+        _timer: A threading.Timer object managing periodic engine checks.
+        _root_dir: File path to the root directory used for engine data storage and management.
+    """
     def __init__(self, opts):
         super().__init__(opts)
         self._servicer = None
@@ -149,7 +183,15 @@ class EngineDataService(GrpcSecondaryService):
 
 
 class EngineEvent:
+    """
+    Represents an engine event recording specific state transitions and related metadata.
 
+    This class encapsulates the details of an engine event, such as the engine's
+    previous state, current state, total operational hours, and an associated
+    timestamp. It provides methods to convert the event data into different
+    formats, including Protobuf and dictionary representations, to facilitate
+    flexible integration with other parts of a system.
+    """
     def __init__(self, total_hours, previous_state, current_state, ts:datetime.datetime = None):
         if ts is None:
             self._ts = datetime.datetime.now()
@@ -178,16 +220,89 @@ class EngineEvent:
 
 
 class EngineData:
+    """
+    Represents the data and state management for an engine.
 
+    This class is responsible for storing, managing, and updating the state of an engine.
+    It handles the initialization of engine data, updating states, generating events,
+    and persisting or loading engine-related data from files. This includes monitoring
+    the engine's state transitions like turning off, running, or stopping, as well as
+    storing performance metrics such as speed, temperature, and total running hours.
+
+    Attributes:
+    _id: int
+        The unique identifier of the engine.
+    _root_dir: str
+        The root directory for engine data storage.
+    _engine_dir: str
+        The directory specific to the engine within the root directory.
+    _status_file: str
+        File path where the engine's current state is saved.
+    _current_date: datetime.date
+        The current date used to track daily events.
+    _event_file: str
+        File path to store daily engine events data.
+    _state: int
+        The current operational state of the engine (OFF, ON, or RUNNING).
+    _speed: float
+        Current speed of the engine.
+    _first_on: datetime.datetime
+        Timestamp when the engine was first turned ON.
+    _last_message: float
+        Timestamp of the last system message or update.
+    _temperature: float
+        Current operating temperature of the engine.
+    _total_hours: float
+        Total aggregate running hours of the engine.
+    _alternator_voltage: float
+        Alternator voltage of the engine.
+    _start_time: datetime.datetime or None
+        Timestamp when the engine was last started, None if not started.
+    _stop_time: datetime.datetime or None
+        Timestamp when the engine was last stopped, None if not stopped.
+    _day_events: list
+        List of EngineEvent objects representing daily engine events.
+    """
     (OFF, ON, RUNNING) = range(0, 3)
 
     def __init__(self, engine_id:int, root_dir:str, engine_dir: str = None):
+        """
+        Initializes a new engine instance, setting up its directory structure, reading saved
+        state data if available, and configuring engine-related properties based on the
+        provided or default parameters.
+
+        Attributes:
+            _id (int): Identifier for the engine instance.
+            _root_dir (str): Path to the root directory where engine data is stored.
+            _engine_dir (str): Subdirectory for specific engine data or default path
+                               if not provided.
+            _status_file (str): Path to the status file for the engine's state.
+            _current_date (datetime.date): Current date for engine operations.
+            _event_file (str, optional): Path to the event file recording engine events.
+            _state (str): Current operational state of the engine, default initialized
+                          to 'OFF' if no engine directory is specified.
+            _speed (float): Operational speed of the engine.
+            _first_on (datetime.datetime): Timestamp of the first time the engine was started.
+            _last_message (float): Timestamp of the last message or operational signal received.
+            _temperature (float): Current operational temperature of the engine.
+            _total_hours (float): The total hours the engine has been operational.
+            _alternator_voltage (float): Current alternator voltage of the engine.
+            _start_time (datetime.datetime, optional): Start time of the current operation cycle.
+            _stop_time (datetime.datetime, optional): Stop time of the last operation cycle.
+            _day_events (list): List of events recorded for the current day.
+
+        Parameters:
+            engine_id (int): Unique identifier for the engine.
+            root_dir (str): The root directory for engine data storage.
+            engine_dir: Optional[str]: The specific directory for engine data, defaulting
+                                        to a generated directory name if not provided.
+        """
         self._id = engine_id
         self._root_dir = root_dir
         # self._status_file = os.path.join(root_dir, engine_dir, f'eng#{engine_id}-current_state')
         self._engine_dir = None
         self._current_date = None
-        self._event_file = None
+        self._event_file: str = None
         # self._event_file = os.path.join(root_dir, engine_dir, event_file)
         if engine_dir is None:
             self._state = self.OFF

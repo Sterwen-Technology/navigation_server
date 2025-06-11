@@ -277,16 +277,74 @@ class GrpcClient:
 
 class GrpcStreamingReader(NavThread):
     """
-    Manages the streaming read over gRPC
+    Manages a gRPC streaming communication in a separate thread.
+
+    The GrpcStreamingReader class is designed to handle gRPC streaming communication.
+    It extends the NavThread class to run as a separate daemon thread. This class
+    connects to a specified gRPC server, invokes the provided RPC method, and processes
+    incoming messages either by passing them to a callback function or by pushing them
+    to an output queue. It also incorporates error handling and facilitates orderly
+    thread termination.
+
+    Attributes:
+        _request (any): The gRPC request object to send to the server.
+        _rpc_func (Callable): The gRPC remote procedure call function to invoke.
+        _process_msg_callback (Callable): The callback function used to process received
+            messages when no output queue is provided.
+        _process_func (Callable): Determines how to process incoming gRPC messages
+            (either push to queue or invoke callback).
+        _out_queue (queue.Queue): A shared queue to store received messages when provided.
+        _stop_flag (bool): A flag indicating whether the thread should stop.
+        _grpc_server (any): The gRPC server instance to communicate with.
+        _error_callback (Callable): A callback function to handle errors.
+
+    Methods:
+        send_callback(msg):
+            Executes the user-defined callback function for processing a received message.
+
+        push_to_queue(msg):
+            Pushes a received message into the shared queue.
+
+        nrun():
+            Executes the main logic of the thread, which reads from the gRPC stream.
+            Handles messages and errors in the streaming process.
+
+        stop():
+            Signals the thread to stop execution during its next processing loop.
     """
-    def __init__(self, grpc_server, rpc_func, request, out_queue:queue.Queue, error_callback):
+    def __init__(self, grpc_server, rpc_func, request, out_queue:queue.Queue, process_msg_callback, error_callback):
+        """
+        Represents a thread for handling gRPC requests, processing messages, and managing output queues
+        or callbacks.
+
+        Attributes:
+            _request: Request object containing client information.
+            _rpc_func: Callable function for handling RPC requests.
+            _out_queue (queue.Queue): Queue for managing outgoing messages if provided.
+            _process_msg_callback: Callable function for processing messages in callback mode.
+            _process_func: Function used for either pushing messages to the queue or sending via callback.
+            _stop_flag: Boolean flag to indicate if the thread should stop its operations.
+            _grpc_server: Reference to the gRPC server instance.
+            _error_callback: Callable function for handling errors.
+        """
         super().__init__(name=request.client, daemon=True)
         self._request = request
         self._rpc_func = rpc_func
-        self._out_queue: queue.Queue = out_queue
+        if out_queue is None:
+            self._process_msg_callback = process_msg_callback
+            self._process_func = self.send_callback
+        else:
+            self._out_queue: queue.Queue = out_queue
+            self._process_func = self.push_to_queue
         self._stop_flag = False
         self._grpc_server = grpc_server
         self._error_callback = error_callback
+
+    def send_callback(self, msg):
+        self._process_msg_callback(msg)
+
+    def push_to_queue(self, msg):
+        self._out_queue.put(msg, block=True)
 
     def nrun(self):
         _logger.debug("Starting gRPC stream reading thread %s" % self._request.client)
@@ -294,7 +352,7 @@ class GrpcStreamingReader(NavThread):
             for msg in self._rpc_func(self._request):
                 if self._stop_flag:
                     break
-                self._out_queue.put(msg, block=True)
+                self._process_func(msg)
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
                 _logger.info(f"Server error:{err.details()}")
@@ -329,7 +387,7 @@ class ServiceClient:
         self._stub_class = stub_class
         self._stub = None
         self._server: GrpcClient = None
-        self._read_queue = queue.Queue(20)
+        self._read_queue = None
         self._stream_reader = None
 
     def attach_server(self, server:GrpcClient):
@@ -399,32 +457,91 @@ class ServiceClient:
             _logger.error("attempt to call a service not attached to a server")
             raise GrpcAccessException
 
-    def _start_read_stream(self, rpc_func, request):
+    def _start_read_stream_to_queue(self, rpc_func, request):
         """
-        prepare and open the stream
+        Starts a gRPC streaming reader and initializes the read queue.
+
+        This method attempts to start a gRPC streaming reader to process
+        incoming streams using the provided remote procedure call (RPC)
+        function and request. If the streaming reader is already running,
+        an error is logged, and the method exits without making changes.
+
+        Parameters:
+        rpc_func: Callable
+            The gRPC remote procedure call function to invoke for the
+            stream.
+        request: Any
+            The request object passed to the gRPC call.
+
+        Raises:
+        queue.Full
+            If the internal read queue exceeds its maximum size while
+            processing messages.
         """
-        _logger.debug("GrpcClient => Creating Starting gRPC stream reader")
+        _logger.debug("GrpcClient => Creating Starting gRPC stream reader with a queue")
         if self.stream_is_alive():
             _logger.error("Grpc Stream reader: attempt to start the stream reader while it is already running")
             return
-        self._stream_reader = GrpcStreamingReader(self._server, rpc_func, request, self._read_queue, self._stream_error)
+        self._read_queue = queue.Queue(20)
+        self._stream_reader = GrpcStreamingReader(self._server, rpc_func, request, self._read_queue, None, self._stream_error)
+        self._stream_reader.start()
+
+    def _start_read_stream_to_callback(self, rpc_func, request, process_msg_callback):
+        """
+        Starts and manages a gRPC streaming reader which handles incoming stream data
+        using a provided callback function. Ensures that only one streaming reader is
+        active at a time.
+
+        Args:
+            rpc_func: Callable
+                The gRPC function used to initialize the stream.
+            request: object
+                The request object to send when starting the gRPC stream.
+            process_msg_callback: Callable
+                A callback function to handle messages received from the stream.
+
+        Returns:
+            None
+        """
+        _logger.debug("GrpcClient => Creating Starting gRPC stream reader with a callback")
+        if self.stream_is_alive():
+            _logger.error("Grpc Stream reader: attempt to start the stream reader while it is already running")
+            return
+        self._stream_reader = GrpcStreamingReader(self._server, rpc_func, request, None, process_msg_callback, self._stream_error)
         self._stream_reader.start()
 
     def _read_stream(self):
+        """
+        Reads data from a gRPC stream queue. This method checks the state of the
+        stream reader, attempts to retrieve data from the queue, and raises
+        appropriate exceptions in case of errors or timeouts.
+
+        Raises:
+            GrpcAccessException: If the stream reader is not initialized or
+                has terminated unexpectedly.
+            GrpcStreamTimeout: If the queue times out while waiting for a
+                stream message and the stream reader is still alive.
+        """
         if self._stream_reader is None:
+            _logger.error("GrpcStreamReader not started")
             raise GrpcAccessException("StreamReader not started")
+        if self._read_queue is None:
+            _logger.error("GrpcStreamReader not in queue mode")
+            raise GrpcAccessException("GrpcStreamReader not in queue mode")
         try:
-            return self._read_queue.get(block=True, timeout=1.0)
+            msg = self._read_queue.get(block=True, timeout=1.0)
+            _logger.debug("GrpcStreamReader got msg PGN %d" % msg.pgn)
+            return msg
         except queue.Empty:
             if self._stream_reader is None:
                 # ok the steam is over
                 raise GrpcAccessException("Grpc StreamReader terminated")
             elif self._stream_reader.is_alive():
-                _logger.debug("Stream time out")
-                raise GrpcStreamTimeout
+                _logger.debug("Grpc Stream time out")
+                raise GrpcStreamTimeout(f"GrpcStreamReader time out on:{self.server.address}")
             else:
                 _logger.debug("StreamReader gRPC error suspected")
-                raise GrpcAccessException("GrpcError during stream read")
+                raise GrpcAccessException(f"GrpcError during stream read on:{self.server.address}")
 
     def _stop_read_stream(self):
         if self._stream_reader is not None:
@@ -444,6 +561,11 @@ class ServiceClient:
 
     def server_state(self):
         return self._server.state
+
+    def _wait_for_stream_end(self):
+        if self._stream_reader is not None:
+            self._stream_reader.join()
+            self._stream_reader = None
 
     @property
     def server_connected(self) -> bool:
@@ -466,7 +588,19 @@ class GrpcStreamIteratorError(Exception):
 
 
 class GrpcSendStreamIterator:
+    """
+    An iterator for sending gRPC stream data.
 
+    This class serves as a wrapper to facilitate sending data in a gRPC stream
+    by utilizing a custom function to fetch the next data item. It implements
+    the iterator protocol, making it suitable for use in loops or any context
+    that requires iteration.
+
+    Attributes:
+        _get_next_function: Callable without parameters that returns the next
+            object from the stream.
+        _service: The gRPC service associated with this stream.
+    """
     def __init__(self, service, get_next_function):
         self._get_next_function = get_next_function
         self._service = service

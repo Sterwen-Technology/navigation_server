@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import navigation_server.generated.navigation_data_pb2 as navigation__data__pb2
+import navigation_server.generated.engine_data_pb2 as engine__data__pb2
 
 
 GRPC_GENERATED_VERSION = '1.66.2'
@@ -19,7 +19,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in navigation_data_pb2_grpc.py depends on'
+        + f' but the generated code in engine_data_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -37,13 +37,13 @@ class EngineDataStub(object):
         """
         self.GetEngineData = channel.unary_unary(
                 '/EngineData/GetEngineData',
-                request_serializer=navigation__data__pb2.engine_request.SerializeToString,
-                response_deserializer=navigation__data__pb2.engine_response.FromString,
+                request_serializer=engine__data__pb2.engine_request.SerializeToString,
+                response_deserializer=engine__data__pb2.engine_response.FromString,
                 _registered_method=True)
         self.GetEngineEvents = channel.unary_unary(
                 '/EngineData/GetEngineEvents',
-                request_serializer=navigation__data__pb2.engine_request.SerializeToString,
-                response_deserializer=navigation__data__pb2.engine_response.FromString,
+                request_serializer=engine__data__pb2.engine_request.SerializeToString,
+                response_deserializer=engine__data__pb2.engine_response.FromString,
                 _registered_method=True)
 
 
@@ -67,13 +67,13 @@ def add_EngineDataServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetEngineData': grpc.unary_unary_rpc_method_handler(
                     servicer.GetEngineData,
-                    request_deserializer=navigation__data__pb2.engine_request.FromString,
-                    response_serializer=navigation__data__pb2.engine_response.SerializeToString,
+                    request_deserializer=engine__data__pb2.engine_request.FromString,
+                    response_serializer=engine__data__pb2.engine_response.SerializeToString,
             ),
             'GetEngineEvents': grpc.unary_unary_rpc_method_handler(
                     servicer.GetEngineEvents,
-                    request_deserializer=navigation__data__pb2.engine_request.FromString,
-                    response_serializer=navigation__data__pb2.engine_response.SerializeToString,
+                    request_deserializer=engine__data__pb2.engine_request.FromString,
+                    response_serializer=engine__data__pb2.engine_response.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -101,8 +101,8 @@ class EngineData(object):
             request,
             target,
             '/EngineData/GetEngineData',
-            navigation__data__pb2.engine_request.SerializeToString,
-            navigation__data__pb2.engine_response.FromString,
+            engine__data__pb2.engine_request.SerializeToString,
+            engine__data__pb2.engine_response.FromString,
             options,
             channel_credentials,
             insecure,
@@ -128,8 +128,8 @@ class EngineData(object):
             request,
             target,
             '/EngineData/GetEngineEvents',
-            navigation__data__pb2.engine_request.SerializeToString,
-            navigation__data__pb2.engine_response.FromString,
+            engine__data__pb2.engine_request.SerializeToString,
+            engine__data__pb2.engine_response.FromString,
             options,
             channel_credentials,
             insecure,

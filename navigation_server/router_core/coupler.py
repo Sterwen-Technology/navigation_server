@@ -302,10 +302,9 @@ class Coupler(NavThread):
                     break
                 else:
                     continue
-            except Exception as e:
+            except Exception as err:
                 # catch all
-                _logger.error("Un-caught exception during coupler %s read: %s" % (self._name, e))
-
+                _logger.error(f"Un-caught exception during coupler {self._name} read => class {err.__class__.__name__} | {err}" )
                 self.close()
                 continue
 

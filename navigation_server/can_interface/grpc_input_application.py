@@ -13,22 +13,22 @@ import logging
 
 from .nmea2k_application import NMEA2000Application
 from navigation_server.nmea2000_datamodel import NMEA2000DecodedMsg
-from navigation_server.nmea2000 import GrpcDataService
+from navigation_server.nmea2000 import GrpcInputDataService
 from navigation_server.router_core import NMEA2000Msg
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-class GrpcInputApplication(GrpcDataService, NMEA2000Application):
+class GrpcInputApplication(GrpcInputDataService, NMEA2000Application):
 
     def __init__(self, opts):
-        GrpcDataService.__init__(self, opts, callback_pb=self.input_message_pb, callback_n2k=self.input_message)
+        GrpcInputDataService.__init__(self, opts, callback_pb=self.input_message_pb, callback_n2k=self.input_message)
         self._controller_name = opts.get('controller', str, None)
 
     def start_application(self):
         _logger.debug("GrpcInputApplication => start")
-        GrpcDataService.finalize(self)
+        GrpcInputDataService.finalize(self)
         super().start_application()
         super().open()
 

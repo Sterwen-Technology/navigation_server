@@ -48,6 +48,7 @@ gen_protobuf nmea2000_classes_iso_gen
 gen_protobuf nmea2000_classes_gen
 gen_protobuf iso_name
 gen_protobuf navigation_data
+gen_protobuf engine_data
 gen_protobuf navigation_objects
 gen_protobuf gnss nmea_messages nmea2000
 gen_protobuf network uuid

@@ -18,7 +18,7 @@ from navigation_server.router_common import (NavigationConfiguration, Navigation
                                              init_options, set_root_package, ConfigurationException, AgentInterface,
                                              ObjectCreationError, GrpcServer)
 
-MessageServerGlobals.version = "2.4.3"
+MessageServerGlobals.version = "2.5.0"
 default_base_dir = "/"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -65,11 +65,12 @@ def server_main():
     assert GrpcServer.grpc_server_global is not None
     _logger.debug("Starting the main server")
     if config.main_server.start():
-        # register the process in agent
+        # register the process in agent service if needed
         if not config.main_server.is_agent():
-            agent = AgentInterface().send_confirmation()
+            if config.get_option('connect_agent', True):
+                agent = AgentInterface().send_confirmation()
         if opts.timer is not None:
-            # for debug only trace running threads at regular interval
+            # for debug only trace running threads at a regular interval
             config.main_server.start_analyser(opts.timer)
         # wait for all threads to stop now
         config.main_server.wait()

@@ -102,7 +102,7 @@ class NMEA2KActiveController(NMEA2KController):
         self._catch_all = []
         set_global_var("NMEA2K_ECU", self)
         # remote access
-        self._read_subscribers = []
+        self._read_subscribers = {}     # 2025-06-10 changed to dictionary
         self._read_subscribers_lock = threading.Lock()
 
     @property
@@ -233,27 +233,18 @@ class NMEA2KActiveController(NMEA2KController):
 
     def add_read_subscriber(self, client, select_source:list, reject_source:list, select_pgn:list, reject_pgn:list, timeout:float) -> N2KReadSubscriber:
         self._read_subscribers_lock.acquire()
-        if self._no_sub_duplicate(client):
-            sub = N2KReadSubscriber(client, select_source, reject_source, select_pgn, reject_pgn, timeout)
-            self._read_subscribers.append(sub)
-            self._read_subscribers_lock.release()
-            return sub
-        else:
-            _logger.error(f"N2K Active controller duplicate subscriber {client} rejected")
-            self._read_subscribers_lock.release()
-            raise ValueError
-
-    def _no_sub_duplicate(self, client) -> bool:
-        for sub in self._read_subscribers:
-            if sub.client == client:
-                return False
-        return True
+        sub = N2KReadSubscriber(client, select_source, reject_source, select_pgn, reject_pgn, timeout)
+        self._read_subscribers[client] = sub
+        self._read_subscribers_lock.release()
+        return sub
 
     def remove_read_subscriber(self, client):
         self._read_subscribers_lock.acquire()
-        for sub in self._read_subscribers:
-            if sub.client == client:
-                self._read_subscribers.remove(sub)
+        try:
+            del self._read_subscribers[client]
+        except KeyError:
+            _logger.error(f"CAN Read subscribers removing non existing client {client} => ignored")
+            pass
         self._read_subscribers_lock.release()
 
     def process_msg(self, msg: NMEA2000Msg):
@@ -280,7 +271,8 @@ class NMEA2KActiveController(NMEA2KController):
             else:
                 _logger.debug("Active controller message dispatch sa=%d pgn =%d" % (msg.sa, msg.pgn))
                 # new in version 2.4.3 dispatch to all subscribers
-                for subscriber in self._read_subscribers:
+                subscribers = list(self._read_subscribers.values())
+                for subscriber in subscribers:
                     try:
                         subscriber.push_message(msg)
                     except queue.Full:

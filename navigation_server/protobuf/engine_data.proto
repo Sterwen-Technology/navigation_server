@@ -1,6 +1,6 @@
 //-------------------------------------------------------------------------------
-// Name:        navigation_data.proto
-// Purpose:     protobuf and grpc for remote control of navigation server
+// Name:        engine_data.proto
+// Purpose:     protobuf and grpc for engine data
 //
 // Author:      Laurent Carré
 //

@@ -10,3 +10,4 @@
 #-------------------------------------------------------------------------------
 
 from .engine_service import EngineDataService
+from .navigation_data_service import NavigationDataService

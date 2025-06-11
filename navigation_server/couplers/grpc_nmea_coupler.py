@@ -12,7 +12,7 @@
 import logging
 import queue
 
-from navigation_server.nmea2000 import GrpcDataService
+from navigation_server.nmea2000 import GrpcInputDataService
 from navigation_server.router_core import Coupler, CouplerTimeOut, NMEA0183Msg
 from navigation_server.router_common import N2K_MSG, N0183D_MSG, NavGenericMsg
 
@@ -27,9 +27,9 @@ class GrpcNmeaCoupler(Coupler):
         # create the server
         self._decode_n2k = opts.get('decoded_nmea2000', bool, False)
         if self._decode_n2k:
-            self._service = GrpcDataService(opts, self.n2k_msg_in, self.nmea0183_msg_in, self.decoded_nmea_in)
+            self._service = GrpcInputDataService(opts, self.n2k_msg_in, self.nmea0183_msg_in, self.decoded_nmea_in)
         else:
-            self._service = GrpcDataService(opts, self.n2k_msg_in, self.nmea0183_msg_in)
+            self._service = GrpcInputDataService(opts, self.n2k_msg_in, self.nmea0183_msg_in)
         self._queue = queue.Queue(20)
         self._direction = self.READ_ONLY  # that is a mono directional coupler
 

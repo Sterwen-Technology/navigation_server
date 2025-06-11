@@ -70,7 +70,19 @@ class AgentExecutor(threading.Thread):
 
 
 class SystemdProcess:
+    """
+    Represents a wrapper for managing systemd processes and their states.
 
+    This class encapsulates functionalities for interacting with systemd services,
+    managing the process lifecycle, querying their statuses, and handling their
+    attributes. It provides methods to start, stop, restart, and query the status
+    of systemd services while maintaining state synchronization internally.
+
+    Attributes:
+        NOT_STARTED (int): State representing a process that has not started.
+        RUNNING (int): State representing a running process.
+        STOPPED (int): State representing a stopped process.
+    """
     (NOT_STARTED, RUNNING, STOPPED) = range(0,3)
 
     def __init__(self, opts):
