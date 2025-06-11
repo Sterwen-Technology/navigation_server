@@ -14,8 +14,8 @@ import time
 
 
 from navigation_server.router_common import (N2K_MSG, NavGenericMsg,
-                                             CANGrpcStreamReader, GrpcStreamTimeout, GrpcAccessException)
-from navigation_server.router_core import NMEA2000Msg, Coupler, CouplerReadError, CouplerTimeOut
+                                              GrpcStreamTimeout, GrpcAccessException)
+from navigation_server.router_core import NMEA2000Msg, Coupler, CANGrpcStreamReader, CouplerReadError, CouplerTimeOut
 
 from navigation_server.generated.n2k_can_service_pb2 import CANReadRequest
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb

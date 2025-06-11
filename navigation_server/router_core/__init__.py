@@ -22,5 +22,6 @@ from .nmea2000_msg import (NMEA2000Msg, NMEA2000Writer, N2KRawDecodeError, N2KEn
 from .console import Console
 from .tcp_server import NavTCPServer, ConnectionRecord
 from .grpc_nmea_server import GrpcNMEAServerService
+from .can_grpc_stream_reader import CANGrpcStreamReader
 
 
