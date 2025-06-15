@@ -4,6 +4,7 @@
 # $1 => directory where the services are defined
 SOURCE_DIR=$1
 cp "$SOURCE_DIR"/navigation.service /lib/systemd/system
+cp "$SOURCE_DIR"/can_server.service /lib/systemd/system
 cp "$SOURCE_DIR"/energy.service /lib/systemd/system
 cp "$SOURCE_DIR"/navigation_agent.service /lib/systemd/system
 cp "$SOURCE_DIR"/navigation_data.service /lib/systemd/system

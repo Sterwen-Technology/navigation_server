@@ -39,8 +39,8 @@ couplers:
 - MPPTVEDirect:
     class: VEDirectCoupler
     device: /dev/ttyUSB4
-    interface: simulation
-    logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
+    interface: serial
+    # logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
     protocol: non_nmea
     max_attempt: 1
 

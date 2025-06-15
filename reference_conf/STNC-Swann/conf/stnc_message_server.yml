@@ -17,18 +17,11 @@ data_dir: /data/navigation/data
 # log_file: test_fast_packet
 log_module:
   router_core.coupler: INFO
-  nmea2000.nmea2000_msg: INFO
-  can_interface.nmea2k_controller: INFO
-  nmea2000.nmea2k_active_controller: INFO
-  nmea2000.nmea2k_device: INFO
-  can_interface.nmea2k_application: INFO
-  nmea2000.n2k_name: INFO
-  can_interface.nmea2k_can_interface: INFO
-  nmea2000.nmea2k_iso_transport: INFO
-  nmea2000.nmea2k_iso_messages: INFO
-  can_interface.nmea2k_can_coupler: INFO
-  nmea2000_devices.nmea2000_device: INFO
-  can_interface.nmea2k_can_service: DEBUG
+  couplers.nmea2k_grpc_coupler: INFO
+  router_common.client_common: INFO
+  router_common.can_grpc_stream_reader: INFO
+  
+  
 
 features:
   - router_core
@@ -67,12 +60,8 @@ couplers:
 
 - CANCoupler:
     class: N2KGrpcCoupler
-    server: 127.0.0.1
-    port: 4512
-
-- GNSSCoupler:
-    class: GNSSInputCoupler
-    gnss_input: GNSS
+    source_server: 127.0.0.1
+    source_port: 4512
 
 - MiniPlex3:
     class: ShipModulInterface
@@ -83,6 +72,14 @@ couplers:
     protocol: nmea2000
     autostart: false
     trace_raw: false
+
+- SolarPanel:
+    class: MpptCoupler
+    port: 4505
+    server: NMEAServer
+    direction: read_only
+    report_timer: 20
+
     
 filters:
 
@@ -100,16 +97,16 @@ services:
 
 publishers:
 
-- SendNMEA2000:
-    class: GrpcPublisher
-    active: true
-    decode_nmea2000: false
-    nmea0183: convert_strict
-    address: 127.0.0.1
-    port: 4508
-    max_retry: 0
-    filters: [Engine]
-    couplers: [CANCoupler]
+#- SendNMEA2000:
+#    class: GrpcPublisher
+#    active: true
+#    decode_nmea2000: false
+#    nmea0183: convert_strict
+#    address: 127.0.0.1
+#    port: 4508
+#    max_retry: 0
+#    filters: [Engine]
+#    couplers: [CANCoupler]
 
 
 - TraceOutput:

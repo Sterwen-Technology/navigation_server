@@ -51,6 +51,8 @@ services:
       baudrate: 38400
       trace: false
       push_to_server: true
+      address: 127.0.0.1
+      port: 4512
 
 couplers:
 
