@@ -773,7 +773,7 @@ Here are the features included with the current version
 
 First example with only the connection to a replay server
 
-```
+```Yaml
 function: Navigation messages router
 server_name: navigation_router
 log_level: INFO
@@ -843,84 +843,9 @@ services:
     class: Console
     server: gRPCMain
 
-
 ```
 
-Second example with direct CAN access
 
-```
-function: Navigation messages router (CAN)
-server_name: navigation_router
-log_level: INFO
-trace_dir: /mnt/meaban/Bateau/tests
-# log_file: test_fast_packet
-log_module:
-  nmea_routing.coupler: INFO
-  nmea2000.nmea2000_msg: INFO
-  nmea2000.nmea2k_controller: INFO
-  nmea2000.nmea2k_active_controller: DEBUG
-  nmea2000.nmea2k_device: INFO
-  nmea2000.nmea2k_application: DEBUG
-  nmea2000.n2k_name: INFO
-  nmea2000.nmea2k_can_interface: INFO
-  nmea2000.nmea2k_can_coupler: DEBUG
-
-features:
-  - router_core
-  - nmea2000
-  - can_interface
-
-servers:
-
-- Main:
-    class: NavigationMainServer
-
-- NMEAServer:
-      class: NMEAServer
-      port: 4500
-      nmea2000: dyfmt
-
-- gRPCMain:
-      class: GrpcServer
-      port: 4502
-
-- NMEANetwork:
-      class: NMEA2KActiveController
-      trace: false
-      channel: can0
-      applications: [CANCoupler]
-
-- NMEAOutput:
-    class: NMEASenderServer
-    port: 4503
-    nmea2000: dyfmt
-    coupler: CANCoupler
-    
-services:
-
-- Console:
-      class: Console
-      server: gRPCMain
-
-couplers:
-
-- CANCoupler:
-    class: DirectCANCoupler
-    autostart: true
-
-filters:
-
-- FastPacket:
-    class: NMEA2000Filter
-    pgn: [129029, 126996, 129540]
-    action: select
-
-- RaymarineProprietary:
-    class: NMEA2000Filter
-    pgn: [126720]
-    action: select
-
-```
 #### Profiling
 
 To tackle performance problems, it is possible to enable profiling on specific threads.
