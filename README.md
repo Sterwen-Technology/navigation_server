@@ -33,7 +33,7 @@ Installations files are available here (tar and wheel): [Sterwen Technology down
 
 ### Setting up the Python environment and running servers
 
-Please refer to the specific documentation: [Python installation](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/python_environment.md)
+Please refer to the specific documentation: [Python installation](doc/python_environment.md)
 
 
 
@@ -67,7 +67,7 @@ Another service is the **can** service that is initializing the CAN bus on boot.
    - PICAN2 HAT on RPi3 or RPi4
    - SolidRun NXP based gateways: Industrial N6 and N8 Compact with CAN interface
  - Victron VE Direct devices (requires a dedicated process to be configured)
- - Ublox GNSS Module on STNC800 systems
+ - Ublox GNSS Module on STNC800 systems. See specific documentation: [STNC internal GNSS documentation](doc/stnc-gnss.md)
 
 The most versatile solution is to use a device that has a direct CAN bus access. In that case, no specific hardware is required and more features can be deployed as this system becomes a real ECU (Electronic Control Unit) that can run one or more Controller Applications (NMEA2000 devices).
 The same device could combine some NMEA0183 inputs on serial port(s) and NMEA2000 bus communication.
@@ -94,11 +94,11 @@ For production the system should be run through *systemd*. Services that can be 
 
 The documentation is located in the *doc* directory.
 
-[message_server documentation](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/Navigation%20message%20server.md)
+[message_server documentation](doc/Navigation%20message%20server.md)
 
-[System API](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/Navigation%20system%20API.md)
+[System API](doc/Navigation%20system%20API.md)
 
-[NMEA2000 support](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/NMEA2000.md)
+[NMEA2000 support](doc/NMEA2000.md)
 
 [Internal GNSS (STNC) usage and configuration](doc/stnc-gnss.md)
 

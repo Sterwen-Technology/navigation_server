@@ -89,7 +89,7 @@ Inside the *navigation_server* process, the following entities can be configured
 
 *Note on the parameter tables: Only the parameters attached to the actual class are described in each class. To have the full parameter set that is applicable, all superclasses descriptions must also be looked at.*
 
-![server concepts](https://github.com/Sterwen-Technology/navigation_server/blob/main/doc/Nmea_message-server-concept-1.png)
+![server concepts](Nmea_message-server-concept-1.png)
 
 ### Servers
 The servers are servers allowing any navigation or control application to access the flow of data via TCP/IP.

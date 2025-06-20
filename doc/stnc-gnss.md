@@ -40,7 +40,7 @@ However, in Europe, only the 2 first are providing meaning positioning data. By 
 
 ### interface for the GNSSService
 
-```
+```protobuf
 message SatellitesInView {
   uint32 svid=1;      // satellite ID
   float elevation=2;  // decimal degrees
