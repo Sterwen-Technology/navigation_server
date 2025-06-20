@@ -81,7 +81,7 @@ class AutoPilotEmulator(NMEA2000DeviceImplementation):
         self._gnss_date = None
 
     def device_class_function(self):
-        return 60, 150
+        return 60, 145
 
     def cross_track_error(self, msg: NMEA2000Msg):
         msg129283 = Pgn129283Class(message=msg)

@@ -31,31 +31,32 @@ class N2KGrpcCoupler(Coupler, CANGrpcStreamReader):
         self._mode = self.NMEA2000
 
     def open(self):
-        _logger.debug("N2KGrpcCoupler open")
-        return self.start_stream_to_queue()
+        _logger.debug("N2KGrpcCoupler open attempt with state %d" % self._state)
+        if self.start_stream_to_queue():
+            _logger.info(f"N2KGrpcCoupler {self.object_name()} connected")
+            self._state = self.CONNECTED
+            return True
+        else:
+            _logger.error(f"N2KGrpcCoupler {self.object_name()} cannot connect to server")
+            return False
 
     def _read(self):
-        if self._client.connected:
-            _logger.debug("N2KGrpcCoupler read")
-            try:
-                pb_msg = self._read_stream()
-                _logger.debug("N2KGrpcCoupler message received with PGN %d" % pb_msg.pgn)
-            except GrpcAccessException:
-                # ok, we have a problem, let's wait and restart later
-                time.sleep(1.0)
-                self._state = self.NOT_READY
-                _logger.debug("N2KGrpcCoupler => StreamReadError")
-                raise CouplerReadError
-            except GrpcStreamTimeout:
-                _logger.debug("N2KGrpcCoupler => Timeout")
-                raise CouplerTimeOut
-            n2k_msg = NMEA2000Msg(pgn=pb_msg.pgn, protobuf=pb_msg)
-            return NavGenericMsg(N2K_MSG, msg=n2k_msg)
-        else:
-            # let's wait
-            time.sleep(10.0)
+        _logger.debug("N2KGrpcCoupler read")
+        try:
+            pb_msg = self._read_stream()
+            _logger.debug("N2KGrpcCoupler message received with PGN %d" % pb_msg.pgn)
+        except GrpcAccessException:
+            # ok, we have a problem, let's wait and restart later
+            time.sleep(1.0)
             self._state = self.NOT_READY
+            _logger.debug("N2KGrpcCoupler => StreamReadError")
             raise CouplerReadError
+        except GrpcStreamTimeout:
+            _logger.debug("N2KGrpcCoupler => Timeout")
+            raise CouplerTimeOut
+        n2k_msg = NMEA2000Msg(pgn=pb_msg.pgn, protobuf=pb_msg)
+        return NavGenericMsg(N2K_MSG, msg=n2k_msg)
+
 
     def stop(self):
         super().stop()

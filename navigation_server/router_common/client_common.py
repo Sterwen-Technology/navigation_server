@@ -97,9 +97,13 @@ class GrpcClient:
         is created to indicate the connection status.
 
         """
-        if self._state != self.NOT_CONNECTED:
+        if self._state == self.CONNECTED:
             _logger.error(f"GrpcClient attempt to connect to {self._server} while already connected")
             return
+        elif self._state == self.CONNECTING:
+            _logger.error(f"GrpcClient attempt to connect to {self._server} while connecting")
+            return
+        _logger.info(f"GrpcClient connect attempt to {self._server}")
         self._wait_connect.clear()
         self._channel = grpc.insecure_channel(self._server)
         self._channel.subscribe(self.channel_callback)
@@ -162,6 +166,10 @@ class GrpcClient:
     @property
     def connected(self) -> bool:
         return self._state == self.CONNECTED
+
+    @property
+    def not_connected(self) -> bool:
+        return self._state == self.NOT_CONNECTED
 
     def server_call(self, rpc_func, req, response_class):
         """
@@ -570,6 +578,10 @@ class ServiceClient:
     @property
     def server_connected(self) -> bool:
         return self._server.connected
+
+    @property
+    def server_not_connected(self) -> bool:
+        return self._server.not_connected
 
     def server_connect(self):
         self._server.connect()

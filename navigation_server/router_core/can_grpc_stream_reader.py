@@ -108,9 +108,10 @@ class CANGrpcStreamReader(ServiceClient):
 
     def start_stream_to_queue(self):
         _logger.debug("CANGrpcStreamReader start stream to queue")
-        if not self._client.connected:
-            self._client.connect()
-            success = self._client.wait_connect(20.0)
+        if self.server_not_connected:
+            _logger.debug("CANGrpcStreamReader start => not connected")
+            self.server_connect()
+            success = self.server_connect_wait(20.0)
         else:
             success = True
         if success:
@@ -124,9 +125,9 @@ class CANGrpcStreamReader(ServiceClient):
 
     def start_stream_to_callback(self, process_msg_callback):
         _logger.debug("CANGrpcStreamReader start stream to callback")
-        if not self._client.connected:
-            self._client.connect()
-            success = self._client.wait_connect(20.0)
+        if  self.server_not_connected:
+            self.server_connect()
+            success = self.server_connect_wait(20.)
         else:
             success = True
         if success:
@@ -155,7 +156,7 @@ class CANGrpcStreamReader(ServiceClient):
         Returns:
             NMEA2000Msg: Parsed message containing the PGN and protobuf data.
         """
-        if self._client.connected:
+        if self.server_connected:
             try:
                 pb_msg = self._read_stream()
                 _logger.debug("N2KGrpcCoupler message received with PGN %d" % pb_msg.pgn)

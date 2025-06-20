@@ -63,7 +63,11 @@ class Publisher(NavThread):
             self._couplers = {}
             for inst_name in inst_list:
                 set_hook(inst_name, self.add_coupler)
-                self._couplers[inst_name] = resolve_ref(inst_name)
+                coupler = resolve_ref(inst_name)
+                if coupler is None:
+                    _logger.error(f"Publisher {object_name} reference to coupler {inst_name} not found")
+                else:
+                    self._couplers[inst_name] = resolve_ref(inst_name)
             daemon = False
             self._filter_select = opts.get('filter_select', bool, False)
 

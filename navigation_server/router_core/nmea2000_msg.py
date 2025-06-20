@@ -265,6 +265,24 @@ def fromProprietaryNmea(msg: NMEA0183Msg) -> NMEA2000Msg:
 
 
 def decodePGDY(msg: NMEA0183Msg) -> NMEA2000Msg:
+    """
+    Decode a PGDY NMEA 0183 message to an NMEA 2000 message.
+
+    This function processes a received or transmitted PGDY message in the NMEA 0183
+    format and converts it into an NMEA 2000 message. The function ensures that
+    address and payload fields are properly interpreted and decoded as needed.
+
+    Parameters:
+        msg (NMEA0183Msg): The NMEA0183 message to decode, containing all the necessary
+            fields to construct the NMEA2000 message.
+
+    Returns:
+        NMEA2000Msg: The constructed NMEA2000 message based on the decoded PGDY fields.
+
+    Raises:
+        N2KRawDecodeError: If the input message contains invalid base64 encoded payload
+            data or does not match the expected PGDY message format.
+    """
     fields = msg.fields()
     if len(fields) == 6:
         ''' Receive message'''

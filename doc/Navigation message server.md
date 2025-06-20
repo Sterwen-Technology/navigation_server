@@ -356,7 +356,8 @@ The coupler creates a gRPC service on which NMEA0183 or NMEA2000 can be pushed (
 
 #### N2KGrpcCoupler (Coupler)
 
-This coupler is pulling a stream of NMEA2000 messages via gRPC. It can connect to the CAN server, for instance
+This coupler is pulling a stream of NMEA2000 messages via gRPC. This is a read-only coupler. It can connect to the CAN server, for instance.
+This coupler is processing only NMEA2000 messages. Communication is using the CAN service (see n2k_can_service.proto)
 
 | Name           | Type      | Default | Signification                                                                    |
 |----------------|-----------|---------|----------------------------------------------------------------------------------|
@@ -367,6 +368,15 @@ This coupler is pulling a stream of NMEA2000 messages via gRPC. It can connect t
 | select_pgn     | list[int] | None    | optional: list all PGN that will be pushed on the stream                         |
 | reject_pgn     | list[int] | None    | valid only if there is no PGN selected. Reject all PGN listed                    |
 
+#### N2KGrpcSendCoupler (Coupler)
+
+The coupler sends NMEA2000 messages to the CAN server using CAN service (see n2k_can_service.proto).
+
+| Name          | Type   | Default | Signification                                                                 |
+|---------------|--------|---------|-------------------------------------------------------------------------------|
+| target_server | string | None    | ip address or URL for the target                                              |
+| target_port   | int    | 0       | port on the target server                                                     |
+| device        | str    | None    | name of the device (application) in the CAN server that will send the message |
 
 
 ### Services

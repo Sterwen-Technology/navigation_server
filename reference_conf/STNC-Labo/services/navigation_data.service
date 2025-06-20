@@ -1,11 +1,11 @@
 [Unit]
-Description=Energy management Server
+Description=Data Server
 Requires=network.target
 
 [Service]
 Type=simple
 User=laurent
-ExecStart=/home/laurent/navigation_server/run_server /data/navigation/config/energy_management.yml
+ExecStart=/home/laurent/navigation_server/run_server /data/navigation/config/data-server.yml
 Restart=on-failure
 RestartSec=6
 

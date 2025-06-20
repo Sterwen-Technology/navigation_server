@@ -8,17 +8,19 @@ Virtual environment can isolate the application at 2 levels:
 Installation files are available here: [Sterwen Technology download page](https://sterwen-technology.eu/softwares/)
 
 There are many existing solutions to achieve the same results. I am proposing a configuration that have been able to fully tested and is based on 2 well known Python tools:
-- **[pyenv](https://github.com/pyenv/pyenv#readme)** to install specific Python version and possibly virtual environments for execution
+- **[pyenv](https://github.com/pyenv/pyenv#readme)** to install a specific Python version and possibly virtual environments for execution
 - **[poetry](https://python-poetry.org/)** to manage dependencies and create associated virtual environment
 
 ### pyenv installation and configuration
 
-To install pyenv: `curl -fsSL https://pyenv.run | bash`
+To install pyenv: ```shell
+curl -fsSL https://pyenv.run | bash```
+
 Then add the pyenv environment into .bashrc file (follow the instructions of the installation script) and restart your shell.
 
 As pyenv is recompiling the python interpreter and environment locally, you need to install a bunch of development packages:
 
-```sh
+```shell
 sudo apt update; sudo apt install build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl git \
 libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
 ```
@@ -31,7 +33,9 @@ If you are intending to install from a wheel, then you can create directly a vir
 `pyenv activate test_navigation` is activating it locally
 
 Assuming that you have downloaded locally **navigation_server-2.2.0-py3-none-any.whl** in your local directory you directly install the application.
-`pip install navigation_server-2.2.0-py3-none-any.whl`
+```shell
+pip install navigation_server-2.2.0-py3-none-any.whl
+```
 
 You can then test the installation by launching `navigation_server`. This will start a server but immediately due to a lack of configuration file.
 

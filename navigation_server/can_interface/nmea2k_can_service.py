@@ -18,6 +18,7 @@ from navigation_server.generated.n2k_can_service_pb2_grpc import CAN_ControllerS
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 from navigation_server.generated.iso_name_pb2 import ISOName
 from navigation_server.router_common import GrpcService, get_global_var, resolve_ref, MessageTraceError
+from navigation_server.router_core import NMEA2000Msg
 from navigation_server.can_interface import NMEA2KActiveController
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -123,11 +124,18 @@ class CAN_ControllerServiceServicerImpl(CAN_ControllerServiceServicer):
             _logger.debug("Pushing message with PGN %d" % msg_pb.pgn)
             yield msg_pb
 
-    def SendNmea2000Msg(self, request_iterator, context):
+    def SendNmea2000Msg(self, request, context):
         """
-        Send a stream of NMEA2000 messages to the CAN
+        Send a NMEA2000 message to the CAN
+        The request includes the sending device and the message
         """
-        raise NotImplemented("SendNmea Streams not implemented")
+        _logger.debug("NMEA CAN service -> SendNmea2000Msg to %s PGN %d" % (request.device, request.n2k_msg.pgn))
+        resp = CANAck()
+        resp.id = request.id
+        resp.messages_count = 1
+        n2k_msg = NMEA2000Msg(pgn=request.n2k_msg.pgn, protobuf=request.n2k_msg)
+        resp.error = self._controller.send_message_from_application(request.device, n2k_msg)
+        return resp
 
 
 class N2KCanService(GrpcService):

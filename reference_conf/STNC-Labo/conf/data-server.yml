@@ -1,0 +1,56 @@
+#-------------------------------------------------------------------------------
+# Name:        data-server.yml
+# Purpose:     Settings file for the data server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/02/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+function: Data server
+server_name: Data
+log_level: INFO
+trace_dir: /data/navigation/traces
+data_dir: /data/navigation/data
+log_module:
+    navigation_data.engine_service: INFO
+    router_common.can_grpc_stream_reader: INFO
+    router_common.generic_top_server: INFO
+
+debug_configuration: false
+
+features:
+    - nmea2000
+    - navigation_data
+
+servers:
+
+- Main:
+      class: GenericTopServer
+
+- gRPCMain:
+    class: GrpcServer
+    port: 4508
+
+services:
+
+- DataSource:
+    class: NavigationDataService
+    server: gRPCMain
+    source_server: 127.0.0.1
+    source_port: 4512
+    select_pgn: [127488, 127489]
+
+- Engines:
+    class: EngineDataService
+    server: gRPCMain
+    primary: DataSource
+
+
+
+
+
+
+

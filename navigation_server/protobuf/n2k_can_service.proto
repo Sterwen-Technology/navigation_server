@@ -39,8 +39,9 @@ message CANRequest{
 }
 
 message CANAck {
-  uint32 messages_count=1;
-  uint32 error=2;
+  uint32 id=1;
+  uint32 messages_count=2;
+  uint32 error=3;
 }
 
 message CANReadRequest{
@@ -52,10 +53,16 @@ message CANReadRequest{
   repeated uint32  reject_pgn=6; //PGN in the list are rejected
 }
 
+message CANSendRequest {
+  uint32 id=1;
+  string device=2;  // that is the device name that shall send the message. Shall be created on the CAN server
+  nmea2000pb n2k_msg = 3;  // that is the actual message (encoded) to be sent
+}
+
 service CAN_ControllerService {
   rpc GetStatus(CANRequest) returns (CAN_ControllerMsg) {}
   rpc StartTrace(CANRequest) returns (CAN_ControllerMsg) {}
   rpc StopTrace(CANRequest) returns (CAN_ControllerMsg) {}
   rpc ReadNmea2000Msg(CANReadRequest) returns (stream nmea2000pb) {}
-  rpc SendNmea2000Msg(stream nmea2000pb) returns (CANAck) {}
+  rpc SendNmea2000Msg(CANSendRequest) returns (CANAck) {}
 }

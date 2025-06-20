@@ -90,6 +90,7 @@ class NMEA2KActiveController(NMEA2KController):
             raise ObjectCreationError(str(e))
         self._coupler_queue = None
         self._applications = []
+        self._applications_register = {}
         self._app_index = {}
         self._apool = NMEA2000ApplicationPool(self, opts)
         self._application_names = opts.getlist('applications', str, None)
@@ -294,5 +295,20 @@ class NMEA2KActiveController(NMEA2KController):
         # app.send_iso_request(255, 126996)
         # app.send_iso_request(255, 126998)
         app.send_address_claim()
+
+    def register_application(self, application):
+        self._applications_register[application.name] = application
+
+    def send_message_from_application(self, application_name:str, msg: NMEA2000Msg):
+        try:
+            application = self._applications_register[application_name]
+            application.send_message(msg)
+            return 0
+        except KeyError:
+            _logger.error("Application %s is non-existent" % application_name)
+            return 10
+
+
+
 
 

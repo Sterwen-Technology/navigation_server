@@ -26,7 +26,26 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class NMEA2000ApplicationPool:
+    """
+    Handles an NMEA2000 application pool to manage application identifiers and
+    addresses for devices in a network.
 
+    This class is responsible for generating unique application identifiers
+    comprising device addresses and ISO names within the constraints of an
+    NMEA2000 network. It uses configurations such as manufacturer ID,
+    MAC address source, and address range to generate and allocate new
+    application addresses and names.
+
+    Attributes:
+        _controller: Reference to a controller managing the network.
+        _mfg_code: Integer representing the manufacturer ID.
+        _unique_id_root: Unique identifier derived from MAC address and application settings.
+        _max_application: Maximum number of allowed applications.
+        _address_pool: List of addresses available for application assignment.
+        _ap_index: Integer tracking the next available address in the address pool.
+        _application_count: Number of applications created from the pool.
+
+    """
     def __init__(self, controller, opts):
         self._controller = controller
         mac_source = opts.get('mac_source', str, 'eth0')
@@ -95,10 +114,23 @@ class NMEA2000Application(NMEA2000Device):
     application_id = 0
 
     def __init__(self, controller, address=-1):
-        '''
-        controller: NMEA2KActiveController acting as ECU and managing CAN bus access
-        address: address to be assigned (0-253) or address taken from the pool
-        '''
+        """
+        Initializes a new instance of a controller application with NMEA2000 communication capabilities.
+
+        The constructor configures the application based on a provided controller and optional address. It
+        associates the application with an ISO Name and CAN bus address, initializes various functional
+        components, timers, and message handling vectors for addressing and broadcasting communications on
+        the NMEA2000 network.
+
+        Parameters:
+            controller (Controller): An object providing CAN bus control functionality and resources.
+            address (int): Optional. The address to assign to the application on the CAN bus. Must be
+                between 0 and 253, inclusive. If not specified, it will be dynamically allocated by the
+                controller. Defaults to -1.
+
+        Raises:
+            IndexError: If the specified address is already allocated locally on the CAN bus.
+        """
 
         self._controller = controller
         self._application_type_name = "Generic NMEA2000 CA"
@@ -156,7 +188,7 @@ class NMEA2000Application(NMEA2000Device):
         return self._app_name
 
     def device_class_function(self):
-        # to be overloaded if specific class and function have to be defined for the device
+        # to be overloaded if a specific class and function have to be defined for the device
         return 25, 130
 
     def stop_request(self):

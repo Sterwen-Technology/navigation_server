@@ -1,7 +1,7 @@
 [project]
 name = "navigation-server"
 package-mode = true
-version = "2.5.0"
+version = "2.5.1"
 description = "Navigation Server Full Install"
 authors = [{name="Laurent Carré", email="<laurent.carre@sterwen-technology.eu>"}]
 readme = "README.md"
