@@ -5,6 +5,7 @@
       * [GenericTopServer class](#generictopserver-class)
       * [NMEAServer class](#nmeaserver-class)
       * [NMEASenderServer class](#nmeasenderserver-class)
+      * [NMEAUDPServer class](#nmeaudpserver-class)
       * [GrpcServer class](#grpcserver-class)
       * [ShipModulConfig server](#shipmodulconfig-server)
       * [NMEA2KController server](#nmea2kcontroller-server)
@@ -125,7 +126,6 @@ Here are the parameters associated with the server
 | port            | int                       | 4500        | listening port of the server                                              |
 | heartbeat       | float                     | 30          | Period of the heartbeat  timer                                            |
 | timeout         | float                     | 5.0         | timeout socket receive                                                    |
-| max_silent      | float                     | 120.0       | maximum time without traffic for a client. The connection is closed after |
 | max_connections | int                       | 10          | maximum number of active connections                                      |
 | nmea2000        | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see below)                               |
 
@@ -141,7 +141,7 @@ When configured in NMEA2000, due to fast packet reassembly, there is no transpar
 
 if dyfmt or stfmt is selected, all NMEA2000 messages will be translated in the selected format, including reassembly of Fast Packet. That implies that the protocol selected in the instruments is 'nmea2000.' NMEA0183 messages are transparently transmitted in any case.
 
-The configuration is also valid for messages sent from the host (client); in that case NMEA0183 like messages encapsulating NMEA2000 messages will be treated internally as NMEA2000.
+The configuration is also valid for messages sent from the host (client); in that case NMEA0183 like messages encapsulating NMEA2000 messages will be treated internally as NMEA2000 (see below).
 
 #### NMEASenderServer class
 This server allows sending NMEA0183 messages from the host towards a coupler. This is mostly used to control navigation and send tracking information to autopilot and displays
@@ -159,7 +159,20 @@ This server allows sending NMEA0183 messages from the host towards a coupler. Th
 | buffer_size | int                       | 256         | Size of the receive buffer. Smaller size are useful for low message rate on the interface      |
 | filters     | filter id list            | None        | List of the filters applicable for the server (see corresponding section)                      |
 
- 
+
+#### NMEAUDPServer class
+
+The server is broadcasting the NMEA messages as UDP datagrams. That is working only on a single subnetwork.
+The configuration is simpler because there are no connections managed.
+
+| Name        | Type                      | Default     | Signification                                                                                  |
+|-------------|---------------------------|-------------|------------------------------------------------------------------------------------------------|
+| port        | int                       | 4503        | listening port of the server                                                                   |
+| heartbeat   | float                     | 30          | Period of the heartbeat  timer                                                                 |
+| nmea2000    | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see above)                                                    |
+| filters     | filter id list            | None        | List of the filters applicable for the server (see corresponding section)                      |
+
+
 
 #### GrpcServer class
 

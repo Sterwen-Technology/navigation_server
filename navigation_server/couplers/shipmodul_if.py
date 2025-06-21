@@ -18,7 +18,7 @@ from navigation_server.router_core import (NavTCPServer, ConnectionRecord, Publi
 from navigation_server.router_common import IncompleteMessage, N2KUnknownPGN, NavGenericMsg, TRANSPARENT_MSG, N2K_MSG, NULL_MSG
 from navigation_server.nmea2000 import FastPacketHandler, FastPacketException
 from navigation_server.nmea2000_datamodel import PGNDef
-
+from router_core import CouplerReadError
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
@@ -175,10 +175,11 @@ class ShipModulInterface(BufferedIPCoupler):
         # if NMEA_MIX, return without decoding except for ISO protocol messages when N2KController is present
         if coupler.mode == Coupler.NMEA_MIX:
             if coupler.n2k_controller is None or not PGNDef.pgn_for_controller(pgn):
-                # return a partially decoded NMEA2000 message
-                msg = NMEA2000Msg(pgn, prio, source_addr, dest_addr)
-                gmsg = NavGenericMsg(N2K_MSG, raw=m0183.raw, msg=msg)
-                return gmsg
+                # return a partially decoded NMEA2000 message => 20/06/2025 this is NOT working
+                # msg = NMEA2000Msg(pgn, prio, source_addr, dest_addr)
+                # gmsg = NavGenericMsg(N2K_MSG, raw=m0183.raw, msg=msg)
+                _logger.error("Cannot process MXPGN data messages in NMEA_MIX mode")
+                raise CouplerReadError("Cannot process MXPGN data messages in NMEA_MIX mode")
         # here we continue decoding in NMEA2000 mode and for ISO messages
         '''
         data = bytearray(dlc)
