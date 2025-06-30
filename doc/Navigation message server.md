@@ -60,9 +60,9 @@
       * [Exemple configuration files](#exemple-configuration-files)
       * [Profiling](#profiling)
     * [Default port assignments for servers / services](#default-port-assignments-for-servers--services)
-  * [Implementation structure](#implementation-structure)
-    * [Root directory](#root-directory)
-    * [Launching a message server process](#launching-a-message-server-process)
+  * [Starting servers](#starting-servers)
+    * [Application directory python launch helpers](#application-directory-python-launch-helpers)
+    * [Starting using systemd](#starting-using-systemd)
 <!-- TOC -->
 ## Description
 The navigation server-router aggregates and distributes navigation and other operational data aboard recreational or small professional vessels.
