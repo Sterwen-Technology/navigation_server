@@ -167,7 +167,7 @@ The configuration is simpler because there are no connections managed.
 
 | Name        | Type                      | Default     | Signification                                                                                  |
 |-------------|---------------------------|-------------|------------------------------------------------------------------------------------------------|
-| port        | int                       | 4503        | listening port of the server                                                                   |
+| port        | int                       | 4504        | listening port of the server                                                                   |
 | heartbeat   | float                     | 30          | Period of the heartbeat  timer                                                                 |
 | nmea2000    | transparent, dyfmt, stfmt | transparent | Formatting of NMEA2000 messages (see above)                                                    |
 | filters     | filter id list            | None        | List of the filters applicable for the server (see corresponding section)                      |
@@ -740,6 +740,7 @@ The global section includes the definition of the following global parameters:
 | nmea2000_xml           | string                   | ./def/PGNDefns.N2kDfn.xml      | XML file containing NMEA2000 PGN definitions                                                               |
 | trace_dir              | string                   | /var/log                       | Directory where all the traces and logs will be stored                                                     |
 | log_file               | string                   | None                           | Filename for all program traces, if None stderr is used instead                                            |
+| connect_agent          | boolean                  | True                           | Indicates if the process is connecting to the agent. false for standalone tests                            |
 | debug_configuration    | boolean                  | False                          | Allow debug traces during the process configuration phase                                                  |
 | decode_definition_only | boolean                  | False                          | If set true then the process stops once fully configured. To be used to test and debug configuration files |
 
@@ -760,6 +761,7 @@ The following sections are recognized:
 - publishers
 - services
 - filters
+- applications
 
 Sections are not mandatory, but if no *features* are declared, only the default Python packages are loaded and not all necessary classes will be present
 
@@ -770,15 +772,16 @@ If no list is specified after the feature, then the full feature (package) is im
 
 Here are the features included with the current version
 
-| feature name  | includes                      | needed for                                   |
-|---------------|-------------------------------|----------------------------------------------|
-| router_core   | Message router basic features |                                              |
-| nmea2000      | NMEA2000 Handling             |                                              |
-| nmea0183      | NMEA0183 handling             |                                              |
-| couplers      | Non CAN couplers              |                                              |  
-| can_interface | direct CAN interface          | NMEA2000 Active controller, CANCoupler       |
-| agent         | Linux agent service           | Implementation of the Linux Agent            |
-| gnss          | GNSS service                  | STNC800 GNSS module interface and management |
+| feature name     | includes                      | needed for                                           |
+|------------------|-------------------------------|------------------------------------------------------|
+| router_core      | Message router basic features |                                                      |
+| nmea2000         | NMEA2000 Handling             |                                                      |
+| nmea0183         | NMEA0183 handling             |                                                      |
+| couplers         | Non CAN couplers              |                                                      |  
+| can_interface    | direct CAN interface          | NMEA2000 Active controller, CANCoupler               |
+| agent            | Linux agent service           | Implementation of the Linux Agent                    |
+| gnss             | GNSS service                  | STNC800 GNSS module interface and management         |
+| nmea2000_devices | NMEA2000 devices (code)       | Using pre_defined NMEA2000 devices (as applications) |
 
 
 
@@ -866,7 +869,7 @@ A profiling summary is printed on stdout when the server stops
 
 Exemple profiling section
 
-```
+```Yaml
 profiling:
   enable: true
   symbols:
@@ -881,23 +884,50 @@ profiling:
 In the current version, the port assignment shall be managed manually. In most of the cases that is not an issue as the configuration for one application is static at all.
 However, having the system agent allocating the ports can be envisaged in future releases.
 
-| service                       | port | transport protocol | application protocol      |
-|-------------------------------|------|--------------------|---------------------------|
-| NMEA Messages server          | 4500 | TCP                | NMEA0183 like             |
-| Miniplex configuration server | 4501 | TCP                | Miniplex specific         |
-| gRPC server                   | 4502 | gRPC               | see console.proto         |
-| NMEA message sender           | 4503 | TCP                | NMEA0183 like             |
-| Energy management server      | 4505 | gRPC               | see vedirect.proto        |
-| Local Linux agent             | 4506 | gRPC               | see agent.proto           |
-| Data management server        | 4508 | gRPC               | see navigation_data.proto |
+Note: 
 
-## Implementation structure
+| service                       | port | transport protocol | application protocol                          |
+|-------------------------------|------|--------------------|-----------------------------------------------|
+| CAN Server                    | 4512 | gRPC               | Interface with CAN/NMEA2000 bus               |
+| NMEA Messages server          | 4500 | TCP                | NMEA0183 like, with possibly NMEA2000 encoded |
+| NMEA Messages server          | 4504 | UDP                | Same                                          |
+| Miniplex configuration server | 4501 | TCP                | Miniplex specific                             |
+| gRPC server                   | 4502 | gRPC               | see console.proto                             |
+| NMEA message sender           | 4503 | TCP                | NMEA0183 like                                 |
+| Energy management server      | 4505 | gRPC               | see vedirect.proto                            |
+| Local Linux agent             | 4506 | gRPC               | see agent.proto                               |
+| Data management server        | 4508 | gRPC               | see navigation_data.proto                     |
 
-### Root directory
+## Starting servers
 
-### Launching a message server process
+### Application directory python launch helpers
 
-A generic Python module is used to start any server "server_main.py" and it requires the configuration file defining the feature and parameters of the process using the *--settings option*
+All server process shall be started from the **Navigation Server top directory** where the application has been installed.
+For details about installation see [Python Environment](python_environment.md)
+Server can be launched from anywhere but must use helpers that are using the correct virtual environment:
+- run_server <configuration.yml>: that is starting a navigation server using the specified configuration
+- run_script <python script> <parameters>: launch any script in the navigation server environment. Useful for development and test individual features
+
+### Starting using systemd
+
+For flexibility, the servers can be controlled by systemd, either started by systemd itself or by the agent.
+
+here is a sample service file
+```service
+[Unit]
+Description=Navigation Can Server (ECU function)
+Requires=network.target
+
+[Service]
+Type=simple
+User=laurent
+ExecStart=/home/laurent/navigation_server/run_server  /data/navigation/config/stnc_can_server.yml
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
 
 
 

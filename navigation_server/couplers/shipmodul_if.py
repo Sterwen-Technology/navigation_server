@@ -11,14 +11,13 @@
 
 import socket
 import logging
-from array import array
 
 from navigation_server.router_core import (NavTCPServer, ConnectionRecord, Publisher, Coupler, BufferedIPCoupler,
-                                            NMEA0183Msg, NMEA0183Sentences, NMEA2000Msg)
+                                            NMEA0183Msg, NMEA0183Sentences, NMEA2000Msg, CouplerReadError)
 from navigation_server.router_common import IncompleteMessage, N2KUnknownPGN, NavGenericMsg, TRANSPARENT_MSG, N2K_MSG, NULL_MSG
 from navigation_server.nmea2000 import FastPacketHandler, FastPacketException
 from navigation_server.nmea2000_datamodel import PGNDef
-from router_core import CouplerReadError
+
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
