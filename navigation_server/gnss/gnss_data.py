@@ -50,14 +50,15 @@ def convert_date(date_bytes) -> int:
 
 
 def convert_latitude(ns_indicator, latitude_bytes) -> float:
-    lat = float(latitude_bytes[0:2]) + (float(latitude_bytes[2:7]) / 60.0)
+
+    lat = float(latitude_bytes[0:2]) + (float(latitude_bytes[2:]) / 60.0) # correct computation on 25-07-08
     if ns_indicator == b'S':
         lat = -lat
     return lat
 
 
 def convert_longitude(ew_indicator, longitude_bytes) -> float:
-    long = float(longitude_bytes[0:3]) + (float(longitude_bytes[3:8]) / 60.0)
+    long = float(longitude_bytes[0:3]) + (float(longitude_bytes[3:]) / 60.0) # correct computation on 25-07-08
     if ew_indicator == b'W':
         long = -long
     return long

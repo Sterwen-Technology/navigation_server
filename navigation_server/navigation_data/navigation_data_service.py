@@ -11,8 +11,8 @@
 import logging
 from collections import namedtuple
 
-from navigation_server.router_common import CANGrpcStreamReader, NavThread
-from navigation_server.router_core import NMEA2000Msg
+from navigation_server.router_common import NavThread
+from navigation_server.router_core import NMEA2000Msg, CANGrpcStreamReader
 from navigation_server.nmea2000 import get_n2k_decoded_object
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 
