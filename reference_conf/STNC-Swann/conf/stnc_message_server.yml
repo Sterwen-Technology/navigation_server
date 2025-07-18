@@ -45,7 +45,7 @@ servers:
     class: NMEASenderServer
     port: 4503
     nmea2000: dyfmt
-    coupler: CANCoupler
+    coupler: CANSendCoupler
 
 - gRPCMain:
       class: GrpcServer
@@ -62,10 +62,16 @@ couplers:
     class: N2KGrpcCoupler
     source_server: 127.0.0.1
     source_port: 4512
+ 
+- CANSendCoupler:
+    class: N2KGrpcSendCoupler
+    target_server: 127.0.0.1
+    target_port: 4512
+    device: NavigationControl
 
 - MiniPlex3:
     class: ShipModulInterface
-    address: 172.16.2.48
+    address: 172.16.2.26
     port: 10110
     transport: TCP
     nmea2000_controller: NMEANetwork

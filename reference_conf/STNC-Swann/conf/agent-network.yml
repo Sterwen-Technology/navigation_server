@@ -64,7 +64,7 @@ processes:
   - GNSS:
       class: SystemdProcess
       service: gnss
-      autostart: false
+      autostart: true
 
   - GNSSConfig:
       class: SystemdProcess
@@ -74,12 +74,12 @@ processes:
   - Data:
       class: SystemdProcess
       service: navigation_data
-      autostart: false
+      autostart: true
 
   - Energy:
       class: SystemdProcess
       service: energy
-      autostart: false
+      autostart: true
 
 
 

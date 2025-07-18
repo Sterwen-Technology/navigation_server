@@ -53,7 +53,7 @@ servers:
       mac_source: end0
       channel: can0
       max_silent: 60.0
-      applications: [GNSS]
+      applications: [GNSS, NavigationControl]
 
 
 couplers:
@@ -78,7 +78,12 @@ publishers:
 
 applications:
 
-
+- NavigationControl:
+    class: NMEA2000SenderDevice
+    address: 17
+    model_id: Route Control
+    device_class: 60
+    device_function: 190
 
 
 
