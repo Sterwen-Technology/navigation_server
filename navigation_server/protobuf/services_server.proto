@@ -48,6 +48,7 @@ message SystemProcessMsg {
   string version=7;
   string start_time=8;
   string hostname = 10;
+  uint32 pid=14;
   string purpose = 11;
   string settings = 12;
   repeated Server servers=9;

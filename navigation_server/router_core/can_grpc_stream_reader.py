@@ -51,7 +51,7 @@ class CANGrpcStreamReader(ServiceClient):
         read: Reads a single message from the stream while applying filters.
         close: Closes the gRPC stream.
     """
-    def __init__(self, reference, opts):
+    def __init__(self, reference, kwargs: dict):
         """
         Manages the interaction with the gRPC CAN Controller service by establishing a connection and
         configuring various request parameters.
@@ -80,19 +80,19 @@ class CANGrpcStreamReader(ServiceClient):
             ValueError: Raised if the 'server' or 'port' parameter is not provided in the options.
         """
         super().__init__(CAN_ControllerServiceStub)
-        self._server = opts.get('source_server', str, None)
+        self._server = kwargs.get('source_server', None)
         if self._server is None:
             _logger.error(f"class {self.__class__.__name__} the 'server' parameter is mandatory")
             raise ValueError
-        self._port= opts.get('source_port', int, 0)
+        self._port= kwargs.get('source_port', 0)
         if self._port == 0:
             _logger.error(f"class {self.__class__.__name__} the 'port' parameter is mandatory")
             raise ValueError
         #
-        self._select_sources = opts.getlist('select_sources', int, None)
-        self._reject_sources = opts.getlist('reject_sources', int, None)
-        self._select_pgn = opts.getlist('select_pgn', int, None)
-        self._reject_pgn = opts.getlist('reject_pgn', int, None)
+        self._select_sources = kwargs.get('select_sources', None)
+        self._reject_sources = kwargs.get('reject_sources', None)
+        self._select_pgn = kwargs.get('select_pgn', None)
+        self._reject_pgn = kwargs.get('reject_pgn', None)
         self._client:GrpcClient = GrpcClient.get_client(f"{self._server}:{self._port}")
         self._client.add_service(self)
         self._can_request = CANReadRequest()

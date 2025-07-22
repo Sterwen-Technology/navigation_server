@@ -29,6 +29,10 @@ def set_protobuf_data(result, keys, data_dict: dict):
         except KeyError:
             continue
 
+def fill_protobuf_from_dict(result, data_dict:dict):
+    for key, val in data_dict.items():
+        setattr(result, key, val)
+
 
 def copy_protobuf_data(source, target, attributes):
     '''

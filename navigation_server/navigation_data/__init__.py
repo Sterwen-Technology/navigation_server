@@ -10,4 +10,4 @@
 #-------------------------------------------------------------------------------
 
 from .engine_service import EngineDataService
-from .navigation_data_service import NavigationDataService
+from .data_input_function import NMEA2000InputConnector

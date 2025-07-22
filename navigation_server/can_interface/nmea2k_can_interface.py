@@ -20,7 +20,7 @@ import time
 import subprocess
 from queue import Queue
 
-from can import Message, CanError, ThreadSafeBus
+from can import Message, CanError, ThreadSafeBus, Bus
 
 from navigation_server.router_core.nmea2000_msg import NMEA2000Msg
 from navigation_server.nmea2000 import FastPacketHandler, FastPacketException
@@ -114,7 +114,8 @@ class SocketCANInterface(NavThread):
     def start(self):
         # connect to the CAN bus
         try:
-            self._bus = ThreadSafeBus(channel=self._channel, interface="socketcan", bitrate=250000)
+            # version 2.6 remove the ThreadSafe overhead as not needed => single thread is sending messages to CAN
+            self._bus = Bus(channel=self._channel, interface="socketcan", bitrate=250000)
         except CanError as e:
             _logger.error("Error initializing CAN Channel %s: %s" % (self._channel, e))
             raise SocketCanError

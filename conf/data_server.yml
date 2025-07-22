@@ -10,16 +10,17 @@
 #-------------------------------------------------------------------------------
 #
 function: Data server
-server_name: data_server
+server_name: Data
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
 data_dir: /mnt/meaban/Bateau/tests
 log_module:
-    navigation_data.engine_service: DEBUG
-    router_common.can_grpc_stream_reader: DEBUG
+    navigation_data.engine_service: INFO
+    router_core.can_grpc_stream_reader: DEBUG
     router_common.generic_top_server: INFO
 
 debug_configuration: false
+connect_agent: true
 
 features:
     - nmea2000
@@ -34,19 +35,19 @@ servers:
     class: GrpcServer
     port: 4508
 
-services:
+functions:
 
 - DataSource:
-    class: NavigationDataService
-    server: gRPCMain
+    class: NMEA2000InputConnector
     source_server: stnc800a003
     source_port: 4512
-    select_pgn: [127488, 127489]
+
+services:
 
 - Engines:
     class: EngineDataService
     server: gRPCMain
-    primary: DataSource
+    source: DataSource
 
 
 

@@ -13,30 +13,58 @@ input_dir="$NAVIGATION_HOME/$PACKAGE/protobuf"
 output_dir="$NAVIGATION_HOME/$PACKAGE/generated"
 cd "$NAVIGATION_HOME/develop" || exit
 
+# Constants for file extensions
+PB2_EXTENSION="_pb2.py"
+GRPC_EXTENSION="_pb2_grpc.py"
+PROTO_EXTENSION=".proto"
+
 gen_protobuf() {
-  echo "generating protobuf for:$1"
-  input_file=${input_dir}/"$1.proto"
-  python -m grpc_tools.protoc -I ${input_dir} --python_out=${output_dir} --grpc_python_out=${output_dir} ${input_file}
-  output_file=${output_dir}/"$1_pb2_grpc.py"
-  if [ -e ${output_file} ]
-  then
-    # shift
-    python mod_pb2.py ${output_file} "$PACKAGE.generated" "$@"
-  fi
+    local proto_name="$1"
+    local proto_file="${input_dir}/${proto_name}${PROTO_EXTENSION}"
+    local pb2_output="${output_dir}/${proto_name}${PB2_EXTENSION}"
+    local grpc_output="${output_dir}/${proto_name}${GRPC_EXTENSION}"
+    
+    # Get file modification timestamps
+    local proto_mtime=$(stat -c %Y "$proto_file")
+    local should_generate="yes"
+    
+    # Check if output exists and is newer than input
+    if [ -e "$pb2_output" ]; then
+        local pb2_mtime=$(stat -c %Y "$pb2_output")
+        if [ "$proto_mtime" -le "$pb2_mtime" ]; then
+            should_generate="no"
+        fi
+    fi
+    
+    # Generate protobuf files if needed
+    if [ "$should_generate" = "yes" ]; then
+        echo "Generating protobuf for: $proto_name"
+        python -m grpc_tools.protoc \
+            -I "${input_dir}" \
+            --python_out="${output_dir}" \
+            --grpc_python_out="${output_dir}" \
+            "${proto_file}"
+        # modify protobuf file
+
+        if [ $# -gt 1 ]; then
+          echo "   adjusting:${proto_name}${PB2_EXTENSION}"
+          python mod_pb2.py "${pb2_output}" "$PACKAGE.generated" "$@"
+        fi
+        # Modify gRPC generated files if they exist
+        if [ -e "${grpc_output}" ]; then
+            # shift
+            echo "   adjusting:${proto_name}${GRPC_EXTENSION}"
+            python mod_pb2.py "${grpc_output}" "$PACKAGE.generated" "$@"
+        fi
+    fi
 }
 
-adjust_protobuf() {
-  echo "adjusting:$1"
-  process_file=${output_dir}/"$1_pb2.py"
-  # shift
-  python mod_pb2.py "${process_file}" "$PACKAGE.generated" "$@"
-}
 
-gen_protobuf energy
-gen_protobuf console services_server
+gen_protobuf energy arguments
+gen_protobuf console services_server arguments
 gen_protobuf nmea0183
 gen_protobuf nmea2000
-gen_protobuf nmea_messages
+gen_protobuf nmea_messages nmea2000 nmea0183
 gen_protobuf services_server
 gen_protobuf input_server nmea_messages nmea2000
 gen_protobuf nmea_server nmea_messages
@@ -47,22 +75,11 @@ gen_protobuf ecu nmea2000
 gen_protobuf nmea2000_classes_iso_gen
 gen_protobuf nmea2000_classes_gen
 gen_protobuf iso_name
-gen_protobuf navigation_data
+# gen_protobuf navigation_data
 gen_protobuf engine_data
-gen_protobuf navigation_objects
+gen_protobuf navigation_objects uuid
 gen_protobuf gnss nmea_messages nmea2000
 gen_protobuf network uuid
-gen_protobuf n2k_can_service nmea2000
+gen_protobuf n2k_can_service nmea2000 iso_name nmea2000_classes_iso_gen
 gen_protobuf grpc_control
-adjust_protobuf input_server nmea_messages nmea2000
-adjust_protobuf nmea_messages nmea0183 nmea2000
-adjust_protobuf nmea_server nmea_messages
-adjust_protobuf console arguments services_server
-adjust_protobuf ecu nmea2000
-adjust_protobuf energy arguments
-adjust_protobuf navigation_objects uuid
-adjust_protobuf gnss nmea_messages nmea2000
-adjust_protobuf network uuid
-adjust_protobuf n2k_can_service nmea2000 iso_name nmea2000_classes_iso_gen
-adjust_protobuf agent services_server
-adjust_protobuf grpc_control
+

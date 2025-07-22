@@ -77,7 +77,7 @@ Each *navigation_server* is a single Python process and messages are exchanged i
 
 Inside the *navigation_server* process, the following entities can be configured and instantiated:
 
-**Server**: servers can accept incoming connections and then are sending or receiving messages using several application and transport protocols that are described in detail in the **Navigation system API** document. In the server category we also find NMEA CAN controllers or pseud-controllers that are not external servers but have a server function versus the CAN network. Some servers can also be purely internal. One server is used as a starting and shall be the "Main" server in the configuration file.
+**Server**: servers can accept incoming connections and then are sending or receiving messages using several nmea2000_app and transport protocols that are described in detail in the **Navigation system API** document. In the server category we also find NMEA CAN controllers or pseud-controllers that are not external servers but have a server function versus the CAN network. Some servers can also be purely internal. One server is used as a starting and shall be the "Main" server in the configuration file.
 
 **Coupler**: couplers are the interfaces for external devices or for incoming messages for communication between processes
 
@@ -85,9 +85,11 @@ Inside the *navigation_server* process, the following entities can be configured
 
 **Service**: A service implements a "service" defined by the gRPC system that will be installed over a gRPC server
 
-**Application**: an application corresponds to a Controller Application as defined by J1939 and reused by NMEA2000. An application results in a device on a NMEA2000 bus. Applications are relevant only when the process is directly linked to the CAN interface.
+**Nmea2000_app**: a nmea2000_app corresponds to a Controller Application as defined by J1939 and reused by NMEA2000. An nmea2000_app results in a device on a NMEA2000 bus. Applications are relevant only when the process is directly linked to the CAN interface.
 
-**Filters**: filters can be plugged at various points in the message flows to select or reject certain types of messages that are useless downstream
+**Filter**: filters can be plugged at various points in the message flows to select or reject certain types of messages that are useless downstream
+
+**Function**: functions are processing entities that are taking part of the message flow as input
 
 *Note on the parameter tables: Only the parameters attached to the actual class are described in each class. To have the full parameter set that is applicable, all superclasses descriptions must also be looked at.*
 
@@ -357,7 +359,7 @@ This coupler is intended to be used by the energy management agent, rather than 
 
 #### DirectCANCoupler(Coupler)
 This coupler class works when a CAN bus interface with a socketcan driver is installed on the system. By construction, only NMEA2000 messages can be processed.
-The CAN bus coupler must be declared as **application** with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters, and the coupler is considered as a specific device (CA) on the CAN bus. 
+The CAN bus coupler must be declared as **nmea2000_app** with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters, and the coupler is considered as a specific device (CA) on the CAN bus. 
 
 #### GrpcNmeaCoupler(Coupler)
 
@@ -390,7 +392,7 @@ The coupler sends NMEA2000 messages to the CAN server using CAN service (see n2k
 |---------------|--------|---------|-------------------------------------------------------------------------------|
 | target_server | string | None    | ip address or URL for the target                                              |
 | target_port   | int    | 0       | port on the target server                                                     |
-| device        | str    | None    | name of the device (application) in the CAN server that will send the message |
+| device        | str    | None    | name of the device (nmea2000_app) in the CAN server that will send the message |
 
 
 ### Services
@@ -566,13 +568,13 @@ Messages modes definition:
 - **message** : NMEA2000 binary message format with Fast packet reassembly
 - **decoded** : NMEA2000 fully decoded (Python object)
 
-### Applications
+### NMEA2000 Applications
 
-Applications are functionally Controller Applications as per J1939, they appear as a device over the CAN bus and a CAN bus address assigned to them.
+NMEA2000 Applications are functionally Controller Applications as per J1939, they appear as a device over the CAN bus and a CAN bus address assigned to them.
 They must be linked to an **Active CAN Controller** (NMEA2KActiveController) that is managing access to the bus and internal dispatching.
 To be active, applications need to be declared in the Active controller definition (parameter *applications*)
 
-There is currently only one pre-defined application that is used to inject on the NMEA2000 (CAN) bus messages coming on gRPC/Protobuf
+There is currently only one pre-defined nmea2000_app that is used to inject on the NMEA2000 (CAN) bus messages coming on gRPC/Protobuf
 
 #### NMEA2000Application
 
@@ -587,7 +589,7 @@ If no address is given, it will be allocated from the pool associated with the s
 
 #### GrpcInputApplication(GrpcDataService, NMEA2000Application)
 
-That application implements a **service** as defined in the input_server.proto. It accepts both decoded and non decoded NMEA2000 messages (protobuf). It shall be associated with the gRPC server of the process.
+That nmea2000_app implements a **service** as defined in the input_server.proto. It accepts both decoded and non decoded NMEA2000 messages (protobuf). It shall be associated with the gRPC server of the process.
 All messages received on the gRPC interface are forwarded to the NMEA2000 CAN bus.
 
 | Name             | Type   | Default | Signification                                                                  |
@@ -690,9 +692,9 @@ This is a variant of the RawLogCoupler working only on CAN level traces. Its pur
 
 ### DeviceReplaySimulator (NMEA2000Application)
 
-That application acts as Controller Application and simulates NMEA2000 devices on the **NMEA2000 CAN bus** based on messages read from a log. Only one device per object, so to simulate multiple devices, multiple objects must be instantiated.
+That nmea2000_app acts as Controller Application and simulates NMEA2000 devices on the **NMEA2000 CAN bus** based on messages read from a log. Only one device per object, so to simulate multiple devices, multiple objects must be instantiated.
 
-If the source is set to 255, the application takes all the messages. Thus, a single device is forwarding all messages to the CAN bus. All other applications are not receiving any message and are disabled.
+If the source is set to 255, the nmea2000_app takes all the messages. Thus, a single device is forwarding all messages to the CAN bus. All other applications are not receiving any message and are disabled.
 
 
 | Name      | Type | Default | Signification                                                          |
@@ -761,7 +763,8 @@ The following sections are recognized:
 - publishers
 - services
 - filters
-- applications
+- nmea2000_apps
+- functions
 
 Sections are not mandatory, but if no *features* are declared, only the default Python packages are loaded and not all necessary classes will be present
 

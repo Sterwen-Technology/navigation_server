@@ -208,6 +208,7 @@ class NavigationConfiguration:
         self._services = {}
         self._filters = {}
         self._applications = {}
+        self._functions = {}
         self._globals = {}
         self._features = {}
         self._hooks = {}
@@ -326,6 +327,7 @@ class NavigationConfiguration:
         read_objects('services', self._services)
         read_objects('filters', self._filters)
         read_objects('applications', self._applications)
+        read_objects('functions', self._functions)
 
         # configure profiling
         profiler_conf = self._configuration.get('profiling', None)
@@ -378,6 +380,9 @@ class NavigationConfiguration:
 
     def processes(self):
         return self._processes.values()
+
+    def functions(self):
+        return self._functions.values()
 
     @property
     def main_server(self):
@@ -482,6 +487,13 @@ class NavigationConfiguration:
         if not self._main_server.console_present:
             _logger.warning("No console defined")
         _logger.debug("Services created")
+        for inst_descr in self._functions.values():
+            try:
+                function = inst_descr.build_object()
+            except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+                _logger.error(f"Error building function:{inst_descr.name}:{e}")
+                continue
+            self._main_server.add_function(function)
         # create the couplers
         for inst_descr in self._couplers.values():
             try:

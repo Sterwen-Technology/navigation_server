@@ -45,6 +45,11 @@ class EngineDataStub(object):
                 request_serializer=engine__data__pb2.engine_request.SerializeToString,
                 response_deserializer=engine__data__pb2.engine_response.FromString,
                 _registered_method=True)
+        self.GetEngineRuns = channel.unary_unary(
+                '/EngineData/GetEngineRuns',
+                request_serializer=engine__data__pb2.engine_request.SerializeToString,
+                response_deserializer=engine__data__pb2.engine_response.FromString,
+                _registered_method=True)
 
 
 class EngineDataServicer(object):
@@ -62,6 +67,12 @@ class EngineDataServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetEngineRuns(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_EngineDataServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -72,6 +83,11 @@ def add_EngineDataServicer_to_server(servicer, server):
             ),
             'GetEngineEvents': grpc.unary_unary_rpc_method_handler(
                     servicer.GetEngineEvents,
+                    request_deserializer=engine__data__pb2.engine_request.FromString,
+                    response_serializer=engine__data__pb2.engine_response.SerializeToString,
+            ),
+            'GetEngineRuns': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetEngineRuns,
                     request_deserializer=engine__data__pb2.engine_request.FromString,
                     response_serializer=engine__data__pb2.engine_response.SerializeToString,
             ),
@@ -128,6 +144,33 @@ class EngineData(object):
             request,
             target,
             '/EngineData/GetEngineEvents',
+            engine__data__pb2.engine_request.SerializeToString,
+            engine__data__pb2.engine_response.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetEngineRuns(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/EngineData/GetEngineRuns',
             engine__data__pb2.engine_request.SerializeToString,
             engine__data__pb2.engine_response.FromString,
             options,

@@ -23,7 +23,11 @@ from navigation_server.generated.services_server_pb2 import SystemProcessMsg, Se
 from navigation_server.generated.agent_pb2_grpc import AgentServicer, add_AgentServicer_to_server
 from navigation_server.router_common import (GrpcService, GenericTopServer, resolve_ref, copy_protobuf_data,
                                                 MessageServerGlobals, GrpcServer)
-from navigation_server.nav_gpio import STNC_D7_Led, STNC_Gpio_Set
+try:
+    from navigation_server.nav_gpio import STNC_D7_Led, STNC_Gpio_Set
+except (ImportError, ValueError):
+    STNC_D7_Led = None
+    STNC_Gpio_Set = None
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -243,6 +247,62 @@ class SystemdProcess:
         return self._state == self.RUNNING and self._process_msg is not None
 
 
+class SimpleProcess:
+    (NOT_STARTED, RUNNING, STOPPED) = range(0, 3)
+    def __init__(self, opts):
+        self._name = opts.get('name', str, 'incognito')
+        self._run_path = opts.get('run_path', str, None)
+        self._process_msg = None
+        self._autostart = False
+        self._state = self.NOT_STARTED
+
+    @property
+    def autostart(self):
+        return self._autostart
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def __getattr__(self, attr_name):
+        if self._process_msg is None:
+            _logger.error(f"SimpleProcess {self._name} no process msg present (bug) attr:{attr_name}")
+            raise AttributeError
+        try:
+            return self._process_msg.__getattribute__(attr_name)
+        except AttributeError:
+            _logger.error(f"SimpleProcess missing {attr_name} attribute")
+            raise
+
+    def status(self):
+        return 1
+
+    def start_in_progress(self) -> bool:
+        return False
+
+    @property
+    def is_controlled(self) -> bool:
+        return False
+
+    @property
+    def local_state(self):
+        return self._state
+
+    @property
+    def service(self):
+        return "simple"
+
+    def start_confirmation(self, process_msg: SystemProcessMsg):
+        self._process_msg = process_msg
+        self.debug_msg_attributes(['name', 'state', 'grpc_port', 'version', 'start_time', 'console_present', 'pid'])
+        self._state = self.RUNNING
+
+    def debug_msg_attributes(self, attr_set):
+        for attr in attr_set:
+            try:
+                _logger.debug(f"{attr}={self._process_msg.__getattribute__(attr)}")
+            except AttributeError:
+                _logger.debug(f"{attr} non existent")
 
 class AgentServicerImpl(AgentServicer):
 
@@ -474,12 +534,15 @@ class AgentService(GrpcService):
             if process.status() == 4:
                 del self._processes[process.name]
 
+
 class AgentTopServer(GenericTopServer):
 
     def __init__(self, opts):
         super().__init__(opts)
         self._agent = None
-        STNC_D7_Led.red_brightness(255)
+        self._STNC_hardware = MessageServerGlobals.configuration.get_option('STNC_hardware', True)
+        if self._STNC_hardware:
+            STNC_D7_Led.red_brightness(255)
 
     def is_agent(self):
         return True
@@ -494,8 +557,9 @@ class AgentTopServer(GenericTopServer):
     def start(self):
         if super().start():
             self._agent.start_processes()
-            STNC_D7_Led.red_brightness(0)
-            STNC_D7_Led.green_brightness(255)
+            if self._STNC_hardware:
+                STNC_D7_Led.red_brightness(0)
+                STNC_D7_Led.green_brightness(255)
             return True
         else:
             return False

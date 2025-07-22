@@ -22,7 +22,7 @@ def main():
         print(sys.argv[0], "File does not exists", full_filename)
         return
     rel_dir, filename = os.path.split(full_filename)
-    print(sys.argv[0], "processing file", full_filename)
+    # print(sys.argv[0], "processing file", full_filename)
     prefix = sys.argv[2]
     keywords = []
     if len(sys.argv) > 3:

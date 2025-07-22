@@ -19,7 +19,7 @@ from .log_utilities import NavigationLogSystem
 from .network_utils import get_id_from_mac, get_mac
 from .object_utilities import copy_attribute, build_subclass_dict
 from .protobuf_utilities import (pb_enum_string, set_protobuf_data, ProtobufProxy, GrpcAccessException,
-                                 copy_protobuf_data)
+                                 copy_protobuf_data, fill_protobuf_from_dict)
 from .protob_arguments import protob_to_dict, dict_to_protob
 from .xml_utilities import XMLDefinitionFile, XMLDecodeError
 from .configuration import NavigationConfiguration

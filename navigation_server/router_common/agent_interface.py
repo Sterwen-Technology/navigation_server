@@ -13,6 +13,7 @@ import logging
 import signal
 from socket import gethostname
 import time
+import os
 
 
 from navigation_server.router_common import (GrpcClient, ServiceClient, NavThread, MessageServerGlobals,
@@ -61,6 +62,7 @@ def build_server_status_head(server) -> SystemProcessMsg:
     resp.grpc_port = GrpcServer.grpc_port()
     resp.start_time = server.start_time_str()
     resp.state = ProcessState.RUNNING
+    resp.pid = os.getpid()
     resp.console_present = server.console_present
     # some information are independent of the main server
     resp.hostname = gethostname()

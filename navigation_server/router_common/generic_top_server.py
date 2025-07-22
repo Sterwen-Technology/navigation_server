@@ -26,6 +26,7 @@ class GenericTopServer:
         self._name = 'generic_main'
         self._servers = []
         self._services = []
+        self._functions = []
         self._analyse_interval = 0
         self._analyse_timer = None
         self._is_running = False
@@ -48,12 +49,17 @@ class GenericTopServer:
     def add_service(self, service):
         self._services.append(service)
 
+    def add_function(self, function):
+        self._functions.append(function)
+
     def add_process(self, process):
         raise NotImplementedError("GenericTopServer does not support process management")
 
     def start(self):
         for service in self._services:
             service.finalize()
+        for function in self._functions:
+            function.start()
         for server in self._servers:
             _logger.debug("starting server %s class:%s" % (server.name, server.__class__.__name__))
             server.start()

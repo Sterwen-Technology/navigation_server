@@ -16,11 +16,11 @@ import time
 import os
 import json
 
-from navigation_server.router_common import MessageServerGlobals
-from navigation_server.generated.engine_data_pb2 import engine_data, engine_request, engine_response, engine_event
+from navigation_server.router_common import MessageServerGlobals, GrpcService, resolve_ref, fill_protobuf_from_dict
+from navigation_server.generated.engine_data_pb2 import engine_data, engine_request, engine_response, engine_event, engine_run
 from navigation_server.generated.engine_data_pb2_grpc import EngineDataServicer, add_EngineDataServicer_to_server
+from navigation_server.generated.nmea2000_classes_gen import Pgn127488Class, Pgn127489Class
 
-from navigation_server.router_common import GrpcSecondaryService
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -75,8 +75,18 @@ class EngineDataServicerImpl(EngineDataServicer):
 
         return response
 
+    def GetEngineRuns(self, request, context):
+        engine_id = request.engine_id
+        response = engine_response()
+        try:
+            self._engine_service.get_engine_runs(engine_id, response.runs)
+            response.error_message = "NO_ERROR"
+        except KeyError:
+            response.error_message = "NO_ENGINE"
+        return response
 
-class EngineDataService(GrpcSecondaryService):
+
+class EngineDataService(GrpcService):
     """
     Manages engine-related data services and interactions between the system's components, particularly
     handling communication with engine data, events, and updates.
@@ -95,6 +105,11 @@ class EngineDataService(GrpcSecondaryService):
     def __init__(self, opts):
         super().__init__(opts)
         self._servicer = None
+        self._source = opts.get('source', str, None)
+        if self._source is None:
+            _logger.error("Engine data source not specified")
+            raise ValueError("Engine data source not specified")
+        self._source_function = None
         self._engines = {}
         self._timer = threading.Timer(30.0, self.check_off_engines)
         # check and create root directory for engine
@@ -121,9 +136,14 @@ class EngineDataService(GrpcSecondaryService):
     def finalize(self):
         super().finalize()
         self._servicer = EngineDataServicerImpl(self)
+        try:
+            self._source_function = resolve_ref(self._source)
+        except KeyError:
+            _logger.error(f"Engine data source {self._source} not found")
+            raise ValueError("Engine data source not found")
         # now set up the subscriptions
-        self._primary_service.subscribe(self, 127488, self.p127488)
-        self._primary_service.subscribe(self, 127489, self.p127489)
+        self._source_function.subscribe(self, 127488, self.p127488, Pgn127488Class)
+        self._source_function.subscribe(self, 127489, self.p127489, Pgn127489Class)
         add_EngineDataServicer_to_server(self._servicer, self.grpc_server)
         self._timer.start()
 
@@ -150,7 +170,7 @@ class EngineDataService(GrpcSecondaryService):
         engine_id = msg.engine_instance
         engine = self.get_engine(engine_id)
         engine.new_message()
-        engine.update_speed(msg.engine_speed)
+        engine.update_speed(msg)
 
     def p127489(self, msg):
         _logger.debug("EngineData processing PGN127489 on instance %d" % msg.engine_instance)
@@ -175,6 +195,15 @@ class EngineDataService(GrpcSecondaryService):
             raise
         for event in engine.get_events_pb():
             response.append(event)
+
+    def get_engine_runs(self, engine_id, response):
+        try:
+            engine = self._engines[engine_id]
+        except KeyError:
+            _logger.error(f"Engine {engine_id} non existent")
+            raise
+        for run in engine.get_runs_pb():
+            response.append(run)
 
     def stop_service(self):
         if self._timer is not None:
@@ -218,6 +247,11 @@ class EngineEvent:
             'previous_state': self._previous_state
         }
 
+def json_date(date_d):
+    if date_d is not None:
+        return date_d.isoformat()
+    else:
+        return None
 
 class EngineData:
     """
@@ -303,6 +337,8 @@ class EngineData:
         self._engine_dir = None
         self._current_date = None
         self._event_file: str = None
+        self._runs = []
+        self._current_run = None
         # self._event_file = os.path.join(root_dir, engine_dir, event_file)
         if engine_dir is None:
             self._state = self.OFF
@@ -355,6 +391,15 @@ class EngineData:
                     self._stop_time = datetime.datetime.fromisoformat(stop_time)
                 else:
                     self._stop_time = None
+                current_run_dict = status.get('current_run', None)
+                if current_run_dict is not None:
+                    self._current_run = EngineRun(self._id, from_dict=current_run_dict)
+                else:
+                    self._current_run = None
+                if self._state == self.RUNNING and self._current_run is None:
+                    self._current_run = EngineRun(self._id, datetime.datetime.fromisoformat(status['start_time']), None)
+                    self._runs.append(self._current_run)
+            # reading events
             self._day_events = []
             if os.path.exists(self._event_file):
                 # ok we have events for today
@@ -381,12 +426,6 @@ class EngineData:
             self._event_file = os.path.join(self._root_dir, self._engine_dir, event_file)
 
     def as_dict(self):
-        def json_date(date_d):
-            if date_d is not None:
-                return date_d.isoformat()
-            else:
-                return None
-
         return {
             'last_save': datetime.datetime.now().isoformat(),
             'state': self._state,
@@ -397,27 +436,45 @@ class EngineData:
             'temperature': self._temperature,
             'alternator_voltage': self._alternator_voltage,
             'start_time': json_date(self._start_time),
-            'stop_time': json_date(self._stop_time)
+            'stop_time': json_date(self._stop_time),
+            'current_run': None if self._current_run is None else self._current_run.as_dict()
         }
 
 
-    def update_speed(self, speed):
+    def update_speed(self, msg):
+        speed = msg.engine_speed
         if speed > 0.0:
             if self._state != self.RUNNING:
-                self.add_event(self.RUNNING)
                 # self._state = self.RUNNING
                 _logger.info(f"Engine {self._id} is starting")
                 self._start_time = datetime.datetime.now()
+                run = EngineRun(self._id, self._start_time, msg)
+                self._runs.append(run)
+                self._current_run = run
+                self.add_event(self.RUNNING)
+            else:
+                if self._current_run is not None:
+                    self._current_run.speed_input(msg)
+                else:
+                    _logger.error(f"Engine {self._id} speed input but no run is active")
         elif speed == 0.0:
             if self._state == self.RUNNING:
                 self._stop_time = datetime.datetime.now()
-                self.add_event(self.ON)
                 # self._state = self.ON
                 _logger.info(f"Engine {self._id} stops")
+                if self._current_run is not None:
+                    self._current_run.stop_run()
+                    _logger.info(f"Engine {self._id} run stopped: {json.dumps(self._current_run.as_dict())}")
+                    self._current_run = None
+                else:
+                    _logger.error(f"Engine {self._id} run stopped but no run is active")
+                self.add_event(self.ON)
+
             elif self._state == self.OFF:
                 _logger.info(f"Engine {self._id} is turned on")
                 self.add_event(self.ON)
                 # self._state = self.ON
+
         self._speed = speed
 
     def new_message(self):
@@ -451,6 +508,10 @@ class EngineData:
             # e_pb.engine_id = self._id
             yield e_pb
 
+    def get_runs_pb(self):
+        for r in self._runs:
+            yield r.as_protobuf()
+
     def update_data(self, msg):
         if self._state == self.OFF:
             self.add_event(self.ON)
@@ -459,6 +520,8 @@ class EngineData:
         self._temperature = msg.temperature
         self._alternator_voltage = msg.alternator_voltage
         self._total_hours = msg.total_engine_hours
+        if self._current_run is not None:
+            self._current_run.data_input(msg)
 
     def get_data(self, response: engine_data):
         response.engine_id = self._id
@@ -471,6 +534,8 @@ class EngineData:
             response.last_start_time = self._start_time.isoformat()
         if self._stop_time is not None:
             response.last_stop_time = self._stop_time.isoformat()
+        if self._current_run is not None:
+            self._current_run.as_protobuf(response.current_run)
 
     def check_off(self):
         if self._state == self.OFF:
@@ -487,6 +552,73 @@ class EngineData:
         return False
 
 
+class EngineRun:
+
+    def __init__(self, engine_id:int, start_time:datetime.datetime = None, msg=None, from_dict:dict= None):
+        self._engine_id = engine_id
+        if from_dict is not None:
+            self._start_time = datetime.datetime.fromisoformat(from_dict['start_time'])
+            self._stop_time = datetime.datetime.fromisoformat(from_dict['stop_time'])
+            self._total_hours_end = from_dict['total_hours_end']
+            self._duration = from_dict['duration']
+            self._max_temperature = from_dict['max_temperature']
+            self._alternator_voltage = from_dict['alternator_voltage']
+            self._last_msg_ts = from_dict['last_msg_ts']
+            self._first_msg_ts = from_dict['first_msg_ts']
+            self._average_speed = from_dict['average_speed']
+        else:
+            self._start_time = start_time
+            self._stop_time = None
+            self._total_hours_end = 0.0
+            self._duration = 0.0
+            self._max_temperature = 0.0
+            self._alternator_voltage = 0.0
+            self._last_msg_ts = time.monotonic()
+            self._first_msg_ts = time.monotonic()
+            if msg is not None:
+                self._average_speed = msg.engine_speed
+                self._max_speed = msg.engine_speed
+            else:
+                self._average_speed = 0.0
+                self._max_speed = 0.0
 
 
+    def speed_input(self, msg):
+        speed = msg.engine_speed
+        timestamp = time.monotonic()
+        interval = timestamp - self._last_msg_ts
+        accumulated_speed = self._average_speed * self._duration + speed * interval
+        # print(speed,timestamp,interval,accumulated_speed,self._average_speed, self._duration)
+        self._average_speed = accumulated_speed / (self._duration + interval)
+        if speed > self._max_speed:
+            self._max_speed = speed
+        self._last_msg_ts = timestamp
+        self._duration = timestamp - self._first_msg_ts
 
+
+    def data_input(self, msg):
+        self._max_temperature = max(self._max_temperature, msg.temperature)
+        self._alternator_voltage = max(self._alternator_voltage, msg.alternator_voltage)
+        self._total_hours_end = msg.total_engine_hours
+
+    def stop_run(self):
+        self._stop_time = datetime.datetime.now()
+
+    def as_dict(self):
+        return {
+            'engine_id': self._engine_id,
+            'start_time': self._start_time.isoformat(),
+            'stop_time': json_date(self._stop_time),
+            'total_hours': self._total_hours_end,
+            'duration': self._duration,
+            'average_speed': self._average_speed,
+            'max_speed': self._max_speed,
+            'max_temperature': self._max_temperature,
+            'alternator_voltage': self._alternator_voltage
+        }
+
+    def as_protobuf(self) -> engine_run:
+        fields = self.as_dict()
+        run_pb = engine_run()
+        fill_protobuf_from_dict(fields, run_pb)
+        return run_pb
