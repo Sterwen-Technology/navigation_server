@@ -69,6 +69,8 @@ class GenericTopServer:
         return True
 
     def stop_server(self):
+        for function in self._functions:
+            function.stop()
         for service in self._services:
             service.stop_service()
         for server in self._servers:

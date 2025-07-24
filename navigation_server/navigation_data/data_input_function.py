@@ -106,7 +106,7 @@ class NMEA2000InputConnector(NavThread):
         except Exception as err:
             _logger.error(f"Exception while processing PGN:{decoded_msg.pgn}: {err}")
 
-    def stop_service(self):
+    def stop(self):
         self._input_stream.close()
         self._stop_flag = True
 

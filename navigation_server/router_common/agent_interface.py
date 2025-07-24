@@ -64,10 +64,12 @@ def build_server_status_head(server) -> SystemProcessMsg:
     resp.state = ProcessState.RUNNING
     resp.pid = os.getpid()
     resp.console_present = server.console_present
+
     # some information are independent of the main server
     resp.hostname = gethostname()
     resp.purpose = MessageServerGlobals.configuration.server_purpose
     resp.settings = MessageServerGlobals.configuration.settings_file
+    _logger.info(f"Server status head: {resp}")
     return resp
 
 class AgentClient(ServiceClient):

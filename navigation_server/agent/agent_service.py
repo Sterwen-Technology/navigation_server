@@ -17,6 +17,7 @@ import logging
 import time
 import signal
 from socket import gethostname
+import os.path
 
 from navigation_server.generated.agent_pb2 import NavigationSystemMsg, AgentResponse
 from navigation_server.generated.services_server_pb2 import SystemProcessMsg, Server, Connection, ProcessState
@@ -73,7 +74,76 @@ class AgentExecutor(threading.Thread):
         run_cmd(self._cmd)
 
 
-class SystemdProcess:
+class ProcessABC:
+    """
+    Represents a process with controlled state management, lifecycle operations, and attributes.
+
+    The ProcessABC class encapsulates functionality to manage the lifecycle of a system process.
+    It provides properties to access its key attributes and state, methods to send signals, and
+    manages external process messages. The class allows controlled initialization and supports
+    tracking the process state, name, and other runtime attributes.
+    """
+    (NOT_STARTED, RUNNING, STOPPED) = range(0, 3)
+
+    def __init__(self, opts):
+        self._name = opts.get('name', str, 'incognito')
+        self._follow = opts.get('follow', str, None)
+        self._post = opts.get_choice('post', ['wait', 'delay', 'none'], 'none')
+        self._autostart = opts.get('autostart', bool, True)
+        self._controlled = opts.get('controlled', bool, True)
+        self._state = self.NOT_STARTED
+        self._process_msg = None
+        self._pid = 0
+
+    def __getattr__(self, attr_name):
+        if self._process_msg is None:
+            _logger.error(f"Process {self._name} no process msg present (bug) attr:{attr_name}")
+            raise AttributeError
+        try:
+            return self._process_msg.__getattribute__(attr_name)
+        except AttributeError:
+            _logger.error(f"Process missing {attr_name} attribute")
+            raise
+
+    def debug_msg_attributes(self, attr_set):
+        for attr in attr_set:
+            try:
+                _logger.debug(f"{attr}={self._process_msg.__getattribute__(attr)}")
+            except AttributeError:
+                _logger.debug(f"{attr} non existent")
+
+    @property
+    def is_controlled(self) -> bool:
+        return self._controlled
+
+    @property
+    def is_running(self) -> bool:
+        return self._state == self.RUNNING and self._process_msg is not None
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def local_state(self):
+        return self._state
+
+    @property
+    def autostart(self):
+        return self._autostart
+
+    def send_sigint(self):
+        if self._state == self.RUNNING and self._pid > 0:
+            run_cmd(f"kill -{signal.SIGINT} {self._pid}")
+
+    def start_confirmation(self, process_msg: SystemProcessMsg):
+        self._process_msg = process_msg
+        self.debug_msg_attributes(['name', 'state', 'grpc_port', 'version', 'start_time', 'console_present', 'pid'])
+        self._state = self.RUNNING
+        self._pid = process_msg.pid
+
+
+class SystemdProcess(ProcessABC):
     """
     Represents a wrapper for managing systemd processes and their states.
 
@@ -87,30 +157,13 @@ class SystemdProcess:
         RUNNING (int): State representing a running process.
         STOPPED (int): State representing a stopped process.
     """
-    (NOT_STARTED, RUNNING, STOPPED) = range(0,3)
+
 
     def __init__(self, opts):
-        self._name = opts.get('name', str, 'incognito')
+        super().__init__(opts)
         self._service = opts.get('service', str, self._name)
-        self._follow = opts.get('follow', str, None)
-        self._post = opts.get_choice('post', ['wait', 'delay', 'none'], 'none')
-        self._autostart = opts.get('autostart', bool, True)
-        self._controlled = opts.get('controlled', bool, True)
-        self._state = self.NOT_STARTED
-        self._process_msg = None
         self._start_event = threading.Event()
-        self._pid = 0
         self._control_group = None
-
-    def __getattr__(self, attr_name):
-        if self._process_msg is None:
-            _logger.error(f"SystemdProcess {self._name} no process msg present (bug) attr:{attr_name}")
-            raise AttributeError
-        try:
-            return self._process_msg.__getattribute__(attr_name)
-        except AttributeError:
-            _logger.error(f"SystemdProcess missing {attr_name} attribute")
-            raise
 
     def start(self):
         _logger.info(f"Agent starting systemd service {self._service}")
@@ -183,24 +236,12 @@ class SystemdProcess:
         return code
 
     def start_confirmation(self, process_msg: SystemProcessMsg):
-        self._process_msg = process_msg
-        self.debug_msg_attributes(['name', 'state', 'grpc_port', 'version', 'start_time', 'console_present'])
-        self._state = self.RUNNING
+        super().start_confirmation(process_msg)
         if not self._start_event.is_set():
             self._start_event.set()
 
     def start_in_progress(self) -> bool:
         return not self._start_event.is_set()
-
-    def debug_msg_attributes(self, attr_set):
-        for attr in attr_set:
-            try:
-                _logger.debug(f"{attr}={self._process_msg.__getattribute__(attr)}")
-            except AttributeError:
-                _logger.debug(f"{attr} non existent")
-
-    def send_sigint(self):
-        run_cmd(f"kill -{signal.SIGINT} {self._pid}")
 
     def restart(self):
         # proceed to hard restart
@@ -223,86 +264,49 @@ class SystemdProcess:
             _logger.error(f"Agent cannot stop a process ({self.name}) that is not running")
 
     @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def local_state(self):
-        return self._state
-
-    @property
-    def autostart(self):
-        return self._autostart
-
-    @property
     def service(self):
         return self._service
 
-    @property
-    def is_controlled(self) -> bool:
-        return self._controlled
 
-    @property
-    def is_running(self) -> bool:
-        return self._state == self.RUNNING and self._process_msg is not None
+class SimpleProcess(ProcessABC):
 
-
-class SimpleProcess:
-    (NOT_STARTED, RUNNING, STOPPED) = range(0, 3)
     def __init__(self, opts):
-        self._name = opts.get('name', str, 'incognito')
+        super().__init__(opts)
         self._run_path = opts.get('run_path', str, None)
-        self._process_msg = None
-        self._autostart = False
-        self._state = self.NOT_STARTED
-
-    @property
-    def autostart(self):
-        return self._autostart
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    def __getattr__(self, attr_name):
-        if self._process_msg is None:
-            _logger.error(f"SimpleProcess {self._name} no process msg present (bug) attr:{attr_name}")
-            raise AttributeError
-        try:
-            return self._process_msg.__getattribute__(attr_name)
-        except AttributeError:
-            _logger.error(f"SimpleProcess missing {attr_name} attribute")
-            raise
+        self._process_type = opts.get_choice('process_type', str, ['shell', 'python', 'other'], 'shell')
+        self._arguments = opts.get('arguments', str, '')
+        self._autostart = opts.get('autostart', bool, True)
+        self._pid = 0
+        self._child = None
+        self._console_present = False
+        self._console_pid = 0
+        self._console_thread = None
+        self._console_lock = threading.Lock()
+        self._console_msg = None
+        self._console_msg_lock = threading.Lock()
+        self._console_msg_thread = None
+        if self._run_path is None:
+            self._autostart = False
 
     def status(self):
-        return 1
+        if self._pid > 0 and os.path.exists(f"/proc/{self._pid}"):
+            self._state = self.RUNNING
+            return 0
+        else:
+            self._state = self.NOT_STARTED
+            return 3
+
 
     def start_in_progress(self) -> bool:
         return False
 
-    @property
-    def is_controlled(self) -> bool:
-        return False
-
-    @property
-    def local_state(self):
-        return self._state
+    def start(self):
+        pass
 
     @property
     def service(self):
         return "simple"
 
-    def start_confirmation(self, process_msg: SystemProcessMsg):
-        self._process_msg = process_msg
-        self.debug_msg_attributes(['name', 'state', 'grpc_port', 'version', 'start_time', 'console_present', 'pid'])
-        self._state = self.RUNNING
-
-    def debug_msg_attributes(self, attr_set):
-        for attr in attr_set:
-            try:
-                _logger.debug(f"{attr}={self._process_msg.__getattribute__(attr)}")
-            except AttributeError:
-                _logger.debug(f"{attr} non existent")
 
 class AgentServicerImpl(AgentServicer):
 
@@ -380,11 +384,12 @@ class AgentServicerImpl(AgentServicer):
 
     def status(self, process:SystemdProcess, resp):
         code = process.status()
+        _logger.debug("Agent status %s code %d" % (process.name, code))
         if code == 0:
             # process is running
             resp.err_code = 0
             resp.response = f"process {process.name} is running"
-            # process.debug_msg_attributes(['name', 'grpc_port', 'version', 'start_time', 'console_present'])
+            process.debug_msg_attributes(['name', 'grpc_port', 'version', 'start_time', 'console_present'])
             self.fill_process_response(process, resp.process)
         elif code == 3:
             # process is not running

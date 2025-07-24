@@ -10,11 +10,10 @@
 #-------------------------------------------------------------------------------
 #
 function: Local system control agent
-server_name: agent
+server_name: navigation_agent
 log_level: INFO
 trace_dir: /data/solidsense/traces
 log_module:
-    main: DEBUG
 
 features:
     - agent
@@ -26,7 +25,7 @@ servers:
 
 - gRPCMain:
     class: GrpcServer
-    port: 4506
+    port: 4545
 
 services:
 
@@ -34,7 +33,10 @@ services:
     class: AgentService
     server: gRPCMain
 
+processes:
 
+- LogReplayServer:
+      class: SimpleProcess
 
 
 
