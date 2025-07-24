@@ -51,5 +51,6 @@ message SystemProcessMsg {
   uint32 pid=14;
   string purpose = 11;
   string settings = 12;
+  bool is_systemd = 15;   // indicates that the process is controlled via systemd
   repeated Server servers=9;
 }
