@@ -19,7 +19,7 @@ import signal
 from socket import gethostname
 import os.path
 
-from navigation_server.generated.agent_pb2 import NavigationSystemMsg, AgentResponse
+from navigation_server.generated.agent_pb2 import NavigationSystemMsg, AgentResponse, LogLine
 from navigation_server.generated.services_server_pb2 import SystemProcessMsg, Server, Connection, ProcessState
 from navigation_server.generated.agent_pb2_grpc import AgentServicer, add_AgentServicer_to_server
 from navigation_server.router_common import (GrpcService, GenericTopServer, resolve_ref, copy_protobuf_data,
@@ -374,6 +374,35 @@ class AgentServicerImpl(AgentServicer):
             return resp
         self._system_vector[cmd](resp)
         return resp
+
+    def GetSystemLog(self, request, context):
+        try:
+            process = self._agent.get_process(request.target)
+        except KeyError:
+            _logger.error(f"Agent GetSystemLog unknown process {request.target}")
+            return
+        if not isinstance(process, SystemdProcess):
+            _logger.error(f"Agent GetSystemLog process {request.target} incorrect type {type(process)}")
+            return
+        if not process.is_running:
+            _logger.error(f"Agent GetSystemLog process {request.target} not running")
+            return
+        # Start journalctl subprocess to read logs
+        cmd = ['journalctl', '-u', process.service, '-f', '-n', '100']
+        try:
+            journal_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+            while True:
+                line = journal_proc.stdout.readline()
+                if not line:
+                    break
+                resp = LogLine()
+                resp.line = line.rstrip()
+                yield resp
+        except Exception as e:
+            _logger.error(f"Error reading logs for {process.service}: {e}")
+        finally:
+            if journal_proc:
+                journal_proc.terminate()
 
     def fill_process_response(self, process, resp):
         if process.is_controlled:

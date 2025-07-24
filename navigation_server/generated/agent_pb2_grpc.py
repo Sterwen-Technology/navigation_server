@@ -52,6 +52,11 @@ class AgentStub(object):
                 request_serializer=services__server__pb2.SystemProcessMsg.SerializeToString,
                 response_deserializer=agent__pb2.AgentResponse.FromString,
                 _registered_method=True)
+        self.GetSystemLog = channel.unary_stream(
+                '/Agent/GetSystemLog',
+                request_serializer=agent__pb2.AgentCmdMsg.SerializeToString,
+                response_deserializer=agent__pb2.LogLines.FromString,
+                _registered_method=True)
 
 
 class AgentServicer(object):
@@ -75,6 +80,12 @@ class AgentServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetSystemLog(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AgentServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -92,6 +103,11 @@ def add_AgentServicer_to_server(servicer, server):
                     servicer.RegisterProcess,
                     request_deserializer=services__server__pb2.SystemProcessMsg.FromString,
                     response_serializer=agent__pb2.AgentResponse.SerializeToString,
+            ),
+            'GetSystemLog': grpc.unary_stream_rpc_method_handler(
+                    servicer.GetSystemLog,
+                    request_deserializer=agent__pb2.AgentCmdMsg.FromString,
+                    response_serializer=agent__pb2.LogLines.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -175,6 +191,33 @@ class Agent(object):
             '/Agent/RegisterProcess',
             services__server__pb2.SystemProcessMsg.SerializeToString,
             agent__pb2.AgentResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetSystemLog(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/Agent/GetSystemLog',
+            agent__pb2.AgentCmdMsg.SerializeToString,
+            agent__pb2.LogLines.FromString,
             options,
             channel_credentials,
             insecure,

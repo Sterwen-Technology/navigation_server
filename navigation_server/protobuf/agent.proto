@@ -41,9 +41,14 @@ message AgentResponse {
   repeated string status_lines = 8;
 }
 
+message LogLines {
+  string line=1;
+}
+
 
 service Agent {
   rpc AgentCmd(AgentCmdMsg) returns (AgentResponse) {}
   rpc AgentSystemCmd(AgentCmdMsg) returns(AgentResponse) {}
   rpc RegisterProcess(SystemProcessMsg) returns(AgentResponse) {}
+  rpc GetSystemLog(AgentCmdMsg) returns (stream LogLines) {}
 }
