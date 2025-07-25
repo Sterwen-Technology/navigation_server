@@ -19,7 +19,7 @@ import signal
 from socket import gethostname
 import os.path
 
-from navigation_server.generated.agent_pb2 import NavigationSystemMsg, AgentResponse, LogLine
+from navigation_server.generated.agent_pb2 import NavigationSystemMsg, AgentResponse, LogLines
 from navigation_server.generated.services_server_pb2 import SystemProcessMsg, Server, Connection, ProcessState
 from navigation_server.generated.agent_pb2_grpc import AgentServicer, add_AgentServicer_to_server
 from navigation_server.router_common import (GrpcService, GenericTopServer, resolve_ref, copy_protobuf_data,
@@ -273,7 +273,7 @@ class SimpleProcess(ProcessABC):
     def __init__(self, opts):
         super().__init__(opts)
         self._run_path = opts.get('run_path', str, None)
-        self._process_type = opts.get_choice('process_type', str, ['shell', 'python', 'other'], 'shell')
+        self._process_type = opts.get_choice('process_type', ['shell', 'python', 'other'], 'shell')
         self._arguments = opts.get('arguments', str, '')
         self._autostart = opts.get('autostart', bool, True)
         self._pid = 0
@@ -388,15 +388,17 @@ class AgentServicerImpl(AgentServicer):
             _logger.error(f"Agent GetSystemLog process {request.target} not running")
             return
         # Start journalctl subprocess to read logs
-        cmd = ['journalctl', '-u', process.service, '-f', '-n', '100']
+        _logger.info(f"Agent GetSystemLog reading logs for {process.service}")
+        cmd = ['journalctl', '-u', process.service, '-f', '-o', 'cat']
         try:
             journal_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
             while True:
                 line = journal_proc.stdout.readline()
                 if not line:
                     break
-                resp = LogLine()
-                resp.line = line.rstrip()
+                _logger.debug(f"Log line: {line}")
+                resp = LogLines()
+                resp.line = line.rstrip('\n')
                 yield resp
         except Exception as e:
             _logger.error(f"Error reading logs for {process.service}: {e}")

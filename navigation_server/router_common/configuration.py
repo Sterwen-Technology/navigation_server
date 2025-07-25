@@ -219,7 +219,7 @@ class NavigationConfiguration:
         self._server_purpose = None
         NavigationConfiguration._instance = self
         MessageServerGlobals.configuration = self
-        self.init_server_globals()
+        # self.init_server_globals()
 
     def build_configuration(self, settings_file):
         """
