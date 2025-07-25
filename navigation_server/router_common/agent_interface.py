@@ -123,7 +123,18 @@ class AgentClient(ServiceClient):
         else:
             return resp.grpc_port
 
+    def get_log(self, process_name: str, line_callback):
+        msg = AgentCmdMsg()
+        msg.cmd = 'system_log'
+        msg.target = process_name
+        try:
+            self._start_read_stream_to_callback(self._stub.GetSystemLog, msg, line_callback)
+        except GrpcAccessException:
+            _logger.error(f"Error accessing server for logs on:{process_name}")
+            return
 
+    def stop_log(self):
+        self._stop_read_stream()
 
 class AgentInterfaceRunner(NavThread):
 
