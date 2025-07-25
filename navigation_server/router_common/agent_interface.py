@@ -128,7 +128,7 @@ class AgentClient(ServiceClient):
         msg.cmd = 'system_log'
         msg.target = process_name
         try:
-            self._start_read_stream_to_callback(self._stub.GetSystemLog, msg, line_callback)
+            self._start_read_stream_to_callback(f"{process_name}-log_reader",self._stub.GetSystemLog, msg, line_callback)
         except GrpcAccessException:
             _logger.error(f"Error accessing server for logs on:{process_name}")
             return

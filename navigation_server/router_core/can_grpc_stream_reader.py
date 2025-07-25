@@ -117,7 +117,8 @@ class CANGrpcStreamReader(ServiceClient):
         if success:
             _logger.debug("CANGrpcStreamReader start => connected")
             if not self.stream_is_alive():
-                self._start_read_stream_to_queue(self._stub.ReadNmea2000Msg, self._can_request)
+                self._start_read_stream_to_queue(self._can_request.client,
+                                                 self._stub.ReadNmea2000Msg, self._can_request)
             return True
         else:
             _logger.debug("CANGrpcStreamReader start => failed")
@@ -133,7 +134,8 @@ class CANGrpcStreamReader(ServiceClient):
         if success:
             _logger.debug("CANGrpcStreamReader start => connected")
             if not self.stream_is_alive():
-                self._start_read_stream_to_callback(self._stub.ReadNmea2000Msg, self._can_request, process_msg_callback)
+                self._start_read_stream_to_callback(self._can_request.client, self._stub.ReadNmea2000Msg,
+                                                    self._can_request, process_msg_callback)
             return True
         else:
             _logger.debug("CANGrpcStreamReader start => failed")
