@@ -335,7 +335,7 @@ class GrpcStreamingReader(NavThread):
             _grpc_server: Reference to the gRPC server instance.
             _error_callback: Callable function for handling errors.
         """
-        super().__init__(name=request.client, daemon=True)
+        super().__init__(name='GrpcStreamReader', daemon=True)
         self._request = request
         self._rpc_func = rpc_func
         if out_queue is None:
@@ -355,7 +355,7 @@ class GrpcStreamingReader(NavThread):
         self._out_queue.put(msg, block=True)
 
     def nrun(self):
-        _logger.debug("Starting gRPC stream reading thread %s" % self._request.client)
+        _logger.debug("Starting gRPC stream reading thread")
         try:
             for msg in self._rpc_func(self._request):
                 if self._stop_flag:
