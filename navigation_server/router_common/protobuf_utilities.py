@@ -6,7 +6,7 @@
 # Author:      Laurent Carré
 #
 # Created:     09/08/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -30,6 +30,28 @@ def set_protobuf_data(result, keys, data_dict: dict):
             continue
 
 def fill_protobuf_from_dict(result, data_dict:dict):
+    """
+    Fills a protobuf message object with data from a dictionary.
+
+    This function iterates over the key-value pairs in the provided dictionary
+    and sets the corresponding attributes of the protobuf message object
+    with the values from the dictionary. It assumes that the keys in
+    the dictionary correspond to the attribute names in the protobuf object.
+
+    Parameters:
+    data_dict: dict
+        A dictionary containing data where the keys represent attribute names
+        and the values are the corresponding values to set in the protobuf
+        object.
+
+    result:
+        A protobuf message object to populate with data from the dictionary.
+
+    Returns:
+        None
+
+    Raise AttributeError if no corresponding attribute is found in the protobuf object
+    """
     for key, val in data_dict.items():
         setattr(result, key, val)
 

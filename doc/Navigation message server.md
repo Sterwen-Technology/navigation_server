@@ -422,32 +422,15 @@ The Agent service provides a limited but useful remote control of the Linux syst
 
 **Warning: use this service only in a controlled environment as in its current version no access control is implemented**
 
-#### DataDispatchService
+#### NetworkService
 
-This is a **primary** service dispatching NMEA messages sent over gRPC using the same interface as the GrpcNmeaCoupler.
-The messages are meant to be processed by *secondary* services that subscribe to this service using NMEA2000 PGN or NMEA0183 formatter as subscribing keys.
-Messages with no subscription are simply ignored.
+#### EngineService
 
-#### NavigationDataService
+Gather all data coming from engines and expose them over a gRPC interface (engine_data.proto)
 
-This service pulls a stream of NMEA2000 messages and dispatches the messages towards all services that use the service as primary ones.
-
-The parameters are the one from the stream:
-
-| Name           | Type      | Default | Signification                                                                    |
-|----------------|-----------|---------|----------------------------------------------------------------------------------|
-| source_server  | string    | None    | ip address or URL for the source                                                 |
-| source_port    | int       | 0       | port on the source server                                                        |
-| select_sources | list[int] | None    | optional: list of all sources (CAN addresses) that will be pushed on the stream  |
-| reject_sources | list[int] | None    | valid only if there is no sources selected. reject all messages from the sources |
-| select_pgn     | list[int] | None    | optional: list all PGN that will be pushed on the stream                         |
-| reject_pgn     | list[int] | None    | valid only if there is no PGN selected. Reject all PGN listed                    |
-
-
-The NavigationDataService can support the following data services:
-
-- EngineService with the **engine_data.proto** interface file
-- PositionDataService (future)
+| Name   | Type   | Default | Signification                                            |
+|--------|--------|---------|----------------------------------------------------------|
+| source | string | None    | input function associated. This is a mandatory parameter |
 
 #### Energy management service
 
@@ -469,6 +452,32 @@ Additional parameters
 | protocol     | nmea0183, nmea2000 | nmea0183 | XDR sentence for NMEA0183, PGN 127507, 127751 for NMEA2000             |
 | trend_depth  | int                | 30       | number of values in the trend table                                    |
 | trend_period | float              | 10       | period of the trend bucket in seconds (min 1 sec)                      |
+
+### Functions
+
+Functions are processing blocks that are not directly accessible
+
+#### NMEA2000InputConnector
+
+This service pulls a stream of NMEA2000 messages and dispatches the messages towards all services that use the service as primary ones.
+
+The parameters are the one from the stream:
+
+| Name           | Type      | Default | Signification                                                                    |
+|----------------|-----------|---------|----------------------------------------------------------------------------------|
+| source_server  | string    | None    | ip address or URL for the source                                                 |
+| source_port    | int       | 0       | port on the source server                                                        |
+| select_sources | list[int] | None    | optional: list of all sources (CAN addresses) that will be pushed on the stream  |
+| reject_sources | list[int] | None    | valid only if there is no sources selected. reject all messages from the sources |
+| select_pgn     | list[int] | None    | optional: list all PGN that will be pushed on the stream                         |
+| reject_pgn     | list[int] | None    | valid only if there is no PGN selected. Reject all PGN listed                    |
+
+The NavigationDataService can support the following data services:
+
+- EngineService with the **engine_data.proto** interface file
+- PositionDataService (future)
+
+**note: PGN do not need to be explicitly selected. By default, they are selected based on the subscription by the services or function processing the data**
 
 
 ### Publishers

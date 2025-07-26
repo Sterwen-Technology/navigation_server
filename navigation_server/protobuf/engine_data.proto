@@ -21,7 +21,7 @@ message engine_data {
   uint32 engine_id=1;
   EngineState state=2;
   float total_hours=3;  // in seconds
-  float speed=4;
+  float speed=4;        // RPM
   float temperature=5;  // in Kelvin
   float alternator_voltage=8;
   string last_start_time=6; // ISO format
@@ -54,7 +54,7 @@ message engine_run {
   uint32 engine_id=1;
   string start_time=2;    // isoformat date
   string stop_time=3;     // isoformat date NULL if on-going run
-  float total_hours=4;  // in seconds
+  float total_hours=4;  // in seconds and the end of the run
   float duration=5;         // in seconds
   float average_speed=6;    // RPM
   float max_speed=7;

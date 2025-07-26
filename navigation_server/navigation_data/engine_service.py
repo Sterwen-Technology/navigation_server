@@ -558,7 +558,7 @@ class EngineData:
         if self._stop_time is not None:
             response.last_stop_time = self._stop_time.isoformat()
         if self._current_run is not None:
-            self._current_run.as_protobuf(response.current_run)
+            self._current_run.set_protobuf(response.current_run)
 
     def check_off(self):
         if self._state == self.OFF:
@@ -576,12 +576,60 @@ class EngineData:
 
 
 class EngineRun:
+    """
+    Represents an instance of an engine's runtime, collecting data such as speed, temperature,
+    voltage, and duration during its operation.
 
+    This class is designed to manage and record various relevant parameters of an engine
+    run. It provides methods to input real-time or recorded data, handles calculations like average
+    speed, and allows serialization of the recorded data into dictionary format or protocol buffers.
+
+    Attributes:
+        _engine_id: int
+            A unique identifier for the engine
+        _start_time: datetime.datetime
+            Timestamp when the engine run started
+        _stop_time: datetime.datetime
+            Timestamp when the engine run stopped
+        _total_hours_end: float
+            Total hours of engine operation at the end of the run
+        _duration: float
+            Duration of the run in seconds
+        _max_temperature: float
+            Maximum temperature reached during the run
+        _alternator_voltage: float
+            Maximum alternator voltage recorded
+        _last_msg_ts: float
+            Timestamp of the last message received
+        _first_msg_ts: float
+            Timestamp of the first message received
+        _average_speed: float
+            Average engine speed over the run duration
+        _max_speed: float
+            Maximum speed reached during the run
+
+    Methods:
+        speed_input(msg)
+            Updates speed data with a new message
+        data_input(msg)
+            Updates temperature and voltage data with a new message
+        stop_run()
+            Marks the end of the run and records the stop timestamp
+        as_dict()
+            Returns the data as a dictionary
+        as_dict_for_pb()
+            Returns a subset of data formatted for protocol buffer
+        as_protobuf()
+            Converts the data to a protocol buffer message
+    """
     def __init__(self, engine_id:int, start_time:datetime.datetime = None, msg=None, from_dict:dict= None):
         self._engine_id = engine_id
         if from_dict is not None:
             self._start_time = datetime.datetime.fromisoformat(from_dict['start_time'])
-            self._stop_time = datetime.datetime.fromisoformat(from_dict['stop_time'])
+            if from_dict['stop_time'] is not None:
+                self._stop_time = datetime.datetime.fromisoformat(from_dict['stop_time'])
+            else:
+                self._stop_time = None
             self._total_hours_end = from_dict['total_hours']
             self._duration = from_dict['duration']
             self._max_temperature = from_dict['max_temperature']
@@ -661,3 +709,7 @@ class EngineRun:
         run_pb = engine_run()
         fill_protobuf_from_dict(run_pb, fields)
         return run_pb
+
+    def set_protobuf(self, run_pb: engine_run):
+        fields = self.as_dict_for_pb()
+        fill_protobuf_from_dict(run_pb, fields)
