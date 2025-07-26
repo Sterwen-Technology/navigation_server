@@ -337,10 +337,12 @@ class NavigationConfiguration:
         self._settings_file = settings_file
         return self
 
+    ''' Removed in 2.6.0 => done in router_common package init
     @staticmethod
     def init_server_globals():
         MessageServerGlobals.thread_controller = NavThreadingController()
         MessageServerGlobals.profiling_controller = NavProfilingController()
+    '''
 
     def dump(self):
         print(self._configuration)

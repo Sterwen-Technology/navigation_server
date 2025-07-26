@@ -337,6 +337,7 @@ class EngineData:
         self._engine_dir = None
         self._current_date = None
         self._event_file: str = None
+        self._run_file: str = None
         self._runs = []
         self._current_run = None
         # self._event_file = os.path.join(root_dir, engine_dir, event_file)
@@ -416,6 +417,16 @@ class EngineData:
                             )
                         else:
                             break
+            if os.path.exists(self._run_file):
+                # we have runs to read
+                with open(self._run_file, 'r') as fd:
+                    while True:
+                        line = fd.readline()
+                        if line:
+                            run_r = json.loads(line)
+                            self._runs.append(EngineRun(self._id, from_dict=run_r))
+                        else:
+                            break
 
     def check_date(self):
         actual_date = datetime.date.today()
@@ -424,6 +435,9 @@ class EngineData:
             event_file = f"eng#{self._id}-events-{self._current_date.year}-{self._current_date.month}-{self._current_date.day}"
             _logger.info(f"Engine data - creating new event file:{event_file}")
             self._event_file = os.path.join(self._root_dir, self._engine_dir, event_file)
+            run_file = f"eng#{self._id}-runs-{self._current_date.year}-{self._current_date.month}-{self._current_date.day}"
+            self._run_file = os.path.join(self._root_dir, self._engine_dir, run_file)
+
 
     def as_dict(self):
         return {
@@ -465,10 +479,12 @@ class EngineData:
                 if self._current_run is not None:
                     self._current_run.stop_run()
                     _logger.info(f"Engine {self._id} run stopped: {json.dumps(self._current_run.as_dict())}")
+                    self.store_run()
                     self._current_run = None
                 else:
                     _logger.error(f"Engine {self._id} run stopped but no run is active")
                 self.add_event(self.ON)
+
 
             elif self._state == self.OFF:
                 _logger.info(f"Engine {self._id} is turned on")
@@ -492,6 +508,13 @@ class EngineData:
             fd.write('\n')
         self._state = current_state
         self.save_status()
+
+    def store_run(self):
+        if self._current_run is not None:
+            with open(self._run_file, 'a') as fd:
+                line = json.dumps(self._current_run.as_dict())
+                fd.write(line)
+                fd.write('\n')
 
     def save_status(self):
         with open(self._status_file, 'w') as fd:
@@ -559,13 +582,14 @@ class EngineRun:
         if from_dict is not None:
             self._start_time = datetime.datetime.fromisoformat(from_dict['start_time'])
             self._stop_time = datetime.datetime.fromisoformat(from_dict['stop_time'])
-            self._total_hours_end = from_dict['total_hours_end']
+            self._total_hours_end = from_dict['total_hours']
             self._duration = from_dict['duration']
             self._max_temperature = from_dict['max_temperature']
             self._alternator_voltage = from_dict['alternator_voltage']
             self._last_msg_ts = from_dict['last_msg_ts']
             self._first_msg_ts = from_dict['first_msg_ts']
             self._average_speed = from_dict['average_speed']
+            self._max_speed = from_dict['max_speed']
         else:
             self._start_time = start_time
             self._stop_time = None
@@ -614,11 +638,26 @@ class EngineRun:
             'average_speed': self._average_speed,
             'max_speed': self._max_speed,
             'max_temperature': self._max_temperature,
+            'alternator_voltage': self._alternator_voltage,
+            'first_msg_ts': self._first_msg_ts,
+            'last_msg_ts': self._last_msg_ts
+        }
+
+    def as_dict_for_pb(self):
+        return {
+            'engine_id': self._engine_id,
+            'start_time': self._start_time.isoformat(),
+            'stop_time': json_date(self._stop_time),
+            'total_hours': self._total_hours_end,
+            'duration': self._duration,
+            'average_speed': self._average_speed,
+            'max_speed': self._max_speed,
+            'max_temperature': self._max_temperature,
             'alternator_voltage': self._alternator_voltage
         }
 
     def as_protobuf(self) -> engine_run:
-        fields = self.as_dict()
+        fields = self.as_dict_for_pb()
         run_pb = engine_run()
-        fill_protobuf_from_dict(fields, run_pb)
+        fill_protobuf_from_dict(run_pb, fields)
         return run_pb
