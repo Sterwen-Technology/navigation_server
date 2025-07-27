@@ -27,7 +27,13 @@ class N2KGrpcCoupler(Coupler, CANGrpcStreamReader):
 
     def __init__(self, opts):
         super().__init__(opts)
-        CANGrpcStreamReader.__init__(self, self.object_name(), opts)
+        input_stream_opts = {}
+        input_stream_opts['source_server'] = opts.get('source_server', str, None)
+        input_stream_opts['source_port'] = opts.get('source_port', int, 0)
+        input_stream_opts['select_sources'] = opts.getlist('select_sources', int, None)
+        input_stream_opts['reject_sources'] = opts.getlist('reject_sources', int, None)
+        input_stream_opts['reject_pgn'] = None
+        CANGrpcStreamReader.__init__(self, self.object_name(), input_stream_opts)
         self._mode = self.NMEA2000
 
     def open(self):
