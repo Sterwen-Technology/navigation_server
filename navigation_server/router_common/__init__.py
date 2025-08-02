@@ -27,10 +27,11 @@ from .message_trace import MessageTraceError, NMEAMsgTrace
 from .server_common import NavigationServer
 from .grpc_server_service import GrpcServer, GrpcService, GrpcServerError, GrpcSecondaryService
 from .generic_top_server import GenericTopServer
-from .nav_threading import NavThread, NavThreadingController, NavProfilingController
+from .nav_threading import NavThread, NavThreadingController, NavProfilingController, NavTimerController
 from .constants_conversion import nautical_mille, mps_to_knots, n2ktime_to_datetime, radian_to_deg
 from .client_common import GrpcClient, ServiceClient, GrpcStreamTimeout, GrpcSendStreamIterator, GrpcStreamIteratorError
 from .agent_interface import AgentInterface, AgentClient
 if MessageServerGlobals.thread_controller is None:
     MessageServerGlobals.thread_controller = NavThreadingController()
     MessageServerGlobals.profiling_controller = NavProfilingController()
+    MessageServerGlobals.timer_controller = NavTimerController()

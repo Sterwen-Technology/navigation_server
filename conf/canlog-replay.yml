@@ -15,6 +15,11 @@ log_level: INFO
 trace_dir: /data/navigation/traces
 debug_configuration: false
 decode_definition_only: false
+connect_agent: true
+
+log_module:
+    router_common.agent_interface: DEBUG
+
 
 features:
   - router_core
@@ -35,20 +40,24 @@ servers:
       class: NMEA2KActiveController
       trace: false
       channel: can0
-      mac_source: end0
+      mac_source: eth0
       max_silent: 60.0
       applications: [LogInjector]
 
 couplers:
 
 - LogReader:
-    logfile: /data/navigation/traces/TRACE-CAN-if-can0-250404-0757.log
+    logfile: /data/navigation/traces/TRACE-CAN-if-can0-240823-1304.log
     class: TransparentCanLogCoupler
     autostart: true
     direction: read_only
     stop_system: true
 
+services:
 
+- Console:
+   class: Console
+   server: gRPCMainServer
 publishers:
 
 - Dispatcher:

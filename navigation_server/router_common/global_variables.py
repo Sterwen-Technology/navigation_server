@@ -30,6 +30,7 @@ class MessageServerGlobals:
     trace_dir = None
     thread_controller = None
     profiling_controller = None
+    timer_controller = None
     main_server = None
     root_package = None
     home_dir = None

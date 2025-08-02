@@ -53,6 +53,7 @@ class Publisher(NavThread):
             self._queue_size = opts.get('queue_size', int, 20)
             self._max_lost = opts.get('max_lost', int, 5)
             self._service = opts.get('service', str, None)
+            self._suspend_on_overflow = opts.get('suspend_on_overflow', bool, False)
             inst_list = opts.getlist('couplers', str, [])
             if len(inst_list) == 0:
                 if self._service is None:
@@ -110,6 +111,11 @@ class Publisher(NavThread):
         except queue.Full:
             # need to empty the queue
             self._nb_msg_lost += 1
+            if self._max_lost == 0:
+                if self._nb_msg_lost == 1:
+                    _logger.warning("Connection %s start losing message" % self._name)
+                # then messages are just discarded
+                return
             _logger.warning("Overflow on connection %s total message lost %d" % (self._name, self._nb_msg_lost))
             if self._nb_msg_lost >= self._max_lost:
                 raise PublisherOverflow
@@ -117,7 +123,11 @@ class Publisher(NavThread):
         if qs > self._queue_threshold:
             _logger.warning("%s Publisher Queue filling up over 80%% size %d" % (self._name, qs))
             self._queue_tpass = True
-            time.sleep(0.2)
+            if self._suspend_on_overflow:
+                for coupler in self._couplers.values():
+                    coupler.suspend()
+            else:
+                time.sleep(0.2)
         if self._queue_tpass:
             if qs < 4:
                 _logger.info("%s Publisher queue back to low level" % self._name)

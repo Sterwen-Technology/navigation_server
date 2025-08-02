@@ -52,3 +52,14 @@ class N2KEncodeException(Exception):
 
 class IncompleteMessage(Exception):
     pass
+
+
+class SocketCanError(Exception):
+
+    def __init__(self, message, can_error: int = 0) -> None:
+        super().__init__(message)
+        self._can_error = can_error
+
+    @property
+    def can_error(self) -> int:
+        return self._can_error

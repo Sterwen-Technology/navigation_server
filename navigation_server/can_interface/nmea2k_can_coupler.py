@@ -119,7 +119,7 @@ class DirectCANCoupler(Coupler, NMEA2000Application):
         """
         Send the NMEA2000 message to the bus interface
         """
-        return self._controller.CAN_interface.send(msg)
+        return self._send_to_bus(msg)
 
     def stop_trace(self):
         if self._controller_set:

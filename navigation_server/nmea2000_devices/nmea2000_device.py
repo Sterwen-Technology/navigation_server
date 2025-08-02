@@ -193,7 +193,7 @@ class SystemClockDevice(NMEA2000Application):
             seconds = (ts.hour * 3600 + ts.minute * 60 + ts.second) + (ts.microsecond / 1e6)
             msg.date = date_val
             msg.time = seconds
-            self._controller.CAN_interface.send(msg.message())
+            self._send_to_bus(msg.message())
             self._sequence_id += 1
             if self._sequence_id == 254:
                 self._sequence_id = 0

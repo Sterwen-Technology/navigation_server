@@ -11,6 +11,7 @@
 
 import logging
 
+from . import SocketCanError
 from .nmea2k_application import NMEA2000Application
 from navigation_server.nmea2000_datamodel import NMEA2000DecodedMsg
 from navigation_server.nmea2000 import GrpcInputDataService
@@ -38,19 +39,19 @@ class GrpcInputApplication(GrpcInputDataService, NMEA2000Application):
 
     def input_message_pb(self, msg: NMEA2000DecodedMsg):
         _logger.debug("Grpc Input application receiving PGN %d" % msg.pgn)
-        # convert it into a message for the CAN bus
-        # adjust SA
-        msg.sa = self._address
+        # convert it into a NMEA200%sg message for the CAN bus
         try:
             can_message = msg.message()
         except Exception as err:
             _logger.error("Error coding CAN message for PGN %d: %s" % (msg.pgn, err))
             raise
-        self._controller.CAN_interface.send(can_message)
+        self.input_message(can_message)
 
     def input_message(self, msg: NMEA2000Msg):
+        # adjust SA and send to CAN
         msg.sa = self._address
-        self._controller.CAN_interface.send(msg)
+        self._send_to_bus(msg)
+
 
     def receive_data_msg(self, msg: NMEA2000Msg):
         # to be implemented for bi-directional applications

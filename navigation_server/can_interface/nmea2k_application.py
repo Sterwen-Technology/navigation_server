@@ -19,7 +19,7 @@ from navigation_server.nmea2000_datamodel import NMEA2000MutableName, PGNDef
 from navigation_server.nmea2000 import (AddressClaim, ISORequest, ProductInformation, ConfigurationInformation,
                                           AcknowledgeGroupFunction, create_group_function, CommandedAddress,
                                           CommandGroupFunction, Heartbeat, get_n2k_decoded_object, NMEA2000Device)
-from navigation_server.router_common import get_id_from_mac, MessageServerGlobals, resolve_ref
+from navigation_server.router_common import get_id_from_mac, MessageServerGlobals, resolve_ref, SocketCanError
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -158,6 +158,7 @@ class NMEA2000Application(NMEA2000Device):
         super().__init__(self._address, name=self._iso_name)
 
         self._app_state = self.WAIT_FOR_BUS
+        self._bus_ready = False
         # vector for addressed messages
         self._process_vector[60928] = self.address_claim_receipt
         self._process_vector[59904] = self.iso_request
@@ -196,6 +197,21 @@ class NMEA2000Application(NMEA2000Device):
         if self._heartbeat_timer is not None:
             self._heartbeat_timer.cancel()
 
+    def _send_to_bus(self, msg:NMEA2000Msg):
+        if self._bus_ready:
+            try:
+                self._controller.CAN_interface.send(msg)
+            except SocketCanError as e:
+                _logger.error(f"Application {self._app_name} Error sending message to CAN bus")
+                if e.can_error == 105:
+                    self._bus_ready = False
+                    self._controller.CAN_interface.register_readiness_callback(self.wait_for_bus_ready)
+                    self._app_state = self.WAIT_FOR_BUS
+                else:
+                    raise e
+        else:
+            _logger.debug(f"Application {self._app_name} Error sending message to CAN bus => bus not ready")
+
     def init_product_information(self):
         '''
         This method is meant to be overloaded in subclasses to create specific product information
@@ -227,26 +243,26 @@ class NMEA2000Application(NMEA2000Device):
     def respond_address_claim(self):
         claim_msg = AddressClaim(self._address, name=self._iso_name, da=255)
         _logger.debug("Application address %d sending address claim to %d" % (self._address, claim_msg.da))
-        self._controller.CAN_interface.send(claim_msg.message(), force_send=True)
+        self._send_to_bus(claim_msg.message())
 
     def address_claim_delay(self):
         # we consider that we are good to go
         _logger.debug("Address claim for %d delay exhausted" % self._address)
         self._app_state = self.ACTIVE
-        self._controller.CAN_interface.allow_send()
         self.send_iso_request(255, 60928)
         # start sending heartbeat
         self.send_heartbeat()
         self._controller.application_started(self)
         self._claim_timer = None # indicates that no timer is running
         # request = ISORequest(self._address)
-        # self._controller.CAN_interface.send(request.message())
+        # self._send_to_bus(request.message())
         # t = threading.Timer(1.0, self.send_product_information)
         # t.start()
 
     def wait_for_bus_ready(self):
         _logger.debug("Waiting for CAN Bus to be ready")
         self._controller.CAN_interface.wait_for_bus_ready()
+        self._bus_ready = True
         _logger.debug("CAN bus ready")
         self.send_address_claim()
 
@@ -280,7 +296,7 @@ class NMEA2000Application(NMEA2000Device):
                     _logger.critical("Cannot obtain a CAN address => Going off line")
                     msg = AddressClaim(address, name=self._iso_name, da=msg.sa)
                     _logger.warning("Application address %d sending cannot claim address" % self._address)
-                    self._controller.CAN_interface.send(msg.message(), force_send=True)
+                    self._send_to_bus(msg.message())
                     self._controller.stop()
                     return
                 # now we need to swap addresses
@@ -331,7 +347,7 @@ class NMEA2000Application(NMEA2000Device):
     def send_product_information(self):
         self._product_information.sa = self._address
         _logger.debug("Send product information from address %d" % self._address)
-        self._controller.CAN_interface.send(self._product_information.message(), force_send=True)
+        self._send_to_bus(self._product_information.message())
 
     def receive_data_msg(self, msg: NMEA2000Msg):
         _logger.critical("Missing receive_data_msg in class %s" % self.__class__.__name__)
@@ -359,12 +375,12 @@ class NMEA2000Application(NMEA2000Device):
     def send_iso_request(self, da: int, pgn: int):
         _logger.debug("Sending ISO request for PGN %d to address %d" % (pgn, da))
         request = ISORequest(self._address, da, pgn)
-        self._controller.CAN_interface.send(request.message(), force_send=True)
+        self._send_to_bus(request.message())
 
     def send_configuration_information(self):
         _logger.debug("Sending configuration information for address %d" % self._address)
         self._configuration_information.sa = self._address
-        self._controller.CAN_interface.send(self._configuration_information.message(), force_send=True)
+        self._send_to_bus(self._configuration_information.message())
 
     def send_heartbeat(self):
         if self._app_state == self.STOP_IN_PROGRESS:
@@ -378,7 +394,7 @@ class NMEA2000Application(NMEA2000Device):
         if self._sequence > 253:
             self._sequence = 0
 
-        self._controller.CAN_interface.send(request.message(), force_send=True)
+        self._send_to_bus(request.message())
         self._heartbeat_timer = threading.Timer(self._heartbeat_interval, self.send_heartbeat)
         self._heartbeat_timer.start()
 
@@ -399,7 +415,7 @@ class NMEA2000Application(NMEA2000Device):
         acknowledge.sa = self._address
         acknowledge.da = msg.sa
         _logger.debug("Group Function sending acknowledgement => %s" % acknowledge.message())
-        self._controller.CAN_interface.send(acknowledge.message())
+        self._send_to_bus(acknowledge.message())
 
     def process_command_group_function(self, group_function, acknowledge):
         if group_function.function_pgn == 60928:

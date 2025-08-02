@@ -39,7 +39,7 @@ functions:
 
 - DataSource:
     class: NMEA2000InputConnector
-    source_server: stnc800a003
+    source_server: stnc800a002
     source_port: 4512
 
 services:

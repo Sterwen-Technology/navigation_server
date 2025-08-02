@@ -52,7 +52,7 @@ class EngineDataServicerImpl(EngineDataServicer):
         self._engine_service = engine_service
 
     def GetEngineData(self, request, context):
-
+        _logger.debug("GetEngineData")
         engine_id = request.engine_id
         response = engine_response()
         response.data.engine_id = engine_id
@@ -61,9 +61,11 @@ class EngineDataServicerImpl(EngineDataServicer):
             response.error_message = "NO_ERROR"
         except KeyError:
             response.error_message = "NO_ENGINE"
+        _logger.debug("GetEngineData OK")
         return response
 
     def GetEngineEvents(self, request, context):
+        _logger.debug("GetEngineEvents")
         engine_id = request.engine_id
         response = engine_response()
         # response.data.engine_id = engine_id
@@ -72,10 +74,11 @@ class EngineDataServicerImpl(EngineDataServicer):
             response.error_message = "NO_ERROR"
         except KeyError:
             response.error_message = "NO_ENGINE"
-
+        _logger.debug("GetEngineEvents OK")
         return response
 
     def GetEngineRuns(self, request, context):
+        _logger.debug("GetEngineRuns")
         engine_id = request.engine_id
         response = engine_response()
         try:
@@ -83,6 +86,7 @@ class EngineDataServicerImpl(EngineDataServicer):
             response.error_message = "NO_ERROR"
         except KeyError:
             response.error_message = "NO_ENGINE"
+        _logger.debug("GetEngineRuns OK")
         return response
 
 
@@ -112,7 +116,7 @@ class EngineDataService(GrpcService):
         self._source_function = None
         self._engines = {}
         self._timer = threading.Timer(30.0, self.check_off_engines)
-        # check and create root directory for engine
+        # check and create the root directory for engine
         self._root_dir = os.path.join(MessageServerGlobals.data_dir, 'engines')
         if not os.path.exists(self._root_dir):
             os.mkdir(self._root_dir)
@@ -233,25 +237,25 @@ class EngineEvent:
     def as_protobuf(self, engine_id):
         e_pb = engine_event()
         e_pb.engine_id = engine_id
-        e_pb.timestamp = self._ts.isoformat()
+        if self._ts is not None:
+            e_pb.timestamp = self._ts.isoformat()
         e_pb.total_hours = self._total_hours
         e_pb.current_state = self._current_state
         e_pb.previous_state = self._previous_state
         return e_pb
 
     def as_dict(self):
-        return {
-            'ts': self._ts.isoformat(),
+        val_dict = {
             'total_hours': self._total_hours,
             'current_state': self._current_state,
             'previous_state': self._previous_state
         }
+        json_date(val_dict, 'ts', self._ts)
+        return val_dict
 
-def json_date(date_d):
+def json_date(d, key, date_d):
     if date_d is not None:
-        return date_d.isoformat()
-    else:
-        return None
+        d[key] = date_d.isoformat()
 
 class EngineData:
     """
@@ -440,19 +444,20 @@ class EngineData:
 
 
     def as_dict(self):
-        return {
+        val_dict = {
             'last_save': datetime.datetime.now().isoformat(),
             'state': self._state,
-            'first_on': json_date(self._first_on),
             'last_message': self._last_message,
             'speed': self._speed,
             'total_hours': self._total_hours,
             'temperature': self._temperature,
             'alternator_voltage': self._alternator_voltage,
-            'start_time': json_date(self._start_time),
-            'stop_time': json_date(self._stop_time),
             'current_run': None if self._current_run is None else self._current_run.as_dict()
         }
+        json_date(val_dict, 'first_on', self._first_on)
+        json_date(val_dict, 'start_time', self._start_time)
+        json_date(val_dict, 'stop_time', self._stop_time)
+        return val_dict
 
 
     def update_speed(self, msg):
@@ -526,12 +531,15 @@ class EngineData:
             yield e
 
     def get_events_pb(self):
+        _logger.debug("get_event")
         for e in self._day_events:
             e_pb = e.as_protobuf(self._id)
             # e_pb.engine_id = self._id
+            _logger.info("get event protobuf OK")
             yield e_pb
 
     def get_runs_pb(self):
+        _logger.debug("get_runs")
         for r in self._runs:
             yield r.as_protobuf()
 
@@ -553,6 +561,7 @@ class EngineData:
         response.speed = self._speed
         response.temperature = self._temperature
         response.alternator_voltage = self._alternator_voltage
+        _logger.debug(f"Engine get data {self._start_time.isoformat()},{self._stop_time.isoformat()}" )
         if self._start_time is not None:
             response.last_start_time = self._start_time.isoformat()
         if self._stop_time is not None:
@@ -677,10 +686,9 @@ class EngineRun:
         self._stop_time = datetime.datetime.now()
 
     def as_dict(self):
-        return {
+        val_dict = {
             'engine_id': self._engine_id,
             'start_time': self._start_time.isoformat(),
-            'stop_time': json_date(self._stop_time),
             'total_hours': self._total_hours_end,
             'duration': self._duration,
             'average_speed': self._average_speed,
@@ -690,12 +698,14 @@ class EngineRun:
             'first_msg_ts': self._first_msg_ts,
             'last_msg_ts': self._last_msg_ts
         }
+        json_date(val_dict, 'stop_time', self._stop_time)
+        return val_dict
 
     def as_dict_for_pb(self):
-        return {
+        _logger.debug(f"EngineRun {self._start_time}")
+        val_dict = {
             'engine_id': self._engine_id,
             'start_time': self._start_time.isoformat(),
-            'stop_time': json_date(self._stop_time),
             'total_hours': self._total_hours_end,
             'duration': self._duration,
             'average_speed': self._average_speed,
@@ -703,6 +713,8 @@ class EngineRun:
             'max_temperature': self._max_temperature,
             'alternator_voltage': self._alternator_voltage
         }
+        json_date(val_dict, 'stop_time', self._stop_time)
+        return val_dict
 
     def as_protobuf(self) -> engine_run:
         fields = self.as_dict_for_pb()

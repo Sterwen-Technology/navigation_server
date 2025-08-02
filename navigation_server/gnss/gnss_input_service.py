@@ -12,6 +12,7 @@
 import logging
 import queue
 
+from can_interface import SocketCanError
 from navigation_server.generated.gnss_pb2_grpc import add_GNSS_InputServicer_to_server, GNSS_InputServicer
 from navigation_server.generated.nmea_messages_pb2 import server_resp
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
@@ -58,6 +59,7 @@ class GNSSInput(NMEA2000Application, GrpcService):
         self._can_controller = None
         self._output_queue: queue.Queue = None
         self._lost_msg = 0
+        self._can_ready = True
 
     def device_class_function(self):
         return 60, 145
@@ -87,6 +89,10 @@ class GNSSInput(NMEA2000Application, GrpcService):
         super().__init__(controller, self._requested_address)
         self._can_controller = controller
 
+    def bus_ready_callback(self):
+        _logger.info("GNSS Input - bus ready")
+        self._can_ready = True
+
     def receive_input_msg(self, msg: nmea2000pb):
         """
         Receive a protobuf message and send it to the CAN bus
@@ -97,10 +103,24 @@ class GNSSInput(NMEA2000Application, GrpcService):
         if self._can_controller is not None:
             n2k_msg = NMEA2000Msg(msg.pgn, protobuf=msg)
             n2k_msg.sa = self._address
-            self._can_controller.CAN_interface.send(n2k_msg)
+            if self._can_ready:
+                try:
+                    self._can_controller.CAN_interface.send(n2k_msg)
+                except SocketCanError as err:
+                    _logger.error(f"GNSS Input - SocketCanError {err}")
+                    if self._can_controller.CAN_interface.is_bus_ready():
+                        _logger.error("GNSS Input - bus ready, but still error")
+                        raise
+                    else:
+                        _logger.error("GNSS Input - bus not ready, stopping sending message")
+                        self._can_ready = False
+                        self._can_controller.CAN_interface.register_read_callback(self.bus_ready_callback)
+                        return
+
             if self._forward:
                 # if the forward flag is true, the message is also sent for direct local distribution
                 self._can_controller.process_msg(n2k_msg)
+
         if self._output_queue is not None:
             if n2k_msg is None:
                 n2k_msg = NMEA2000Msg(msg.pgn, protobuf=msg)

@@ -19,6 +19,7 @@ message NavigationSystemMsg {
   string version=7;
   string start_time=8;
   string hostname = 10;
+  string ip_address = 11;
   string settings = 12;
   repeated SystemProcessMsg processes = 3;
 }

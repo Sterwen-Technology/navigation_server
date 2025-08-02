@@ -198,7 +198,7 @@ ProcessVector = namedtuple('ProcessVector', ['subscriber', 'msg_id', 'vector'])
 
 class DataInputDispatchService(GrpcService):
     """
-    This class process all input NMEA messages and dispatch them towards the data services that have subscribed
+    This class processes all input NMEA messages and dispatches them towards the data services that have subscribed
     to specific PGN. Messages are decoded before being forwarded.
     Messages without subscription are just discarded
     """

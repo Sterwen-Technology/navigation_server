@@ -218,12 +218,17 @@ class NMEA2KActiveController(NMEA2KController):
 
     def start_applications(self):
         _logger.debug("NMEA2000 Controller => Applications starts")
+        application_starting = None
         for app in self._applications:
             # to limit the load on the CAN bus, applications are started one at a time
             _logger.debug("Start application %d" % app.id)
             if not self._start_application_lock.acquire(timeout=2.0):
-                _logger.error("ActiveController timeout on application start")
+                if application_starting is None:
+                    _logger.critical("Active Controller => timeout on lock on application start")
+                else:
+                    _logger.error(f"ActiveController timeout on application {application_starting.id} start")
             app.start_application()
+            application_starting = app
 
     def application_started(self, application):
         try:

@@ -45,4 +45,4 @@ class NMEA2000SenderDevice(NMEA2000Application):
 
     def send_message(self, msg: NMEA2000Msg):
         msg.sa = self._address
-        self._controller.CAN_interface.send(msg)
+        self._send_to_bus(msg)

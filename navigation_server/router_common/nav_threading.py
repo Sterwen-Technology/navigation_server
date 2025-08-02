@@ -13,6 +13,8 @@ import threading
 import cProfile
 import pstats
 import logging
+import time
+
 from navigation_server.router_common.global_variables import MessageServerGlobals
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
@@ -32,8 +34,9 @@ class NavThread(threading.Thread):
         _name (str): The name assigned to the thread.
         _profile: The profiler object for the thread, if any.
     """
-    def __init__(self, name: str, daemon=False):
+    def __init__(self, name: str, daemon=False, callback_on_stop = None):
         self._name = name
+        self._callback_on_stop = callback_on_stop
         self._profile = MessageServerGlobals.profiling_controller.get_profile(self)
         MessageServerGlobals.thread_controller.register(self)
         if self._profile is None:
@@ -55,6 +58,9 @@ class NavThread(threading.Thread):
             _logger.error(f"NavThreading => {__name__}|Fatal error in thread: {self._name} class{err.__class__.__name__}:{err} - stopped")
         MessageServerGlobals.thread_controller.record_stop(self)
         _logger.debug("NavThreading => Thread %s stops" % self._name)
+        if self._callback_on_stop is not None:
+            _logger.info("NavThreading => Thread %s callback on stop" % self._name)
+            self._callback_on_stop()
 
     def _run_profiling(self):
         _logger.debug("NavThreading => Thread %s start with profiling" % self._name)
@@ -253,4 +259,43 @@ class NavProfilingController:
             except TypeError:
                 _logger.error("Error in profile %s" % name)
 
+
+class NavTimerController:
+
+    def __init__(self):
+        self._timers = {}
+
+    def add_timer(self, name, timer):
+        self._timers[name] = timer
+
+    def remove_timer(self, name):
+        del self._timers[name]
+
+
+
+
+class NavTimer(threading.Thread):
+
+    def __init__(self, name, period, callback, args=None):
+        super().__init__(name=name, daemon=True)
+        MessageServerGlobals.timer_controller.add_timer(name, self)
+        self._name = name
+        self._period = period
+        self._callback = callback
+        self._args = args
+        self._stop = False
+
+    def start(self):
+        super().start()
+
+    def run(self):
+        while True:
+            time.sleep(self._period)
+            if self._stop:
+                break
+            self._callback(*self._args)
+        MessageServerGlobals.timer_controller.remove_timer(self._name)
+
+    def cancel(self):
+        self._stop = True
 
