@@ -12,14 +12,13 @@
 import logging
 import queue
 
-from can_interface import SocketCanError
+
 from navigation_server.generated.gnss_pb2_grpc import add_GNSS_InputServicer_to_server, GNSS_InputServicer
 from navigation_server.generated.nmea_messages_pb2 import server_resp
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 from navigation_server.router_core import NMEA2000Msg, Coupler, CouplerTimeOut, CouplerOpenRefused
 from navigation_server.can_interface import NMEA2000Application
-from navigation_server.router_common import GrpcService, GrpcServerError, NavGenericMsg, N2K_MSG
-from navigation_server.router_common import resolve_ref
+from navigation_server.router_common import GrpcService, GrpcServerError, NavGenericMsg, N2K_MSG, resolve_ref, SocketCanError
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 

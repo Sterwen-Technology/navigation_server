@@ -11,7 +11,6 @@
 
 import logging
 
-from . import SocketCanError
 from .nmea2k_application import NMEA2000Application
 from navigation_server.nmea2000_datamodel import NMEA2000DecodedMsg
 from navigation_server.nmea2000 import GrpcInputDataService

@@ -359,11 +359,10 @@ class SocketCANInterface(NavThread):
         if n2k_msg.fast_packet:
             _logger.debug("CAN interface -> start split fast packet")
             for data in self._fp_handler.split_message(n2k_msg.pgn, n2k_msg.payload):
-                if not self.put_can_msg(can_id, data):
-                    return
-            return True
+                self.put_can_msg(can_id, data)
+
         else:
-            return self.put_can_msg(can_id, n2k_msg.payload)
+            self.put_can_msg(can_id, n2k_msg.payload)
 
 
 

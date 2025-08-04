@@ -11,7 +11,7 @@
 
 import logging
 import time
-
+from typing import Any, Generator
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -193,7 +193,7 @@ class FastPacketHandler:
         for key in to_be_removed:
             del self._sequences[key]
 
-    def split_message(self, pgn: int, data: bytearray) -> bytearray:
+    def split_message(self, pgn: int, data: bytearray) -> Generator[bytearray, Any, None]:
         """
         split the NMEA payload with Fast Packet structure
         :param pgn:
@@ -239,8 +239,11 @@ class FastPacketHandler:
             self._write_sequences[pgn] = 1
             return 1
         else:
-            _logger.critical("NMEA2000 Fast Packet => cannot allocate sequence for PGN %d already in use" % pgn)
-            raise ValueError
+            _logger.warning(f"NMEA2000 Fast Packet sequence {seq} for PGN {pgn} already in use")
+            # so let's allocate one anyway => to be reworked
+            self._write_sequences[pgn] = 1
+            return 1
+
 
     def free_seq(self, pgn, seq):
         self._write_sequences[pgn] = 0

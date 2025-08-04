@@ -16,8 +16,8 @@ import threading
 from navigation_server.router_core import NMEA2000Msg
 from navigation_server.nmea2000 import NMEA2KController
 from .nmea2k_application import NMEA2000Application, NMEA2000ApplicationPool
-from .nmea2k_can_interface import SocketCANInterface, SocketCanError
-from navigation_server.router_common import ObjectCreationError, set_global_var
+from .nmea2k_can_interface import SocketCANInterface
+from navigation_server.router_common import ObjectCreationError, set_global_var, SocketCanError
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
