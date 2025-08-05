@@ -1,0 +1,66 @@
+#
+#  Definition file for the Real Time database of the navigation system
+#
+#  Author:      Laurent Carré
+#
+# Created: 05/08/2025
+# Copyright:(c) Laurent Carré Sterwen Technology 2021-2025
+
+
+dataset:
+
+- LAT:
+    name: Latitude
+    unit: decimal_deg
+    group: position
+
+- LONG:
+    name: Longitude
+    unit: decimal_deg
+    group: position
+
+- COG:
+    name: Cape on ground
+    unit: radian
+    group: position
+
+- SOG:
+    name: Speed over ground
+    unit: meter_per_sec
+    group: position
+
+- STW:
+    name: Speed through water
+    unit: meter_per_sec
+
+- ENG_ON:
+    name: Engine running flag
+    unit: boolean
+    group: engine
+
+- TWA:
+    name: True wind angle based on STW
+    unit: radian
+    group: wind
+
+- TWS:
+    name: True wind speed based on STW
+    unit: meter_per_sec
+    group: wind
+
+- AWA:
+    name: Apparent wind angle
+    unit: radian
+    group: wind
+
+- AWS:
+    name: Apparent wind speed
+    unit: meter_per_sec
+    group: wind
+
+
+units:
+
+- decimal_deg:
+    full_name: Decimal Degree
+    details: Negative East and South
