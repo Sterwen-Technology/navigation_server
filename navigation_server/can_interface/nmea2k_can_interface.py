@@ -358,7 +358,7 @@ class SocketCANInterface(NavThread):
         # Fast packet processing and send to bus
         if n2k_msg.fast_packet:
             _logger.debug("CAN interface -> start split fast packet")
-            packet_sent = 0
+            # packet_sent = 0
             for data in self._fp_handler.split_message(n2k_msg.pgn, n2k_msg.payload):
                 #_logger.debug("CAN interface send split message nibble %d" % packet_sent)
                 self.put_can_msg(can_id, data)
