@@ -54,6 +54,7 @@ message MPPT_device {
   VE_MPPT mppt_state =7;
   float day_max_power = 6; //Watt
   float day_power = 8; //kilo Watt-heure
+  string msg_timestamp = 9;
 }
 
 message solar_output {

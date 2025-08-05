@@ -22,12 +22,13 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-import nmea2000_pb2 as nmea2000__pb2
+import navigation_server.generated.nmea2000_pb2 as nmea2000__pb2
+
 import navigation_server.generated.nmea_messages_pb2 as nmea__messages__pb2
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12input_server.proto\x1a\x0enmea2000.proto\x1a\x13nmea_messages.proto2\x9a\x01\n\x0fNMEAInputServer\x12%\n\x06status\x12\x0b.server_cmd\x1a\x0c.server_resp\"\x00\x12%\n\x08pushNMEA\x12\t.nmea_msg\x1a\x0c.server_resp\"\x00\x12\x39\n\x11pushDecodedNMEA2K\x12\x14.nmea2000_decoded_pb\x1a\x0c.server_resp\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12input_server.proto\x1a\x0enmea2000.proto\x1a\x13nmea_messages.proto2\xc5\x01\n\x0fNMEAInputServer\x12%\n\x06status\x12\x0b.server_cmd\x1a\x0c.server_resp\"\x00\x12)\n\npushNMEA2K\x12\x0b.nmea2000pb\x1a\x0c.server_resp\"\x00\x12%\n\x08pushNMEA\x12\t.nmea_msg\x1a\x0c.server_resp\"\x00\x12\x39\n\x11pushDecodedNMEA2K\x12\x14.nmea2000_decoded_pb\x1a\x0c.server_resp\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,5 +36,5 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'input_server_pb2', _globals
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_NMEAINPUTSERVER']._serialized_start=60
-  _globals['_NMEAINPUTSERVER']._serialized_end=214
+  _globals['_NMEAINPUTSERVER']._serialized_end=257
 # @@protoc_insertion_point(module_scope)

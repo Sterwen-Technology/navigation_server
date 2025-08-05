@@ -59,6 +59,13 @@ class GpioLine:
             time.sleep(width)
             request.set_value(self._offset, Value.INACTIVE)
 
+    def invert_pulse(self, width: float):
+        with gpiod.request_lines(self._chip_path, consumer=f"{__name__}_set",
+                                 config={self._offset: LineSettings(direction=Direction.OUTPUT)}) as request:
+            request.set_value(self._offset, Value.INACTIVE)
+            time.sleep(width)
+            request.set_value(self._offset, Value.ACTIVE)
+
 
 class GpioGroup:
     """
@@ -97,6 +104,15 @@ class GpioGroup:
         try:
             line = self._lines[line_name]
             line.pulse(width)
+        except KeyError:
+            _logger.error(f"Group {self._name}: Unknown GPIO line {line_name}")
+            raise
+
+    def inverse_pulse_line(self, line_name: str, width: float):
+        _logger.debug("GpioGroup %s line %s inverse pulse for=%f4.1 ms" % (self._name, line_name, width * 1000.))
+        try:
+            line = self._lines[line_name]
+            line.inverse_pulse(width)
         except KeyError:
             _logger.error(f"Group {self._name}: Unknown GPIO line {line_name}")
             raise

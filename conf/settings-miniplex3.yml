@@ -39,7 +39,7 @@ servers:
     class: NMEASenderServer
     port: 4503
     coupler: MiniPlex3
-    max_silent: 10
+    max_silent: 20
     nmea2000: dyfmt
 
 - gRPCMain:
@@ -58,7 +58,7 @@ couplers:
 
 - MiniPlex3:
     class: ShipModulInterface
-    address: 192.168.1.33
+    address: 192.168.1.26
     port: 10110
     nmea2000_controller: NMEANetwork
     protocol: nmea2000

@@ -22,7 +22,7 @@ def main():
         print(sys.argv[0], "File does not exists", full_filename)
         return
     rel_dir, filename = os.path.split(full_filename)
-    print(sys.argv[0], "processing file", full_filename)
+    # print(sys.argv[0], "processing file", full_filename)
     prefix = sys.argv[2]
     keywords = []
     if len(sys.argv) > 3:
@@ -34,6 +34,7 @@ def main():
     # print(full_filename, keywords)
     output_filename = os.path.join(rel_dir, "tmpFile")
     of = open(output_filename, "w")
+    # print("keywords=", keywords)
     with open(full_filename, "r") as input_f:
         for line in input_f:
             if line.startswith('import'):

@@ -11,19 +11,19 @@
 
 import logging
 
-from navigation_server.generated.navigation_data_pb2 import *
-from navigation_server.generated.navigation_data_pb2_grpc import *
+from navigation_server.generated.engine_data_pb2_grpc import EngineDataStub
+from navigation_server.generated.engine_data_pb2 import engine_data, engine_request
 
-from navigation_server.router_common import pb_enum_string, ProtobufProxy, GrpcAccessException
-from .client_common import GrpcClient, ServiceClient
+from navigation_server.router_common import pb_enum_string, ProtobufProxy, ServiceClient
 
-_logger = logging.getLogger("ShipDataClient." + __name__)
+
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class EngineProxy(ProtobufProxy):
 
     def __init__(self, engine_msg: engine_data):
-        self._msg = engine_msg
+        super().__init__(engine_msg)
 
     @property
     def state(self):
@@ -43,6 +43,13 @@ class EngineProxy(ProtobufProxy):
         else:
             return "Unknown"
 
+    @property
+    def current_run(self):
+        if self._msg.current_run is not None:
+            return EngineRunProxy(self._msg.current_run)
+        else:
+            return None
+
 
 class EngineEventProxy(ProtobufProxy):
 
@@ -54,6 +61,10 @@ class EngineEventProxy(ProtobufProxy):
     def previous_state(self):
         return pb_enum_string(self._msg, 'previous_state', self._msg.previous_state)
 
+class EngineRunProxy(ProtobufProxy):
+
+    pass
+
 
 class EngineClient(ServiceClient):
 
@@ -63,7 +74,7 @@ class EngineClient(ServiceClient):
     def get_data(self, engine_instance):
         request = engine_request()
         request.engine_id = engine_instance
-        result = self._server_call(self._stub.GetEngineData, request)
+        result = self._server_call(self._stub.GetEngineData, request, None)
         if result.error_message == 'NO_ERROR':
             return EngineProxy(result.data)
         else:
@@ -73,12 +84,25 @@ class EngineClient(ServiceClient):
     def get_events(self, engine_instance):
         request = engine_request()
         request.engine_id = engine_instance
-        result = self._server_call(self._stub.GetEngineEvents, request)
+        result = self._server_call(self._stub.GetEngineEvents, request, None)
         if result.error_message == 'NO_ERROR':
             events = []
             for e_pb in result.events:
                 events.append(EngineEventProxy(e_pb))
             return events
+        else:
+            _logger.error(f"EngineData => No engine instance #{engine_instance}")
+            return None
+
+    def get_runs(self, engine_instance):
+        request = engine_request()
+        request.engine_id = engine_instance
+        result = self._server_call(self._stub.GetEngineRuns, request, None)
+        if result.error_message == 'NO_ERROR':
+            runs = []
+            for r_pb in result.runs:
+                runs.append(EngineRunProxy(r_pb))
+            return runs
         else:
             _logger.error(f"EngineData => No engine instance #{engine_instance}")
             return None

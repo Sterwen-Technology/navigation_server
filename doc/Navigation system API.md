@@ -37,7 +37,7 @@ Same behavior as the receiving server.
 
 ### NMEA0183 messages
 
-The structure of the message follow the syntax:
+The structure of the message follows the syntax:
 **[!$]<talker><formatter>,<field1>,...,<fieldn>*<checksum><cr><lf>
 
 So a message is delimited by '!' or '$' for the beginning and <cr><lf> (0x0D0A)
@@ -61,7 +61,7 @@ The PGN data are encoded using the base64 algorithm to transform the binary data
 
 #### !PGNST Format
 
-The format has been defined by Sterwen Technology and the only difference with !PDGY format is that the PGN data are transmitted as an hexadecimal string.
+The format has been defined by Sterwen Technology, and the only difference with !PDGY format is that the PGN data are transmitted as an hexadecimal string.
 That requires a bit less processing but generates larger messages.
 
 ### gRPC NMEA messages
@@ -71,28 +71,30 @@ That requires a bit less processing but generates larger messages.
 *note: messages described using the Protobuf 3 syntax*
 
 That message is able to carry NMEA0183 or encoded NMEA2000 messages
-
-    `message nmea_msg {
+```protobuf
+message nmea_msg {
         oneof Message {
             nmea2000pb N2K_msg = 1;
             nmea0183pb N0183_msg = 2;
         }
         uint32 msg_id=3;
-    }`
+    }
+```
 
 With each flavor of NMEA being:
 
-    `message nmea0183pb {
+```protobuf
+message nmea0183pb {
         string talker=1;
         string formatter=2;   // not existing for proprietary sentences
         float timestamp = 4; // seconds from the epoch
         repeated string values=3; // each field in a separate string
         bytes raw_message=5; //optional, that is the full message. When present the other fields are not tramsitted
         }
-
+```
 Or:
-
-    `message nmea2000pb {  // That is the full NMEA2000 PDU above the transport layer
+```protobuf
+message nmea2000pb {  // That is the full NMEA2000 PDU above the transport layer
         uint32 pgn=1;
         uint32 priority=2;
         uint32 sa=3; // source address
@@ -100,15 +102,16 @@ Or:
         float timestamp = 5; // seconds from the epoch
         bytes payload = 6; // Full payload data above transport layer
         }
+```
 
 #### Fully decoded NMEA messages
 
-The systems offers also the possibility to exchange fully decoded NMEA2000 PDU, each PDU field is represented by a Protobuf field.
+The system offers also the possibility to exchange fully decoded NMEA2000 PDU, each PDU field is represented by a Protobuf field.
 That is avoiding further decoding or encoding process and allows a simple integration of NMEA2000 data processing in the system.
 
 The top message is generic for all PGN and includes the header section of the NMEA2000 PDU.
-
-    'message nmea2000_decoded_pb {
+```protobuf
+message nmea2000_decoded_pb {
         uint32 pgn=1;
         uint32 priority=2;
         uint32 sa=3; // source address
@@ -117,6 +120,7 @@ The top message is generic for all PGN and includes the header section of the NM
         optional uint32 manufacturer_id = 6; // manufacturer ID for proprietary messages
         google.protobuf.Any payload = 7; // includes PGN specific fields
         }
+```
 
 To simplify the Protobuf construction the PDU specific fields are defined in a specific Protobuf that is generated (see NMEA2000 document).
 
@@ -128,27 +132,141 @@ Some other can be developed by anyone in any programming language.
 These are gRPC services that are attached to the message_server gRPC server. Messages communication services are using the NMEA messages described in the previous section.
 The full Protobuf description can be found in the proto directory of the repository.
 
-*note: currently the rpc services do not use streams. That is simplifying the processing structure, but also limits the throughput. Moving heavy messaging services to streaming is in the plan*
+#### Agent Service
+
+That is the agent that provides control over the processes that run the system operations. Thus, this can be fully remotely controlled.
+
+```protobuf
+
+message NavigationSystemMsg {
+  uint32 id=1;
+  string name=2;
+  string version=7;
+  string start_time=8;
+  string hostname = 10;
+  string settings = 12;
+  repeated SystemProcessMsg processes = 3;
+}
+
+message AgentCmdMsg {
+  uint32 id=1;
+  string cmd=2;
+  string target=3;
+}
+
+message AgentResponse {
+  uint32 id=1;
+  uint32 err_code = 2;  // 0 = no error
+  // depending on the command the server will reply one more of the following values
+  string response = 3;  // string with result or error
+  NavigationSystemMsg system=4;
+  repeated SystemProcessMsg processes=5;
+  SystemProcessMsg process=6;
+  uint32 grpc_port = 7;
+  repeated string status_lines = 8;
+}
+
+
+service Agent {
+  rpc AgentCmd(AgentCmdMsg) returns (AgentResponse) {}
+  rpc AgentSystemCmd(AgentCmdMsg) returns(AgentResponse) {}
+  rpc RegisterProcess(SystemProcessMsg) returns(AgentResponse) {}
+}
+
+```
+
+AgentCmd
+
+| command string | target           | result                                       |
+|----------------|------------------|----------------------------------------------|
+| status         | <process/server> | send the status and the processes parameters |
+| start          | <process/server> |                                              |
+| stop           | <process/server> |                                              |
+| restart        |                  |                                              |
+| get_port       |                  |                                              |
+| interrupt      |                  | send a SIGINT signal to the process          |
+
+AgentSystemCmd
+
+| command string     | result |
+|--------------------|--------|
+| system_status      |        |
+| navigation_restart |        |
+| system_halt        |        |
+| system_reboot      |        |
+
 
 
 #### gRPC InputService
 
-This service is allowing to push NMEA messages (NMEA0183/NMEA200 Encoded/NMEA200 Decode) in a server. It is implemented in:
-- GrpcNmeaCoupler: coupler that can be used to feed additional processing services
+This service is allowing pushing NMEA messages (NMEA0183/NMEA200 Encoded/NMEA200 Decode) in a server. It is implemented in:
+- GrpcNmeaCoupler: a coupler that can be used to feed additional processing services
 - GrpcInputApplication: that Application (CA) running on the CAN controller injects the NMEA messages received on the CAN bus
 
+```protobuf
+service NMEAInputServer {
+  rpc status (server_cmd) returns (server_resp) {}
+  rpc pushNMEA2K( nmea2000pb ) returns (server_resp) {}       // accept N2K encoded only
+  rpc pushNMEA (nmea_msg) returns (server_resp) {}              // accept N2K encoded or NMEA0183 messages
+  rpc pushDecodedNMEA2K (nmea2000_decoded_pb) returns (server_resp) {} // decoded messages only
+}
 
-    `service NMEAInputServer {
-        rpc status (server_cmd) returns (server_resp) {}
-        rpc pushNMEA( nmea_msg ) returns (server_resp) {}
-        rpc pushDecodedNMEA2K (nmea2000_decoded_pb) returns (server_resp) {}
-        }
+```
 
 The *status* method is used mainly to test the connection from the client standpoint.
 
-#### gRPC NmeaServer service
+#### gRPC CAN service
 
-This service allows to pull NMEA messages from the server. This is in the plan but not yet implemented. One of the hurdle is the lack of external client for test.
+This service allows pulling NMEA messages from the server and monitoring the CAN bus
+
+```protobuf
+message N2KDeviceMsg {
+  uint32 address=1;
+  bool changed=2;
+  float last_time_seen=3;
+  ISOName iso_name=4;
+  Pgn126996ClassPb product_information=5;
+  Pgn126998ClassPb configuration_information=6;
+}
+
+message CAN_ControllerMsg {
+  string channel=1;
+  string status = 2;
+  float incoming_rate = 3;
+  float outgoing_rate = 4;
+  bool traces_on=5;
+  repeated N2KDeviceMsg devices=6;
+}
+
+message CANRequest{
+  uint32 id = 1;
+  string cmd = 2;
+}
+
+message CANAck {
+  uint32 messages_count=1;
+  uint32 error=2;
+}
+
+message CANReadRequest{
+  uint32 id=1;
+  string client=2;  // client identification
+  repeated uint32 select_sources=3; // only the selected sources will be forwarded if empty or equal to 255 all sources are selected
+  repeated uint32 reject_sources=4; // all sources from the list are rejected
+  repeated uint32 select_pgn=5; // only the PGN in the list are forwarded if the list is empty all PGN are forwarded
+  repeated uint32  reject_pgn=6; //PGN in the list are rejected
+}
+
+service CAN_ControllerService {
+  rpc GetStatus(CANRequest) returns (CAN_ControllerMsg) {}
+  rpc StartTrace(CANRequest) returns (CAN_ControllerMsg) {}
+  rpc StopTrace(CANRequest) returns (CAN_ControllerMsg) {}
+  rpc ReadNmea2000Msg(CANReadRequest) returns (stream nmea2000pb) {}
+  rpc SendNmea2000Msg(stream nmea2000pb) returns (CANAck) {}
+}
+```
+
+
 
 ### Console
 
@@ -159,29 +277,12 @@ The full details for each object can be found in the **console.proto** file.
 
 An example application using the full console interface is available. It is written in Python and uses a very basic GUI library.
 
-#### Nmea_message_server status
-
-The rpc call **ServerStatus** return the high level status of the nmea_message_server process and the list of servers running inside.
-
-If the connection succeeds to the server, the following information is retrieved:
-    - Name (IP + port) and hostname
-    - Software version
-    - Uptime
-    - list of the servers created in the process (but necessarily running)
-
-A few commands can be sent to the main (root) server using the **ServerCmd** rpc call
-
-| command       | target         | result                                |
-|---------------|----------------|---------------------------------------|
-| stop          | None           | stop the message_server               |
-| start_coupler | <coupler name> | start (or restart) the target coupler |
-
 
 #### Server objects
 
 The server objects have the following information but no command is today possible on them
-
-    'message Server {
+```protobuf
+message Server {
         string server_class=1;
         string name=2;
         string server_type=3;
@@ -191,12 +292,13 @@ The server objects have the following information but no command is today possib
         string protocol=8;      // only for NMEA TCP servers
         repeated Connection connections=7;  // only for TCP servers
         }
-
+```
+ 
 #### Coupler objects
 
 Protobuf definition:
-
-    'message CouplerMsg {
+```protobuf
+message CouplerMsg {
         string  name=1;
         string coupler_class=2;
         State state=3;
@@ -217,6 +319,7 @@ Protobuf definition:
         float input_rate_raw=12;
         float output_rate=11;
     }
+```
 
 On the coupler objects several commands can be sent with some valid only for some couplers. Some commands may have arguments and return values.
 Commands arguments and replied values are based on the ArgumentList Protobuf massage that is a list of (key, value) pairs.

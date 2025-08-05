@@ -24,7 +24,21 @@ _logger = logging.getLogger("ShipDataServer."+__name__)
 
 
 class AsynchLogReader(NavThread):
+    """
+    Manages asynchronous reading of log files and processing their messages within a separate thread.
 
+    This class inherits from `NavThread` and is designed to read messages from a log file and process
+    these messages in an asynchronous manner. It allows functionalities to open log files, stop the
+    reading process, suspend and resume operations, and continuously monitor and handle messages.
+
+    Attributes:
+        _logfile: Internal handler for the opened log file to read messages from.
+        _out_queue: Queue instance for outputting processed messages.
+        _stop_flag: Boolean flag to indicate whether the thread should cease operation.
+        _suspend_flag: Boolean flag to indicate if the operation is suspended.
+        _suspend_date: Float representing the timestamp at which the suspension began.
+        _process_message: Callable function to process log file messages.
+    """
     def __init__(self, out_queue, process_message):
         super().__init__(name="AsynchLogReader", daemon=True)
         self._logfile = None
@@ -57,7 +71,7 @@ class AsynchLogReader(NavThread):
                 time.sleep(0.5)
                 continue
             try:
-                frame = self._logfile.read_message()
+                message = self._logfile.read_message() # returns record structure with timestamp
             except LogReadError as err:
                 if err.reason == "EOF":
                     _logger.info("Log Coupler End of file")
@@ -69,7 +83,7 @@ class AsynchLogReader(NavThread):
                 break
 
             try:
-                msg = self._process_message(frame)
+                msg = self._process_message(message)
             except IncompleteMessage:
                 continue
             self._out_queue.put(msg)
@@ -83,6 +97,7 @@ class RawLogCoupler(Coupler):
         self._filename = opts.get('logfile', str, None)
         self._direction = self.READ_ONLY
         if self._filename is None:
+            _logger.error("RawLogCoupler missing the logfile parameter")
             raise ValueError
         self._logfile = None
 
@@ -166,7 +181,8 @@ class RawLogCoupler(Coupler):
     def _resume(self):
         self._reader.resume()
 
-    def process_shipmodul_frame(self, frame):
+    def process_shipmodul_frame(self, message):
+        frame = message.message
         try:
             msg0183 = NMEA0183Msg(frame)
         except ValueError:
@@ -184,12 +200,13 @@ class RawLogCoupler(Coupler):
             raise IncompleteMessage
         return msg0183
 
-    def process_nmea0183(self, frame):
+    def process_nmea0183(self, message):
+        frame = message.message
         msg = self.process_shipmodul_frame(frame)
         return msg
 
-    def process_n2k(self, frame):
-        msg0183 = self.process_shipmodul_frame(frame)
+    def process_n2k(self, message):
+        msg0183 = self.process_shipmodul_frame(message.message)
         if msg0183.proprietary():
             return fromProprietaryNmea(msg0183)
         elif msg0183.address() == b'MXPGN':
@@ -199,12 +216,13 @@ class RawLogCoupler(Coupler):
         else:
             return msg0183
 
-    def process_yd_frame(self, frame):
+    def process_yd_frame(self, message):
+        frame = message.message
         msg = YDCoupler.decode_frame(self, frame, self._pgn_white_list)
         return msg
 
-    def process_can_frame(self, frame):
-
+    def process_can_frame(self, message):
+        frame = message.message
         try:
             can_id = int(frame[:8], 16)
             data = bytearray.fromhex(frame[9:])
@@ -303,6 +321,7 @@ class TransparentCanLogCoupler(RawLogCoupler):
                 return True
         return False
 
-    def forward_can_frame(self, frame):
+    def forward_can_frame(self, message):
+        frame = message.message
         msg = NavGenericMsg(TRANSPARENT_MSG, raw=frame, msg=frame)
         return msg

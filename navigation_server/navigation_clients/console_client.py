@@ -11,14 +11,12 @@
 
 import logging
 
-import grpc
+from navigation_server.router_common import (ProtobufProxy, pb_enum_string, dict_to_protob, protob_to_dict,
+                                             ServiceClient, GrpcClient)
+from navigation_server.generated.console_pb2 import CouplerMsg, Request
+from navigation_server.generated.console_pb2_grpc import NavigationConsoleStub
 
-from navigation_server.router_common import ProtobufProxy, pb_enum_string, dict_to_protob, protob_to_dict
-from navigation_server.generated.console_pb2 import *
-from navigation_server.generated.console_pb2_grpc import *
-from .client_common import ServiceClient, GrpcClient
-
-_logger = logging.getLogger("ShipDataClient." + __name__)
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class CouplerProxy(ProtobufProxy):
@@ -85,24 +83,6 @@ class ServerProxy(ProtobufProxy):
         return self._sub_servers
 
 
-class DeviceProxy(ProtobufProxy):
-
-    def __init__(self, msg: N2KDeviceMsg):
-        super().__init__(msg)
-
-    @property
-    def manufacturer_name(self):
-        return self._msg.iso_name.manufacturer_name
-
-    @property
-    def product_name(self):
-        return self._msg.product_information.model_id
-
-    @property
-    def description(self):
-        return self._msg.product_information.model_serial_code
-
-
 class ConsoleClient(ServiceClient):
 
 
@@ -126,7 +106,7 @@ class ConsoleClient(ServiceClient):
         req = Request(target=target, cmd=command)
         if args is not None:
             dict_to_protob(args, req.kwargs)
-        resp = self._server_call(self._stub.CouplerCmd, req)
+        resp = self._server_call(self._stub.CouplerCmd, req,None)
         if resp.HasField('response_values'):
             return protob_to_dict(resp.response_values.arguments)
         else:
@@ -143,16 +123,8 @@ class ConsoleClient(ServiceClient):
         req.cmd = cmd
         if target is not None:
             req.target = target
-        response = self._server_call(self._stub.ServerCmd, req)
+        response = self._server_call(self._stub.ServerCmd, req, None)
         return response.status
 
-    def get_devices(self, command=None):
-        req = Request()
-        if command is not None:
-            req.cmd = command
-        devices = []
-        for dev in self._server_call_multiple(self._stub.GetDevices,req, DeviceProxy):
-                devices.append(dev)
-        return devices
 
 

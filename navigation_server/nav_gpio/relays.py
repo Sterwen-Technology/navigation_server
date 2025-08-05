@@ -12,8 +12,8 @@
 import logging
 import time
 
-from .nav_gpio_if import *
-from .stnc_gpio_conf import STNC_Gpio_Set
+from navigation_server.nav_gpio.nav_gpio_if import *
+from navigation_server.nav_gpio.stnc_gpio_conf import STNC_Gpio_Set
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -54,19 +54,22 @@ class LatchingRelay(Relay):
 
 def main():
     _logger.setLevel(logging.DEBUG)
-    relay1 = LatchingRelay('relay2')
-    print("current position:", relay1.position())
+    relay = 'relay1'
+    relay1 = LatchingRelay(relay)
+    print(f"{relay} current position:", relay1.position())
     if relay1.is_open():
-        print("relay open we close it")
+        print(f"{relay} open we close it")
         relay1.close()
         command = 'close'
     else:
-        print("relay is closed => open")
+        print(f"{relay} is closed => open")
         relay1.open()
         command = 'open'
     position = relay1.position()
-    print('the relay is in position', position, 'command=', command)
+    print(f'the {relay} is in position', position, 'command=', command)
     if position != command:
         print("Relay command error => reset")
         relay1.reset()
 
+if __name__ == '__main__':
+    main()

@@ -20,21 +20,18 @@ import time
 import subprocess
 from queue import Queue
 
-from can import Message, CanError, ThreadSafeBus
+from can import Message, CanError, ThreadSafeBus, Bus
 
-from navigation_server.router_core.nmea2000_msg import NMEA2000Msg
-from navigation_server.nmea2000 import FastPacketHandler, FastPacketException
-from navigation_server.nmea2000 import IsoTransportHandler, IsoTransportException
+from navigation_server.router_core import NMEA2000Msg
+from navigation_server.nmea2000 import FastPacketHandler, FastPacketException, IsoTransportHandler, IsoTransportException
 from navigation_server.nmea2000_datamodel import PGNDef
-from navigation_server.router_common import NMEAMsgTrace, MessageTraceError, NavThread, build_subclass_dict
-from navigation_server.router_common import ObjectFatalError
+from navigation_server.router_common import (NMEAMsgTrace, MessageTraceError, NavThread, MessageServerGlobals, ObjectFatalError,
+                                            SocketCanError)
+
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
-
-class SocketCanError(Exception):
-    pass
 
 
 class SocketCanReadInvalid(Exception):
@@ -51,15 +48,15 @@ def check_can_device(link: str):
     lines = proc.stdout.split('\n')
     #  print(len(lines), lines)
     if len(lines) <= 1:
-        raise SocketCanError("SocketCAN channel %s non existent" % link)
+        raise SocketCanError("SocketCAN channel %s non existent" % link, 2)
     try:
         i = lines[0].index(link)
     except ValueError:
-        raise SocketCanError("SocketCAN channel %s non existent" % link)
+        raise SocketCanError("SocketCAN channel %s non existent" % link, 2)
     try:
         i = lines[0].index('UP')
     except ValueError:
-        raise SocketCanError("SocketCAN channel %s not ready" % link)
+        raise SocketCanError("SocketCAN channel %s not ready" % link, 3)
     return
 
 
@@ -67,7 +64,7 @@ class SocketCANInterface(NavThread):
     """
     Manage a socket CAN interface including transport layer both ISO and Fast Packets
     """
-    (BUS_NOT_CONNECTED, BUS_CONNECTED, BUS_READY, BUS_SENS_ALLOWED) = range(0, 4)
+    (BUS_NOT_CONNECTED, BUS_CONNECTED, BUS_READY, BUS_OFFLINE) = range(0, 4)
 
     def __init__(self, channel: str, out_queue: queue.Queue, trace=False):
 
@@ -78,7 +75,7 @@ class SocketCANInterface(NavThread):
             _logger.critical("%s: %s" % (err_str, err))
             raise ObjectFatalError(err_str)
 
-        super().__init__(name="CAN-if-%s" % channel)
+        super().__init__(name="CAN-if-%s" % channel, callback_on_stop=MessageServerGlobals.main_server.stop_server)
         self._channel = channel
         self._bus = None
         self._queue = out_queue     # that is the queue used to push all message received towards application
@@ -96,6 +93,8 @@ class SocketCANInterface(NavThread):
         # self._access_lock = threading.Lock()
         self._addresses = [255]
         self._write_errors = 0
+        self._readiness_callbacks = []
+        self._callback_lock = threading.Lock()
 
         # self._notifier = None
         # self._listener = NMEA2000MsgListener(self, self._bus_queue)
@@ -114,10 +113,11 @@ class SocketCANInterface(NavThread):
     def start(self):
         # connect to the CAN bus
         try:
-            self._bus = ThreadSafeBus(channel=self._channel, interface="socketcan", bitrate=250000)
+            # version 2.6 remove the ThreadSafe overhead as not needed => single thread is sending messages to CAN
+            self._bus = Bus(channel=self._channel, interface="socketcan", bitrate=250000)
         except CanError as e:
             _logger.error("Error initializing CAN Channel %s: %s" % (self._channel, e))
-            raise SocketCanError
+            raise SocketCanError(f"Error initializing CAN Channel {self._channel}: {e}", e.error_code)
         # self._notifier = Notifier(self._bus, [self._listener])
         self._writer.set_bus(self._bus)
         self._state = self.BUS_CONNECTED
@@ -128,10 +128,17 @@ class SocketCANInterface(NavThread):
         self._state = self.BUS_READY
 
     def stop(self):
-        self._stop_flag = True
         self._writer.stop()
+        self._writer.join() # change 2025-05-26 => wait until the writer stops before stopping the full service
+        self._stop_flag = True
         if self._trace is not None:
             self._trace.stop_trace()
+
+    def stop_on_error(self):
+        self._stop_flag = True
+        if self._trace is not None:
+            self._trace.stop_trace()
+        _logger.critical("CAN Interface %s stopping due to error" % self.name)
 
     def add_address(self, address: int):
         self._addresses.append(address & 0xFF)
@@ -150,18 +157,40 @@ class SocketCANInterface(NavThread):
 #  navigation_definitions access_lock(self):
 #     return self._access_lock
 
-    def total_msg_raw(self):
+    def total_msg_raw(self) -> int:
         return self._total_msg_in
 
-    def total_msg_raw_out(self):
-        self._writer.total_msg()
+    def total_msg_raw_out(self) -> int:
+        return self._writer.total_msg()
 
     def wait_for_bus_ready(self):
         self._bus_ready.wait()
         _logger.debug("NMEA CAN Interface BUS ready")
+        self._send_readiness_callbacks()
 
-    def allow_send(self):
-        self._allowed_send.set()
+    def bus_offline(self):
+        self._state = self.BUS_OFFLINE
+        self._bus_ready.clear()
+
+    def bus_online(self):
+        self._state = self.BUS_READY
+        self._bus_ready.set()
+        self._send_readiness_callbacks()
+
+    def is_bus_ready(self) -> bool:
+        return self._state == self.BUS_READY
+
+    def register_readiness_callback(self, callback):
+        self._callback_lock.acquire()
+        self._readiness_callbacks.append(callback)
+        self._callback_lock.release()
+
+    def _send_readiness_callbacks(self):
+        self._callback_lock.acquire()
+        for callback in self._readiness_callbacks:
+            callback()
+        self._readiness_callbacks = []
+        self._callback_lock.release()
 
     def send_trace(self, direction, can_id, timestamp, data):
         if timestamp == 0.0:
@@ -188,7 +217,7 @@ class SocketCANInterface(NavThread):
             self.send_trace(NMEAMsgTrace.TRACE_IN, can_id, msg_recv.timestamp, data)
         self._total_msg_in += 1
         # ISO TP handling
-        # only Broadcast messages are handled, others will raise an exception
+        # only Broadcast messages are handled; others will raise an exception
         if pgn == 60416:
             self._iso_tp_handler.new_transaction(sa, prio, data)
             return
@@ -205,19 +234,28 @@ class SocketCANInterface(NavThread):
             return
 
         # Fast packet handling
-        if self._fp_handler.is_pgn_active(pgn, sa, data):
+        try:
+            fp_active = self._fp_handler.is_pgn_active(pgn, sa, data)
+        except FastPacketException:
+            return
+
+        if fp_active:
             try:
                 data = self._fp_handler.process_frame(pgn, sa, data)
+                if data is None:
+                    return
             except FastPacketException as e:
-                _logger.error("CAN interface Fast packet error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
-                return None
-            if data is None:
-                return None
+                _logger.error("CAN interface Fast packet (active) error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
+                return
         else:
             if PGNDef.fast_packet_check(pgn):
-                data = self._fp_handler.process_frame(pgn, sa, data)
-            if data is None:
-                return None
+                try:
+                    data = self._fp_handler.process_frame(pgn, sa, data)
+                    if data is None:
+                        return
+                except FastPacketException as e:
+                    _logger.error("CAN interface Fast packet (start) error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
+                    return
         # end fast packet handling
         n2k_msg = NMEA2000Msg(pgn, prio, sa, da, data)
         if n2k_msg is not None:
@@ -227,6 +265,7 @@ class SocketCANInterface(NavThread):
             except queue.Full:
                 _logger.warning("CAN read queue full, message discarded: %s" % n2k_msg.header_str())
                 #  time.sleep(0.02) # remove as we have the timeout
+        return
 
     def read_can(self) -> Message:
         """
@@ -288,46 +327,48 @@ class SocketCANInterface(NavThread):
         self._bus.shutdown()
         _logger.info("CAN Interface %s stopped" % self.name)
 
-    def put_can_msg(self, can_id: int, data: bytearray) -> bool:
+    def put_can_msg(self, can_id: int, data: bytearray):
         """
         Send a CAN message to the sending queue
+
         """
         msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.time(), data=data)
         try:
             self._in_queue.put(msg, timeout=5.0)
-            self._write_errors = 0
         except queue.Full:
-            _logger.error(f"CAN Interface {self.name} Write buffer full occurrence {self._write_errors}")
             self._write_errors += 1
-            if self._write_errors > 10:
-                raise SocketCanError("Socket write buffer full")
-            else:
-                return False
-        return True
+            _logger.error(f"CAN Interface {self.name} Write buffer full occurrence {self._write_errors}")
+            raise SocketCanError("Socket write buffer full", self._writer.last_error)
 
-    def send(self, n2k_msg: NMEA2000Msg, force_send=False) -> bool:
+    def send(self, n2k_msg: NMEA2000Msg):
         """
         Send a NMEA2000 message to the CAN bus
+        If the bus is not ready, then no messages are put in the queue
         Message will be split if FastPacket and send to the sending queue
         """
 
-        if not self._allowed_send.is_set() and not force_send:
-            _logger.error("Trying to send messages on the CAN BUS while no address claimed")
-            return False
+        if self._state != self.BUS_READY:
+            _logger.debug("CAN interface not ready to send message")
+            raise SocketCanError("CAN interface not ready to send message", self._writer.last_error)
 
         can_id = self.build_arbitration_id(n2k_msg)
-
         _logger.debug("CAN interface send in queue message: %s" % n2k_msg.format1())
 
-        # Fast packet processing
+
+        # Fast packet processing and send to bus
         if n2k_msg.fast_packet:
             _logger.debug("CAN interface -> start split fast packet")
+            # packet_sent = 0
             for data in self._fp_handler.split_message(n2k_msg.pgn, n2k_msg.payload):
-                if not self.put_can_msg(can_id, data):
-                    return False
+                #_logger.debug("CAN interface send split message nibble %d" % packet_sent)
+                self.put_can_msg(can_id, data)
+                #_logger.debug("CAN interface split message nibble %d sent" % packet_sent)
+                # packet_sent += 1
+
         else:
-            return self.put_can_msg(can_id, n2k_msg.payload)
-        return True
+            self.put_can_msg(can_id, n2k_msg.payload)
+
+
 
     def send_broadcast_with_iso_tp(self, msg: NMEA2000Msg):
         """
@@ -345,18 +386,32 @@ class SocketCANInterface(NavThread):
                 return False
         return True
 
+    #
+    #   Trace management methods
+    #
     def stop_trace(self):
         if self._trace is not None:
             self._trace.stop_trace()
+            self._trace = None
+            self._writer.update_trace(None)
 
 
+    def is_trace_active(self) -> bool:
+        return self._trace is not None
 
+    def start_trace(self, file_root:str = None):
+        if file_root is None or len(file_root) == 0:
+            file_root = self.name
+        self._trace  = NMEAMsgTrace(file_root, self.__class__.__name__)
+        self._writer.update_trace(self._trace)
 
 
 class SocketCANWriter(NavThread):
 
     max_throughput = 2000.0
     min_interval_100 = 1. / max_throughput
+
+    (RUNNING, OFFLINE, STOPPED) = range(3)
 
     def __init__(self, in_queue: Queue, can_interface, trace):
 
@@ -366,6 +421,10 @@ class SocketCANWriter(NavThread):
         self._in_queue_size = self._in_queue.maxsize
         self._bus = None
         self._trace = trace
+        self._state = self.RUNNING  # we assume running by default
+        self._start_stop_mode = None
+        self._last_error = 0
+        self._stop_mode_retry_period = 30.0
         self._stop_flag = False
         self._total_msg = 0
         self._min_interval = (100. / 20.) * self.min_interval_100  # 20% of the bandwidth by default
@@ -377,7 +436,10 @@ class SocketCANWriter(NavThread):
     def stop(self):
         self._stop_flag = True
 
-    def total_msg(self):
+    def update_trace(self, trace):
+        self._trace = trace
+
+    def total_msg(self) -> int:
         return self._total_msg
 
     def change_bandwidth(self, bandwidth: float):
@@ -386,6 +448,12 @@ class SocketCANWriter(NavThread):
         else:
             _logger.error("Cannot increase bandwidth over 50% of the bus bandwidth")
 
+    def bus_running(self) -> bool:
+        return self._state == self.RUNNING
+
+    @property
+    def last_error(self) -> int:
+        return self._last_error
 
     def nrun(self):
         """
@@ -397,16 +465,28 @@ class SocketCANWriter(NavThread):
         #  Run loop
         last_write_time = time.monotonic()
         nberr = 0
+        retry = False
+        max_retry = 5
         while not self._stop_flag:
+            _logger.debug("Start Write loop STATE=%d retry=%s" % (self._state, retry))
+            if not retry and self._state == self.RUNNING:
+                # we pick a new message in the queue
+                try:
+                    msg = self._in_queue.get(timeout=1.0)
+                except queue.Empty:
+                    continue
+            elif self._state == self.OFFLINE:
+                delay = self._stop_mode_retry_period - (time.monotonic() - self._start_stop_mode)
+                _logger.debug("CAN Writer OFFLINE state delays=%5.2f sec" % delay)
+                if delay > 0.0:
+                    time.sleep(1.0)
+                    continue
+                _logger.debug("CAN Writer try connection again")
 
-            try:
-                msg = self._in_queue.get(timeout=1.0)
-            except queue.Empty:
-                continue
             # 2024-09-07 change the pacing algorithm
             msg_pace = time.monotonic() - last_write_time
             # each ECU is allowed to a max bandwidth% of the bus, so a minimum interval is setup
-            # except when the input queue start to fill-up
+            # except when the input queue starts to fill-up
             # Burst implemented in version 2.2 to speed up the processing of the queue
             if self._in_queue.qsize() > self._in_queue_size - 2:
                 # the input is filling up => burst mode
@@ -430,21 +510,52 @@ class SocketCANWriter(NavThread):
                     self._total_msg += 1
                     self._bus.send(msg, 5.0)
                     last_write_time = time.monotonic()
+                    if retry:
+                        _logger.info("SocketCANWriter success after retry (%4X) attempt:%d" % (msg.arbitration_id, nberr))
+                    retry = False
                     nberr = 0
+                    if self._state == self.OFFLINE:
+                        self._can_interface.bus_online()
+                        self._state = self.RUNNING
+                    max_retry = 19
                 except ValueError:
                     # can happen if the thread was blocked while the CAN interface is closed
-                    raise SocketCanError(f"SocketCANWriter {self.name} CAN access closed during write => STOP")
+                    self._last_error = 5
+                    raise SocketCanError(f"SocketCANWriter {self.name} CAN access closed during write => STOP", 5)
                 except CanError as e:
-                    _logger.error("Error writing message to channel %s: %s" % (self._can_interface.channel, e))
                     nberr += 1
-                    if nberr > 20:
-                        # more than 20 consecutive error no need to continue
-                        _logger.critical("CAN Write too many errors stopping")
-                        raise SocketCanError(f"Too many errors in write operations - suspecting CAN bus problem")
+                    _logger.debug("SocketCANWriter: Error writing message (%4X) to channel %s: %s retry:%d" %
+                                  (msg.arbitration_id, self._can_interface.channel, e, nberr))
+                    burst = 1 # we stop burst
+                    retry = True
+                    self._last_error = e.error_code
+                    last_write_time = time.monotonic()
+                    if nberr > max_retry:
+                        # more than 20 consecutive errors let see what we do [changed in 2.6.1 31/07/2025)
+                        _logger.debug("CAN Writer too many errors %d code %s" % (nberr, e.error_code))
+                        if e.error_code == 105:
+                            _logger.info("CAN Write error 105 - bus error - suspecting no one is listening on CAN bus")
+                            self._state = self.OFFLINE
+                            self._can_interface.bus_offline()
+                            self._start_stop_mode = time.monotonic()
+                            nberr = 0
+                            retry = False
+                            burst = 0
+                            max_retry = 4
+                            continue
+                        else:
+                            _logger.critical(f"CAN Write too many errors {e} stopping write operations")
+                            self._can_interface.stop_on_error()
+                            self._stop_flag = True
+                            break
+
+                    else:
+                        _logger.info(f"CAN Write error {e} => retrying")
                 burst -= 1
                 if burst > 0:
                     # in case of burst limit anyway to 1000 msg/sec
-                    time.sleep(0.001)
+                    # decrease to 500msg/sec 25-04-2025
+                    time.sleep(0.002)
                     # then get one more message
                     try:
                         msg = self._in_queue.get(block=False)

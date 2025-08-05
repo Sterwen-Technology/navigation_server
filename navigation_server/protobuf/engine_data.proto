@@ -1,0 +1,69 @@
+//-------------------------------------------------------------------------------
+// Name:        engine_data.proto
+// Purpose:     protobuf and grpc for engine data
+//
+// Author:      Laurent Carré
+//
+// Created:     16/07/2024
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+enum EngineState {
+    ENGINE_OFF=0; // No power
+    ENGINE_ON=1;  // Powered on but not running
+    ENGINE_RUNNING=2;
+  }
+
+message engine_data {
+  uint32 engine_id=1;
+  EngineState state=2;
+  float total_hours=3;  // in seconds
+  float speed=4;        // RPM
+  float temperature=5;  // in Kelvin
+  float alternator_voltage=8;
+  string last_start_time=6; // ISO format
+  string last_stop_time=7;
+  engine_run current_run=9;  // NULL if no on-going-run
+}
+
+message engine_response {
+    uint32 id=4;
+    string error_message=1;
+    engine_data data=2;
+    repeated engine_event events=3;
+    repeated engine_run runs=5;
+}
+
+message engine_request {
+  uint32 id = 2;
+  uint32 engine_id=1;
+}
+
+message engine_event {
+  uint32 engine_id=1;
+  string timestamp=2;
+  float total_hours=3;        // in seconds
+  EngineState current_state=4;
+  EngineState previous_state=5;
+}
+
+message engine_run {
+  uint32 engine_id=1;
+  string start_time=2;    // isoformat date
+  string stop_time=3;     // isoformat date NULL if on-going run
+  float total_hours=4;  // in seconds and the end of the run
+  float duration=5;         // in seconds
+  float average_speed=6;    // RPM
+  float max_speed=7;
+  float max_temperature=8;  // in Kelvin
+  float alternator_voltage=9; //max voltage over the run
+}
+
+service EngineData {
+  rpc GetEngineData(engine_request) returns(engine_response) {}
+  rpc GetEngineEvents(engine_request) returns (engine_response) {}
+  rpc GetEngineRuns(engine_request) returns (engine_response) {}
+}

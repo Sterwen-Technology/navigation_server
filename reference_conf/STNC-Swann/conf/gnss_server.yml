@@ -1,0 +1,63 @@
+#-------------------------------------------------------------------------------
+# Name:        settings-agent.yml
+# Purpose:     Settings file for the local agent
+#
+# Author:      Laurent Carré
+#
+# Created:     26/02/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+function: GNSS interface and data management
+server_name: GNSS
+log_level: INFO
+trace_dir: /data/navigation/traces
+data_dir: /data/navigation/data
+log_module:
+    gnss.gnss_data: INFO
+    gnss.gnss_service: INFO
+    router_core.coupler: INFO
+    gnss.gnss_coupler: INFO
+
+
+debug_configuration: false
+
+features:
+    - nmea2000
+    - gnss
+    - router_core
+
+servers:
+
+- Main:
+      class: NavigationMainServer
+      
+- NMEABackup:
+    class: NMEAServer
+    port: 4511
+    
+
+- gRPCMain:
+    class: GrpcServer
+    port: 4510
+
+services:
+
+- GNSS:
+      server: gRPCMain
+      class: GNSSService
+      device: /dev/ttyUSB0
+      baudrate: 38400
+      trace: false
+      push_to_server: true
+      address: 127.0.0.1
+      port: 4512
+
+couplers:
+
+#- NMEAGNSS:
+#    class: GNSSCoupler
+#    gnss_service: GNSS
+    
+ 

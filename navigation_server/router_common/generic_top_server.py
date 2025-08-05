@@ -13,6 +13,7 @@ import logging
 import signal
 import os
 import threading
+import datetime
 
 from .global_variables import MessageServerGlobals
 
@@ -25,9 +26,13 @@ class GenericTopServer:
         self._name = 'generic_main'
         self._servers = []
         self._services = []
+        self._functions = []
         self._analyse_interval = 0
         self._analyse_timer = None
+        self._is_running = False
         self._sigint_count = 0
+        self._start_time = 0
+        self._start_time_s = "Not started"
         MessageServerGlobals.main_server = self
         signal.signal(signal.SIGINT, self.stop_handler)
 
@@ -35,20 +40,37 @@ class GenericTopServer:
     def name(self):
         return self._name
 
+    def start_time_str(self):
+        return self._start_time_s
+
     def add_server(self, server):
         self._servers.append(server)
 
     def add_service(self, service):
         self._services.append(service)
 
+    def add_function(self, function):
+        self._functions.append(function)
+
+    def add_process(self, process):
+        raise NotImplementedError("GenericTopServer does not support process management")
+
     def start(self):
         for service in self._services:
             service.finalize()
+        for function in self._functions:
+            function.start()
         for server in self._servers:
+            _logger.debug("starting server %s class:%s" % (server.name, server.__class__.__name__))
             server.start()
+        self._is_running = True
+        self._start_time = datetime.datetime.now()
+        self._start_time_s = self._start_time.strftime("%Y/%m/%d-%H:%M:%S")
         return True
 
     def stop_server(self):
+        for function in self._functions:
+            function.stop()
         for service in self._services:
             service.stop_service()
         for server in self._servers:
@@ -70,8 +92,12 @@ class GenericTopServer:
             if self._sigint_count > 2:
                 os._exit(1)
 
+    @property
     def console_present(self):
         # for compatibility
+        return False
+
+    def is_agent(self):
         return False
 
     def start_analyser(self, interval):

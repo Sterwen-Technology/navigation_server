@@ -61,9 +61,9 @@ class NMEA2000DeviceImplementation(NMEA2000Application):
 Waypoint = namedtuple('Waypoint', ['id', 'name', 'latitude', 'longitude'])
 
 class AutoPilotEmulator(NMEA2000DeviceImplementation):
-    '''
+    """
     This a example class for a NMEA2000 implementation
-    '''
+    """
 
     def __init__(self, opts):
         super().__init__(opts)
@@ -79,6 +79,9 @@ class AutoPilotEmulator(NMEA2000DeviceImplementation):
         self._current_sid = -1
         self._waypoints = None
         self._gnss_date = None
+
+    def device_class_function(self):
+        return 60, 145
 
     def cross_track_error(self, msg: NMEA2000Msg):
         msg129283 = Pgn129283Class(message=msg)
@@ -163,6 +166,9 @@ class SystemClockDevice(NMEA2000Application):
         self._sequence_id = 0
         self._controller = None
 
+    def device_class_function(self):
+        return 10, 130
+
     def init_product_information(self):
         super().init_product_information()
         self._product_information.model_id = self._model_id
@@ -187,7 +193,7 @@ class SystemClockDevice(NMEA2000Application):
             seconds = (ts.hour * 3600 + ts.minute * 60 + ts.second) + (ts.microsecond / 1e6)
             msg.date = date_val
             msg.time = seconds
-            self._controller.CAN_interface.send(msg.message())
+            self._send_to_bus(msg.message())
             self._sequence_id += 1
             if self._sequence_id == 254:
                 self._sequence_id = 0
@@ -195,3 +201,4 @@ class SystemClockDevice(NMEA2000Application):
 
     def stop_request(self):
         self._controller.timer_unsubscribe(self)
+

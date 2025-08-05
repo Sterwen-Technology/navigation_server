@@ -1,0 +1,57 @@
+//-------------------------------------------------------------------------------
+// Name:        gnss.proto
+// Purpose:     protobuf and grpc for gnss internal messages and external access
+//
+// Author:      Laurent Carré
+//
+// Created:     12/04/2025
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+import "nmea2000.proto";
+import "nmea_messages.proto";
+
+// specific service to receive NMEA2000 messages coming from the GNSS and to be distributed
+service GNSS_Input {
+  rpc gnss_message(stream nmea2000pb) returns (server_resp);
+}
+
+
+message SatellitesInView {
+  uint32 svid=1;      // satellite ID
+  float elevation=2;  // decimal degrees
+  float azimuth=3;    // decimal degrees
+  float signal_noise=4;
+  float timestamp=5;  // last time seen by the GPS in sec from the Epoch
+  uint32 status=6;    // usage in fix
+}
+
+message ConstellationStatus {
+  string name=1;        // Name of the constellation or GNSS system
+  uint32 systemId=2;    // SystemId
+  bool in_fix=3;        // true if the GNSS system is providing a fix
+  repeated SatellitesInView satellites=4;
+}
+
+message GNSS_Status {
+  bool fixed=1;
+  float fix_time=2;     //  time stamp seconds since the Epoch
+  repeated string constellations=3; // constellations seen
+  string gnss_time=4;    //  date and time UTC as ISO format
+  uint32 nb_satellites_in_fix=5;
+  float latitude=6;     // decimal degree negative south
+  float longitude=7;    // decimal degree negative west
+  float SOG=8;          // knots
+  float COG=9;          // degrees
+  float PDOP=10;
+  float HDOP=11;
+  float VDOP=12;
+}
+
+service GNSSService {
+  rpc gnss_status(server_cmd) returns (GNSS_Status);
+  rpc constellation_details(server_cmd) returns (ConstellationStatus);
+}

@@ -52,16 +52,23 @@ class Publisher(NavThread):
             self._opts = opts
             self._queue_size = opts.get('queue_size', int, 20)
             self._max_lost = opts.get('max_lost', int, 5)
+            self._service = opts.get('service', str, None)
+            self._suspend_on_overflow = opts.get('suspend_on_overflow', bool, False)
             inst_list = opts.getlist('couplers', str, [])
             if len(inst_list) == 0:
-                # we must have a coupler here
-                _logger.error(f"Publisher {object_name} has no couplers defined")
-                raise ValueError
+                if self._service is None:
+                    # we must have a coupler here
+                    _logger.error(f"Publisher {object_name} has no couplers defined")
+                    raise ValueError
             self._active = opts.get('active', bool, True)
             self._couplers = {}
             for inst_name in inst_list:
                 set_hook(inst_name, self.add_coupler)
-                self._couplers[inst_name] = resolve_ref(inst_name)
+                coupler = resolve_ref(inst_name)
+                if coupler is None:
+                    _logger.error(f"Publisher {object_name} reference to coupler {inst_name} not found")
+                else:
+                    self._couplers[inst_name] = resolve_ref(inst_name)
             daemon = False
             self._filter_select = opts.get('filter_select', bool, False)
 
@@ -104,6 +111,11 @@ class Publisher(NavThread):
         except queue.Full:
             # need to empty the queue
             self._nb_msg_lost += 1
+            if self._max_lost == 0:
+                if self._nb_msg_lost == 1:
+                    _logger.warning("Connection %s start losing message" % self._name)
+                # then messages are just discarded
+                return
             _logger.warning("Overflow on connection %s total message lost %d" % (self._name, self._nb_msg_lost))
             if self._nb_msg_lost >= self._max_lost:
                 raise PublisherOverflow
@@ -111,7 +123,11 @@ class Publisher(NavThread):
         if qs > self._queue_threshold:
             _logger.warning("%s Publisher Queue filling up over 80%% size %d" % (self._name, qs))
             self._queue_tpass = True
-            time.sleep(0.2)
+            if self._suspend_on_overflow:
+                for coupler in self._couplers.values():
+                    coupler.suspend()
+            else:
+                time.sleep(0.2)
         if self._queue_tpass:
             if qs < 4:
                 _logger.info("%s Publisher queue back to low level" % self._name)
@@ -217,3 +233,24 @@ class PrintPublisher(ExternalPublisher):
     def process_msg(self, msg):
         print(msg)
         return True
+
+
+class PullPublisher(Publisher):
+
+    def __init__(self, couplers=None, name=None):
+        super().__init__(None, internal=True, couplers=couplers, name=name)
+        self._wait_queue = queue.SimpleQueue()
+
+    def process_msg(self, msg):
+        try:
+            self._wait_queue.put(msg, block=False)
+            return True
+        except queue.Full:
+            _logger.error("Pull publisher %s queue full" % self._name)
+            return False
+
+    def pull_msg(self, timeout=None):
+        try:
+            return self._wait_queue.get(timeout=timeout)
+        except queue.Empty:
+            return None

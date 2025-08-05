@@ -21,11 +21,14 @@ STNC_Gpio_Set.add_group(GpioGroup("relay2", {"close": GpioLine("/dev/gpiochip0",
                                                         "open": GpioLine("/dev/gpiochip3", 22),
                                                         "sense": GpioLine("/dev/gpiochip4", 1)}))
 
-STNC_Gpio_Set.add_group(GpioGroup("CAN1", {"standby": GpioLine("/dev/gpiochip2", 28),
-                                                       "silent": GpioLine("/dev/gpiochip2", 26),
-                                                       "bus_detect": GpioLine("/dev/gpiochip0", 1)}))
+STNC_Gpio_Set.add_group(GpioGroup("CAN1", { "bus_detect": GpioLine("/dev/gpiochip0", 1)}))
 
-STNC_Gpio_Set.add_group(GpioGroup("CAN2", {"standby": GpioLine("/dev/gpiochip2", 27),
-                                                       "silent": GpioLine("/dev/gpiochip2", 29),
-                                                       "bus_detect": GpioLine("/dev/gpiochip0", 10)}))
+STNC_Gpio_Set.add_group(GpioGroup("CAN2", { "bus_detect": GpioLine("/dev/gpiochip0", 10)}))
+
+STNC_Gpio_Set.add_group(GpioGroup("MODEM_EM05", {"power": GpioLine("/dev/gpiochip5", 5),
+                                                        "reset": GpioLine("/dev/gpiochip5", 8),
+                                                        "flight_mode": GpioLine("/dev/gpiochip5", 9),
+                                                        "gps_enable": GpioLine("/dev/gpiochip5", 10)}))
+
+STNC_Gpio_Set.add_group(GpioGroup("GNSS_M10Q", {"reset": GpioLine("/dev/gpiochip0", 0)}))
 

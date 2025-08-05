@@ -28,7 +28,7 @@ import navigation_server.generated.nmea0183_pb2 as nmea0183__pb2
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13nmea_messages.proto\x1a\x0enmea2000.proto\x1a\x0enmea0183.proto\"g\n\x08nmea_msg\x12\x1e\n\x07N2K_msg\x18\x01 \x01(\x0b\x32\x0b.nmea2000pbH\x00\x12 \n\tN0183_msg\x18\x02 \x01(\x0b\x32\x0b.nmea0183pbH\x00\x12\x0e\n\x06msg_id\x18\x03 \x01(\rB\t\n\x07Message\"1\n\x0bserver_resp\x12\x12\n\nreportCode\x18\x01 \x01(\r\x12\x0e\n\x06status\x18\x02 \x01(\t\"\x19\n\nserver_cmd\x12\x0b\n\x03\x63md\x18\x01 \x01(\tb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13nmea_messages.proto\x1a\x0enmea2000.proto\x1a\x0enmea0183.proto\"g\n\x08nmea_msg\x12\x1e\n\x07N2K_msg\x18\x01 \x01(\x0b\x32\x0b.nmea2000pbH\x00\x12 \n\tN0183_msg\x18\x02 \x01(\x0b\x32\x0b.nmea0183pbH\x00\x12\x0e\n\x06msg_id\x18\x03 \x01(\rB\t\n\x07Message\"=\n\x0bserver_resp\x12\x12\n\nreportCode\x18\x01 \x01(\r\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\n\n\x02id\x18\x03 \x01(\r\"%\n\nserver_cmd\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0b\n\x03\x63md\x18\x02 \x01(\tb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,7 +38,7 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_NMEA_MSG']._serialized_start=55
   _globals['_NMEA_MSG']._serialized_end=158
   _globals['_SERVER_RESP']._serialized_start=160
-  _globals['_SERVER_RESP']._serialized_end=209
-  _globals['_SERVER_CMD']._serialized_start=211
-  _globals['_SERVER_CMD']._serialized_end=236
+  _globals['_SERVER_RESP']._serialized_end=221
+  _globals['_SERVER_CMD']._serialized_start=223
+  _globals['_SERVER_CMD']._serialized_end=260
 # @@protoc_insertion_point(module_scope)

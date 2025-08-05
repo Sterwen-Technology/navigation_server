@@ -12,6 +12,7 @@
 
 import logging
 import time
+import traceback
 
 from collections import namedtuple, deque
 
@@ -184,9 +185,16 @@ class VictronMPPT:
         self._sid += 1
         self._publisher.publish(msg)
 
+    def object_name(self):
+        # for debug only
+        traceback.print_stack()
+
+
 
 class MPPT_Servicer(solar_mpptServicer):
+    """
 
+    """
     def __init__(self, mppt_device):
         self._mppt_device = mppt_device
 

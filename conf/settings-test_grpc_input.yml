@@ -26,9 +26,13 @@ servers:
 - Main:
     class: NavigationMainServer
 
+- NMEAServer:
+    class: NMEAServer
+    port: 4500
+
 - gRPCMainServer:
       class: GrpcServer
-      port: 4504
+      port: 4502
 
 couplers:
 
@@ -51,10 +55,11 @@ publishers:
     class: PrintPublisher
     # filters: [NMEASent]
     couplers: [InputCoupler]
-    active: true
+    active: false
     flexible_decode: false
 
 applications:
+
 
 
 

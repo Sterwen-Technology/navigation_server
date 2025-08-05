@@ -19,7 +19,7 @@ from .log_utilities import NavigationLogSystem
 from .network_utils import get_id_from_mac, get_mac
 from .object_utilities import copy_attribute, build_subclass_dict
 from .protobuf_utilities import (pb_enum_string, set_protobuf_data, ProtobufProxy, GrpcAccessException,
-                                 copy_protobuf_data)
+                                 copy_protobuf_data, fill_protobuf_from_dict)
 from .protob_arguments import protob_to_dict, dict_to_protob
 from .xml_utilities import XMLDefinitionFile, XMLDecodeError
 from .configuration import NavigationConfiguration
@@ -27,5 +27,11 @@ from .message_trace import MessageTraceError, NMEAMsgTrace
 from .server_common import NavigationServer
 from .grpc_server_service import GrpcServer, GrpcService, GrpcServerError, GrpcSecondaryService
 from .generic_top_server import GenericTopServer
-from .nav_threading import NavThread, NavThreadingController, NavProfilingController
+from .nav_threading import NavThread, NavThreadingController, NavProfilingController, NavTimerController
 from .constants_conversion import nautical_mille, mps_to_knots, n2ktime_to_datetime, radian_to_deg
+from .client_common import GrpcClient, ServiceClient, GrpcStreamTimeout, GrpcSendStreamIterator, GrpcStreamIteratorError
+from .agent_interface import AgentInterface, AgentClient
+if MessageServerGlobals.thread_controller is None:
+    MessageServerGlobals.thread_controller = NavThreadingController()
+    MessageServerGlobals.profiling_controller = NavProfilingController()
+    MessageServerGlobals.timer_controller = NavTimerController()

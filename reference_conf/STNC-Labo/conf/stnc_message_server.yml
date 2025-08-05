@@ -1,0 +1,130 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     02/04/2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+#
+function: Messages (NMEA0183 & NMEA2000) server coupler interfaces
+server_name: STNC_Message_Server
+log_level: INFO
+trace_dir: /data/navigation/traces
+data_dir: /data/navigation/data
+
+log_module:
+  router_core.coupler: INFO
+  couplers.nmea2k_grpc_coupler: INFO
+  router_common.client_common: INFO
+  router_common.can_grpc_stream_reader: INFO
+  
+  
+
+features:
+  - router_core
+  - nmea2000
+  - nmea2000_devices
+  - couplers
+  - gnss
+
+
+servers:
+
+- Main:
+    class: NavigationMainServer
+
+- NMEAServer:
+    class: NMEAServer
+    port: 4500
+    nmea2000: dyfmt
+
+- NMEASender:
+    class: NMEASenderServer
+    port: 4503
+    nmea2000: dyfmt
+    coupler: CANCoupler
+
+- gRPCMain:
+      class: GrpcServer
+      port: 4502
+
+- ShipModulConfig:
+    class: ShipModulConfig
+    port: 4501
+    coupler: MiniPlex3
+
+couplers:
+
+- CANCoupler:
+    class: N2KGrpcCoupler
+    source_server: 127.0.0.1
+    source_port: 4512
+
+- CANSendCoupler:
+    class: N2KGrpcSendCoupler
+    target_server: 127.0.0.1
+    target_port: 4512
+    device: NavigationControl
+
+- MiniPlex3:
+    class: ShipModulInterface
+    address: 172.16.2.48
+    port: 10110
+    transport: TCP
+    nmea2000_controller: NMEANetwork
+    protocol: nmea2000
+    autostart: false
+    trace_raw: false
+
+- SolarPanel:
+    class: MpptCoupler
+    port: 4505
+    server: NMEAServer
+    direction: read_only
+    report_timer: 20
+
+    
+filters:
+
+- Engine:
+    class: NMEA2000Filter
+    pgn: [127488, 127489]
+    type: select
+
+services:
+
+- Console:
+      class: Console
+      server: gRPCMain
+
+
+publishers:
+
+#- SendNMEA2000:
+#    class: GrpcPublisher
+#    active: true
+#    decode_nmea2000: false
+#    nmea0183: convert_strict
+#    address: 127.0.0.1
+#    port: 4508
+#    max_retry: 0
+#    filters: [Engine]
+#    couplers: [CANCoupler]
+
+
+- TraceOutput:
+    class: N2KStatisticPublisher
+    couplers: [CANCoupler]
+    # filters: [NMEAOutput, AIS]
+    active: true
+    flexible_decode: false
+
+applications:
+
+
+
+
+

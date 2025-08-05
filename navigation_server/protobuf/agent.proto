@@ -5,44 +5,51 @@
 // Author:      Laurent Carré
 //
 // Created:     30/05/2023
-// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 // Licence:     Eclipse Public License 2.0
 //-------------------------------------------------------------------------------
 
 syntax = "proto3";
 
-message AgentMsg {
+import "services_server.proto";
+
+message NavigationSystemMsg {
+  uint32 id=1;
+  string name=2;
+  string version=7;
+  string start_time=8;
+  string hostname = 10;
+  string ip_address = 11;
+  string settings = 12;
+  repeated SystemProcessMsg processes = 3;
+}
+
+message AgentCmdMsg {
   uint32 id=1;
   string cmd=2;
+  string target=3;
 }
 
 message AgentResponse {
-  uint32 err_code=1;
-  string resp=2;
-}
-
-message AgentResponseML {
-  uint32 err_code=1;
-  repeated string lines=2;
-}
-
-message SystemdCmdMsg {
   uint32 id=1;
-  string cmd=2;
-  string service=3;
+  uint32 err_code = 2;  // 0 = no error
+  // depending on the command the server will reply one more of the following values
+  string response = 3;  // string with result or error
+  NavigationSystemMsg system=4;
+  repeated SystemProcessMsg processes=5;
+  SystemProcessMsg process=6;
+  uint32 grpc_port = 7;
+  repeated string status_lines = 8;
 }
 
-message NetworkCmdMsg {
-  uint32 id=1;
-  string interface=2;
-  string cmd=3;
+message LogLines {
+  string line=1;
 }
 
 
 service Agent {
-  rpc SendCmdMultipleResp(AgentMsg) returns (stream AgentResponse){}
-  rpc SendCmdSingleResp(AgentMsg) returns (AgentResponse) {}
-  rpc SendCmdNoResp(AgentMsg) returns (AgentResponse) {}
-  rpc SystemdCmd(SystemdCmdMsg) returns (AgentResponseML) {}
-  rpc NetworkCmd(NetworkCmdMsg) returns (AgentResponse) {}
+  rpc AgentCmd(AgentCmdMsg) returns (AgentResponse) {}
+  rpc AgentSystemCmd(AgentCmdMsg) returns(AgentResponse) {}
+  rpc RegisterProcess(SystemProcessMsg) returns(AgentResponse) {}
+  rpc GetSystemLog(AgentCmdMsg) returns (stream LogLines) {}
 }

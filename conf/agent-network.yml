@@ -1,0 +1,58 @@
+#-------------------------------------------------------------------------------
+# Name:        agent-network.yml
+# Purpose:     Settings file for the local agent with networking management
+#
+# Author:      Laurent Carré
+#
+# Created:     26/02/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+function: Local system control agent
+server_name: navigation_agent
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+log_module:
+  network.nmcli_interface: DEBUG
+  network.network_service: DEBUG
+
+decode_definition_only: True
+
+features:
+    - agent
+    - network
+
+servers:
+
+- Main:
+      class: AgentTopServer
+
+- gRPCMain:
+    class: GrpcServer
+    port: 4506
+
+services:
+
+- Agent:
+    class: AgentService
+    server: gRPCMain
+
+- Network:
+    class: NetworkService
+    server: gRPCMain
+    configuration: network_conf.yml
+
+processes:
+
+  - NavigationServer:
+      class: SystemdProcess
+      service: navigation
+
+
+
+
+
+
+
+

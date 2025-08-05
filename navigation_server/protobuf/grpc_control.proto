@@ -1,0 +1,30 @@
+//-------------------------------------------------------------------------------
+// Name:        grpc_control.proto
+// Purpose:     protobuf and grpc for maintenance of the gRPC services and communication
+//
+// Author:      Laurent Carré
+//
+// Created:     26/05/2025
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+// message to send command / request to a gRPC server in the navigation system
+// all servers include the support of this service
+// that is a first version and vert simplified one
+
+message GrpcCommand {
+    uint32 id=1;
+    string command=2;
+}
+
+message GrpcAck {
+    uint32 id=1;
+    string response=2;
+}
+
+service NavigationGrpcControl {
+  rpc SendCommand(GrpcCommand) returns (GrpcAck) {}
+}

@@ -1,0 +1,13 @@
+[Unit]
+Description=Energy management Server
+Requires=network.target
+
+[Service]
+Type=simple
+User=solidsense
+ExecStart=/home/laurent/navigation_server/run_server /home/laurent/config/energy_management.yml
+Restart=on-failure
+RestartSec=6
+
+[Install]
+WantedBy=multi-user.target

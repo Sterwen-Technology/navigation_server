@@ -138,7 +138,7 @@ class GrpcPublisher(ExternalPublisher):
             resp = self._stub.pushDecodedNMEA2K(msg)
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.error("Server Status - Error accessing server:%s" % err)
+                _logger.error(f"Server pushDecodedNMEA2K - Error accessing server:{err}")
                 if self._stop_on_error:
                     self.stop()
             else:
@@ -154,12 +154,12 @@ class GrpcPublisher(ExternalPublisher):
             _logger.error("Grpc Publisher error returned by server %s" % resp.status)
 
     def send_message(self, msg):
-        _logger.debug("gRPC Publisher send message: %s" % msg)
+        _logger.debug("gRPC Publisher send message pushNMEA: %s" % msg)
         try:
             resp = self._stub.pushNMEA(msg)
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.error("Server Status - Error accessing server:%s" % err)
+                _logger.error("Server pushNMEA- Error accessing server:%s" % err.details())
                 if self._stop_on_error:
                     self.stop()
             else:

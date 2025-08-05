@@ -9,9 +9,10 @@ Other possibility is to use NMEA0183 type streams on pseudo NMEA0183 streams enc
 
 **The toolbox** is focusing on NMEA2000 messages and data, whatever is the format. NMEA0183 messages are also carried but with a minimum of semantic analysis. All applications are using the same Python program.
 
-Based on the configuration file (using YamL syntax), all type of application can be launched:
+Based on the configuration file (using YamL syntax), all types of application can be launched:
    - **message server** that acts as a router/concentrator/proxy between NMEA0183/NMEA2000 instrumentation buses with possibly some adhoc interface to be added for energy systems.
-   - **energy management** application interfaced with energy system (controllers, MPPT, Converters,...) via NMEA2000 or specific protocols
+   - **can server** dealing with the CAN/NMEA2000 interface and acting as an J1939 ECU, implementing transport protocols (J1939/21 and Fast-packets) and network management protocol(J1939/81)
+   - **energy management** application interfaced with the energy system (controllers, MPPT, Converters, ...) via NMEA2000 or specific protocols
    - **local agent** this is a local service controlling other services via systemd through commands sent via gRPC, it can also act on the system network and operation (reboot)
    - **data manager** collecting messages and creating datasets like engine start and stop. That is a big area for future development
 
@@ -25,32 +26,21 @@ A sample GUI application for the control of the various server is also available
 
 
 ## Installation
-The project is entirely written in Python 3 and has been tested with Python 3.7 - 3.12. It is intended to run on Linux based system. Is has been tested on Debian, Yocto and Ubuntu.
-*note: from version 2.1.1 on Python version 3.12 is preferred*
+The project is entirely written in Python 3 and has been tested with Python 3.7-3.12. It is intended to run on Linux-based systems. It has been tested on Debian, Yocto and Ubuntu.
+*Note: from version 2.1.1 on Python version 3.12 is preferred*
 Installation on Windows 10 or 11 is working with some limitations on TCP sockets and no support on Direct CAN connection.
 
-Installations files are available here (tar and wheel): [Sterwen Technology download page](https://sterwen-technology.eu/softwares/)
+Installation files are available here (tar and wheel): [Sterwen Technology download page](https://sterwen-technology.eu/softwares/)
 
 ### Setting up the Python environment and running servers
 
-Please refer to the specific documentation: [Python installation](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/python_environment.md)
+Please refer to the specific documentation: [Python installation](doc/python_environment.md)
 
 
 
-### Running automatically with systemd
-In the **system** directory there are sample files to install several services to run the servers automatically. They can be reused, but you have to make sure that the files and locations are corresponding.
-The script *install_server* creates 4 services:
-- **navigation**: main navigation server for which the 
-- **navigation_agent**: host local agent to allow remote control
-- **energy**: energy management service (currently limited)
-- **navigation_data**: data server, currently mostly some custom processing
-
-So the script is to be customized as well as the service files in the *systemd* subdirectory to match actual installation.
-
-**Warning: starting services in Python requires either to fully work without virtual environment or to be able to refer to the virtual environment from the service file**
-
-Another service is the **can** service that is initializing the CAN bus on boot. It is to be installed to avoid having to initialize manually the CAN upon boot. Again path to scripts is to be modified in the service file.
-
+### Global architecture
+As the software package is based on building blocks, it offers a lot of options for the global system architecture. However, the author is proposing a generic architecture adapted for ships equipped with a NMEA2000 backbone.
+The proposed architecture is described here:[Global system recommended architecture](doc/global_architecture.md)
 
 ### Supported hosts hardware
  - ARM 32 bits systems: NXP iMX6 Dual or Quad core running Debian or Yocto; Raspberry Pi2
@@ -67,6 +57,7 @@ Another service is the **can** service that is initializing the CAN bus on boot.
    - PICAN2 HAT on RPi3 or RPi4
    - SolidRun NXP based gateways: Industrial N6 and N8 Compact with CAN interface
  - Victron VE Direct devices (requires a dedicated process to be configured)
+ - Ublox GNSS Module on STNC800 systems. See specific documentation: [STNC internal GNSS documentation](doc/stnc-gnss.md)
 
 The most versatile solution is to use a device that has a direct CAN bus access. In that case, no specific hardware is required and more features can be deployed as this system becomes a real ECU (Electronic Control Unit) that can run one or more Controller Applications (NMEA2000 devices).
 The same device could combine some NMEA0183 inputs on serial port(s) and NMEA2000 bus communication.
@@ -93,17 +84,21 @@ For production the system should be run through *systemd*. Services that can be 
 
 The documentation is located in the *doc* directory.
 
-[message_server documentation](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/Navigation%20message%20server.md)
+[message_server documentation](doc/Navigation%20message%20server.md)
 
-[System API](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/Navigation%20system%20API.md)
+[System API](doc/Navigation%20system%20API.md)
 
-[NMEA2000 support](https://github.com/Sterwen-Technology/navigation_server/blob/V2.2/doc/NMEA2000.md)
+[NMEA2000 support](doc/NMEA2000.md)
+
+[Internal GNSS (STNC) usage and configuration](doc/stnc-gnss.md)
+
+
 
 
 ## Development
 
-The Protobuf files can be modified if needed or by generation of new NMEA2000 supporting messages (see NMEA2000 support), however, the output of the Protobuf compiler into Python needs to be adjusted. This is a known limitation of the grpcio compiler.
-To overcome the problem a specific Python script has been developed (mod_pb2.py) as well as a convenience shell script (gen_proto) that generates the Python files from the protobuf ones.
+The Protobuf files can be modified if needed or by generation of new NMEA2000 supporting messages (see NMEA2000 support). However, the output of the Protobuf compiler into Python needs to be adjusted. This is a known limitation of the grpcio compiler.
+To overcome the problem, a specific Python script has been developed (mod_pb2.py) as well as a convenience shell script (gen_proto) that generates the Python files from the protobuf ones.
 
 
 ## Support
@@ -111,13 +106,13 @@ To overcome the problem a specific Python script has been developed (mod_pb2.py)
 For any problem encountered, please open an issue in this GitHub repository.
 
 ## Roadmap
-The current stable version is V2.2. Documentation is aligned on this version.
+The current stable version is V2.6.1 Documentation is aligned on this version.
 
-The version 2.2 is focusing on installation and import optimization
+From the version 2.5.0 the new STNC800 hardware is supported
 
 ## Contributing
 
-All contributions welcome. 
+All contributions are welcome. 
 
 ## Authors and acknowledgment
 Laurent Carré - [Sterwen Technology](http://www.sterwen-technology.eu). 

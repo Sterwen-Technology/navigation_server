@@ -1,0 +1,13 @@
+[Unit]
+Description=Navigation Local Agent
+Requires=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/home/laurent/navigation_server/run_server /data/navigation/config/agent-network.yml
+Restart=always
+RestartSec=6
+
+[Install]
+WantedBy=multi-user.target

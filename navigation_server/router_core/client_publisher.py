@@ -22,12 +22,37 @@ _logger = logging.getLogger("ShipDataServer."+__name__)
 
 
 class NMEAPublisher(Publisher):
+    """
+    Manages the publication of NMEA messages using a specified client.
 
+    The NMEAPublisher class facilitates transmission of NMEA messages, handling
+    initialization with specific couplers and filters, and ensuring proper cleanup
+    of client resources. This class acts as a specialized implementation of the
+    Publisher base class, enabling integration with client-defined behavior for
+    NMEA message communication.
+
+    Attributes
+    ----------
+    _client : ClientType
+        The client object responsible for sending NMEA messages.
+
+    Methods
+    -------
+    process_msg(msg: NavGenericMsg) -> bool
+        Processes an incoming message, handling errors related to missing payloads
+        and forwarding valid payloads to the client.
+
+    last_action()
+        Performs necessary cleanup operations, such as closing the client
+        connection.
+
+    descr() -> str
+        Provides a description of the client associated with the publisher.
+    """
     def __init__(self, client, couplers: list, filters):
 
         super().__init__(None, internal=True, couplers=couplers, name=client.descr(), filters=filters)
         self._client = client
-
         client.set_publisher(self)
         _logger.info("NMEA Publisher %s created" % self.object_name())
 
@@ -46,7 +71,21 @@ class NMEAPublisher(Publisher):
 
 
 class NMEA2000DYPublisher(NMEAPublisher):
+    """
+    Handles the publishing of NMEA 2000 messages dynamically.
 
+    This class inherits from the NMEAPublisher class and is specifically designed
+    to manage and publish NMEA 2000 messages using Digital Yacht (DY) format.
+
+    Attributes:
+        client: Manages communication with the data recipient, allowing transmission of
+            processed NMEA data.
+        couplers: Provides additional functionality or behavioral changes in the
+            data processing pipeline.
+        filters: Filters incoming data messages to determine which should be processed
+            and published.
+
+    """
     def __init__(self, client, couplers, filters):
         super().__init__(client, couplers, filters)
 
@@ -76,7 +115,20 @@ class NMEA2000STPublisher(NMEAPublisher):
 
 
 class NMEASender(NavThread):
+    """
+    Manages the transmission of NMEA messages over a specified network connection.
 
+    This class handles the sending of NMEA messages over a TCP connection. It processes input
+    messages, manages their dispatch through a coupler, and optionally forwards them to a
+    publishing system. The sender operates in a threaded manner, allowing asynchronous
+    handling and termination of message transmission. Various modes of message processing
+    can be configured based on the chosen NMEA2000 mode. It provides utility to track
+    message counts, manage silent periods, and reset internal counters.
+
+    Attributes:
+        msg_processing (dict): A dictionary mapping message processing modes to their
+            corresponding processing functions.
+    """
     msg_processing = {'transparent': process_nmea0183_frame,
                       'dyfmt': fromPGDY, 'stfmt': fromPGNST}
 
@@ -109,7 +161,7 @@ class NMEASender(NavThread):
             try:
                 self._coupler.send_msg_gen(msg)
             except CouplerWriteError as err:
-                _logger.error("NMEASEnter write error %s" % err)
+                _logger.error("NMEASender write error %s" % err)
                 break
             if self._publisher is not None:
                 self._publisher.publish(msg)
@@ -139,12 +191,27 @@ class NMEASender(NavThread):
 
 
 class ClientConnection:
-    '''
-    class to implement the connection between client and server
-    perform all I/O on communication socket
+    """
+    Manages an individual client connection within a server system, facilitating
+    communication, message counting, and handling associated resources.
 
-    Created by the server upon accept for a new client connection
-    '''
+    The `ClientConnection` class wraps a socket connection and provides methods
+    for sending and receiving messages, tracking message counts, managing silent
+    periods, and interacting with publishers. The class also handles cleanup
+    processes such as closing connections and deregistering components tied to
+    the connection.
+
+    Attributes:
+        _socket: The socket object representing the client connection.
+        _address: Tuple containing the remote client IP address and port number.
+        _server: The server instance managing the client connections.
+        _totalmsg: Tracks the total number of messages sent over this connection.
+        _total_recmsg: Tracks the total number of messages received from this connection.
+        _periodmsg: Tracks the number of messages sent or received during a specific period.
+        _silent_count: Counts the number of consecutive silent periods of the connection.
+        _publisher: The associated publisher instance managing outgoing data streams.
+        _sender: The sender thread or mechanism used for handling outgoing messages.
+    """
     def __init__(self, connection, address, server):
         self._socket = connection
         self._address = address

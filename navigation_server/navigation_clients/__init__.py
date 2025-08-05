@@ -9,8 +9,10 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-from .client_common import GrpcClient
+
 from .console_client import *
-from .agent_client import AgentClient
 from .energy_client import MPPT_Client, MPPT_device_proxy, MPPT_output_proxy
-from .navigation_data_client import EngineClient, EngineData, EngineProxy, EngineEventProxy
+from .nmea_server_client import GrpcNmeaServerClient
+from .navigation_data_client import EngineClient
+from .network_client import NetworkClient, NetworkStatusProxy, NetConnectionProxy, NetInterfaceProxy
+from .n2k_can_client import NMEA2000CanClient

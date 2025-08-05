@@ -11,7 +11,7 @@
 
 import logging
 import time
-
+import math
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -155,15 +155,22 @@ class FastPacketHandler:
             return l_handle
 
         if handle is None:
+            if counter != 0:
+                raise FastPacketException(f"Fast packet PGN {pgn} from address {addr} wrong first packet {counter}")
             handle = allocate_handle()
 
         if counter == 0:
             handle.first_packet(frame)
         else:
-            handle.add_packet(frame)
+            try:
+                handle.add_packet(frame)
+            except FastPacketException:
+                del self._sequences[key]
+                raise
+
         if handle.check_complete():
+            del self._sequences[key]
             result = handle.total_frame()
-            self._sequences[key] = None
             _logger.debug("Fast packet ==> end sequence on PGN %d from address %d sequence %d" % (pgn, addr, seq))
             return result
         else:
@@ -186,19 +193,19 @@ class FastPacketHandler:
         for key in to_be_removed:
             del self._sequences[key]
 
-    def split_message(self, pgn: int, data: bytearray) -> bytearray:
+    def split_message(self, pgn: int, data: bytearray):
         """
         split the NMEA payload with Fast Packet structure
         :param pgn:
         :param data: NMEA 2000 payload
         :return: iterator over Fast Packet frames
         """
-        nb_frames = ((len(data) - 6) / 7) + 1
+        nb_frames = math.ceil((len(data) - 6) / 7) + 1  # corrected in 2.6.1
         seq = self.allocate_seq(pgn)
         seq_en = seq << 5
         counter = 0
         total_len = len(data)
-        # print("Fast packet split data  for PGN", pgn, "data len", total_len)
+        # _logger.debug(f"Fast packet split data  for PGN {pgn} data len {total_len} nb frames:{nb_frames}")
         data_ptr = 0
         while counter < nb_frames:
             remaining_bytes = total_len - data_ptr
@@ -217,7 +224,7 @@ class FastPacketHandler:
                 while ptr < 8:
                     frame[ptr] = 0xFF
                     ptr += 1
-            # print("frame #", counter, "remaining bytes", remaining_bytes, "DLC", len(frame))
+            # _logger.debug(f"{pgn} => frame # {counter} remaining bytes {remaining_bytes} DLC {len(frame)}")
             yield frame
             counter += 1
         self.free_seq(pgn, seq)
@@ -228,13 +235,13 @@ class FastPacketHandler:
         So seq is always 1
         """
         seq = self._write_sequences.get(pgn, 0)
-        if seq == 0:
-            self._write_sequences[pgn] = 1
-            return 1
-        else:
-            _logger.critical("NMEA2000 Fast Packet => cannot allocate sequence for PGN %d already in use" % pgn)
-            raise ValueError
+        if seq != 0:
+            _logger.warning(f"NMEA2000 Fast Packet sequence {seq} for PGN {pgn} already in use")
+        self._write_sequences[pgn] = 1
+        return 1
+
 
     def free_seq(self, pgn, seq):
+        _logger.debug(f"Fast packet free sequence for PGN {pgn}")
         self._write_sequences[pgn] = 0
 

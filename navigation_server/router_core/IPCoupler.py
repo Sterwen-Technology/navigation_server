@@ -278,6 +278,9 @@ class IPAsynchReader(NavThread):
                 except NMEAInvalidFrame:
                     _logger.error("Invalid frame in %s: %s %s" % (self._transport.ref(), frame, buffer))
                     continue
+                except CouplerReadError:
+                    # at that stage we consider this is not recoverable
+                    break
                 try:
                     self._out_queue.put(msg, timeout=1.0)
                 except queue.Full:

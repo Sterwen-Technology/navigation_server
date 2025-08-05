@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     29/02/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -14,9 +14,12 @@ import logging
 import threading
 import socket
 
-from .tcp_server import NavTCPServer, ConnectionRecord
-from .client_publisher import ClientConnection, NMEAPublisher, NMEA2000DYPublisher, NMEA2000STPublisher, NMEASender
-from .nmea0183_msg import ZDA
+from navigation_server.router_core import FilterSet
+from navigation_server.router_core.client_publisher import (NMEAPublisher, NMEA2000DYPublisher, NMEA2000STPublisher,
+                                                            NMEASender, ClientConnection)
+from navigation_server.router_common import NavigationServer
+from navigation_server.router_core.tcp_server import NavTCPServer, ConnectionRecord
+from navigation_server.router_core.nmea0183_msg import ZDA
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -365,5 +368,108 @@ class NMEASenderServer(NavTCPServer):
             result.append(ConnectionRecord(self._address[0], self._address[1], self._sender.msgcount()))
         return result
 
+#
+#    UDP server section
+#    ==================
+
+class NMEAUDPServer(NavigationServer):
+    """
+    Manages a UDP-based NMEA server for navigation data distribution.
+
+    This class facilitates the creation of an NMEA server that operates over UDP. It can handle different
+    publisher formats and supports filtering capabilities. The server is intended to broadcast navigation
+    data to connected clients. It also allows coupling with external data-processing mechanisms and
+    efficient data dissemination. It is built upon a base `NavigationServer` class with added NMEA-specific
+    functionalities.
+
+    Attributes:
+        publisher_class (dict): Mapping of publisher format types to their respective publisher classes.
+    """
+    publisher_class = {'transparent': NMEAPublisher, 'dyfmt': NMEA2000DYPublisher, 'stfmt': NMEA2000STPublisher}
+
+    def __init__(self, options):
+        super().__init__(options)
+
+        if self._port == 0:
+            _logger.error(f"NMEAUDPServer {self._name} must have a UDP port defined")
+            raise ValueError
+
+        self._couplers = []
+        self._options = options
+        self._nmea2000 = options.get_choice('nmea2000', ('transparent', 'dyfmt', 'stfmt'), 'transparent')
+        self._buffer_size = options.get('buffer_size', int, 1024)
+        self._heartbeat = options.get('heartbeat', float, 30.0)
+
+        self._timer_name = self.name + "-timer"
+        self._timer = None
+        self._msg_sent = 0
+
+        # Création du socket UDP
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        # self._socket.bind(('0.0.0.0', self._port))
+        self._broadcast_address= ('<broadcast>', self._port)
+        self._filters = None
+
+        filter_names = options.getlist('filters', str)
+        if filter_names is not None and len(filter_names) > 0:
+            self._filters = FilterSet(filter_names)
+
+        self._publisher = self.publisher_class[self._nmea2000](self, self._couplers, self._filters)
 
 
+    def add_coupler(self, coupler):
+        '''
+        The following test is too restrictive and does not work always - removed until better solution implemented
+        if self._nmea2000 in ['dyfmt', 'stfmt']:
+            if coupler.protocol() != 'nmea2000':
+                _logger.error("Coupler %s is not configured for NMEA2000 and incompatible with server %s protocol" %
+                              (coupler.name(), self._name))
+                return
+        '''
+        self._couplers.append(coupler)
+        _logger.info("Server %s adding coupler %s" % (self.name, coupler.object_name()))
+        # now if we had some active connections we need to create the publishers
+        self._publisher.add_coupler(coupler)
+
+    def remove_coupler(self, coupler):
+        _logger.info("Server %s removing coupler %s" % (self.name, coupler.object_name()))
+        try:
+            self._couplers.remove(coupler)
+        except ValueError:
+            _logger.error("Server %s removing coupler %s failed" % (self.name, coupler.object_name()))
+
+    def send(self, msg):
+        _logger.debug("%s sending UDP datagram %s" % (self.name, msg))
+        self._socket.sendto(msg, self._broadcast_address)
+        self._msg_sent += 1
+
+    def start(self):
+        self._publisher.start()
+        self.start_timer()
+
+    def stop(self):
+        self.stop_timer()
+        self._publisher.stop()
+
+    def start_timer(self):
+        self._timer = threading.Timer(self._heartbeat, self.heartbeat)
+        self._timer.name = self._timer_name
+        self._timer.start()
+
+    def stop_timer(self):
+        if self._timer is not None:
+            self._timer.cancel()
+
+    def heartbeat(self):
+        _logger.info(f"UDP server {self.name} number of msg sent:{self._msg_sent}")
+
+    def descr(self):
+        return f"UDP server {self.name} on port {self._port}"
+
+    def set_publisher(self, publisher):
+        pass
+
+    def join(self):
+        self._publisher.join()

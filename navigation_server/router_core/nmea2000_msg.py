@@ -41,7 +41,8 @@ class NMEA2000Msg:
 
     ts_format = "%H:%M:%S.%f"
     struct_2b = struct.Struct("<H")
-    pgn_service = (59392, 59904, 60928, 65240, 126208, 126464, 126993, 126996, 126998)
+    pgn_service = {59392, 59904, 60928, 65240, 126208, 126464, 126993, 126996, 126998}
+    pgn_in_band_signalling = 0x100
 
     def __init__(self, pgn: int, prio: int = 0, sa: int = 0, da: int = 0, payload: bytearray = None, timestamp=0.0,
                  protobuf=None):
@@ -74,9 +75,9 @@ class NMEA2000Msg:
             #   Fast packet mode whatever is the length
 
             self._payload = payload
-            self._check_fast_packet()
         else:
             self.from_protobuf(protobuf)
+        self._check_fast_packet()
         # define if the PGN is part of ISO and base protocol (do not carry navigation data)
         self._check_protocol()
 
@@ -212,7 +213,9 @@ class NMEA2000Msg:
         self._payload = pb_msg.payload
 
     def serialize(self):
-        return MessageToJson(self.as_protobuf())
+        msg_pb = nmea2000pb()
+        self.as_protobuf(msg_pb)
+        return MessageToJson(msg_pb, preserving_proto_field_name=True, indent=2).encode('utf-8')
 
     def decode(self):
         try:
@@ -262,6 +265,24 @@ def fromProprietaryNmea(msg: NMEA0183Msg) -> NMEA2000Msg:
 
 
 def decodePGDY(msg: NMEA0183Msg) -> NMEA2000Msg:
+    """
+    Decode a PGDY NMEA 0183 message to an NMEA 2000 message.
+
+    This function processes a received or transmitted PGDY message in the NMEA 0183
+    format and converts it into an NMEA 2000 message. The function ensures that
+    address and payload fields are properly interpreted and decoded as needed.
+
+    Parameters:
+        msg (NMEA0183Msg): The NMEA0183 message to decode, containing all the necessary
+            fields to construct the NMEA2000 message.
+
+    Returns:
+        NMEA2000Msg: The constructed NMEA2000 message based on the decoded PGDY fields.
+
+    Raises:
+        N2KRawDecodeError: If the input message contains invalid base64 encoded payload
+            data or does not match the expected PGDY message format.
+    """
     fields = msg.fields()
     if len(fields) == 6:
         ''' Receive message'''

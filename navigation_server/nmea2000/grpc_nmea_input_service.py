@@ -22,7 +22,7 @@ from .nmea2k_decode_dispatch import get_n2k_object_from_protobuf, get_n2k_decode
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
 
-class GrpcNmeaServicer(NMEAInputServerServicer):
+class GrpcNmeaInputServicer(NMEAInputServerServicer):
     '''
     The class is a generic servicer for incoming NMEA messages
     Current version is a non-streaming one
@@ -41,9 +41,9 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
         self._total_n183_msg = 0
 
     def pushNMEA(self, request, context):
-        '''
-
-        '''
+        """
+        receive NMEA2000 or NMEA0183 messages
+        """
         resp = server_resp()
         resp.reportCode = 0
         if not self._accept_messages:
@@ -92,6 +92,15 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
             self._callback_pb(n2k_object)
         return resp
 
+    def pushNMEA2K(self, request, context):
+        resp = server_resp()
+        resp.reportCode = 0
+        if not self._accept_messages:
+            _logger.debug("GrpcNmeaService not ready")
+            return resp
+        resp.reportCode, resp.status = self.incoming_n2k(request)
+        return resp
+
     def incoming_n2k(self, msg):
         if self._callback_n2k is None:
             report_code = 1
@@ -116,7 +125,7 @@ class GrpcNmeaServicer(NMEAInputServerServicer):
         self._accept_messages = False
 
 
-class DataDispatchServicer(GrpcNmeaServicer):
+class DataInputDispatchServicer(GrpcNmeaInputServicer):
 
     def __init__(self):
         super().__init__()
@@ -149,7 +158,7 @@ class DataDispatchServicer(GrpcNmeaServicer):
             return 101, str(err)
 
 
-class GrpcDataService(GrpcService):
+class GrpcInputDataService(GrpcService):
 
     def __init__(self, opts, callback_n2k=None, callback_0183=None, callback_pb=None):
         super().__init__(opts)
@@ -164,7 +173,7 @@ class GrpcDataService(GrpcService):
         except GrpcServerError:
             return
         _logger.info("Adding service %s to server" % self._name)
-        self._servicer = GrpcNmeaServicer(self._callback_n2k, self._callback_0183, self._callback_pb)
+        self._servicer = GrpcNmeaInputServicer(self._callback_n2k, self._callback_0183, self._callback_pb)
         add_NMEAInputServerServicer_to_server(self._servicer, self.grpc_server)
 
     def open(self):
@@ -187,12 +196,12 @@ class GrpcDataService(GrpcService):
 ProcessVector = namedtuple('ProcessVector', ['subscriber', 'msg_id', 'vector'])
 
 
-class DataDispatchService(GrpcService):
-    '''
-    This class process all input NMEA messages and dispatch them towards the data services that have subscribed
+class DataInputDispatchService(GrpcService):
+    """
+    This class processes all input NMEA messages and dispatches them towards the data services that have subscribed
     to specific PGN. Messages are decoded before being forwarded.
     Messages without subscription are just discarded
-    '''
+    """
 
     def __init__(self, opts):
         super().__init__(opts)
@@ -205,7 +214,7 @@ class DataDispatchService(GrpcService):
         except GrpcServerError:
             return
         _logger.info("Adding service %s to server" % self._name)
-        self._servicer = DataDispatchServicer()
+        self._servicer = DataInputDispatchServicer()
         add_NMEAInputServerServicer_to_server(self._servicer, self.grpc_server)
         self._servicer.open()
 

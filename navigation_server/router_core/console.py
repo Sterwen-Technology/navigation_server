@@ -13,8 +13,9 @@ from collections import namedtuple
 from socket import gethostname
 import logging
 
-from navigation_server.router_common import MessageServerGlobals, GrpcService, protob_to_dict, dict_to_protob
-from navigation_server.generated.console_pb2 import *
+from navigation_server.router_common import MessageServerGlobals, GrpcService, protob_to_dict, dict_to_protob, get_global_var
+from navigation_server.generated.console_pb2 import CouplerMsg, ServiceMsg, PublisherMsg, Response
+from navigation_server.generated.services_server_pb2 import ProcessState, Connection, Server, SystemProcessMsg
 from navigation_server.generated.console_pb2_grpc import *
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
@@ -32,11 +33,11 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.coupler_class = type(i).__name__
         if i.is_alive():
             if i.is_suspended():
-                resp.state = State.SUSPENDED
+                resp.state = CouplerMsg.Coupler_state.SUSPENDED
             else:
-                resp.state = State.RUNNING
+                resp.state = CouplerMsg.Coupler_state.RUNNING
         else:
-            resp.state = State.STOPPED
+            resp.state = CouplerMsg.Coupler_state.STOPPED
         state = i.state()
         if 0 < state > 3:
             _logger.error("Coupler %s wrong device state %d must in range 0-3" % (resp.name, state))
@@ -106,12 +107,12 @@ class ConsoleServicer(NavigationConsoleServicer):
 
     def ServerStatus(self, request, context):
         _logger.debug("Console server status ")
-        resp = NavigationServerMsg(id=request.id)
+        resp = SystemProcessMsg(id=request.id)
         server = self._console.main_server()
         resp.name = MessageServerGlobals.server_name
         resp.version = server.version()
         resp.start_time = server.start_time_str()
-        resp.state = State.RUNNING
+        resp.state = ProcessState.RUNNING
         # some information are independent of the main server
         resp.hostname = gethostname()
         resp.purpose = MessageServerGlobals.configuration.server_purpose
@@ -173,38 +174,6 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.status = server.get_details()
         return resp
 
-    def GetDevices(self, request, context):
-        _logger.debug("Get NMEA200 devices request")
-        n2k_svr = self._console.get_server_by_type('NMEA2KController')
-        if n2k_svr is None:
-            _logger.debug("No NMEA200 Server present")
-            return
-        if request.cmd == 'poll':
-            _logger.debug("Poll for devices first")
-            n2k_svr.poll_devices()
-            time.sleep(3.0) # wait a bit to get the responses
-
-        for device in n2k_svr.get_device():
-            resp = N2KDeviceMsg()
-            resp.address = device.address
-            resp.changed = device.changed()
-            device.clear_change_flag()
-            _logger.debug("Console sending NMEA2000 Device address %d info" % device.address)
-            if device.iso_name is not None:
-                device.iso_name.set_protobuf(resp.iso_name)
-                resp.iso_name.manufacturer_name = device.manufacturer_name
-            else:
-                _logger.debug("Device address %d partial info only" % device.address)
-            resp.last_time_seen = device.last_time_seen
-            if device.product_information is not None:
-                device.product_information.set_protobuf(resp.product_information)
-            if device.configuration_information is not None:
-                device.configuration_information.set_protobuf(resp.configuration_information)
-            yield resp
-        _logger.debug("Get NMEA Devices END")
-        return
-
-
 ServerRecord = namedtuple('ServerRecord', ['server', 'name', 'class_name'])
 
 
@@ -221,6 +190,7 @@ class Console(GrpcService):
         super().finalize()
         add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self.grpc_server)
         self._main_server = MessageServerGlobals.configuration.main_server
+
 
     def add_server(self, server):
         record = ServerRecord(server, server.name, server.class_name())

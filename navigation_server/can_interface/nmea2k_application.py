@@ -19,14 +19,33 @@ from navigation_server.nmea2000_datamodel import NMEA2000MutableName, PGNDef
 from navigation_server.nmea2000 import (AddressClaim, ISORequest, ProductInformation, ConfigurationInformation,
                                           AcknowledgeGroupFunction, create_group_function, CommandedAddress,
                                           CommandGroupFunction, Heartbeat, get_n2k_decoded_object, NMEA2000Device)
-from navigation_server.router_common import get_id_from_mac, MessageServerGlobals, resolve_ref
+from navigation_server.router_common import get_id_from_mac, MessageServerGlobals, resolve_ref, SocketCanError
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class NMEA2000ApplicationPool:
+    """
+    Handles an NMEA2000 application pool to manage application identifiers and
+    addresses for devices in a network.
 
+    This class is responsible for generating unique application identifiers
+    comprising device addresses and ISO names within the constraints of an
+    NMEA2000 network. It uses configurations such as manufacturer ID,
+    MAC address source, and address range to generate and allocate new
+    application addresses and names.
+
+    Attributes:
+        _controller: Reference to a controller managing the network.
+        _mfg_code: Integer representing the manufacturer ID.
+        _unique_id_root: Unique identifier derived from MAC address and application settings.
+        _max_application: Maximum number of allowed applications.
+        _address_pool: List of addresses available for application assignment.
+        _ap_index: Integer tracking the next available address in the address pool.
+        _application_count: Number of applications created from the pool.
+
+    """
     def __init__(self, controller, opts):
         self._controller = controller
         mac_source = opts.get('mac_source', str, 'eth0')
@@ -39,21 +58,21 @@ class NMEA2000ApplicationPool:
         self._ap_index = 0
         self._application_count = 0
 
-    def application_ids(self):
+    def application_ids(self, device_class, device_function):
         address = self.get_new_address()
         if address == 254:
             raise IndexError
-        iso_name = self.application_name()
+        iso_name = self.application_name(device_class, device_function)
         return address, iso_name
 
-    def application_name(self) -> NMEA2000MutableName:
+    def application_name(self, device_class, device_function) -> NMEA2000MutableName:
         if self._application_count < self._max_application:
             # create the ISO NAME
             iso_name = NMEA2000MutableName(
                 identity_number=self._unique_id_root | self._application_count,
                 manufacturer_code=self._mfg_code,
-                device_class=25,
-                device_function=130,
+                device_class=device_class,
+                device_function=device_function,
                 industry_group=4,
                 arbitrary_address_capable=1
                 )
@@ -95,27 +114,42 @@ class NMEA2000Application(NMEA2000Device):
     application_id = 0
 
     def __init__(self, controller, address=-1):
-        '''
-        controller: NMEA2KActiveController acting as ECU and managing CAN bus access
-        address: address to be assigned (0-253) or address taken from the pool
-        '''
+        """
+        Initializes a new instance of a controller application with NMEA2000 communication capabilities.
+
+        The constructor configures the application based on a provided controller and optional address. It
+        associates the application with an ISO Name and CAN bus address, initializes various functional
+        components, timers, and message handling vectors for addressing and broadcasting communications on
+        the NMEA2000 network.
+
+        Parameters:
+            controller (Controller): An object providing CAN bus control functionality and resources.
+            address (int): Optional. The address to assign to the application on the CAN bus. Must be
+                between 0 and 253, inclusive. If not specified, it will be dynamically allocated by the
+                controller. Defaults to -1.
+
+        Raises:
+            IndexError: If the specified address is already allocated locally on the CAN bus.
+        """
 
         self._controller = controller
         self._application_type_name = "Generic NMEA2000 CA"
+        # get class and function
+        device_class, device_function = self.device_class_function()
         # get address and create ISO Name
         if address < 0 or address > 253:
-            self._address, self._iso_name = controller.app_pool.application_ids()
+            self._address, self._iso_name = controller.app_pool.application_ids(device_class, device_function)
         else:
             # check that the address has not been allocated locally
-            if address is controller.network_addresses():
+            if address in controller.network_addresses():  # correction 2025-04-19
                 _logger.error(f"CAN bus address {address} already allocated")
                 raise IndexError
             self._address = address
-            self._iso_name = controller.app_pool.application_name()
+            self._iso_name = controller.app_pool.application_name(device_class, device_function)
 
         _logger.info("Controller Application ECU:%s ISO Name=%08X address=%d type:%s" %
                      (controller.name, self._iso_name.name_value, self._address, self._application_type_name))
-        self._name = f"{self._application_type_name}@{self._address}"
+        self._app_name = f"{self._application_type_name}@{self._address}"
         self._claim_timer = None
         self._heartbeat_timer = None
         self._heartbeat_interval = 60.0  # can be adjusted in subclasses
@@ -124,6 +158,7 @@ class NMEA2000Application(NMEA2000Device):
         super().__init__(self._address, name=self._iso_name)
 
         self._app_state = self.WAIT_FOR_BUS
+        self._bus_ready = False
         # vector for addressed messages
         self._process_vector[60928] = self.address_claim_receipt
         self._process_vector[59904] = self.iso_request
@@ -151,12 +186,31 @@ class NMEA2000Application(NMEA2000Device):
 
     @property
     def name(self) -> str:
-        return self._name
+        return self._app_name
+
+    def device_class_function(self):
+        # to be overloaded if a specific class and function have to be defined for the device
+        return 25, 130
 
     def stop_request(self):
         self._app_state = self.STOP_IN_PROGRESS
         if self._heartbeat_timer is not None:
             self._heartbeat_timer.cancel()
+
+    def _send_to_bus(self, msg:NMEA2000Msg):
+        if self._bus_ready:
+            try:
+                self._controller.CAN_interface.send(msg)
+            except SocketCanError as e:
+                _logger.error(f"Application {self._app_name} Error sending message to CAN bus")
+                if e.can_error == 105:
+                    self._bus_ready = False
+                    self._controller.CAN_interface.register_readiness_callback(self.wait_for_bus_ready)
+                    self._app_state = self.WAIT_FOR_BUS
+                else:
+                    raise e
+        else:
+            _logger.debug(f"Application {self._app_name} Error sending message to CAN bus => bus not ready")
 
     def init_product_information(self):
         '''
@@ -189,26 +243,26 @@ class NMEA2000Application(NMEA2000Device):
     def respond_address_claim(self):
         claim_msg = AddressClaim(self._address, name=self._iso_name, da=255)
         _logger.debug("Application address %d sending address claim to %d" % (self._address, claim_msg.da))
-        self._controller.CAN_interface.send(claim_msg.message(), force_send=True)
+        self._send_to_bus(claim_msg.message())
 
     def address_claim_delay(self):
         # we consider that we are good to go
         _logger.debug("Address claim for %d delay exhausted" % self._address)
         self._app_state = self.ACTIVE
-        self._controller.CAN_interface.allow_send()
         self.send_iso_request(255, 60928)
         # start sending heartbeat
         self.send_heartbeat()
         self._controller.application_started(self)
         self._claim_timer = None # indicates that no timer is running
         # request = ISORequest(self._address)
-        # self._controller.CAN_interface.send(request.message())
+        # self._send_to_bus(request.message())
         # t = threading.Timer(1.0, self.send_product_information)
         # t.start()
 
     def wait_for_bus_ready(self):
         _logger.debug("Waiting for CAN Bus to be ready")
         self._controller.CAN_interface.wait_for_bus_ready()
+        self._bus_ready = True
         _logger.debug("CAN bus ready")
         self.send_address_claim()
 
@@ -242,11 +296,16 @@ class NMEA2000Application(NMEA2000Device):
                     _logger.critical("Cannot obtain a CAN address => Going off line")
                     msg = AddressClaim(address, name=self._iso_name, da=msg.sa)
                     _logger.warning("Application address %d sending cannot claim address" % self._address)
-                    self._controller.CAN_interface.send(msg.message(), force_send=True)
+                    self._send_to_bus(msg.message())
                     self._controller.stop()
                     return
                 # now we need to swap addresses
                 self.change_address(address)
+            elif iso_name.name_value == self._iso_name.name_value:
+                _logger.critical("Duplicate name %8X on network suspect network loop => Emergency stop" % self._iso_name.name_value)
+                self._controller.stop()
+                _logger.critical("CAN Interface is becoming ineffective")
+                return
             else:
                 _logger.warning("Local application name %8X keeps address %d" % (self._iso_name.name_value, self._address))
                 # need to send an Address Claimed response
@@ -288,7 +347,7 @@ class NMEA2000Application(NMEA2000Device):
     def send_product_information(self):
         self._product_information.sa = self._address
         _logger.debug("Send product information from address %d" % self._address)
-        self._controller.CAN_interface.send(self._product_information.message(), force_send=True)
+        self._send_to_bus(self._product_information.message())
 
     def receive_data_msg(self, msg: NMEA2000Msg):
         _logger.critical("Missing receive_data_msg in class %s" % self.__class__.__name__)
@@ -316,12 +375,12 @@ class NMEA2000Application(NMEA2000Device):
     def send_iso_request(self, da: int, pgn: int):
         _logger.debug("Sending ISO request for PGN %d to address %d" % (pgn, da))
         request = ISORequest(self._address, da, pgn)
-        self._controller.CAN_interface.send(request.message(), force_send=True)
+        self._send_to_bus(request.message())
 
     def send_configuration_information(self):
         _logger.debug("Sending configuration information for address %d" % self._address)
         self._configuration_information.sa = self._address
-        self._controller.CAN_interface.send(self._configuration_information.message(), force_send=True)
+        self._send_to_bus(self._configuration_information.message())
 
     def send_heartbeat(self):
         if self._app_state == self.STOP_IN_PROGRESS:
@@ -335,7 +394,7 @@ class NMEA2000Application(NMEA2000Device):
         if self._sequence > 253:
             self._sequence = 0
 
-        self._controller.CAN_interface.send(request.message(), force_send=True)
+        self._send_to_bus(request.message())
         self._heartbeat_timer = threading.Timer(self._heartbeat_interval, self.send_heartbeat)
         self._heartbeat_timer.start()
 
@@ -356,7 +415,7 @@ class NMEA2000Application(NMEA2000Device):
         acknowledge.sa = self._address
         acknowledge.da = msg.sa
         _logger.debug("Group Function sending acknowledgement => %s" % acknowledge.message())
-        self._controller.CAN_interface.send(acknowledge.message())
+        self._send_to_bus(acknowledge.message())
 
     def process_command_group_function(self, group_function, acknowledge):
         if group_function.function_pgn == 60928:
@@ -377,15 +436,15 @@ class NMEA2000Application(NMEA2000Device):
 class DeviceReplaySimulator(NMEA2000Application):
 
     def __init__(self, opts):
-        self._name = opts['name']
+        self._app_name = opts['name']
         self._source = opts.get('source', int, 255)
         if self._source in (253, 254):
             raise ValueError
-        _logger.info(f"Starting DeviceReplaySimulator {self._name} with source {self._source}")
+        _logger.info(f"Starting DeviceReplaySimulator {self._app_name} with source {self._source}")
         self._publisher_name = opts.get('publisher', str, None)
         self._publisher = None
         if self._publisher_name is None:
-            _logger.error(f"DeviceReplaySimulator {self._name} missing publisher")
+            _logger.error(f"DeviceReplaySimulator {self._app_name} missing publisher")
             raise ValueError
         self._model_id = opts.get('model_id', str, 'Replay Simulator')
 
@@ -400,16 +459,16 @@ class DeviceReplaySimulator(NMEA2000Application):
         try:
             self._publisher = resolve_ref(self._publisher_name)
         except KeyError:
-            _logger.error(f"DeviceReplaySimulator {self._name} incorrect publisher {self._publisher_name}")
+            _logger.error(f"DeviceReplaySimulator {self._app_name} incorrect publisher {self._publisher_name}")
             return
         assert self._publisher is not None
-        _logger.info(f"DeviceReplaySimulator {self._name} subscribing on published {self._publisher.name}")
+        _logger.info(f"DeviceReplaySimulator {self._app_name} subscribing on published {self._publisher.name}")
         self._publisher.subscribe(self._source, self.input_message)
 
     def input_message(self, can_id, data):
         _logger.debug("DeviceReplaySimulator message %4X %s" % (can_id, data.hex()))
         if self._app_state != self.ACTIVE:
-            _logger.warning(f"Application {self._name} not ready to take messages")
+            _logger.warning(f"Application {self._app_name} not ready to take messages")
             return
         pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
         # need to avoid all protocol pgn
@@ -427,12 +486,12 @@ class DeviceSimulator(NMEA2000Application):
     '''
 
     def __init__(self, opts):
-        self._name = opts['name']
+        self._app_name = opts['name']
         self._requested_address = opts.get('address', int, -1)
         self._model_id = opts.get('model_id', str, 'Device Simulator')
         self._processed_pgn = opts.getlist('pgn_list',int, None)
         if self._processed_pgn is None:
-            _logger.error(f"Device Simulator {self._name} must have a set of pgn assigned")
+            _logger.error(f"Device Simulator {self._app_name} must have a set of pgn assigned")
             raise ValueError
 
     def init_product_information(self):
@@ -442,7 +501,7 @@ class DeviceSimulator(NMEA2000Application):
     def set_controller(self, controller):
         super().__init__(controller, self._requested_address)
         # here we assume that the publisher has been instantiated as well
-        _logger.info(f"Device Simulator {self._name} ready")
+        _logger.info(f"Device Simulator {self._app_name} ready")
         controller.set_pgn_vector(self, self._processed_pgn)
 
     def receive_data_msg(self, msg: NMEA2000Msg):

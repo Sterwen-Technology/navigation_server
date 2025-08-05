@@ -20,6 +20,9 @@ from .server_common import NavigationServer
 from navigation_server.router_common import ConfigurationException
 from .global_variables import resolve_ref
 
+from navigation_server.generated.grpc_control_pb2 import GrpcCommand, GrpcAck
+from navigation_server.generated.grpc_control_pb2_grpc import NavigationGrpcControlServicer, add_NavigationGrpcControlServicer_to_server
+
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
 
@@ -27,11 +30,25 @@ class GrpcServerError(Exception):
     pass
 
 
+class NavigationGrpcControlServicerImpl(NavigationGrpcControlServicer):
+    """
+    That is default service that is included with all GrpcServer
+    For the moment only a single method is implemented most to ping and check presence
+    """
+    def SendCommand(self, request, context):
+        _logger.info(f"SendCommand from {context.peer()}")
+        response = GrpcAck()
+        response.id = request.id
+        response.response = "OK"
+        return response
+
+
 class GrpcServer(NavigationServer):
 
     grpc_server_global = None
     @staticmethod
     def get_grpc_server():
+        # print(__name__, "get grpc server", GrpcServer.grpc_server_global)
         return GrpcServer.grpc_server_global.grpc_server
 
     def __init__(self, options):
@@ -49,9 +66,13 @@ class GrpcServer(NavigationServer):
         address = "0.0.0.0:%d" % self._port
         self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=nb_threads))
         self._grpc_server.add_insecure_port(address)
-        self.grpc_server_global = self
+        GrpcServer.grpc_server_global = self
         self._running = False
         self._services = []
+        # print(__name__, "Building GrpcServer", self.name)
+        # add the default service
+        self._grpc_service = NavigationGrpcControlServicerImpl()
+        add_NavigationGrpcControlServicer_to_server(self._grpc_service, self._grpc_server)
 
     def server_type(self):
         return "gRPCServer"
@@ -84,6 +105,11 @@ class GrpcServer(NavigationServer):
     @property
     def grpc_server(self):
         return self._grpc_server
+
+    @staticmethod
+    def grpc_port() -> int:
+        # print(__name__, "GrpcServer get port", GrpcServer.grpc_server_global)
+        return GrpcServer.grpc_server_global.port
 
     def running(self) -> bool:
         return self._running

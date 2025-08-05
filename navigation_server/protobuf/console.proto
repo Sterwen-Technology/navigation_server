@@ -12,19 +12,19 @@
 syntax = "proto3";
 
 import "arguments.proto";
-import "iso_name.proto";
-import "nmea2000_classes_iso_gen.proto";
+import "services_server.proto";
 
-enum State {
-     STOPPED=0;
-     RUNNING = 1;
-     SUSPENDED = 3;
-  }
+
 
 message CouplerMsg {
   string  name=1;
   string coupler_class=2;
-  State state=3;
+  enum Coupler_state {
+    STOPPED = 0;
+    RUNNING = 1;
+    SUSPENDED = 3;
+  }
+  Coupler_state state=3;
   enum Device_state {
     NOT_READY=0;
     OPEN=1;
@@ -43,47 +43,15 @@ message CouplerMsg {
   float output_rate=11;
 }
 
-// TCP connection description
-message Connection {
-  string remote_ip=1;
-  uint32 remote_port=2;
-  uint32 total_msg=3;
-  float msg_rate=4;
-  float max_delay=5;  // maximum delay in sec for a message through the router
+message ServiceMsg {
+  string name = 1;
+  string class = 2;
 }
 
-message Server {
-  string server_class=1;
-  string name=2;
-  string server_type=3;
-  bool running=4;
-  uint32 nb_connections=5;
-  uint32 port=6;
-  string protocol=8;
-  repeated Connection connections=7;
-}
-
-message NavigationServerMsg {
-  uint32 id=1;
-  string name=2;
-  State state=3;
-  string status=5;
-  uint32 error=6;
-  string version=7;
-  string start_time=8;
-  string hostname = 10;
-  string purpose = 11;
-  string settings = 12;
-  repeated Server servers=9;
-}
-
-message N2KDeviceMsg {
-  uint32 address=1;
-  bool changed=2;
-  float last_time_seen=3;
-  ISOName iso_name=4;
-  Pgn126996ClassPb product_information=5;
-  Pgn126998ClassPb configuration_information=6;
+message PublisherMsg {
+  string name=1;
+  string class=2;
+  bool active=3;
 }
 
 message Request {
@@ -100,11 +68,10 @@ message Response {
 }
 
 service NavigationConsole {
+  rpc ServerCmd(Request) returns (Response) {}
+  rpc ServerStatus(Request) returns (SystemProcessMsg) {}
   rpc GetCouplers(Request) returns (stream CouplerMsg) {}
   rpc GetCoupler(Request) returns (CouplerMsg) {}
   rpc CouplerCmd(Request) returns (Response) {}
-  rpc ServerStatus(Request) returns (NavigationServerMsg) {}
-  rpc ServerCmd(Request) returns (Response) {}
-  rpc GetDevices(Request) returns (stream N2KDeviceMsg) {}
 }
 

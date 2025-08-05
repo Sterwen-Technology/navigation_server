@@ -13,10 +13,12 @@ import os
 import logging
 import sys
 
-from navigation_server.router_common import (NavigationConfiguration, NavigationLogSystem, MessageServerGlobals,
-                                             init_options, set_root_package, ConfigurationException, ObjectCreationError)
 
-MessageServerGlobals.version = "2.2.1"
+from navigation_server.router_common import (NavigationConfiguration, NavigationLogSystem, MessageServerGlobals,
+                                             init_options, set_root_package, ConfigurationException, AgentInterface,
+                                             ObjectCreationError, GrpcServer)
+
+MessageServerGlobals.version = "2.6.0"
 default_base_dir = "/"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -37,7 +39,7 @@ def server_main():
         return
 
     # set log for the configuration phase
-    NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2024")
+    NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2025")
     # build the configuration from the file
     try:
         config = NavigationConfiguration().build_configuration(opts.settings)
@@ -60,11 +62,15 @@ def server_main():
         return
 
     assert MessageServerGlobals.main_server is not None
-
+    assert GrpcServer.grpc_server_global is not None
     _logger.debug("Starting the main server")
     if config.main_server.start():
+        # register the process in agent service if needed
+        if not config.main_server.is_agent():
+            if config.get_option('connect_agent', True):
+                agent = AgentInterface().send_confirmation()
         if opts.timer is not None:
-            # for debug only trace running threads at regular interval
+            # for debug only trace running threads at a regular interval
             config.main_server.start_analyser(opts.timer)
         # wait for all threads to stop now
         config.main_server.wait()

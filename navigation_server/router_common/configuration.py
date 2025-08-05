@@ -180,7 +180,7 @@ class NavigationServerObject:
             else:
                 self._object = getattr(self._class, factory)(Parameters(self._param))
             return self._object
-        except (TypeError, ObjectCreationError) as e:
+        except (TypeError, ObjectCreationError, ValueError) as e:
             _logger.error("Error building object %s class %s: %s" % (self._name, self._class_name, e))
             raise ObjectCreationError("Error building object %s class %s: %s" % (self._name, self._class_name, e))
 
@@ -208,16 +208,18 @@ class NavigationConfiguration:
         self._services = {}
         self._filters = {}
         self._applications = {}
+        self._functions = {}
         self._globals = {}
         self._features = {}
         self._hooks = {}
+        self._processes = {} # new in version 2.4 only for the main agent
         self._main = None
         self._main_server = None
         self._settings_file = None
         self._server_purpose = None
         NavigationConfiguration._instance = self
         MessageServerGlobals.configuration = self
-        self.init_server_globals()
+        # self.init_server_globals()
 
     def build_configuration(self, settings_file):
         """
@@ -229,6 +231,12 @@ class NavigationConfiguration:
         if not os.path.exists(settings_file):
             # we merge with the home dir
             settings_file = os.path.join(MessageServerGlobals.home_dir, "conf", settings_file)
+        # keep the configuration path
+        settings_path = os.path.dirname(settings_file)
+        self.set_global('settings_path', settings_path)
+        _logger.info(
+            "Building configuration from settings file %s in path %s" % (settings_file, settings_path)
+        )
         try:
             fp = open(settings_file, 'r')
         except (IOError, FileNotFoundError) as e:
@@ -236,7 +244,7 @@ class NavigationConfiguration:
             _logger.error(f"Current directory is {os.getcwd()}")
             raise
         try:
-            self._configuration = yaml.load(fp, yaml.FullLoader)
+            self._configuration = yaml.safe_load(fp)
         except yaml.YAMLError as e:
             _logger.error("Settings file decoding error %s" % str(e))
             fp.close()
@@ -282,6 +290,12 @@ class NavigationConfiguration:
             trace_dir = '/var/log'
         MessageServerGlobals.trace_dir = trace_dir
 
+        try:
+            MessageServerGlobals.agent_address = self._configuration['agent_address']
+        except KeyError:
+            MessageServerGlobals.agent_address = "127.0.0.1:4545"
+            _logger.warning(f"Missing agent address, defaulting to {MessageServerGlobals.agent_address}")
+
         # create entries for allways included classes
         self.import_internal()
         for feature in self.object_descr_iter('features'):
@@ -298,41 +312,22 @@ class NavigationConfiguration:
             _logger.error("The 'Main' server is missing -> invalid configuration")
             raise ConfigurationException
 
-        try:
-            for obj in self.object_descr_iter('couplers'):
-                nav_obj = NavigationServerObject(obj)
-                self._obj_dict[nav_obj.name] = nav_obj
-                self._couplers[nav_obj.name] = nav_obj
-        except KeyError:
-            _logger.info("No couplers")
-        try:
-            for obj in self.object_descr_iter('publishers'):
-                nav_obj = NavigationServerObject(obj)
-                self._obj_dict[nav_obj.name] = nav_obj
-                self._publishers[nav_obj.name] = nav_obj
-        except KeyError:
-            _logger.info("No publishers")
-        try:
-            for obj in self.object_descr_iter('services'):
-                nav_obj = NavigationServerObject(obj)
-                self._obj_dict[nav_obj.name] = nav_obj
-                self._services[nav_obj.name] = nav_obj
-        except KeyError:
-            _logger.info("No data clients")
-        try:
-            for obj in self.object_descr_iter('filters'):
-                nav_obj = NavigationServerObject(obj)
-                self._obj_dict[nav_obj.name] = nav_obj
-                self._filters[nav_obj.name] = nav_obj
-        except KeyError:
-            _logger.info("No filters")
-        try:
-            for obj in self.object_descr_iter('applications'):
-                nav_obj = NavigationServerObject(obj)
-                self._obj_dict[nav_obj.name] = nav_obj
-                self._applications[nav_obj.name] = nav_obj
-        except KeyError:
-            _logger.info("No applications")
+        def read_objects(category, holding_dict):
+            try:
+                for obj in self.object_descr_iter(category):
+                    nav_obj = NavigationServerObject(obj)
+                    self._obj_dict[nav_obj.name] = nav_obj
+                    holding_dict[nav_obj.name] = nav_obj
+            except KeyError:
+                _logger.info(f"No {category} in configuration")
+
+        read_objects('processes', self._processes)
+        read_objects('couplers', self._couplers)
+        read_objects('publishers', self._publishers)
+        read_objects('services', self._services)
+        read_objects('filters', self._filters)
+        read_objects('applications', self._applications)
+        read_objects('functions', self._functions)
 
         # configure profiling
         profiler_conf = self._configuration.get('profiling', None)
@@ -342,10 +337,12 @@ class NavigationConfiguration:
         self._settings_file = settings_file
         return self
 
+    ''' Removed in 2.6.0 => done in router_common package init
     @staticmethod
     def init_server_globals():
         MessageServerGlobals.thread_controller = NavThreadingController()
         MessageServerGlobals.profiling_controller = NavProfilingController()
+    '''
 
     def dump(self):
         print(self._configuration)
@@ -382,6 +379,12 @@ class NavigationConfiguration:
 
     def applications(self):
         return self._applications.values()
+
+    def processes(self):
+        return self._processes.values()
+
+    def functions(self):
+        return self._functions.values()
 
     @property
     def main_server(self):
@@ -486,6 +489,13 @@ class NavigationConfiguration:
         if not self._main_server.console_present:
             _logger.warning("No console defined")
         _logger.debug("Services created")
+        for inst_descr in self._functions.values():
+            try:
+                function = inst_descr.build_object()
+            except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+                _logger.error(f"Error building function:{inst_descr.name}:{e}")
+                continue
+            self._main_server.add_function(function)
         # create the couplers
         for inst_descr in self._couplers.values():
             try:
@@ -506,6 +516,17 @@ class NavigationConfiguration:
                 _logger.error(str(e))
                 continue
         _logger.debug("Publishers created")
+        # create the processes - only in agent
+        if self._main_server.is_agent():
+            self._main_server.pre_build()
+        for proc_descr in self._processes.values():
+            try:
+                process = proc_descr.build_object()
+                self._main_server.add_process(process)
+            except ConfigurationException as e:
+                _logger.error(str(e))
+                continue
+
 
 
 def main():

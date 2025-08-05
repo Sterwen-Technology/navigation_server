@@ -1,0 +1,60 @@
+#-------------------------------------------------------------------------------
+# Name:        network_conf.yml
+# Purpose:     Settings file for networking configuration
+#
+# Author:      Laurent Carré
+#
+# Created:     2/04/2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+apply_defaults: false
+
+interfaces:
+
+  - ethernet-0:
+     device: end0
+     type: ethernet
+     default_connection: eth-0
+     default_state: activated
+
+  - ethernet-1:
+     device: end1
+     type: ethernet
+     default_connection: eth-1
+     default_state: activated
+
+  - wifi:
+     device: wlan0
+     type: wifi
+     default_connection: wifi-ap-1
+     default_state: activated
+
+  - cellular:
+      device: cdc-wdm0
+      type: cellular
+      default_connection: cellular-1
+      default_state: deactivated
+
+
+
+connections:
+
+  - eth-0:
+    function: WAN_INTERFACE
+
+  - eth-1:
+    function: LAN_CONTROLLER
+    address: 172.16.2.1
+
+  - wifi-ap-1:
+    function: LAN_CONTROLLER
+    address: 172.16.1.1
+
+
+  - cellular-1:
+    function: WAN_INTERFACE
+    apn: orange
+    username: orange
+    password: orange

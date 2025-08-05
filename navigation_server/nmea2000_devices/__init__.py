@@ -10,3 +10,4 @@
 #-------------------------------------------------------------------------------
 
 from .nmea2000_device import AutoPilotEmulator, SystemClockDevice
+from .nmea2000_sender_device import NMEA2000SenderDevice

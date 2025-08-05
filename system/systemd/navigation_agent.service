@@ -5,7 +5,7 @@ Requires=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/home/solidsense/navigation/run_server /home/solidsense/config/settings-agent.yml
+ExecStart=/home/laurent/navigation_server/run_server /home/laurent/config/settings-agent.yml
 Restart=always
 RestartSec=6
 

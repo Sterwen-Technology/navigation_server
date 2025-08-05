@@ -1,0 +1,76 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the navigation server
+#
+# Author:      Laurent Carré
+#
+# Created:     26/05/2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+#
+function: CAN ECU server
+server_name: STNC_CAN_Server
+log_level: INFO
+trace_dir: /data/navigation/traces
+# log_file: test_fast_packet
+log_module:
+  router_core.coupler: INFO
+  nmea2000.nmea2000_msg: INFO
+  can_interface.nmea2k_active_controller: DEBUG
+  nmea2000.nmea2k_active_controller: INFO
+  nmea2000.nmea2k_device: INFO
+  can_interface.nmea2k_application: INFO
+  can_interface.nmea2k_can_interface: DEBUG
+  nmea2000.nmea2k_iso_transport: INFO
+  nmea2000.nmea2k_iso_messages: INFO
+
+
+features:
+  - router_core
+  - can_interface
+  - nmea2000
+  - nmea2000_devices
+
+
+servers:
+
+- Main:
+    class: NavigationMainServer
+
+- gRPCMain:
+      class: GrpcServer
+      port: 4512
+
+- NMEANetwork:
+      class: NMEA2KActiveController
+      trace: false
+      mac_source: end0
+      channel: can0
+      max_silent: 60.0
+      applications: []
+
+couplers:
+
+filters:
+
+services:
+
+- Console:
+      class: Console
+      server: gRPCMain
+
+- NMEA2000MsgServer:
+      class: N2KCanService
+      can_controller: NMEANetwork
+
+
+publishers:
+
+applications:
+
+
+
+
+
+

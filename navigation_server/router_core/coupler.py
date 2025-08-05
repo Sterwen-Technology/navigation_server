@@ -302,9 +302,9 @@ class Coupler(NavThread):
                     break
                 else:
                     continue
-            except Exception as e:
+            except Exception as err:
                 # catch all
-                _logger.error("Un-caught exception during coupler %s read: %s" % (self._name, e))
+                _logger.error(f"Un-caught exception during coupler {self._name} read => class {err.__class__.__name__} | {err}" )
                 self.close()
                 continue
 
@@ -477,7 +477,7 @@ class Coupler(NavThread):
                         for n2k_msg in self._converter.convert_to_n2kmsg(msg):
                             _logger.debug("Read valid N2K:%s", n2k_msg)
                             yield n2k_msg
-                        return
+
                     except NMEAInvalidFrame:
                         if self._mode == self.NMEA2000:
                             fetch_next = True
@@ -493,20 +493,20 @@ class Coupler(NavThread):
         :return: a NMEA message (either NMEA0183 or NMEA2000)
         Must be implemented in all subclasses
         """
-        raise NotImplementedError("Method _read To be implemented in subclass")
+        raise NotImplementedError("coupler._read => Method _read To be implemented in subclass")
 
     def open(self) -> bool:
         """
         Open the communication channel for the coupler
         :return: True if the channel is open and ready to communicate, False otherwise
         """
-        raise NotImplementedError("To be implemented in subclass")
+        raise NotImplementedError("Coupler.open => To be implemented in subclass")
 
     def close(self):
-        raise NotImplementedError("To be implemented in subclass")
+        raise NotImplementedError("Couple.close => To be implemented in subclass")
 
     def send(self, msg: NavGenericMsg):
-        raise NotImplementedError("To be implemented in subclass")
+        raise NotImplementedError("Coupler.send => To be implemented in subclass")
 
     def check_connection(self):
         # raise NotImplementedError("To be implemented in subclass")
