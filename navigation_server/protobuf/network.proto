@@ -49,18 +49,18 @@ message NetConnection {
 message NetworkCommand {
   uint32 id=1;
   string cmd=2;
-  NetInterface if=3;
-  NetConnection conn=4;
+  NetInterface interface=3;
 }
 
 message NetworkReply {
   uint32 id=1;
-  NetInterface if=2;
-  NetConnection conn=3;
+  string status=4;
+  NetInterface interface=2;
 }
 
 message NetworkStatus {
   uint32 id=1;
+  string status=4;
   bool nm_running = 2;
   repeated NetInterface if_list=3;
 }

@@ -67,6 +67,20 @@ class NetworkStatusProxy(ProtobufProxy):
     def interfaces(self) -> list[NetInterfaceProxy]:
         return list(self._interfaces.values())
 
+class NetworkReplyProxy(ProtobufProxy):
+
+    def __init__(self, reply):
+        super().__init__(reply)
+
+    @property
+    def interface(self) -> NetInterfaceProxy:
+        return NetInterfaceProxy(self._msg.interface)
+
+    @property
+    def connection(self) -> NetConnectionProxy:
+        return NetConnectionProxy(self._msg.connection)
+
+
 
 class NetworkClient(ServiceClient):
 
@@ -82,4 +96,24 @@ class NetworkClient(ServiceClient):
         if connection is not None:
             pass # tbd
         return self._server_call(self._stub.get_network_status, request, NetworkStatusProxy)
+
+    def set_global_configuration(self, command:str):
+        _logger.debug("Call set_global_configuration")
+        request = NetworkCommand()
+        request.cmd = command
+        return self._server_call(self._stub.set_global_configuration, request, NetworkStatusProxy)
+
+    def set_configuration(self, command:str, interface:NetInterface):
+        _logger.debug("Call set_configuration")
+        request = NetworkCommand()
+        request.cmd = command
+        request.interface.name = interface.name
+        # enough for first test. Deep copy shall be implemented
+        return self._server_call(self._stub.set_configuration, request, NetworkReplyProxy)
+
+    def get_configuration(self, interface:str):
+        _logger.debug("Call get_configuration")
+        request = NetworkCommand()
+        request.cmd = interface
+        return self._server_call(self._stub.get_configuration, request, NetworkReplyProxy)
 

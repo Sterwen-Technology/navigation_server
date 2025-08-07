@@ -16,6 +16,7 @@ import sys
 import time
 from dataclasses import dataclass
 import io
+import socket
 
 _logger = logging.getLogger('ShipDataServer.' + __name__)
 
@@ -41,6 +42,23 @@ def nmcli_request(command: list):
         _logger.error(result.stderr)
         raise NetworkManagerError(result.returncode)
     return
+
+def nmcli_command(command: list):
+    args = ["nmcli", "-t"] + command
+    _logger.debug(f"nmcli command: {args}")
+    result = subprocess.run(args, capture_output=True, encoding="utf-8")
+    if result.returncode == 0:
+        stream = io.StringIO(result.stdout)
+        for line in stream:
+            _logger.debug(f"nmcli command response {line[:-1]}")
+    else:
+        _logger.error(f"nmcli command {command} failed")
+        stream = io.StringIO(result.stderr)
+        for line in stream:
+            _logger.error(f"nmcli command error message: {line[:-1]}")
+        raise NetworkManagerError(result.returncode)
+    return
+
 
 @dataclass
 class NetworkDevice:
@@ -135,12 +153,37 @@ class NetworkManagerControl:
         for d in nmcli_request(["device"]):
             if d[1] in {'ethernet', 'wifi', 'gsm'}:
                 dev = NetworkDevice(d[0], d[1], d[2], d[3])
+                _logger.debug(f"nmcli Device detected {dev})")
                 self._devices[dev.name] = dev
 
         # now get the connections
         for device in self._devices.values():
             if device.connection is not None and len(device.connection) > 0:
                 self.read_connection(device.connection)
+
+    def read_device_configuration(self, device_name:str, expected_type:str = None):
+        device_type = None
+        device_state = None
+        device_connection = None
+        for line in nmcli_request(['device', 'show', device_name]):
+            match line[0]:
+                case 'GENERAL.DEVICE':
+                    assert device_name == line[1]
+                case 'GENERAL.TYPE':
+                    device_type = line[1]
+                    if expected_type is not None and expected_type != device_type:
+                        raise ValueError(f"Device {device_name} is not a {expected_type}")
+                case 'GENERAL.STATE':
+                    device_state = line[1]
+                case 'GENERAL.CONNECTION':
+                    if len(line) > 1 and len(line[1]) > 0:
+                        device_connection = line[1]
+
+        device = NetworkDevice(device_name, device_type, device_state, device_connection)
+        self._devices[device.name] = device
+        if device_connection is not None:
+            self.read_connection(device_connection)
+        return device_type, device_state, device_connection
 
     def get_device(self, name):
         return self._devices[name]
@@ -164,29 +207,45 @@ class NetworkManagerControl:
         del self._connections[name]
 
     def read_connection(self, name):
+        _logger.debug(f"nmcli => Reading connection {name}")
         conn = NetworkConnection()
         for property in nmcli_request(["con", "show", name]):
             conn.add_property(property[0], property[1])
         self._connections[conn.name] = conn
 
     def create_connection(self, name:str, device:str, connection_type:str, params:dict):
-        function = params['function']
-        parameters = (['conn', 'add', 'ifname', device, 'conn-name', name] +
-                      self._build_parameters[connection_type](function, params))
-        nmcli_request(parameters)
-        nmcli_request(['conn', 'up', name])
+        if params is None:
+            _logger.error(f"NetworkInterface create_connection: no parameters for connection {name}")
+            return
+        try:
+            function = params['function']
+        except KeyError:
+            _logger.error(f"NetworkInterface create_connection: no function for connection {name}")
+            return
+        _logger.debug(f"nmcli => Creating connection {name} on device {device} of type {connection_type}: {function}")
+        base_parameters = ['conn', 'add', 'ifname', device, 'con-name', name]
+        if_parameters = self._build_parameters[connection_type](function, params)
+        parameters = base_parameters + if_parameters
+        try:
+            nmcli_command(parameters)
+        except NetworkManagerError:
+            _logger.error(f"NetworkInterface create_connection: nmcli error for connection {name}")
+            return
+        nmcli_command(['conn', 'up', name])
         self.read_connection(name)
 
     def ethernet_parameters(self, function, params) -> list:
+        _logger.debug(f"ethernet_parameters: {function} {params}")
         base_list = self.ethernet[function]
         if function == "LAN_CONTROLLER":
             full_list = base_list + ['ipv4.addresses', f"{params['ipv4_address']}/24"]
         else:
             full_list = base_list
+        _logger.debug(f"ethernet_parameters: {full_list}")
         return full_list
 
     def cellular_parameters(self, function, params) -> list:
-        parameters = ['type', 'gsm', 'gsm.apn', params['apn']]
+        parameters = ['type', 'gsm', 'gsm.apn', params['apn'], 'ipv4.method', 'auto', 'ipv6.method', 'auto']
         if params.get('username', None) is not None:
             parameters.extend(['gsm.username', params['username']])
         if params.get('password', None) is not None:
@@ -195,7 +254,11 @@ class NetworkManagerControl:
 
     def wifi_parameters(self, function, params) -> list:
         if function == "LAN_CONTROLLER":
-            parameters = ['type', 'wifi', 'wifi.ssid', params['ssid'], 'wifi.mode', 'infrastructure', 'ipv4.mode', 'shared',
+            if params.get('ssid', None) is None:
+                ssid = socket.gethostname()
+            else:
+                ssid = params['ssid']
+            parameters = ['type', 'wifi', 'wifi.ssid', f'{ssid}', 'wifi.mode', 'infrastructure', 'ipv4.mode', 'shared',
                           'ipv6.mode', 'shared', 'ipv4.addresses', f"{params['ipv4_address']}/24"]
             if params.get('password', None) is not None:
                 parameters.extend(['wifi.psk', params['password'], 'wifi.key-mgmt', 'wpa-psk'])

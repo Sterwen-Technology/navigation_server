@@ -10,6 +10,7 @@
 #-------------------------------------------------------------------------------
 #
 apply_defaults: false
+applicable_hardware: STNC800
 
 interfaces:
 
@@ -38,23 +39,22 @@ interfaces:
       default_state: deactivated
 
 
-
 connections:
 
   - eth-0:
-    function: WAN_INTERFACE
+       function: WAN_INTERFACE
 
   - eth-1:
-    function: LAN_CONTROLLER
-    address: 172.16.2.1
+       function: LAN_CONTROLLER
+       address: 172.16.2.1
 
   - wifi-ap-1:
-    function: LAN_CONTROLLER
-    address: 172.16.1.1
+       function: LAN_CONTROLLER
+       address: 172.16.1.1
 
 
   - cellular-1:
-    function: WAN_INTERFACE
-    apn: orange
-    username: orange
-    password: orange
+       function: WAN_INTERFACE
+       apn: orange
+       username: orange
+       password: orange

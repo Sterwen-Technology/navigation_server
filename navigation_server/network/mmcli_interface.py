@@ -12,7 +12,13 @@
 import logging
 import json
 import subprocess
-import sys
+import threading
+import time
+
+try:
+    from navigation_server.nav_gpio import ModemGpioControl
+except ValueError:
+    print("GPIO not available")
 
 _logger = logging.getLogger('ShipDataServer.' + __name__)
 
@@ -30,26 +36,60 @@ class ModemControl:
 
     def __init__(self):
         self._modems = []
+        self._gpio_control = None
+        self._power_on_thread = None
 
-    def detect(self):
+    def detect(self) -> bool:
         result = mmcli_request(['-L'])
         modems = result['modem-list']
 
         for modem in modems:
             # print(modem)
             modem_no = modem[-1]
-            print("Found modem:", modem)
+            _logger.info(f"Found modem:{modem}")
             modem_dict = mmcli_request(['-m', modem_no])
-            json.dump(modem_dict['modem']['generic'], sys.stdout, indent=2)
-            print()
+            if _logger.isEnabledFor(logging.DEBUG):
+                _logger.debug(json.dumps(modem_dict['modem']['generic'], indent=2))
             # print(modem_dict['modem']['generic'].keys())
             self._modems.append(Modem(modem_no, modem_dict['modem']['generic']))
+        if len(modems) > 0:
+            _logger.info("Found %d modems" % len(modems))
+            return True
+        else:
+            _logger.warning("No modem found")
+            return False
 
     def get_modem(self, modem_no):
         return self._modems[modem_no]
 
     def nb_modems(self) -> int:
         return len(self._modems)
+
+    def power_on_sequence(self, success_callback):
+        self._gpio_control = ModemGpioControl('MODEM_EM05')
+        self._power_on_thread = threading.Thread(target=self.drive_power_on, args=(success_callback,), daemon=True)
+        self._power_on_thread.start()
+
+    def drive_power_on(self, success_callback):
+        _logger.info("Modem power on GPIO set")
+        self._gpio_control.power_on()
+        time.sleep(40.)
+        if self.detect():
+            success_callback()
+            return
+        # make another try
+        retries = 0
+        while retries < 5:
+            _logger.info(f"Modem power on retry {retries} ...")
+            time.sleep(20.)
+            if self.detect():
+                success_callback()
+                return
+            retries += 1
+        _logger.error("Modem power on failed")
+
+
+
 
 
 class Modem:
