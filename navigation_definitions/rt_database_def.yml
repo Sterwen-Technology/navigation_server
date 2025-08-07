@@ -64,3 +64,4 @@ units:
 - decimal_deg:
     full_name: Decimal Degree
     details: Negative East and South
+    symbol: deg

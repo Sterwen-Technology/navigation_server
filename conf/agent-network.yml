@@ -17,7 +17,8 @@ log_module:
   network.nmcli_interface: DEBUG
   network.network_service: DEBUG
 
-decode_definition_only: True
+decode_definition_only: true
+STNC_hardware: false
 
 features:
     - agent

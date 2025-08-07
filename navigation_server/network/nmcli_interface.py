@@ -16,6 +16,7 @@ import sys
 import time
 from dataclasses import dataclass
 import io
+import socket
 
 _logger = logging.getLogger('ShipDataServer.' + __name__)
 
@@ -41,6 +42,7 @@ def nmcli_request(command: list):
         _logger.error(result.stderr)
         raise NetworkManagerError(result.returncode)
     return
+
 
 @dataclass
 class NetworkDevice:
@@ -142,6 +144,30 @@ class NetworkManagerControl:
             if device.connection is not None and len(device.connection) > 0:
                 self.read_connection(device.connection)
 
+    def read_device_configuration(self, device_name:str, expected_type:str = None):
+        device_type = None
+        device_state = None
+        device_connection = None
+        for line in nmcli_request(['device', 'show', device_name]):
+            match line[0]:
+                case 'GENERAL.DEVICE':
+                    assert device_name == line[1]
+                case 'GENERAL.TYPE':
+                    device_type = line[1]
+                    if expected_type is not None and expected_type != device_type:
+                        raise ValueError(f"Device {device_name} is not a {expected_type}")
+                case 'GENERAL.STATE':
+                    device_state = line[1]
+                case 'GENERAL.CONNECTION':
+                    if len(line) > 1 and len(line[1]) > 0:
+                        device_connection = line[1]
+
+        device = NetworkDevice(device_name, device_type, device_state, device_connection)
+        self._devices[device.name] = device
+        if device_connection is not None:
+            self.read_connection(device_connection)
+        return device_type, device_state, device_connection
+
     def get_device(self, name):
         return self._devices[name]
 
@@ -186,7 +212,7 @@ class NetworkManagerControl:
         return full_list
 
     def cellular_parameters(self, function, params) -> list:
-        parameters = ['type', 'gsm', 'gsm.apn', params['apn']]
+        parameters = ['type', 'gsm', 'gsm.apn', params['apn'], 'ipv4.method', 'auto', 'ipv6.method', 'auto']
         if params.get('username', None) is not None:
             parameters.extend(['gsm.username', params['username']])
         if params.get('password', None) is not None:
@@ -195,7 +221,11 @@ class NetworkManagerControl:
 
     def wifi_parameters(self, function, params) -> list:
         if function == "LAN_CONTROLLER":
-            parameters = ['type', 'wifi', 'wifi.ssid', params['ssid'], 'wifi.mode', 'infrastructure', 'ipv4.mode', 'shared',
+            if params.get('ssid', None) is None:
+                ssid = socket.gethostname()
+            else:
+                ssid = params['ssid']
+            parameters = ['type', 'wifi', 'wifi.ssid', f'{ssid}', 'wifi.mode', 'infrastructure', 'ipv4.mode', 'shared',
                           'ipv6.mode', 'shared', 'ipv4.addresses', f"{params['ipv4_address']}/24"]
             if params.get('password', None) is not None:
                 parameters.extend(['wifi.psk', params['password'], 'wifi.key-mgmt', 'wpa-psk'])

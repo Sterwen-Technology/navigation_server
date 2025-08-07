@@ -16,6 +16,7 @@ _logger = logging.getLogger('ShipDataServer.' + __name__)
 
 from navigation_server.router_common import GrpcService, GrpcServerError, get_global_var
 from navigation_server.network.nmcli_interface import NetworkManagerControl, NetworkManagerError
+from navigation_server.network.mmcli_interface import ModemControl
 
 from navigation_server.generated.network_pb2_grpc import NetworkServiceServicer, add_NetworkServiceServicer_to_server
 from navigation_server.generated.network_pb2 import (NetInterface, NetConnection, NetworkCommand, NetworkStatus,
@@ -32,9 +33,9 @@ status_dict = { 'auto': WAN_INTERFACE, 'manual': LAN_INTERFACE, 'shared': LAN_CO
 
 class NetworkInterface:
 
-    def __init__(self, name, params):
+    def __init__(self, name, params: dict):
         self._name = name
-        self._params = params
+        self._params: dict = params
         self._connection = None
         self._state = 'unknown'
         self._network_connection = None
@@ -44,6 +45,10 @@ class NetworkInterface:
     @property
     def name(self):
         return self._name
+
+    @property
+    def params(self) -> dict:
+        return self._params
 
     @property
     def type(self):
@@ -112,7 +117,7 @@ class NetworkInterfaceConnection:
 
 class NetworkServicerImpl(NetworkServiceServicer):
 
-    def __init__(self, service):
+    def __init__(self, service: 'NetworkService'):
         self._service = service
         self._id = 0
 
@@ -122,21 +127,20 @@ class NetworkServicerImpl(NetworkServiceServicer):
         resp.id = self._id
         self._id += 1
         resp.nm_running = self._service.network_manager.nm_running
-        for iface in self._service.interfaces():
-            interface = NetInterface()
-            interface.name = iface.name
-            interface.type = device_type_dict[iface.type]
-            interface.status = connection_type_dict[iface.status]
-            if iface.state == 'unavailable':
-                interface.device_name = "Not available"
-            else:
-                interface.device_name = iface.device
-            resp.if_list.append(interface)
+        if resp.nm_running:
+            if request.cmd == 'update':
+                self._service.update_configuration()
+            self.fill_network_status(resp)
         return resp
 
     def set_global_configuration(self, request, context):
         _logger.debug(f'set_global_configuration: request={request}')
         resp = NetworkStatus()
+        resp.id = self._id
+        self._id += 1
+        self._service.apply_defaults()
+        self._service.update_configuration()
+        self.fill_network_status(resp)
         return resp
 
     def get_configuration(self, request, context):
@@ -149,6 +153,18 @@ class NetworkServicerImpl(NetworkServiceServicer):
         resp = NetworkReply()
         return resp
 
+    def fill_network_status(self, resp):
+        for iface in self._service.interfaces():
+            interface = NetInterface()
+            interface.name = iface.name
+            interface.type = device_type_dict[iface.type]
+            interface.status = connection_type_dict[iface.status]
+            if iface.state == 'unavailable':
+                interface.device_name = "Not available"
+            else:
+                interface.device_name = iface.device
+            resp.if_list.append(interface)
+
 
 class NetworkService(GrpcService):
 
@@ -156,6 +172,7 @@ class NetworkService(GrpcService):
         super().__init__(opts)
         self._configuration_file = opts.get('configuration', str, 'network_conf.yml')
         self._network_manager = NetworkManagerControl()
+        self._modem_manager = ModemControl()
         self._servicer = None
         self._configuration = None
         self._interfaces = {}
@@ -187,7 +204,14 @@ class NetworkService(GrpcService):
             return
         _logger.info("NetworkManager running state: %s" % self._network_manager.nm_running)
         self._network_manager.get_networking_conf()
+        if self._interfaces.get('cellular', None) is not None:
+            if not self._modem_manager.detect():
+                # ok the modem is not yet showing up
+                _logger.info("No modem detected yet => starting power-on sequence")
+                self._modem_manager.power_on_sequence(self.modem_update)
         self.update_configuration()
+        # let's see if we have to manage a modem
+
 
     def read_configuration(self):
         try:
@@ -218,16 +242,20 @@ class NetworkService(GrpcService):
 
         # get the interfaces
         for impl_obj in object_descr_iter('interfaces'):
-            # print(impl_obj)
-            for items in impl_obj.items():
-                interface = NetworkInterface(items[0], items[1])
+            print(impl_obj)
+            keys = list(impl_obj)
+            name = keys[0]
+            params = impl_obj[name]
+            interface = NetworkInterface(name, params)
             self._interfaces[interface.name] = interface
 
         # now get all connections
         for impl_obj in object_descr_iter('connections'):
-            # print(impl_obj)
-            for items in impl_obj.items():
-                connection = NetworkInterface(items[0], items[1])
+            print(impl_obj)
+            keys = list(impl_obj)
+            name = keys[0]
+            params = impl_obj[name]
+            connection = NetworkInterface(name, params)
             self._connections[connection.name] = connection
 
     def update_configuration(self):
@@ -235,25 +263,42 @@ class NetworkService(GrpcService):
         Here we check that what we want is inline with what is available in NetworkManager
         """
         for interface in self._interfaces.values():
+            self.update_interface(interface)
+
+    def modem_update(self):
+        interface = self._interfaces.get('cellular', None)
+        if interface is not None:
             try:
-                device = self._network_manager.get_device(interface.device)
-            except KeyError:
-                _logger.error(f"NetworkService interface {interface.name} device {interface.device} not found")
-                interface.set_state('unavailable')
-                continue
-            if device.connection is None or len(device.connection) == 0:
-                _logger.info(f"NetworkService interface {interface.name} device {interface.device} has no connection")
-                interface.set_state('disconnected')
-                continue
-            try:
-                interface.network_connection = self._network_manager.get_connection(device.connection)
-            except KeyError:
-                _logger.error(f"NetworkService interface {interface.name} device {interface.device} connection {device.connection} not found")
-                interface.set_state('unavailable')
-                continue
-            # now we need to understand better
-            interface.state = device.state
-            interface.get_connection_params()
+                self._network_manager.read_device_configuration(interface.device, 'gsm')
+            except NetworkManagerError as e:
+                _logger.error(f"NetworkService error reading modem device configuration: {e}")
+                return
+            except ValueError as e:
+                _logger.error(f"NetworkService error reading modem device configuration: {e}")
+                return
+            self.update_interface(interface)
+
+    def update_interface(self, interface: NetworkInterface):
+        try:
+            device = self._network_manager.get_device(interface.device)
+        except KeyError:
+            _logger.error(f"NetworkService interface {interface.name} device {interface.device} not found")
+            interface.set_state('unavailable')
+            return
+        if device.connection is None or len(device.connection) == 0:
+            _logger.info(f"NetworkService interface {interface.name} device {interface.device} has no connection")
+            interface.set_state('disconnected')
+            return
+        try:
+            interface.network_connection = self._network_manager.get_connection(device.connection)
+        except KeyError:
+            _logger.error(
+                f"NetworkService interface {interface.name} device {interface.device} connection {device.connection} not found")
+            interface.set_state('unavailable')
+            return
+        # now we need to understand better
+        interface.state = device.state
+        interface.get_connection_params()
 
     def apply_defaults(self):
         for interface in self._interfaces.values():
@@ -273,6 +318,7 @@ class NetworkService(GrpcService):
                 _logger.error(f"NetworkService interface {interface.name} default connection {interface.default_connection} not found")
                 interface.set_state('unavailable')
                 continue
+            _logger.info(f"NetworkService creating connection {connection.name} for interface {interface.name} device {interface.device}")
             self._network_manager.create_connection(connection.name, interface.device, interface.type, connection.params)
 
 

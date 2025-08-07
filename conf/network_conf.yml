@@ -10,6 +10,7 @@
 #-------------------------------------------------------------------------------
 #
 apply_defaults: false
+applicable_hardware: STNC800
 
 interfaces:
 
@@ -36,7 +37,6 @@ interfaces:
       type: cellular
       default_connection: cellular-1
       default_state: deactivated
-
 
 
 connections:

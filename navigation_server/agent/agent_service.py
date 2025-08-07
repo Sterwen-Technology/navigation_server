@@ -206,7 +206,7 @@ class SystemdProcess(ProcessABC):
                 if idx := line.find('Loaded') >= 0:
                     loaded = True
                 elif (idx := line.find('Active')) >= 0:
-                    print("idx=",idx)
+                    # print("idx=",idx)
                     idx += 8
                     first_space = line.find(' ', idx)
                     state = line[idx: first_space]
