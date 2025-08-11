@@ -15,6 +15,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
+from collections import namedtuple
 import io
 import socket
 
@@ -67,35 +68,71 @@ class NetworkDevice:
     state: str
     connection: str = None
 
+ConnParameterRef = namedtuple('ConnParameterRef', ['name', 'value'])
+
+general_parameters = [
+    ConnParameterRef('name', 'connection.id'),
+    ConnParameterRef('uuid', 'connection.uuid'),
+    ConnParameterRef('type', 'connection.type'),
+    ConnParameterRef('state', 'connection.state'),
+    ConnParameterRef('device', 'connection.interface-name'),
+    ConnParameterRef('ipv4_method', 'ipv4.method'),
+    ConnParameterRef('ipv4_address', 'IP4.ADDRESS[1]'),
+    ConnParameterRef('ipv6_method', 'ipv6.method'),
+    ConnParameterRef('ipv6_address', 'IP6.ADDRESS[1]'),
+    ConnParameterRef('ipv4_gateway', 'IP4.GATEWAY'),
+]
+
+ethernet_parameters = general_parameters + []
+
+wifi_specific_parameters = [
+    ConnParameterRef('ssid', '802-11-wireless.ssid'),
+    ConnParameterRef('mode', '802-11-wireless.mode'),
+    ConnParameterRef('band', '802-11-wireless.band'),
+    ConnParameterRef('channel', '802-11-wireless.channel'),
+    ConnParameterRef('frequency', '802-11-wireless.frequency'),
+    ConnParameterRef('bitrate', '802-11-wireless.bitrate'),
+    ConnParameterRef('txpower', '802-11-wireless.txpower'),
+    ConnParameterRef('security', '802-11-wireless.security.key-mgmt'),
+    ConnParameterRef('password', '802-11-wireless-security.psk'),
+]
+
+wifi_parameters = general_parameters + wifi_specific_parameters
+
+cellular_specific_parameters = [
+    ConnParameterRef('username', 'gsm.username'),
+    ConnParameterRef('password', 'gsm.password'),
+]
+
+cellular_parameters = general_parameters + cellular_specific_parameters
+
+all_parameters = general_parameters + wifi_specific_parameters + cellular_specific_parameters
+
+parameters_by_type = {
+    "ethernet": {key for _, key in ethernet_parameters},
+    "wifi": {key for _, key in wifi_parameters},
+    "gsm": {key for _, key in cellular_parameters},
+}
+
+reverses_parameters_global = { key: value for value, key in all_parameters }
+
 
 class NetworkConnection:
-
-    _attr_properties = {
-        'name': 'connection.id',
-        'device': 'connection.interface-name',
-        'type': 'connection.type',
-        'state': 'connection.state',
-        'ipv4_method': 'ipv4.method',
-        'ipv4_address': 'ipv4.addresses',
-        'ipv6_method': 'ipv6.method',
-    }
 
     def __init__(self):
         self._properties = {}
 
     def add_property(self, key, value):
-        self._properties[key] = value
+        attribute = reverses_parameters_global[key]
+        self._properties[attribute] = value
 
     def get_property(self, key):
         return self._properties[key]
 
-    def __getattr__(self, item):
-        try:
-            attribute = self._attr_properties[item]
-        except KeyError:
-            raise AttributeError
-        else:
-            return self._properties[attribute]
+    def __getattr__(self, attribute):
+        return self._properties[attribute]
+
+
 
 
 class NetworkManagerControl:
@@ -103,7 +140,7 @@ class NetworkManagerControl:
     ethernet = {
         "WAN_INTERFACE": ['type', 'ethernet', 'ipv4.method', 'auto', 'ipv6.method', 'auto'],
         "LAN_INTERFACE": ['type', 'ethernet', 'ipv4.method', 'auto', 'ipv6.method', 'auto'],
-        "LAN_CONTROLLER": ['type', 'ethernet', 'ipv4.method', 'shared', 'ipv6.method', 'shared'],
+        "LAN_CONTROLLER": ['type', 'ethernet', 'ipv4.method', 'shared', 'ipv6.method', 'auto'],
     }
 
     def __init__(self):
@@ -113,9 +150,9 @@ class NetworkManagerControl:
         self._devices = {}
         self._connections = {}
         self._build_parameters = {
-            'ethernet': self.ethernet_parameters,
-            'cellular': self.cellular_parameters,
-            'wifi': self.wifi_parameters
+            'ethernet': self.gen_ethernet_parameters,
+            'cellular': self.gen_cellular_parameters,
+            'wifi': self.gen_wifi_parameters
         }
 
     def check_network_manager(self, wait:bool = True):
@@ -159,7 +196,7 @@ class NetworkManagerControl:
         # now get the connections
         for device in self._devices.values():
             if device.connection is not None and len(device.connection) > 0:
-                self.read_connection(device.connection)
+                self.read_network_connection(device.type, device.connection)
 
     def read_device_configuration(self, device_name:str, expected_type:str = None):
         device_type = None
@@ -182,11 +219,14 @@ class NetworkManagerControl:
         device = NetworkDevice(device_name, device_type, device_state, device_connection)
         self._devices[device.name] = device
         if device_connection is not None:
-            self.read_connection(device_connection)
+            self.read_network_connection(device_type, device_connection)
         return device_type, device_state, device_connection
 
     def get_device(self, name):
         return self._devices[name]
+
+    def device_update_connection(self, device_name: str, connection_name: str):
+        self._devices[device_name].connection = connection_name
 
     def get_devices(self):
         return self._devices.values()
@@ -198,19 +238,22 @@ class NetworkManagerControl:
         return self._connections[name]
 
     def delete_connection(self, name):
+        _logger.debug(f"nmcli => Deleting connection {name}")
         try:
             conn = self._connections[name]
         except KeyError:
             _logger.error(f"NetworkInterface connection {name} not found")
             return
-        nmcli_request(["con", "delete", conn.name])
+        nmcli_command(["con", "delete", conn.name])
         del self._connections[name]
 
-    def read_connection(self, name):
+    def read_network_connection(self, device_type, name):
         _logger.debug(f"nmcli => Reading connection {name}")
         conn = NetworkConnection()
+        parameters_list = parameters_by_type[device_type]
         for property in nmcli_request(["con", "show", name]):
-            conn.add_property(property[0], property[1])
+            if property[0] in parameters_list:
+                conn.add_property(property[0], property[1])
         self._connections[conn.name] = conn
 
     def create_connection(self, name:str, device:str, connection_type:str, params:dict):
@@ -224,17 +267,23 @@ class NetworkManagerControl:
             return
         _logger.debug(f"nmcli => Creating connection {name} on device {device} of type {connection_type}: {function}")
         base_parameters = ['conn', 'add', 'ifname', device, 'con-name', name]
-        if_parameters = self._build_parameters[connection_type](function, params)
+        try:
+            if_parameters = self._build_parameters[connection_type](function, params)
+        except KeyError:
+            _logger.error(f"NetworkInterface create_connection: {name} parameters errors")
+            return
         parameters = base_parameters + if_parameters
         try:
             nmcli_command(parameters)
         except NetworkManagerError:
             _logger.error(f"NetworkInterface create_connection: nmcli error for connection {name}")
             return
+        self.device_update_connection(device, name)
+        self.read_network_connection(connection_type, name)
         nmcli_command(['conn', 'up', name])
-        self.read_connection(name)
+        self.read_network_connection(connection_type, name)
 
-    def ethernet_parameters(self, function, params) -> list:
+    def gen_ethernet_parameters(self, function, params) -> list:
         _logger.debug(f"ethernet_parameters: {function} {params}")
         base_list = self.ethernet[function]
         if function == "LAN_CONTROLLER":
@@ -244,7 +293,7 @@ class NetworkManagerControl:
         _logger.debug(f"ethernet_parameters: {full_list}")
         return full_list
 
-    def cellular_parameters(self, function, params) -> list:
+    def gen_cellular_parameters(self, function, params) -> list:
         parameters = ['type', 'gsm', 'gsm.apn', params['apn'], 'ipv4.method', 'auto', 'ipv6.method', 'auto']
         if params.get('username', None) is not None:
             parameters.extend(['gsm.username', params['username']])
@@ -252,14 +301,14 @@ class NetworkManagerControl:
             parameters.extend(['gsm.password', params['password']])
         return parameters
 
-    def wifi_parameters(self, function, params) -> list:
+    def gen_wifi_parameters(self, function, params) -> list:
         if function == "LAN_CONTROLLER":
             if params.get('ssid', None) is None:
                 ssid = socket.gethostname()
             else:
                 ssid = params['ssid']
-            parameters = ['type', 'wifi', 'wifi.ssid', f'{ssid}', 'wifi.mode', 'infrastructure', 'ipv4.mode', 'shared',
-                          'ipv6.mode', 'shared', 'ipv4.addresses', f"{params['ipv4_address']}/24"]
+            parameters = ['type', 'wifi', 'wifi.ssid', f'{ssid}', 'wifi.mode', 'ap', 'ipv4.method', 'shared',
+                          'ipv6.method', 'shared', 'ipv4.addresses', f"{params['ipv4_address']}/24"]
             if params.get('password', None) is not None:
                 parameters.extend(['wifi.psk', params['password'], 'wifi.key-mgmt', 'wpa-psk'])
             if params.get('band', None) is not None:
