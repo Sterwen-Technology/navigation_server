@@ -45,13 +45,13 @@ connections:
        type: ethernet
        description: "Eth port 1 as LAN with DHCP on address 173.16.2.1"
        function: LAN_CONTROLLER
-       address: 172.16.2.1
+       ipv4_address: 172.16.2.1
 
   - wifi-ap-1:
        type: wifi
        description: "Wifi access point on band 2.4 Ghz with SSID=hostname"
        function: LAN_CONTROLLER
-       address: 172.16.1.1
+       ipv4_address: 172.16.1.1
        password: pmpr23!A
 
   - cellular-1:
@@ -72,7 +72,7 @@ connections:
        type: ethernet
        description: "Eth port 0 as LAN with DHCP on address 173.16.0.1"
        function: LAN_CONTROLLER
-       address: 172.16.0.1
+       ipv4_address: 172.16.0.1
 
 # lastly we define the possible configurations for the networking in this system
 configurations:

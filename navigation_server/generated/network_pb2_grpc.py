@@ -55,6 +55,16 @@ class NetworkServiceStub(object):
                 request_serializer=network__pb2.NetworkCommand.SerializeToString,
                 response_deserializer=network__pb2.NetworkStatus.FromString,
                 _registered_method=True)
+        self.interface_command = channel.unary_unary(
+                '/NetworkService/interface_command',
+                request_serializer=network__pb2.NetworkCommand.SerializeToString,
+                response_deserializer=network__pb2.NetworkReply.FromString,
+                _registered_method=True)
+        self.get_configuration_base = channel.unary_unary(
+                '/NetworkService/get_configuration_base',
+                request_serializer=network__pb2.NetworkCommand.SerializeToString,
+                response_deserializer=network__pb2.NetworkConfigurationReply.FromString,
+                _registered_method=True)
 
 
 class NetworkServiceServicer(object):
@@ -84,6 +94,18 @@ class NetworkServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def interface_command(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def get_configuration_base(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_NetworkServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -106,6 +128,16 @@ def add_NetworkServiceServicer_to_server(servicer, server):
                     servicer.get_network_status,
                     request_deserializer=network__pb2.NetworkCommand.FromString,
                     response_serializer=network__pb2.NetworkStatus.SerializeToString,
+            ),
+            'interface_command': grpc.unary_unary_rpc_method_handler(
+                    servicer.interface_command,
+                    request_deserializer=network__pb2.NetworkCommand.FromString,
+                    response_serializer=network__pb2.NetworkReply.SerializeToString,
+            ),
+            'get_configuration_base': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_configuration_base,
+                    request_deserializer=network__pb2.NetworkCommand.FromString,
+                    response_serializer=network__pb2.NetworkConfigurationReply.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -216,6 +248,60 @@ class NetworkService(object):
             '/NetworkService/get_network_status',
             network__pb2.NetworkCommand.SerializeToString,
             network__pb2.NetworkStatus.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def interface_command(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/NetworkService/interface_command',
+            network__pb2.NetworkCommand.SerializeToString,
+            network__pb2.NetworkReply.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def get_configuration_base(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/NetworkService/get_configuration_base',
+            network__pb2.NetworkCommand.SerializeToString,
+            network__pb2.NetworkConfigurationReply.FromString,
             options,
             channel_credentials,
             insecure,

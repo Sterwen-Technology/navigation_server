@@ -46,6 +46,13 @@ message NetConnection {
   repeated NetParameter parameters=4;  // set of parameters depending on the connection type
 }
 
+message NetConnectionDef {
+  string name=1;
+  DeviceType type=2;
+  InterfaceStatus function=3;
+  repeated NetParameter parameters=4;
+}
+
 message NetworkCommand {
   uint32 id=1;
   string cmd=2;
@@ -65,10 +72,19 @@ message NetworkStatus {
   repeated NetInterface if_list=3;
 }
 
+message NetworkConfigurationReply {
+  uint32 id=1;
+  string status=2;
+  repeated string global_configurations=3;
+  repeated NetConnectionDef connection_definitions=4;
+}
+
 service NetworkService {
   rpc set_configuration(NetworkCommand) returns (NetworkReply) {}
   rpc get_configuration(NetworkCommand) returns (NetworkReply) {}
   rpc set_global_configuration(NetworkCommand) returns (NetworkStatus) {}
   rpc get_network_status (NetworkCommand) returns (NetworkStatus) {}
+  rpc interface_command(NetworkCommand) returns (NetworkReply) {}
+  rpc get_configuration_base(NetworkCommand) returns (NetworkConfigurationReply) {}
 }
 

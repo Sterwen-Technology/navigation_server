@@ -117,3 +117,10 @@ class NetworkClient(ServiceClient):
         request.cmd = interface
         return self._server_call(self._stub.get_configuration, request, NetworkReplyProxy)
 
+    def interface_command(self, command, interface:NetInterface):
+        _logger.debug("Call interface_command")
+        request = NetworkCommand()
+        request.cmd = command
+        request.interface.name = interface.name
+        return self._server_call(self._stub.interface_command, request, NetworkReplyProxy)
+

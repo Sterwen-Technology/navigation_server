@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from collections import namedtuple
 import io
 import socket
+import uuid
 
 _logger = logging.getLogger('ShipDataServer.' + __name__)
 
@@ -100,6 +101,7 @@ wifi_specific_parameters = [
 wifi_parameters = general_parameters + wifi_specific_parameters
 
 cellular_specific_parameters = [
+    ConnParameterRef('apn', 'gsm.apn'),
     ConnParameterRef('username', 'gsm.username'),
     ConnParameterRef('password', 'gsm.password'),
 ]
@@ -119,15 +121,31 @@ reverses_parameters_global = { key: value for value, key in all_parameters }
 
 class NetworkConnection:
 
+    _excluded_properties = { 'name', 'uuid', 'device'
+                             }
     def __init__(self):
         self._properties = {}
+        self._uuid = None
 
     def add_property(self, key, value):
         attribute = reverses_parameters_global[key]
+        # _logger.debug(f"NetworkConnection adding property {attribute} from {key} = {value}")
         self._properties[attribute] = value
+        if attribute == 'uuid':
+            self._uuid = uuid.UUID(value)
+            # _logger.debug(f"NetworkConnection set uuid from:{value} = {self._uuid}")
+
+    @property
+    def uuid(self) -> uuid.UUID:
+        return self._uuid
 
     def get_property(self, key):
         return self._properties[key]
+
+    def get_properties(self):
+        for key, value in self._properties.items():
+            if key not in self._excluded_properties:
+                yield key, value
 
     def __getattr__(self, attribute):
         return self._properties[attribute]
@@ -183,6 +201,7 @@ class NetworkManagerControl:
         return self._nm_running
 
     def get_networking_conf(self):
+        _logger.debug("NetworkInterface reading networking configuration")
         if not self._nm_running:
             _logger.error("NetworkInterface NetworkManager not running")
             raise NetworkManagerError("NetworkManager not running")
@@ -199,6 +218,7 @@ class NetworkManagerControl:
                 self.read_network_connection(device.type, device.connection)
 
     def read_device_configuration(self, device_name:str, expected_type:str = None):
+        _logger.debug(f"NetworkManager read device {device_name}")
         device_type = None
         device_state = None
         device_connection = None
@@ -237,7 +257,8 @@ class NetworkManagerControl:
     def get_connection(self, name:str) -> NetworkConnection:
         return self._connections[name]
 
-    def delete_connection(self, name):
+    def delete_device_connection(self, name:str):
+        # only use in case on initial device setup
         _logger.debug(f"nmcli => Deleting connection {name}")
         try:
             conn = self._connections[name]
@@ -248,13 +269,17 @@ class NetworkManagerControl:
         del self._connections[name]
 
     def read_network_connection(self, device_type, name):
-        _logger.debug(f"nmcli => Reading connection {name}")
+        _logger.debug(f"nmcli => Reading connection {name} type {device_type}")
         conn = NetworkConnection()
         parameters_list = parameters_by_type[device_type]
+        # _logger.debug(f"parameters:{parameters_list}")
         for property in nmcli_request(["con", "show", name]):
+            # _logger.debug(f"NetworkManager read property {property}")
             if property[0] in parameters_list:
                 conn.add_property(property[0], property[1])
         self._connections[conn.name] = conn
+
+
 
     def create_connection(self, name:str, device:str, connection_type:str, params:dict):
         if params is None:
@@ -317,11 +342,24 @@ class NetworkManagerControl:
             raise NotImplementedError
         return parameters
 
-    def device_up(self, name):
-        nmcli_request(['device', 'up', name])
+    def del_connection(self, conn:NetworkConnection):
+        name = conn.name
+        nmcli_command(['conn', 'delete', name])
+        # make our internal cleanup
+        del self._connections[name]
+        # reload device
+        self.read_device_configuration(conn.device, conn.type)
 
-    def device_down(self, name):
-        nmcli_request(['device', 'down', name])
+    def up_connection(self, conn:NetworkConnection):
+        name = conn.name
+        nmcli_command(['conn', 'up', name])
+        self.read_network_connection(conn.type, name)
+
+    def down_connection(self, conn:NetworkConnection):
+        name = conn.name
+        nmcli_command(['conn', 'up', name])
+        self.read_device_configuration(conn.device, conn.type)
+
 
 
 

@@ -31,6 +31,7 @@ from .nav_threading import NavThread, NavThreadingController, NavProfilingContro
 from .constants_conversion import nautical_mille, mps_to_knots, n2ktime_to_datetime, radian_to_deg
 from .client_common import GrpcClient, ServiceClient, GrpcStreamTimeout, GrpcSendStreamIterator, GrpcStreamIteratorError
 from .agent_interface import AgentInterface, AgentClient
+from .navigation_uuid import fill_uuid_protobuf
 if MessageServerGlobals.thread_controller is None:
     MessageServerGlobals.thread_controller = NavThreadingController()
     MessageServerGlobals.profiling_controller = NavProfilingController()
