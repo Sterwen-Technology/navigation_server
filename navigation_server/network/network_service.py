@@ -85,7 +85,10 @@ class NetworkInterface:
 
     @property
     def status(self):
-        return self._status
+        if self._connection is None:
+            return NOT_CONNECTED
+        else:
+            return self._connection.function
 
     @property
     def network_connection(self):
@@ -121,8 +124,12 @@ class NetworkInterface:
         else:
             pb_interface.status = InterfaceStatus.NOT_CONNECTED
 
-        _logger.debug(f"NetworkInterface set_protobuf: pb_interface={pb_interface}")
+        # _logger.debug(f"NetworkInterface set_protobuf: pb_interface={pb_interface}")
 
+    def __repr__(self):
+        pb_version = NetInterface()
+        self.set_protobuf(pb_version)
+        return f"{pb_version}"
 
 
 class NetworkInterfaceConnection:
@@ -303,14 +310,13 @@ class NetworkServicerImpl(NetworkServiceServicer):
             interface = self._service.interface(request.interface.name)
         except KeyError:
             _logger.error(f"NetworkService interface {request.interface.name} not found")
-            resp.status = "Interface not found"
+            resp.status = f"Interface {request.interface.name} not found"
             return resp
+
         if request.cmd not in self._cmd_vector.keys():
             resp.status = f"network command {request.cmd} unknown"
             return resp
-        if interface.status == NOT_CONNECTED:
-            resp.status = "Interface is not connected"
-            return resp
+
         try:
             self._cmd_vector[request.cmd](interface)
         except NetworkManagerError as err:
@@ -486,6 +492,7 @@ class NetworkService(GrpcService):
             _logger.info(f"NetworkService interface {interface.name} device {interface.device} has no connection")
             interface.set_state('disconnected')
             return
+
         try:
             interface.network_connection = self._network_manager.get_connection(device.connection)
         except KeyError:
@@ -552,7 +559,10 @@ class NetworkService(GrpcService):
         self.update_interface(interface)
 
     def up_connection(self, interface:NetworkInterface):
-        self._network_manager.up_connection(interface.network_connection)
+        if interface.connection is None:
+            _logger.error(f"NetworkService interface {interface.name} has no connection configured")
+            raise NetworkManagerError(f"NetworkService interface {interface.name} has no connection configured")
+        self._network_manager.up_connection(interface.connection)
         self.update_interface(interface)
 
     def down_connection(self, interface:NetworkInterface):
