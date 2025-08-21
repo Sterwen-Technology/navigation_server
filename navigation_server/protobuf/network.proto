@@ -13,7 +13,7 @@ syntax = "proto3";
 
 import "uuid.proto";
 
-enum InterfaceStatus {
+enum InterfaceFunction {
   NOT_CONNECTED=0;
   LAN_CONTROLLER=1; // means that the connection is controlling a sub-LAN
   WAN_INTERFACE=2; // means connected to WAN or upper layer LAN
@@ -32,59 +32,70 @@ message NetParameter {
   string value=2;
 }
 
+// Message for the definition of the interface that is an object combining a device and a connection
 message NetInterface {
-  string name=1;
+  string name=1;      // name of the interface
   DeviceType type=3;
-  InterfaceStatus status=4;
-  NetConnection conn=5;
-  string device_name=6;
+  InterfaceFunction function=4;
+  string state=2;         // state of the device (from NetworkManager)
+  NetConnection conn=5;   // connection
+  string device_name=6;   // name of the device (Linux and NetworkManager)
 }
 
 message NetConnection {
-  string name=1;
+  string name=1;                        // name of the connection (NetworkManager)
   ObjectId uuid=2;                     // optional, used only with NetworkManager
-  repeated NetParameter parameters=4;  // set of parameters depending on the connection type
+  repeated NetParameter parameters=4;  // set of parameters depending on the connection type. Theses ar not directly NetworkManager parameters
 }
 
 message NetConnectionDef {
   string name=1;
   DeviceType type=2;
-  InterfaceStatus function=3;
+  InterfaceFunction function=3;
   repeated NetParameter parameters=4;
 }
 
 message NetworkCommand {
   uint32 id=1;
-  string cmd=2;
-  NetInterface interface=3;
+  string cmd=2;             // shall be connection or configuration
+  string source=4;          // connection or configuration name to be applied
+  NetInterface interface=3; // details of the interface. Not all rpc call will use it
 }
 
 message NetworkReply {
   uint32 id=1;
-  string status=4;
-  NetInterface interface=2;
+  string status=4;  // "OK" if success - error message otherwise
+  string details=3; // More details on error or success
+  NetInterface interface=2;  // latest set of information for the interface after execution of the rpc
 }
 
 message NetworkStatus {
   uint32 id=1;
-  string status=4;
-  bool nm_running = 2;
-  repeated NetInterface if_list=3;
+  string status=4;    // "OK" if success - error message otherwise
+  string details=5;   // More details on error or success
+  bool nm_running = 2; // true if the NetworkManager is running
+  repeated NetInterface if_list=3; // all defined/existing interfaces
 }
 
 message NetworkConfigurationReply {
   uint32 id=1;
   string status=2;
-  repeated string global_configurations=3;
-  repeated NetConnectionDef connection_definitions=4;
+  repeated string global_configurations=3;            // names of all configurations
+  repeated NetConnectionDef connection_definitions=4; // not implemented
 }
 
 service NetworkService {
+  // set the configuration for one interface
   rpc set_configuration(NetworkCommand) returns (NetworkReply) {}
+  // get the configuration for one interface => not implemented in 2.6.1
   rpc get_configuration(NetworkCommand) returns (NetworkReply) {}
+  // Apply a configuration on all interfaces
   rpc set_global_configuration(NetworkCommand) returns (NetworkStatus) {}
+  // Get a full view on the network configuration
   rpc get_network_status (NetworkCommand) returns (NetworkStatus) {}
+  // send command on the interface (delete, up, down connection)
   rpc interface_command(NetworkCommand) returns (NetworkReply) {}
+  // get parameters from the configuration defined in the agent file (partial implementation in 2.6.1)
   rpc get_configuration_base(NetworkCommand) returns (NetworkConfigurationReply) {}
 }
 

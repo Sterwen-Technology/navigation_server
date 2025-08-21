@@ -21,15 +21,15 @@ from navigation_server.network.mmcli_interface import ModemControl
 
 from navigation_server.generated.network_pb2_grpc import NetworkServiceServicer, add_NetworkServiceServicer_to_server
 from navigation_server.generated.network_pb2 import (NetInterface, NetConnection, NetworkCommand, NetworkStatus,
-                                                    NetworkReply, InterfaceStatus, DeviceType, NetParameter,
+                                                    NetworkReply, InterfaceFunction, DeviceType, NetParameter,
                                                     NetConnectionDef, NetworkConfigurationReply)
 
 
 (NOT_CONNECTED, LAN_CONTROLLER, WAN_INTERFACE, LAN_INTERFACE) = range(4)
 
 device_type_dict = { 'ethernet': DeviceType.ETHERNET, 'wifi': DeviceType.WIFI, 'cellular': DeviceType.CELLULAR}
-connection_type_dict = { NOT_CONNECTED: InterfaceStatus.NOT_CONNECTED, LAN_CONTROLLER: InterfaceStatus.LAN_CONTROLLER,
-                         WAN_INTERFACE: InterfaceStatus.WAN_INTERFACE, LAN_INTERFACE: InterfaceStatus.LAN_INTERFACE}
+connection_type_dict = { NOT_CONNECTED: InterfaceFunction.NOT_CONNECTED, LAN_CONTROLLER: InterfaceFunction.LAN_CONTROLLER,
+                         WAN_INTERFACE: InterfaceFunction.WAN_INTERFACE, LAN_INTERFACE: InterfaceFunction.LAN_INTERFACE}
 
 status_dict = { 'auto': WAN_INTERFACE, 'manual': LAN_INTERFACE, 'shared': LAN_CONTROLLER}
 
@@ -107,13 +107,14 @@ class NetworkInterface:
     def set_protobuf(self, pb_interface: NetInterface):
         pb_interface.name = self._name
         pb_interface.type = device_type_dict[self.type]
+        pb_interface.state = self._state
 
         if self._state == 'unavailable':
             pb_interface.device_name = "Not available"
         else:
             pb_interface.device_name = self._params['device']
         if self._connection is not None:
-            pb_interface.status = connection_type_dict[self._connection.function]
+            pb_interface.function = connection_type_dict[self._connection.function]
             pb_interface.conn.name = self._connection.name
             fill_uuid_protobuf( pb_interface.conn.uuid, self._network_connection.uuid)
             for key, value in self._network_connection.get_properties():
@@ -122,7 +123,7 @@ class NetworkInterface:
                 parameter.value = value
                 pb_interface.conn.parameters.append(parameter)
         else:
-            pb_interface.status = InterfaceStatus.NOT_CONNECTED
+            pb_interface.function = InterfaceFunction.NOT_CONNECTED
 
         # _logger.debug(f"NetworkInterface set_protobuf: pb_interface={pb_interface}")
 
@@ -218,8 +219,8 @@ class NetworkConfiguration:
         return self._configurations[interface].connection
 
     def all_connections(self):
-        for interface, connection in self._configurations.items():
-            yield interface, connection
+        for interface_conf in self._configurations.values():
+            yield interface_conf.interface, interface_conf.connection
 
 
 class NetworkServicerImpl(NetworkServiceServicer):
@@ -250,14 +251,23 @@ class NetworkServicerImpl(NetworkServiceServicer):
         resp = NetworkStatus()
         resp.id = self._id
         self._id += 1
-        self._service.apply_configuration(request.configuration)
-        self._service.update_configuration()
-        self.fill_network_status(resp)
+        try:
+            self._service.apply_configuration(request.cmd)
+            self._service.update_configuration()
+            self.fill_network_status(resp)
+            resp.status = "OK"
+            resp.details = "Global configuration applied"
+        except NetworkManagerError as e:
+            resp.status = f"NetworkManager error: {e.returncode}"
+            resp.details = e.message
         return resp
 
     def get_configuration(self, request, context):
         _logger.debug(f'get_configuration: request={request}')
         resp = NetworkReply()
+        resp.id = self._id
+        self._id += 1
+        resp.status = "Not implemented"
         return resp
 
     def set_configuration(self, request, context):
@@ -269,36 +279,47 @@ class NetworkServicerImpl(NetworkServiceServicer):
             interface = self._service.interface(request.interface.name)
         except KeyError:
             _logger.error(f"NetworkService interface {request.interface.name} not found")
-            resp.status = "Interface not found"
+            resp.status = "Error in request"
+            resp.details = f"Interface {request.interface.name} not found"
             return resp
 
-        if request.cmd == 'default':
+        if request.cmd == 'configuration':
             try:
-                connection = self._service.connection_in_configuration('default', interface)
+                connection = self._service.connection_in_configuration(request.source, interface)
             except KeyError:
                 _logger.error(f"NetworkService interface {request.interface.name} default connection not found")
-                resp.status = "Default connection not found"
+                resp.status= "Error in configuration"
+                resp.details = f"NetworkService interface {request.interface.name} default connection not found"
                 return resp
-        else:
+        elif request.cmd == 'connection':
             try:
-                connection = self._service.connection(request.connection.name)
+                connection = self._service.connection(request.source)
                 if connection.type != interface.type:
                     _logger.error(f"NetworkService interface {request.interface.name} connection {request.connection.name} type mismatch")
                     resp.status = "Connection type mismatch"
+                    resp.details = f"Connection {request.connection.name} type mismatch"
                     return resp
             except KeyError:
                 _logger.error(f"NetworkService interface {request.interface.name} connection {request.connection.name} not found")
-                resp.status = "Connection not found"
+                resp.status = "Error in request"
+                resp.details = f"Connection {request.connection.name} not found"
                 return resp
-        try:
-            self._service.apply_connection(interface, connection)
-            interface.set_protobuf(resp.interface)
-            resp.status = "OK"
-        except (ValueError, KeyError, NetworkManagerError) as e:
-            _logger.error(f"NetworkService error applying connection for interface {request.interface.name}: {e}")
-            resp.status = f"Error applying default connection: {e}"
         else:
             resp.status = "Command not recognized"
+            resp.details = f"network command {request.cmd} unknown"
+            return resp
+
+        try:
+            resp.details = self._service.apply_connection(interface, connection)
+            interface.set_protobuf(resp.interface)
+            resp.status = "OK"
+        except (ValueError, KeyError):
+            _logger.error(f"NetworkService error applying connection for interface {request.interface.name}")
+            resp.status = f"Error applying connection"
+            resp.details = "Internal error"
+        except NetworkManagerError as e:
+            resp.status = f"NetworkManager error: {e.returncode}"
+            resp.details = e.message
         return resp
 
     def interface_command(self, request, context):
@@ -310,17 +331,20 @@ class NetworkServicerImpl(NetworkServiceServicer):
             interface = self._service.interface(request.interface.name)
         except KeyError:
             _logger.error(f"NetworkService interface {request.interface.name} not found")
-            resp.status = f"Interface {request.interface.name} not found"
+            resp.status = "Error in request"
+            resp.details = f"Interface {request.interface.name} not found"
             return resp
 
         if request.cmd not in self._cmd_vector.keys():
-            resp.status = f"network command {request.cmd} unknown"
+            resp.status = "Command not recognized"
+            resp.details = f"network command {request.cmd} unknown"
             return resp
 
         try:
-            self._cmd_vector[request.cmd](interface)
+            resp.details = self._cmd_vector[request.cmd](interface)
         except NetworkManagerError as err:
-            resp.status = str(err)
+            resp.status = f"NetworkManager error: {err.returncode}"
+            resp.details = err.message
             return resp
         # now update the configuration for response
         interface.set_protobuf(resp.interface)
@@ -329,9 +353,15 @@ class NetworkServicerImpl(NetworkServiceServicer):
 
     def get_configuration_base(self, request, context):
         _logger.debug(f"get_configuration_base command:{request.cmd}")
-        resp = NetworkReply()
+        resp = NetworkConfigurationReply()
         resp.id = self._id
         self._id += 1
+        if request.cmd == 'global':
+            for config_name in self._service.configuration_names():
+                resp.global_configurations.append(config_name)
+            resp.status = "OK"
+        else:
+            resp.status = "Not implemented"
         return resp
 
     def fill_network_status(self, resp):
@@ -368,6 +398,9 @@ class NetworkService(GrpcService):
 
     def connection(self, name):
         return self._connections[name]
+
+    def configuration_names(self):
+        return self._configurations.keys()
 
     def finalize(self):
         try:
@@ -518,30 +551,31 @@ class NetworkService(GrpcService):
             configuration = self._configurations[configuration_name]
         except KeyError:
             _logger.error(f"NetworkService configuration {configuration_name} not found")
-            return
+            raise NetworkManagerError(121, f"Configuration {configuration_name} not found")
         for interface, connection in configuration.all_connections():
             self.apply_connection(interface, connection)
 
-
-    def apply_connection(self, interface: NetworkInterface, connection: NetworkInterfaceConnection):
+    def apply_connection(self, interface: NetworkInterface, connection: NetworkInterfaceConnection) -> str:
         _logger.debug(f"NetworkService applying connection {connection.name} for interface {interface.name}")
         if interface.state == "unmanaged":
             _logger.info(f"NetworkService interface {interface.name} device {interface.device} is unmanaged")
-            return
+            raise NetworkManagerError(110, f"Interface {interface.name} is unmanaged")
         device = self._network_manager.get_device(interface.device)
-        _logger.debug(f"NetworkService interface {interface.name} device {interface.device} connection {device.connection}")
-        if device.connection != connection.name:
-            _logger.info(f"NetworkService actual connection for interface {interface.name} is {device.connection} => deleted")
-            # lets delete it
-            self._network_manager.delete_device_connection(device.connection)
-        else:
-            _logger.info(f"NetworkService interface {interface.name} device {interface.device} connection {device.connection} already set")
-            return
+        _logger.debug(f"NetworkService interface {interface.name} device {interface.device} state {device.state} => {device.connection}")
+        if device.state == 'connected':
+            if device.connection != connection.name:
+                _logger.info(f"NetworkService actual connection for interface {interface.name} is {device.connection} => deleted")
+                # lets delete it
+                self._network_manager.delete_device_connection(device.connection)
+            else:
+                _logger.info(f"NetworkService interface {interface.name} device {interface.device} connection {device.connection} already set")
+                return f"NetworkService interface {interface.name} device {interface.device} connection {device.connection} already set"
         # now we need to create the correct connection for the interface
         _logger.info(
             f"NetworkService creating connection {connection.name} for interface {interface.name} device {interface.device} with:{connection.params}")
-        self._network_manager.create_connection(connection.name, interface.device, interface.type, connection.params)
+        ret_val = self._network_manager.create_connection(connection.name, interface.device, interface.type, connection.params)
         self.update_interface(interface)
+        return ret_val
 
     def connection_in_configuration(self, configuration_name: str, interface: NetworkInterface) -> NetworkInterfaceConnection:
         try:
@@ -553,18 +587,22 @@ class NetworkService(GrpcService):
             return configuration.connection_for_interface(interface.name)
         except KeyError:
             _logger.error(f"NetworkService interface {interface.name} not found in configuration {configuration_name}")
+            raise
 
-    def del_connection(self, interface:NetworkInterface):
-        self._network_manager.del_connection(interface.network_connection)
+    def del_connection(self, interface:NetworkInterface) -> str:
+        ret_val = self._network_manager.del_connection(interface.network_connection)
         self.update_interface(interface)
+        return ret_val
 
-    def up_connection(self, interface:NetworkInterface):
+    def up_connection(self, interface:NetworkInterface) -> str:
         if interface.connection is None:
             _logger.error(f"NetworkService interface {interface.name} has no connection configured")
             raise NetworkManagerError(f"NetworkService interface {interface.name} has no connection configured")
-        self._network_manager.up_connection(interface.connection)
+        ret_val = self._network_manager.up_connection(interface.connection)
         self.update_interface(interface)
+        return ret_val
 
-    def down_connection(self, interface:NetworkInterface):
-        self._network_manager.down_connection(interface.network_connection)
+    def down_connection(self, interface:NetworkInterface) -> str:
+        ret_val = self._network_manager.down_connection(interface.network_connection)
         self.update_interface(interface)
+        return ret_val

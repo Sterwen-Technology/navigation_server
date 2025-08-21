@@ -14,7 +14,7 @@ import logging
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 from navigation_server.router_common import ServiceClient, ProtobufProxy, pb_enum_string
-from navigation_server.generated.network_pb2 import (NetInterface, NetParameter, DeviceType, InterfaceStatus,
+from navigation_server.generated.network_pb2 import (NetInterface, NetParameter, DeviceType, InterfaceFunction,
                                                     NetConnection, NetworkCommand, NetworkStatus)
 from navigation_server.generated.network_pb2_grpc import NetworkServiceStub
 
@@ -45,8 +45,8 @@ class NetInterfaceProxy(ProtobufProxy):
         return pb_enum_string(self._msg, 'type', self._msg.type)
 
     @property
-    def status(self) -> str:
-        return pb_enum_string(self._msg, 'status', self._msg.status)
+    def function(self) -> str:
+        return pb_enum_string(self._msg, 'function', self._msg.function)
 
     @property
     def connection(self) -> NetConnectionProxy:
@@ -81,6 +81,13 @@ class NetworkReplyProxy(ProtobufProxy):
         return NetConnectionProxy(self._msg.connection)
 
 
+class NetworkConfigurationReplyProxy(ProtobufProxy):
+    def __init__(self, reply):
+        super().__init__(reply)
+
+    def configuration_names(self) -> list[str]:
+        return [conf for conf in self._msg.global_configurations]
+
 
 class NetworkClient(ServiceClient):
 
@@ -103,12 +110,13 @@ class NetworkClient(ServiceClient):
         request.cmd = command
         return self._server_call(self._stub.set_global_configuration, request, NetworkStatusProxy)
 
-    def set_configuration(self, command:str, interface:NetInterface):
+    def set_configuration(self, command:str, source:str, interface:NetInterface):
         _logger.debug("Call set_configuration")
         request = NetworkCommand()
         request.cmd = command
+        request.source = source
         request.interface.name = interface.name
-        # enough for first test. Deep copy shall be implemented
+        # Enough for a first test. Deep copy shall be implemented with all parameters
         return self._server_call(self._stub.set_configuration, request, NetworkReplyProxy)
 
     def get_configuration(self, interface:str):
@@ -123,4 +131,10 @@ class NetworkClient(ServiceClient):
         request.cmd = command
         request.interface.name = interface.name
         return self._server_call(self._stub.interface_command, request, NetworkReplyProxy)
+
+    def get_global_configuration(self):
+        _logger.debug("Call get_global_configuration")
+        request = NetworkCommand()
+        request.cmd = "global"
+        return self._server_call(self._stub.get_configuration_base, request, NetworkConfigurationReplyProxy)
 
