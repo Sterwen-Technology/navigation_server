@@ -418,11 +418,12 @@ This is a gRPC service used for external monitoring and control of the navigatio
 
 #### AgentService
 
-The Agent service provides a limited but useful remote control of the Linux system on which some servers are running. Protobuf interface is **agent.proto** file.
-
-**Warning: use this service only in a controlled environment as in its current version no access control is implemented**
+The Agent service provides a limited but useful remote control of the Linux system on which some servers are running.
+See [AgentService and Network services](agent-network.md)
 
 #### NetworkService
+
+See [AgentService and Network services](agent-network.md)
 
 #### EngineService
 
@@ -774,6 +775,7 @@ The following sections are recognized:
 - filters
 - nmea2000_apps
 - functions
+- processes (agent only)
 
 Sections are not mandatory, but if no *features* are declared, only the default Python packages are loaded and not all necessary classes will be present
 

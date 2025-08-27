@@ -1,0 +1,20 @@
+#!/bin/bash
+NAV_KEY_DIR=/data/navigation/config/certificates
+NAV_CA_DIR="$HOME/certificates"
+
+CA_KEY="$NAV_CA_DIR/nav_ca_key.pem"
+CA_CERT="$NAV_KEY_DIR/nav_ca_cert.pem"
+SERVER_KEY="$NAV_KEY_DIR/nav_server_key.pem"
+SERVER_REQ="$NAV_KEY_DIR/nav_server_req.pem"
+SERVER_CERT="$NAV_KEY_DIR/nav_server_cert.pem"
+CONF_FILE="$NAV_KEY_DIR/nav_openssl.cnf"
+
+#-----
+# Generate a new server private key
+openssl genrsa -out "$SERVER_KEY" 4096
+
+# Generate a CSR (with SANs for all IPs)
+openssl req -new -key "$SERVER_KEY" -out "$SERVER_REQ" -config "$CONF_FILE"
+
+# Sign the CSR with the existing CA
+openssl x509 -req -in "$SERVER_REQ" -CA "$CA_CERT" -CAkey "$CA_KEY" -CAcreateserial -out "$SERVER_CERT" -days 365 -extfile "$CONF_FILE" -extensions v3_req

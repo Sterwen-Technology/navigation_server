@@ -15,6 +15,7 @@ server_name: Energy
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
+secure_grpc: true
 log_module:
     energy_mgmt.mppt_service: INFO
 

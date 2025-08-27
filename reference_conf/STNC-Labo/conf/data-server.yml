@@ -14,6 +14,7 @@ server_name: Data
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
+secure_grpc: true
 log_module:
     navigation_data.engine_service: INFO
     router_core.can_grpc_stream_reader: DEBUG

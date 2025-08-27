@@ -21,6 +21,7 @@ log_module:
   router_common.agent_interface: INFO
 
 decode_definition_only: False
+secure_grpc: true
 
 features:
     - agent
@@ -34,6 +35,7 @@ servers:
 - gRPCMain:
     class: GrpcServer
     port: 4545
+    secure: true
 
 services:
 

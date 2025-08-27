@@ -18,6 +18,7 @@ from navigation_server.router_common import GrpcAccessException, NavThread
 from navigation_server.generated.grpc_control_pb2 import GrpcCommand, GrpcAck
 from navigation_server.generated.grpc_control_pb2_grpc import NavigationGrpcControlStub
 
+
 class GrpcStreamTimeout(Exception):
     pass
 
@@ -40,19 +41,27 @@ class GrpcClient:
     (NOT_CONNECTED, CONNECTING, CONNECTED) = range(10, 13)
 
     clients = {}  # records all clients to avoid duplicate
+    _ca_certificate = None
+    _credentials = None
 
     @classmethod
-    def get_client(cls, server, use_request_id:bool = True):
+    def get_client(cls, server, use_request_id:bool = True, secure:bool = False):
         try:
-            return cls.clients[server]
+            client = cls.clients[server]
+            if client.secure != secure:
+                raise GrpcAccessException("Mismatch between secure and non-secure client")
         except KeyError:
             pass
-        client = GrpcClient(server, use_request_id)
+        client = GrpcClient(server, use_request_id, secure)
         cls.clients[server] = client
         return client
 
+    @classmethod
+    def set_ca_certificate(cls, ca_certificate):
+        cls._ca_certificate = ca_certificate
+        cls._credentials = grpc.ssl_channel_credentials(ca_certificate)
 
-    def __init__(self, server: str, use_request_id:bool = True):
+    def __init__(self, server: str, use_request_id:bool = True, secure:bool = False):
         """
         Represents a client connection handler for a server.
         The __init__ method shall not be called directly use GrpcClient.get_client instead
@@ -86,6 +95,7 @@ class GrpcClient:
         self._ready = False
         self._wait_connect = threading.Event()
         self._control_stub = None
+        self._secure = secure
 
     def connect(self):
         """
@@ -105,14 +115,19 @@ class GrpcClient:
             return
         _logger.info(f"GrpcClient connect attempt to {self._server}")
         self._wait_connect.clear()
-        self._channel = grpc.insecure_channel(self._server)
+        if self._secure:
+            if self._ca_certificate is None:
+                raise GrpcAccessException("GrpcClient => Missing certificate for secure communication")
+            self._channel = grpc.secure_channel(self._server, self._credentials)
+        else:
+            self._channel = grpc.insecure_channel(self._server)
         self._channel.subscribe(self.channel_callback)
         # create the control stub
         self._control_stub = NavigationGrpcControlStub(self._channel)
         for service in self._services:
             service.create_stub(self._channel)
         self._state = self.CONNECTING
-        _logger.info(f"Server stub created on {self._server} => connecting")
+        _logger.info(f"Server stub created on {self._server} => connecting. secure={self._secure}")
         # now attempt a first connection
         request = GrpcCommand()
         request.id = self._req_id

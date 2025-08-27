@@ -14,7 +14,7 @@ server_name: STNC_CAN_Server
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
-# log_file: test_fast_packet
+
 log_module:
   nmea2000.nmea2000_msg: INFO
   can_interface.nmea2k_controller: INFO
