@@ -64,7 +64,8 @@ class GrpcServer(NavigationServer):
         self._end_event = None
         self._wait_lock = threading.Semaphore(0)
         nb_threads = options.get('nb_thread', int, 5)
-        address = "0.0.0.0:%d" % self._port
+        # from 2.7.0 support of dual stack IPV4-IPV6
+        address = f"[::]:{self._port}"
         self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=nb_threads))
         if not self._secure or not MessageServerGlobals.configuration.secure_communications:
             _logger.warning(f"Secure communications not selected for {MessageServerGlobals.server_name}")

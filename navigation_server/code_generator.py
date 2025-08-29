@@ -19,7 +19,7 @@ from navigation_server.nmea2000_datamodel import initialize_feature
 from navigation_server.router_common import set_root_package, init_options, NavigationLogSystem, N2KDefinitionError
 from navigation_server.code_generation import nmea2000_gen_meta, ProtobufPGNGenerator, PythonPGNGenerator
 
-_version = "V2.2"
+_version = "V2.3"
 
 
 def _parser():
@@ -28,7 +28,7 @@ def _parser():
     p.add_argument('-d', '--python_dir', action='store', type=str, help="Python output directory",
                    default="./navigation_server/generated")
     p.add_argument('-po', '--protobuf_dir', action='store', type=str, help="Protobuf output directory",
-                   default="./navigation_server/protobuf")
+                   default="./protobuf")
     p.add_argument('-pb', '--protobuf', action="store_true", help="generate protobuf definitions")
     p.add_argument('-py', '--python', action="store_true", help="generate Python code")
     p.add_argument('-cv', '--protobuf_conv', action="store_true", help="generate Python <-> Protobuf conversion")

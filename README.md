@@ -106,9 +106,11 @@ To overcome the problem, a specific Python script has been developed (mod_pb2.py
 For any problem encountered, please open an issue in this GitHub repository.
 
 ## Roadmap
-The current stable version is V2.6.1 Documentation is aligned on this version.
+The current stable version is V2.7.0 Documentation is aligned on this version.
 
 From the version 2.5.0 the new STNC800 hardware is supported
+
+From version 2.7.0 gRPC secure communication is available this implies generating certificates for the server and clients. [Secure gRPC](doc/gRPC_secure_communication.md)
 
 ## Contributing
 

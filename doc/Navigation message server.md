@@ -182,12 +182,13 @@ Server for NMEA information and other navigation information using the gRPC prot
 Each of these services corresponds to one *service* in a gRPC/Protobuf definition file (.proto).
 Some services are explicitly defined in the configuration file (Console service, for instance), while some others are implicitly defined by Couplers or other entities.
 
-| Name      | Type | Default | Signification                                                 |
-|-----------|------|---------|---------------------------------------------------------------|
-| port      | int  | 4502    | listening port of the server                                  |
-| nb_thread | int  | 5       | Number of thread in the pool to process simultaneous requests |
+| Name      | Type    | Default | Signification                                                 |
+|-----------|---------|---------|---------------------------------------------------------------|
+| port      | int     | 4502    | listening port of the server                                  |
+| nb_thread | int     | 5       | Number of thread in the pool to process simultaneous requests |
+| secure    | boolean | False   | Indicates that the server is using secure communication (TLS) |
 
-
+*note*: To enable TLS communication for the server, the **grpc_secure** global flag must be true and the corresponding certificates needs to be setup accordingly. See [gPRC secure communication](gRPC_secure_communication.md)
 
 #### ShipModulConfig server
 
@@ -399,7 +400,7 @@ The coupler sends NMEA2000 messages to the CAN server using CAN service (see n2k
 
 The services are attached to the gRPC server that is declared and running in the process. If no gRPC server is declared, then all services definition and creation will fail
 All services to have a dedicated gRPC interface described in **Protobuf** language. All interfaces description files are located in the src/proto directory.
-All services must be associated with a gRPC server (one per process)
+All services must be associated with a gRPC server (one per process). They all inherit from the **GrpcService class**.
 
 
 | Name             | Type   | Default | Signification                                                                  |
@@ -752,7 +753,9 @@ The global section includes the definition of the following global parameters:
 | nmea2000_xml           | string                   | ./def/PGNDefns.N2kDfn.xml      | XML file containing NMEA2000 PGN definitions                                                               |
 | trace_dir              | string                   | /var/log                       | Directory where all the traces and logs will be stored                                                     |
 | log_file               | string                   | None                           | Filename for all program traces, if None stderr is used instead                                            |
+| secure_grpc            | boolean                  | False                          | Activate gRPC over TLS initialization                                                                      |
 | connect_agent          | boolean                  | True                           | Indicates if the process is connecting to the agent. false for standalone tests                            |
+| unsecure_agent         | boolean                  | False                          | Attempt to connect to the agent using unsecured channel                                                    |
 | debug_configuration    | boolean                  | False                          | Allow debug traces during the process configuration phase                                                  |
 | decode_definition_only | boolean                  | False                          | If set true then the process stops once fully configured. To be used to test and debug configuration files |
 
@@ -794,10 +797,11 @@ Here are the features included with the current version
 | couplers         | Non CAN couplers              |                                                      |  
 | can_interface    | direct CAN interface          | NMEA2000 Active controller, CANCoupler               |
 | agent            | Linux agent service           | Implementation of the Linux Agent                    |
+| network          | Network agent                 | Control of network interfaces                        |
 | gnss             | GNSS service                  | STNC800 GNSS module interface and management         |
 | nmea2000_devices | NMEA2000 devices (code)       | Using pre_defined NMEA2000 devices (as applications) |
 
-
+ 
 
 #### Exemple configuration files
 
@@ -922,9 +926,14 @@ Server can be launched from anywhere but must use helpers that are using the cor
 - run_server <configuration.yml>: that is starting a navigation server using the specified configuration
 - run_script <python script> <parameters>: launch any script in the navigation server environment. Useful for development and test individual features
 
-### Starting using systemd
+### Starting and controlling processes using the AgentService
 
-For flexibility, the servers can be controlled by systemd, either started by systemd itself or by the agent.
+The simplest solution to launch and control all processes in the navigation server processes using the [AgentService](agent-network.md).
+In that case, only the *navigation_agent* service is automatically started upon Linux system start. The other processes are controlled by the AgentService.
+
+### Using systemd
+
+It is recommended to integrate the servers in systemd by creating a service for each of them.
 
 here is a sample service file
 ```service

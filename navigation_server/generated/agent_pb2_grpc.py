@@ -3,9 +3,11 @@
 import grpc
 import warnings
 
-import navigation_server.generated.agent_pb2 as agent__pb2
+import navigation_server.generated navigation_server.generated.agent_pb2 as agent__pb2
 
-import navigation_server.generated.services_server_pb2 as services__server__pb2
+
+import navigation_server.generated navigation_server.generated.services_server_pb2 as services__server__pb2
+
 
 
 GRPC_GENERATED_VERSION = '1.66.2'

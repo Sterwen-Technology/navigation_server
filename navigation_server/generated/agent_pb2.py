@@ -22,7 +22,8 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-import navigation_server.generated.services_server_pb2 as services__server__pb2
+import navigation_server.generated navigation_server.generated.services_server_pb2 as services__server__pb2
+
 
 
 
