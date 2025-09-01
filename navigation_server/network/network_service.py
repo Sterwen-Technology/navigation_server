@@ -65,6 +65,10 @@ class NetworkInterface:
         return self._params['device']
 
     @property
+    def support_ssl(self) -> bool:
+        return self._params.get('support_ssl', False)
+
+    @property
     def connection(self):
         return self._connection
 
@@ -103,6 +107,16 @@ class NetworkInterface:
         self._connection = value
         self._connection.network_connection = self._network_connection
         # now lets get
+
+    @property
+    def ipv4_address(self):
+        if self._network_connection is not None:
+            return self._network_connection.ipv4_address
+        elif self._connection is not None:
+            return self._connection.ipv4_address
+        else:
+            return None
+
 
     def set_protobuf(self, pb_interface: NetInterface):
         pb_interface.name = self._name
@@ -168,6 +182,13 @@ class NetworkInterfaceConnection:
     def network_connection(self):
         return self._network_connection
 
+    @property
+    def ipv4_address(self):
+        if self._network_connection is not None:
+            return self._network_connection.ipv4_address
+        else:
+            return self._params.get('ipv4_address', None)
+
     @network_connection.setter
     def network_connection(self, value):
         self._network_connection = value
@@ -195,6 +216,7 @@ class NetworkInterfaceConnection:
 
 
 InterfaceConfiguration = namedtuple('InterfaceConfiguration', ['interface', 'connection'])
+InterfaceSSLConfiguration = namedtuple('InterfaceSSLConfiguration', ['interface', 'function', 'address'])
 
 class NetworkConfiguration:
 
@@ -376,6 +398,7 @@ class NetworkService(GrpcService):
     def __init__(self, opts):
         super().__init__(opts)
         self._configuration_file = opts.get('configuration', str, 'network_conf.yml')
+        self._gen_ssl = opts.get('gen_ssl', bool, False)
         self._network_manager = NetworkManagerControl()
         self._modem_manager = ModemControl()
         self._servicer = None
@@ -384,6 +407,7 @@ class NetworkService(GrpcService):
         self._connections = {}
         self._configurations = {}
         self.read_configuration()
+        self._saved_network_state = None
 
 
     @property
@@ -402,6 +426,12 @@ class NetworkService(GrpcService):
     def configuration_names(self):
         return self._configurations.keys()
 
+    def interface_from_type(self, interface_type:str):
+        for interface in self._interfaces.values():
+            if interface.type == interface_type:
+                return interface
+        return None
+
     def finalize(self):
         try:
             super().finalize()
@@ -419,13 +449,69 @@ class NetworkService(GrpcService):
             return
         _logger.info("NetworkManager running state: %s" % self._network_manager.nm_running)
         self._network_manager.get_networking_conf()
-        if self._interfaces.get('cellular', None) is not None:
+        # let's see if we have to manage a modem
+        if self.interface_from_type('cellular') is not None:
             if not self._modem_manager.detect():
                 # ok the modem is not yet showing up
                 _logger.info("No modem detected yet => starting power-on sequence")
                 self._modem_manager.power_on_sequence(self.modem_update)
         self.update_configuration()
-        # let's see if we have to manage a modem
+        # do we have to configure SSL on interfaces
+        if self._gen_ssl:
+            certificate_dir = get_global_var('certificate_dir')
+            if certificate_dir is None:
+                _logger.error("Missing certificate_dir global variable")
+                return
+            try:
+                with open(os.path.join(certificate_dir, 'ssl_network_state'), 'r') as fp:
+                    self._saved_network_state = yaml.safe_load(fp)
+            except FileNotFoundError:
+                _logger.info("No saved network state found")
+            except yaml.YAMLError as e:
+                _logger.error(f"NetworkService error decoding saved network state file: {e}")
+
+            intf_ssl_list = []
+            need_to_generate = False
+            for interface in self.interfaces():
+                if interface.support_ssl:
+                    intf_ssl_def = InterfaceSSLConfiguration(interface.name, interface.function, interface.ipv4_address)
+                    if self._saved_network_state is not None:
+                        intf_ssl_save = self._saved_network_state.get(interface.name, None)
+                        if intf_ssl_save is not None:
+                            if intf_ssl_save.ipv4_address == interface.ipv4_address and intf_ssl_save.function == interface.function:
+                               continue
+                            else:
+                                need_to_generate = True
+                                _logger.info(f"NetworkService interface {interface.name} ipv4_address changed from {intf_ssl_save.ipv4_address} to {interface.ipv4_address}")
+                            intf_ssl_list.append(intf_ssl_def)
+                    else:
+                        need_to_generate = True
+                        intf_ssl_list.append(intf_ssl_def)
+            if need_to_generate and len(intf_ssl_list) > 0:
+                # ok, then we need to generate a new file
+                with open(os.path.join(certificate_dir, 'nav_openssl.conf'), 'w') as fp:
+                    fp.write("""[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+CN = localhost  # CN is required but can be localhost
+
+[v3_req]
+keyUsage = critical, keyEncipherment, dataEncipherment, digitalSignature
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]\n""")
+                    index_if = 1
+                    network_state = {}
+                    for intf_ssl_def in intf_ssl_list:
+                        fp.write(f"IP.{index_if} = {intf_ssl_def.ipv4_address}\n")
+                        network_state[intf_ssl_def.name] = intf_ssl_def
+                        index_if += 1
+                    with open(os.path.join(certificate_dir, 'ssl_network_state'), 'w') as fp2:
+                        yaml.safe_dump(network_state, fp2)
 
 
     def read_configuration(self):
