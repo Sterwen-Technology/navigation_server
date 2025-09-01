@@ -71,37 +71,43 @@ class NetworkServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def set_configuration(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """set the configuration for one interface
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def get_configuration(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """get the configuration for one interface => not implemented in 2.6.1
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def set_global_configuration(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Apply a configuration on all interfaces
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def get_network_status(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Get a full view on the network configuration
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def interface_command(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """send command on the interface (delete, up, down connection)
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def get_configuration_base(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """get parameters from the configuration defined in the agent file (partial implementation in 2.6.1)
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')

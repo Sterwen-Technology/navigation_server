@@ -89,7 +89,7 @@ class ProcessABC:
         self._name = opts.get('name', str, 'incognito')
         self._follow = opts.get('follow', str, None)
         self._post = opts.get_choice('post', ['wait', 'delay', 'none'], 'none')
-        self._autostart = opts.get('autostart', bool, True)
+        self._autostart = opts.get('autostart', bool, False)
         self._controlled = opts.get('controlled', bool, True)
         self._state = self.NOT_STARTED
         self._process_msg = None
@@ -553,6 +553,7 @@ class AgentService(GrpcService):
     def start_processes(self):
         processes = list(self._processes.values())
         for process in processes:
+            _logger.info(f"Agent starting process {process.name} autostart={process.autostart}")
             code = process.status()
             if code == 4:
                 # unknown service

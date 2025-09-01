@@ -102,6 +102,8 @@ class NetworkDevice:
     state: str
     connection: str = None
 
+
+
 ConnParameterRef = namedtuple('ConnParameterRef', ['name', 'value'])
 
 general_parameters = [
@@ -113,7 +115,7 @@ general_parameters = [
     ConnParameterRef('ipv4_method', 'ipv4.method'),
     ConnParameterRef('ipv4_address', 'IP4.ADDRESS[1]'),
     ConnParameterRef('ipv6_method', 'ipv6.method'),
-    ConnParameterRef('ipv6_address', 'IP6.ADDRESS[1]'),
+    ConnParameterRef('ipv6_address', 'IP6.ADDRESS[3]'),
     ConnParameterRef('ipv4_gateway', 'IP4.GATEWAY'),
 ]
 
@@ -189,6 +191,17 @@ class NetworkConnection:
     def name(self):
         return self._name
 
+    @property
+    def ipv4_address(self) -> str:
+        address = self._properties.get('ipv4_address', None)
+        if address is not None:
+            isl = address.find('/')
+            if isl != -1:
+                address = address[:isl]
+            return address
+        else:
+            raise ValueError("No ipv4_address property")
+
     def get_property(self, key):
         return self._properties[key]
 
@@ -258,7 +271,12 @@ class NetworkManagerControl:
 
         for d in nmcli_request(["device"]):
             if d[1] in {'ethernet', 'wifi', 'gsm'}:
-                dev = NetworkDevice(d[0], d[1], d[2], d[3])
+                # filter the state
+                def state(value):
+                    if (ip_o := value.find('(')) != -1:
+                        value = value[:ip_o].rstrip(' ')
+                    return value
+                dev = NetworkDevice(d[0], d[1], state(d[2]), d[3])
                 _logger.debug(f"nmcli Device detected {dev})")
                 self._devices[dev.name] = dev
 
@@ -284,6 +302,12 @@ class NetworkManagerControl:
                     ip_o = line[1].find('(')
                     ip_c = line[1].find(')')
                     device_state = line[1][ip_o+1:ip_c] if ip_o != -1 and ip_c != -1 else line[1]
+                    # refilter is necessary
+                    def state(value):
+                        if (ip_o := value.find('(')) != -1:
+                            value = value[:ip_o].rstrip(' ')
+                        return value
+                    device_state = state(device_state)
                 case 'GENERAL.CONNECTION':
                     _logger.debug(f"Device {device_name} connection {line[1]}")
                     if len(line) > 1 and len(line[1]) > 0:
@@ -347,6 +371,9 @@ class NetworkManagerControl:
                 conn.add_property(key, value)
 
     def create_connection(self, name:str, device_name:str, connection_type:str, params:dict) -> str:
+        if name in self._connections:
+            _logger.error(f"NetworkInterface create_connection: connection {name} already exists")
+            raise NetworkManagerError(100, f"NetworkManager error => connection {name} already exists")
         try:
             device = self.get_device(device_name)
         except KeyError:
@@ -374,9 +401,14 @@ class NetworkManagerControl:
             _logger.error(f"NetworkInterface create_connection: nmcli error for connection {name}")
             raise
         self.device_update_connection(device.name, name)
-        # self.read_network_connection(device, name)
-        nmcli_command(['conn', 'up', name])
-        self.read_device_configuration(device.name, device.type)
+        # now we have a connection ready
+        self.read_network_connection(device, name)
+
+        try:
+            nmcli_command(['conn', 'up', name])
+            self.read_device_configuration(device.name, device.type)
+        except NetworkManagerError as err:
+            _logger.error(f"NetworkInterface create_connection: nmcli error for connection {name}:{err}")
         return ret_val
 
     def gen_ethernet_parameters(self, function, params) -> list:

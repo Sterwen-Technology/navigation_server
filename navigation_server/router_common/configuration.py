@@ -300,6 +300,7 @@ class NavigationConfiguration:
         if self._secure_grpc:
             _logger.info("Secure GRPC enabled")
             certificate_dir = os.path.join(settings_path, 'certificates')
+            self.set_global('certificate_dir', certificate_dir)
             if os.path.isdir(certificate_dir):
                 cert_file = os.path.join(certificate_dir, 'nav_ca_cert.pem')
                 if os.path.isfile(cert_file):

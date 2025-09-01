@@ -22,11 +22,14 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-import navigation_server.generated.iso_name_pb2 as iso__name__pb2
+import navigation_server.generated navigation_server.generated.iso_name_pb2 as iso__name__pb2
 
-import navigation_server.generated.nmea2000_classes_iso_gen_pb2 as nmea2000__classes__iso__gen__pb2
 
-import navigation_server.generated.nmea2000_pb2 as nmea2000__pb2
+import navigation_server.generated navigation_server.generated.nmea2000_classes_iso_gen_pb2 as nmea2000__classes__iso__gen__pb2
+
+
+import navigation_server.generated navigation_server.generated.nmea2000_pb2 as nmea2000__pb2
+
 
 
 

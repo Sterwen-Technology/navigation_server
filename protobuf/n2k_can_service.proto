@@ -15,14 +15,15 @@ import "iso_name.proto";
 import "nmea2000_classes_iso_gen.proto";
 import "nmea2000.proto";
 
+// Message representing CAN/NMEA2000 device
 message N2KDeviceMsg {
-  uint32 address=1;
-  bool changed=2;
-  bool is_proxy=7;      // indicate that the device is local or not to the CAN controller
-  float last_time_seen=3;
-  ISOName iso_name=4;
-  Pgn126996ClassPb product_information=5;
-  Pgn126998ClassPb configuration_information=6;
+  uint32 address=1;       // CAN address 0-253
+  bool changed=2;         // True if the device has changed or has appeared since last call to the server
+  bool is_proxy=7;        // indicate that the device is local or not to the CAN controller
+  float last_time_seen=3; // Epoch seconds
+  ISOName iso_name=4;     // Unique identifier of the Device  see J1939
+  Pgn126996ClassPb product_information=5;       // NMEA2000 PGN126996 content
+  Pgn126998ClassPb configuration_information=6; // NMEA2000 PGN126998 content
 }
 
 message CAN_ControllerMsg {
@@ -31,7 +32,7 @@ message CAN_ControllerMsg {
   float incoming_rate = 3;
   float outgoing_rate = 4;
   bool traces_on=5;
-  repeated N2KDeviceMsg devices=6;
+  repeated N2KDeviceMsg devices=6;    // All devices seen by the controller
 }
 
 message CANRequest{
@@ -45,6 +46,7 @@ message CANAck {
   uint32 error=3;
 }
 
+//
 message CANReadRequest{
   uint32 id=1;
   string client=2;  // client identification
@@ -56,7 +58,7 @@ message CANReadRequest{
 
 message CANSendRequest {
   uint32 id=1;
-  string device=2;  // that is the device name that shall send the message. Shall be created on the CAN server
+  string device=2;  // that is the device name that shall send the message. Shall be created on the CAN server in the configuration file
   nmea2000pb n2k_msg = 3;  // that is the actual message (encoded) to be sent
 }
 

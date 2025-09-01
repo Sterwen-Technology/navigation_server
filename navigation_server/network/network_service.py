@@ -10,6 +10,7 @@
 
 import logging
 import yaml
+import json
 import os.path
 from collections import namedtuple
 
@@ -65,6 +66,13 @@ class NetworkInterface:
         return self._params['device']
 
     @property
+    def support_ssl(self) -> bool:
+        if self._connection is not None:
+            return self._connection.support_ssl
+        else:
+            return False
+
+    @property
     def connection(self):
         return self._connection
 
@@ -103,6 +111,23 @@ class NetworkInterface:
         self._connection = value
         self._connection.network_connection = self._network_connection
         # now lets get
+
+    @property
+    def ipv4_address(self):
+        if self._network_connection is not None:
+            return self._network_connection.ipv4_address
+        elif self._connection is not None:
+            return self._connection.ipv4_address
+        else:
+            raise ValueError(f"NetworkInterface {self._name} has no connection")
+
+    @property
+    def function(self):
+        if self._connection is None:
+            raise ValueError(f"NetworkInterface {self._name} has no connection")
+        else:
+            return self._connection.function
+
 
     def set_protobuf(self, pb_interface: NetInterface):
         pb_interface.name = self._name
@@ -165,8 +190,24 @@ class NetworkInterfaceConnection:
         return self._type
 
     @property
+    def support_ssl(self) -> bool:
+        return self._params.get('support_ssl', False)
+
+    @property
     def network_connection(self):
         return self._network_connection
+
+    @property
+    def ipv4_address(self):
+        if self._network_connection is not None:
+            address = self._network_connection.ipv4_address
+        else:
+            address = self._params.get('ipv4_address', None)
+        if address is not None:
+            isl = address.find('/')
+            if isl > 0:
+                address = address[:isl]
+        return address
 
     @network_connection.setter
     def network_connection(self, value):
@@ -191,10 +232,8 @@ class NetworkInterfaceConnection:
             raise ValueError(f"NetworkInterface connection {self._name} is missing network connection")
 
 
-
-
-
 InterfaceConfiguration = namedtuple('InterfaceConfiguration', ['interface', 'connection'])
+InterfaceSSLConfiguration = namedtuple('InterfaceSSLConfiguration', ['interface', 'function', 'ipv4_address'])
 
 class NetworkConfiguration:
 
@@ -376,6 +415,7 @@ class NetworkService(GrpcService):
     def __init__(self, opts):
         super().__init__(opts)
         self._configuration_file = opts.get('configuration', str, 'network_conf.yml')
+        self._gen_ssl = opts.get('generate_ssl', bool, False)
         self._network_manager = NetworkManagerControl()
         self._modem_manager = ModemControl()
         self._servicer = None
@@ -383,7 +423,11 @@ class NetworkService(GrpcService):
         self._interfaces = {}
         self._connections = {}
         self._configurations = {}
+        self._saved_network_state = None
+        self._apply_default = False
+        # shall be last
         self.read_configuration()
+
 
 
     @property
@@ -402,6 +446,12 @@ class NetworkService(GrpcService):
     def configuration_names(self):
         return self._configurations.keys()
 
+    def interface_from_type(self, interface_type:str):
+        for interface in self._interfaces.values():
+            if interface.type == interface_type:
+                return interface
+        return None
+
     def finalize(self):
         try:
             super().finalize()
@@ -419,13 +469,99 @@ class NetworkService(GrpcService):
             return
         _logger.info("NetworkManager running state: %s" % self._network_manager.nm_running)
         self._network_manager.get_networking_conf()
-        if self._interfaces.get('cellular', None) is not None:
+        # let's see if we have to manage a modem
+        if self.interface_from_type('cellular') is not None:
             if not self._modem_manager.detect():
                 # ok the modem is not yet showing up
                 _logger.info("No modem detected yet => starting power-on sequence")
                 self._modem_manager.power_on_sequence(self.modem_update)
         self.update_configuration()
-        # let's see if we have to manage a modem
+        # check that all interfaces have a connection
+        for interface in self.interfaces():
+            if interface.connection is None:
+                _logger.info(f"NetworkService interface {interface.name} has no connection")
+                if self._apply_default:
+                    _logger.info(f"NetworkService interface {interface.name} applying default connection")
+                    try:
+                        connection = self.connection_in_configuration('default', interface)
+                        self.apply_connection(interface, connection)
+                    except NetworkManagerError as e:
+                        _logger.error(f"NetworkService error applying default connection for interface {interface.name}: {e}")
+                        continue
+                    except KeyError:
+                        _logger.error(f"NetworkService interface {interface.name} default connection not found")
+                        continue
+
+        # do we have to configure SSL on interfaces
+        if self._gen_ssl:
+            _logger.info("Generating SSL certificates and configuration files for interfaces with support_ssl=True")
+            certificate_dir = get_global_var('certificate_dir')
+            if certificate_dir is None:
+                _logger.error("Missing certificate_dir global variable")
+                return
+            try:
+                with open(os.path.join(certificate_dir, 'ssl_network_state'), 'r') as fp:
+                    network_state = json.load(fp)
+                    self._saved_network_state = {}
+                    for state in network_state:
+                        self._saved_network_state[state[0]] = InterfaceSSLConfiguration(state[0], state[1], state[2])
+            except FileNotFoundError:
+                _logger.info("No saved network state found")
+            except yaml.YAMLError as e:
+                _logger.error(f"NetworkService error decoding saved network state file: {e}")
+
+            intf_ssl_list = []
+            need_to_generate = False
+            for interface in self.interfaces():
+                if interface.support_ssl:
+                    _logger.debug(f"NetworkService interface {interface.name} support_ssl=True")
+                    try:
+                        intf_ssl_def = InterfaceSSLConfiguration(interface.name, interface.function, interface.ipv4_address)
+                    except ValueError as err:
+                        _logger.error(f"NetworkService interface {interface.name} error:{err}")
+                        continue
+                    if self._saved_network_state is not None:
+                        intf_ssl_save = self._saved_network_state.get(interface.name, None)
+                        if intf_ssl_save is not None:
+                            if intf_ssl_save.ipv4_address == interface.ipv4_address and intf_ssl_save.function == interface.function:
+                               _logger.debug(f"NetworkService interface {interface.name} ipv4_address unchanged")
+                            else:
+                                need_to_generate = True
+                                _logger.info(f"NetworkService interface {interface.name} ipv4_address changed from {intf_ssl_save.ipv4_address} to {interface.ipv4_address}")
+                        else:
+                            need_to_generate = True
+                    else:
+                        need_to_generate = True
+                    # need to add the interface in all cases
+                    intf_ssl_list.append(intf_ssl_def)
+
+            if need_to_generate and len(intf_ssl_list) > 0:
+                # ok, then we need to generate a new file
+                _logger.info("Generating SSL configuration files")
+                with open(os.path.join(certificate_dir, 'nav_openssl.cnf'), 'w') as fp:
+                    fp.write("""# This file is generated automatically do not modify
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+CN = localhost  # CN is required but can be localhost
+
+[v3_req]
+keyUsage = critical, keyEncipherment, dataEncipherment, digitalSignature
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]\n""")
+                    index_if = 1
+                    network_state = []
+                    for intf_ssl_def in intf_ssl_list:
+                        fp.write(f"IP.{index_if} = {intf_ssl_def.ipv4_address}\t# {intf_ssl_def.interface}\n")
+                        network_state.append((intf_ssl_def.interface,  intf_ssl_def.function, intf_ssl_def.ipv4_address))
+                        index_if += 1
+                    with open(os.path.join(certificate_dir, 'ssl_network_state'), 'w') as fp2:
+                        json.dump(network_state, fp2)
 
 
     def read_configuration(self):
@@ -490,6 +626,7 @@ class NetworkService(GrpcService):
             configuration = NetworkConfiguration(self, name, params)
             self._configurations[name] = configuration
 
+        self._apply_default = self._configuration.get('apply_default_connections', False)
 
     def update_configuration(self):
         """
@@ -557,12 +694,9 @@ class NetworkService(GrpcService):
 
     def apply_connection(self, interface: NetworkInterface, connection: NetworkInterfaceConnection) -> str:
         _logger.debug(f"NetworkService applying connection {connection.name} for interface {interface.name}")
-        if interface.state == "unmanaged":
-            _logger.info(f"NetworkService interface {interface.name} device {interface.device} is unmanaged")
-            raise NetworkManagerError(110, f"Interface {interface.name} is unmanaged")
         device = self._network_manager.get_device(interface.device)
         _logger.debug(f"NetworkService interface {interface.name} device {interface.device} state {device.state} => {device.connection}")
-        if device.state == 'connected':
+        if device.state == 'connected' or device.state == 'connecting':
             if device.connection != connection.name:
                 _logger.info(f"NetworkService actual connection for interface {interface.name} is {device.connection} => deleted")
                 # lets delete it
@@ -570,6 +704,19 @@ class NetworkService(GrpcService):
             else:
                 _logger.info(f"NetworkService interface {interface.name} device {interface.device} connection {device.connection} already set")
                 return f"NetworkService interface {interface.name} device {interface.device} connection {device.connection} already set"
+        elif device.state == "unmanaged":
+            _logger.info(f"NetworkService interface {interface.name} device {interface.device} is unmanaged")
+            raise NetworkManagerError(110, f"Interface {interface.name} is unmanaged")
+        elif device.state == 'disconnected':
+            _logger.info(f"NetworkService interface {interface.name} device {interface.device} is disconnected")
+            # we need to check that there no existing connection
+            try:
+                conn = self._network_manager.get_connection(connection.name)
+            except KeyError:
+                _logger.debug(f"NetworkService interface {interface.name} device {interface.device} connection {connection.name} not found")
+            else:
+                _logger.info(f"NetworkService interface {interface.name} device {interface.device} connection {connection.name} already exists")
+                return f"NetworkService interface {interface.name} device {interface.device} connection {connection.name} already exists"
         # now we need to create the correct connection for the interface
         _logger.info(
             f"NetworkService creating connection {connection.name} for interface {interface.name} device {interface.device} with:{connection.params}")
@@ -606,3 +753,4 @@ class NetworkService(GrpcService):
         ret_val = self._network_manager.down_connection(interface.network_connection)
         self.update_interface(interface)
         return ret_val
+
