@@ -3,11 +3,9 @@
 import grpc
 import warnings
 
-import navigation_server.generated navigation_server.generated.n2k_can_service_pb2 as n2k__can__service__pb2
+import navigation_server.generated.n2k_can_service_pb2 as n2k__can__service__pb2
 
-
-import navigation_server.generated navigation_server.generated.nmea2000_pb2 as nmea2000__pb2
-
+import navigation_server.generated.nmea2000_pb2 as nmea2000__pb2
 
 
 GRPC_GENERATED_VERSION = '1.66.2'

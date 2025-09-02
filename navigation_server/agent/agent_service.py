@@ -186,6 +186,8 @@ class SystemdProcess(ProcessABC):
                 return code
             elif not self._start_event.wait(20.0):
                 _logger.error(f"Agent - systemd process {self._service} did not start within 20s")
+                # let's set a stable situation
+                self.stop()
                 return -1
             else:
                 _logger.info(f"Agent - service {self._service} successfully started")

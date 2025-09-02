@@ -13,6 +13,7 @@ import yaml
 import json
 import os.path
 from collections import namedtuple
+from socket import gethostname
 
 _logger = logging.getLogger('ShipDataServer.' + __name__)
 
@@ -416,6 +417,8 @@ class NetworkService(GrpcService):
         super().__init__(opts)
         self._configuration_file = opts.get('configuration', str, 'network_conf.yml')
         self._gen_ssl = opts.get('generate_ssl', bool, False)
+        self._restart_ssl_config = opts.get('restart_ssl', bool, False)
+        self._ipv6_ssl = opts.get('ipv6_ssl', bool, False)
         self._network_manager = NetworkManagerControl()
         self._modem_manager = ModemControl()
         self._servicer = None
@@ -494,75 +497,7 @@ class NetworkService(GrpcService):
 
         # do we have to configure SSL on interfaces
         if self._gen_ssl:
-            _logger.info("Generating SSL certificates and configuration files for interfaces with support_ssl=True")
-            certificate_dir = get_global_var('certificate_dir')
-            if certificate_dir is None:
-                _logger.error("Missing certificate_dir global variable")
-                return
-            try:
-                with open(os.path.join(certificate_dir, 'ssl_network_state'), 'r') as fp:
-                    network_state = json.load(fp)
-                    self._saved_network_state = {}
-                    for state in network_state:
-                        self._saved_network_state[state[0]] = InterfaceSSLConfiguration(state[0], state[1], state[2])
-            except FileNotFoundError:
-                _logger.info("No saved network state found")
-            except yaml.YAMLError as e:
-                _logger.error(f"NetworkService error decoding saved network state file: {e}")
-
-            intf_ssl_list = []
-            need_to_generate = False
-            for interface in self.interfaces():
-                if interface.support_ssl:
-                    _logger.debug(f"NetworkService interface {interface.name} support_ssl=True")
-                    try:
-                        intf_ssl_def = InterfaceSSLConfiguration(interface.name, interface.function, interface.ipv4_address)
-                    except ValueError as err:
-                        _logger.error(f"NetworkService interface {interface.name} error:{err}")
-                        continue
-                    if self._saved_network_state is not None:
-                        intf_ssl_save = self._saved_network_state.get(interface.name, None)
-                        if intf_ssl_save is not None:
-                            if intf_ssl_save.ipv4_address == interface.ipv4_address and intf_ssl_save.function == interface.function:
-                               _logger.debug(f"NetworkService interface {interface.name} ipv4_address unchanged")
-                            else:
-                                need_to_generate = True
-                                _logger.info(f"NetworkService interface {interface.name} ipv4_address changed from {intf_ssl_save.ipv4_address} to {interface.ipv4_address}")
-                        else:
-                            need_to_generate = True
-                    else:
-                        need_to_generate = True
-                    # need to add the interface in all cases
-                    intf_ssl_list.append(intf_ssl_def)
-
-            if need_to_generate and len(intf_ssl_list) > 0:
-                # ok, then we need to generate a new file
-                _logger.info("Generating SSL configuration files")
-                with open(os.path.join(certificate_dir, 'nav_openssl.cnf'), 'w') as fp:
-                    fp.write("""# This file is generated automatically do not modify
-[req]
-distinguished_name = req_distinguished_name
-req_extensions = v3_req
-prompt = no
-
-[req_distinguished_name]
-CN = localhost  # CN is required but can be localhost
-
-[v3_req]
-keyUsage = critical, keyEncipherment, dataEncipherment, digitalSignature
-extendedKeyUsage = serverAuth
-subjectAltName = @alt_names
-
-[alt_names]\n""")
-                    index_if = 1
-                    network_state = []
-                    for intf_ssl_def in intf_ssl_list:
-                        fp.write(f"IP.{index_if} = {intf_ssl_def.ipv4_address}\t# {intf_ssl_def.interface}\n")
-                        network_state.append((intf_ssl_def.interface,  intf_ssl_def.function, intf_ssl_def.ipv4_address))
-                        index_if += 1
-                    with open(os.path.join(certificate_dir, 'ssl_network_state'), 'w') as fp2:
-                        json.dump(network_state, fp2)
-
+            self.generate_ssl_configuration()
 
     def read_configuration(self):
         try:
@@ -640,6 +575,7 @@ subjectAltName = @alt_names
     def modem_update(self):
         interface = self._interfaces.get('cellular', None)
         if interface is not None:
+            _logger.debug("NetworkService updating modem configuration")
             try:
                 self._network_manager.read_device_configuration(interface.device, 'gsm')
             except NetworkManagerError as e:
@@ -754,3 +690,77 @@ subjectAltName = @alt_names
         self.update_interface(interface)
         return ret_val
 
+    def generate_ssl_configuration(self):
+
+        _logger.info("Generating SSL certificates and configuration files for interfaces with support_ssl=True")
+        certificate_dir = get_global_var('certificate_dir')
+        if certificate_dir is None:
+            _logger.error("Missing certificate_dir global variable")
+            return
+        try:
+            with open(os.path.join(certificate_dir, 'ssl_network_state'), 'r') as fp:
+                network_state = json.load(fp)
+                self._saved_network_state = {}
+                for state in network_state:
+                    self._saved_network_state[state[0]] = InterfaceSSLConfiguration(state[0], state[1], state[2])
+        except FileNotFoundError:
+            _logger.info("No saved network state found")
+        except yaml.YAMLError as e:
+            _logger.error(f"NetworkService error decoding saved network state file: {e}")
+
+        intf_ssl_list = []
+        need_to_generate = False
+        for interface in self.interfaces():
+            if interface.support_ssl:
+                _logger.debug(f"NetworkService interface {interface.name} support_ssl=True")
+                try:
+                    intf_ssl_def = InterfaceSSLConfiguration(interface.name, interface.function, interface.ipv4_address)
+                except ValueError as err:
+                    _logger.error(f"NetworkService interface {interface.name} error:{err}")
+                    continue
+                if self._saved_network_state is not None:
+                    intf_ssl_save = self._saved_network_state.get(interface.name, None)
+                    if intf_ssl_save is not None:
+                        if intf_ssl_save.ipv4_address == interface.ipv4_address and intf_ssl_save.function == interface.function:
+                            _logger.debug(f"NetworkService interface {interface.name} ipv4_address unchanged")
+                        else:
+                            need_to_generate = True
+                            _logger.info(
+                                f"NetworkService interface {interface.name} ipv4_address changed from {intf_ssl_save.ipv4_address} to {interface.ipv4_address}")
+                    else:
+                        need_to_generate = True
+                else:
+                    need_to_generate = True
+                # need to add the interface in all cases
+                intf_ssl_list.append(intf_ssl_def)
+
+        if need_to_generate and len(intf_ssl_list) > 0:
+            # ok, then we need to generate a new file
+            _logger.info("Generating SSL configuration files")
+            with open(os.path.join(certificate_dir, 'nav_openssl.cnf'), 'w') as fp:
+                fp.write("""# This file is generated automatically do not modify
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+CN = localhost  # CN is required but can be localhost
+
+[v3_req]
+keyUsage = critical, keyEncipherment, dataEncipherment, digitalSignature
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]\n""")
+                index_if = 1
+                network_state = []
+                for intf_ssl_def in intf_ssl_list:
+                    fp.write(f"IP.{index_if} = {intf_ssl_def.ipv4_address}\t# {intf_ssl_def.interface}\n")
+                    network_state.append((intf_ssl_def.interface, intf_ssl_def.function, intf_ssl_def.ipv4_address))
+                    index_if += 1
+                # always need to add localhost
+                fp.write(f"IP.{index_if} = 127.0.0.1\t# localhost\n")
+                fp.write(f"DNS.1 = {gethostname()}")
+                with open(os.path.join(certificate_dir, 'ssl_network_state'), 'w') as fp2:
+                    json.dump(network_state, fp2)
