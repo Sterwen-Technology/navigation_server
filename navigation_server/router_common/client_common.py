@@ -183,6 +183,10 @@ class GrpcClient:
         return self._state == self.CONNECTED
 
     @property
+    def secure(self) -> bool:
+        return self._secure
+
+    @property
     def not_connected(self) -> bool:
         return self._state == self.NOT_CONNECTED
 

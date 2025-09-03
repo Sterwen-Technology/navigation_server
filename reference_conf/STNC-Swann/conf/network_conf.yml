@@ -9,7 +9,7 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
-apply_defaults: false
+apply_default_connections: true
 applicable_hardware: STNC800
 
 #  Here we defined the physical interfaces from the system
@@ -40,21 +40,23 @@ connections:
        type: ethernet
        description: "Eth port 0 using DHCP"
        function: WAN_INTERFACE
+       support_ssl: true
 
   - eth-1-lan:
        type: ethernet
        description: "Eth port 1 as LAN with DHCP on address 173.16.2.1"
        function: LAN_CONTROLLER
-       address: 172.16.2.1
+       ipv4_address: 172.16.2.1
 
   - wifi-ap-1:
        type: wifi
        description: "Wifi access point on band 2.4 Ghz with SSID=hostname"
        function: LAN_CONTROLLER
-       address: 172.16.1.1
-       passwd: pmpr23!A
+       ipv4_address: 172.16.1.1
+       password: pmpr23!A
+       support_ssl: true
 
-  - cellular-1:
+  - cellular-2:
        type: cellular
        description: "Cellular access on Orange network"
        function: WAN_INTERFACE
@@ -62,7 +64,7 @@ connections:
        username: orange
        password: orange
 
-  - cellular-2:
+  - cellular-1:
       type: cellular
       description: "Cellular access on ConnectedYou CTYA01 network"
       function: WAN_INTERFACE
@@ -72,7 +74,7 @@ connections:
        type: ethernet
        description: "Eth port 0 as LAN with DHCP on address 173.16.0.1"
        function: LAN_CONTROLLER
-       address: 172.16.0.1
+       ipv4_address: 172.16.0.1
 
 # lastly we define the possible configurations for the networking in this system
 configurations:
@@ -80,12 +82,11 @@ configurations:
   - default:
       ethernet-0: eth-0-wan
       ethernet-1: eth-1-lan
-      cellular: cellular-1
+      cellular: cellular-2
       wifi: wifi-ap-1
 
   - sailing:
-      ethernet-0: eth0-lan
-      ethernet-1: eth1-lan
+      ethernet-0: eth-0-wan
+      ethernet-1: eth-1-lan
       cellular: cellular-1
       wifi: wifi-ap-1
-

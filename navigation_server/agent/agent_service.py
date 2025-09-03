@@ -511,10 +511,7 @@ class AgentServicerImpl(AgentServicer):
         Stop all running services, then stop itself
         Restart to be performed by systemd
         """
-        _logger.info("Start stopping all processes")
-        self._agent.stop_all_processes()
-        _logger.info("All processes stopped => stopping the agent")
-        MessageServerGlobals.main_server.stop_server()
+        MessageServerGlobals.main_server.stop_navigation()
 
     def system_halt(self, resp):
         STNC_D7_Led.green_brightness(0)
@@ -608,6 +605,13 @@ class AgentTopServer(GenericTopServer):
             return True
         else:
             return False
+
+    def stop_navigation(self):
+        self._agent.stop_all_processes()
+        if self._STNC_hardware:
+            STNC_D7_Led.red_brightness(255)
+            STNC_D7_Led.green_brightness(0)
+        self.stop_server()
 
 
 

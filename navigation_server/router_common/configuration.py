@@ -299,6 +299,15 @@ class NavigationConfiguration:
         self._secure_grpc = self._configuration.get('secure_grpc', False)
         if self._secure_grpc:
             _logger.info("Secure GRPC enabled")
+            try:
+                key_dir = self._configuration['ssl_key_dir']
+            except KeyError:
+                _logger.warning("Missing ssl_key_dir in configuration file")
+                key_dir = os.path.join(os.getenv('HOME'), 'certificates')
+            if not os.path.isdir(key_dir):
+                _logger.warning(f"Key directory {key_dir} does not exist => SSL certificate generation disabled")
+            else:
+                self.set_global('ssl_key_dir', key_dir)
             certificate_dir = os.path.join(settings_path, 'certificates')
             self.set_global('certificate_dir', certificate_dir)
             if os.path.isdir(certificate_dir):

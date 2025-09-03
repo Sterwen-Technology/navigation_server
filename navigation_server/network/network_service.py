@@ -14,10 +14,11 @@ import json
 import os.path
 from collections import namedtuple
 from socket import gethostname
+import subprocess
 
 _logger = logging.getLogger('ShipDataServer.' + __name__)
 
-from navigation_server.router_common import GrpcService, GrpcServerError, get_global_var, fill_uuid_protobuf
+from navigation_server.router_common import GrpcService, GrpcServerError, get_global_var, fill_uuid_protobuf, MessageServerGlobals
 from navigation_server.network.nmcli_interface import NetworkManagerControl, NetworkManagerError
 from navigation_server.network.mmcli_interface import ModemControl
 
@@ -497,7 +498,14 @@ class NetworkService(GrpcService):
 
         # do we have to configure SSL on interfaces
         if self._gen_ssl:
-            self.generate_ssl_configuration()
+            if self.generate_ssl_configuration():
+                if self.generate_server_certificates():
+                    if self._restart_ssl_config:
+                        _logger.info(f"Stopping {MessageServerGlobals.server_name} to be restarted with new SSL configuration")
+                        # ok we need to restart the navigation_server assuming AgentTopServer class
+                        MessageServerGlobals.main_server.stop_navigation()
+                    else:
+                        _logger.warning(f"{MessageServerGlobals.server_name} must be restarted after new SSL configuration generated")
 
     def read_configuration(self):
         try:
@@ -690,13 +698,13 @@ class NetworkService(GrpcService):
         self.update_interface(interface)
         return ret_val
 
-    def generate_ssl_configuration(self):
+    def generate_ssl_configuration(self) -> bool:
 
-        _logger.info("Generating SSL certificates and configuration files for interfaces with support_ssl=True")
+        _logger.info("Check if the generation of a new configuration file is necessary")
         certificate_dir = get_global_var('certificate_dir')
         if certificate_dir is None:
             _logger.error("Missing certificate_dir global variable")
-            return
+            return False
         try:
             with open(os.path.join(certificate_dir, 'ssl_network_state'), 'r') as fp:
                 network_state = json.load(fp)
@@ -704,7 +712,7 @@ class NetworkService(GrpcService):
                 for state in network_state:
                     self._saved_network_state[state[0]] = InterfaceSSLConfiguration(state[0], state[1], state[2])
         except FileNotFoundError:
-            _logger.info("No saved network state found")
+            _logger.info(f"No saved network state found: {certificate_dir}/ssl_network_state")
         except yaml.YAMLError as e:
             _logger.error(f"NetworkService error decoding saved network state file: {e}")
 
@@ -733,8 +741,13 @@ class NetworkService(GrpcService):
                     need_to_generate = True
                 # need to add the interface in all cases
                 intf_ssl_list.append(intf_ssl_def)
+        configuration_file = os.path.join(certificate_dir, 'nav_openssl.cnf')
+        if not os.path.isfile(configuration_file):
+            _logger.debug(f"NetworkService configuration file {configuration_file} not found")
+            need_to_generate = True
 
-        if need_to_generate and len(intf_ssl_list) > 0:
+        if need_to_generate:
+            _logger.info("Generating SSL certificates and configuration files for interfaces")
             # ok, then we need to generate a new file
             _logger.info("Generating SSL configuration files")
             with open(os.path.join(certificate_dir, 'nav_openssl.cnf'), 'w') as fp:
@@ -764,3 +777,52 @@ subjectAltName = @alt_names
                 fp.write(f"DNS.1 = {gethostname()}")
                 with open(os.path.join(certificate_dir, 'ssl_network_state'), 'w') as fp2:
                     json.dump(network_state, fp2)
+        else:
+            _logger.debug("NetworkService SSL configuration not required")
+
+        return need_to_generate
+
+    def generate_server_certificates(self):
+        _logger.info("Generating server certificates")
+        certificate_dir = get_global_var('certificate_dir')
+        if certificate_dir is None:
+            _logger.error("Missing certificate_dir global variable")
+            return False
+        key_dir = get_global_var('ssl_key_dir')
+        if key_dir is None:
+            _logger.error("Missing ssl_key_dir global variable")
+            return False
+        server_ca_certificate = os.path.join(certificate_dir, 'nav_ca_cert.pem')
+        server_ca_key = os.path.join(key_dir, 'nav_ca_key.pem')
+        _logger.debug(f"key file: {server_ca_key} - certificate file: {server_ca_certificate}")
+        if not os.path.isfile(server_ca_certificate) or not os.path.isfile(server_ca_key):
+            _logger.error("Missing CA key and/or certificate to generate server certificates")
+            return False
+        server_certificate = os.path.join(certificate_dir, 'nav_server_cert.pem')
+        server_key = os.path.join(certificate_dir, 'nav_server_key.pem')
+        server_req = os.path.join(certificate_dir, 'nav_server_req.pem')
+        conf_file = os.path.join(certificate_dir, 'nav_openssl.cnf')
+
+        def run_openssl(cmd: list):
+            _logger.debug(f"NetworkService running openssl command: {cmd}")
+            args = ['openssl'] + cmd
+            try:
+                ret_val = subprocess.run(args, capture_output=True, check=True)
+            except subprocess.CalledProcessError as e:
+                _logger.error(f"NetworkService openssl command failed: {e}")
+                raise ValueError(f"NetworkService openssl command failed: {e}")
+            else:
+                _logger.debug(f"NetworkService openssl command output: {ret_val.stdout}")
+        _logger.info("Generating server certificate")
+
+        try:
+            run_openssl(['genrsa', '-out', server_key, '4096'])
+            run_openssl(['req', '-new', '-key', server_key, '-out', server_req, '-config', conf_file])
+            run_openssl(['x509', '-req', '-days', '365', '-in', server_req, '-CA', server_ca_certificate, '-CAkey',
+                         server_ca_key, '-extfile',conf_file, '-out', server_certificate, '-extensions', 'v3_req'])
+        except ValueError:
+            _logger.error("NetworkService openssl command failed")
+            return False
+
+        # here we shall be good
+        return True

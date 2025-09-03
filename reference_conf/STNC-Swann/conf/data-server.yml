@@ -14,9 +14,10 @@ server_name: Data
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
+secure_grpc: true
 log_module:
     navigation_data.engine_service: INFO
-    router_core.can_grpc_stream_reader: INFO
+    router_common.can_grpc_stream_reader: INFO
     router_common.generic_top_server: INFO
 
 debug_configuration: false
@@ -38,19 +39,14 @@ functions:
 
 - DataSource:
     class: NMEA2000InputConnector
+    server: gRPCMain
     source_server: 127.0.0.1
     source_port: 4512
 
 services:
-
 - Engines:
     class: EngineDataService
     server: gRPCMain
     source: DataSource
-
-
-
-
-
 
 
