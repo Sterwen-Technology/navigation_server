@@ -219,6 +219,11 @@ class NavigationConfiguration:
         self._server_purpose = None
         NavigationConfiguration._instance = self
         MessageServerGlobals.configuration = self
+        self._secure_grpc = False # This is the fleg from the configuration file
+        self._secure_communications = False # That is the resulting flag after reading all certificates
+        self._ca_cert = None
+        self._server_key = None
+        self._server_cert = None
         # self.init_server_globals()
 
     def build_configuration(self, settings_file):
@@ -289,6 +294,45 @@ class NavigationConfiguration:
             _logger.warning(f"Trace directory {trace_dir} not existing => switching to /var/log")
             trace_dir = '/var/log'
         MessageServerGlobals.trace_dir = trace_dir
+
+        # secure communication section
+        self._secure_grpc = self._configuration.get('secure_grpc', False)
+        if self._secure_grpc:
+            _logger.info("Secure GRPC enabled")
+            try:
+                key_dir = self._configuration['ssl_key_dir']
+            except KeyError:
+                _logger.warning("Missing ssl_key_dir in configuration file")
+                key_dir = os.path.join(os.getenv('HOME'), 'certificates')
+            if not os.path.isdir(key_dir):
+                _logger.warning(f"Key directory {key_dir} does not exist => SSL certificate generation disabled")
+            else:
+                self.set_global('ssl_key_dir', key_dir)
+            certificate_dir = os.path.join(settings_path, 'certificates')
+            self.set_global('certificate_dir', certificate_dir)
+            if os.path.isdir(certificate_dir):
+                cert_file = os.path.join(certificate_dir, 'nav_ca_cert.pem')
+                if os.path.isfile(cert_file):
+                    with open(cert_file, 'rb') as f:
+                        self._ca_cert = f.read()
+                else:
+                    _logger.warning(f"Certificate file {cert_file} does not exist")
+                server_cert = os.path.join(certificate_dir, 'nav_server_cert.pem')
+                if os.path.isfile(server_cert):
+                    with open(server_cert, 'rb') as f:
+                        self._server_cert = f.read()
+                else:
+                    _logger.warning(f"Server certificate file {server_cert} does not exist")
+                server_key = os.path.join(certificate_dir, 'nav_server_key.pem')
+                if os.path.isfile(server_key):
+                    with open(server_key, 'rb') as f:
+                        self._server_key = f.read()
+                else:
+                    _logger.warning(f"Server key file {server_key} does not exist")
+                if self._server_cert and self._server_key:
+                    self._secure_communications = True
+        else:
+            _logger.warning("Secure GRPC disabled")
 
         try:
             MessageServerGlobals.agent_address = self._configuration['agent_address']
@@ -526,6 +570,22 @@ class NavigationConfiguration:
             except ConfigurationException as e:
                 _logger.error(str(e))
                 continue
+
+    @property
+    def secure_communications(self):
+        return self._secure_communications
+
+    @property
+    def ca_certificate(self):
+        return self._ca_cert
+
+    @property
+    def server_cert(self):
+        return self._server_cert
+
+    @property
+    def server_key(self):
+        return self._server_key
 
 
 

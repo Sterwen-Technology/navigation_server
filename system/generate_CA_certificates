@@ -1,0 +1,24 @@
+#!/bin/bash
+# The script is generating the Certificate Authority key and certificates
+#
+NAV_KEY_DIR=/data/navigation/config/certificates
+NAV_CA_DIR="$HOME/certificates"
+
+if [ ! -e "$NAV_KEY_DIR" ]
+then
+  mkdir "$NAV_KEY_DIR"
+fi
+
+if [ ! -e "$NAV_CA_DIR" ]
+then
+  mkdir "$NAV_CA_DIR"
+fi
+
+CA_KEY="$NAV_CA_DIR/nav_ca_key.pem"
+CA_CERT="$NAV_KEY_DIR/nav_ca_cert.pem"
+
+# Generate CA private key
+openssl genrsa -out "$CA_KEY" 4096
+
+# Generate self-signed CA certificate (valid for 10 years)
+openssl req -x509 -new -nodes -key "$CA_KEY" -sha256 -days 3650 -out "$CA_CERT" -subj "/CN=STNC CA"

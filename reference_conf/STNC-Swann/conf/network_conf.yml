@@ -9,52 +9,84 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
-apply_defaults: false
+apply_default_connections: true
+applicable_hardware: STNC800
 
+#  Here we defined the physical interfaces from the system
 interfaces:
 
   - ethernet-0:
      device: end0
      type: ethernet
-     default_connection: eth-0
-     default_state: activated
 
   - ethernet-1:
      device: end1
      type: ethernet
-     default_connection: eth-1
-     default_state: activated
 
   - wifi:
      device: wlan0
      type: wifi
-     default_connection: wifi-ap-1
-     default_state: activated
 
   - cellular:
       device: cdc-wdm0
       type: cellular
-      default_connection: cellular-1
-      default_state: deactivated
+      modem_manufacturer: Quectel
+      modem_model: EM05-G
 
-
-
+# now we define all possible connections over the physical interface
 connections:
 
-  - eth-0:
-    function: WAN_INTERFACE
+  - eth-0-wan:
+       type: ethernet
+       description: "Eth port 0 using DHCP"
+       function: WAN_INTERFACE
+       support_ssl: true
 
-  - eth-1:
-    function: LAN_CONTROLLER
-    address: 172.16.2.1
+  - eth-1-lan:
+       type: ethernet
+       description: "Eth port 1 as LAN with DHCP on address 173.16.2.1"
+       function: LAN_CONTROLLER
+       ipv4_address: 172.16.2.1
 
   - wifi-ap-1:
-    function: LAN_CONTROLLER
-    address: 172.16.1.1
+       type: wifi
+       description: "Wifi access point on band 2.4 Ghz with SSID=hostname"
+       function: LAN_CONTROLLER
+       ipv4_address: 172.16.1.1
+       password: pmpr23!A
+       support_ssl: true
 
+  - cellular-2:
+       type: cellular
+       description: "Cellular access on Orange network"
+       function: WAN_INTERFACE
+       apn: orange
+       username: orange
+       password: orange
 
   - cellular-1:
-    function: WAN_INTERFACE
-    apn: orange
-    username: orange
-    password: orange
+      type: cellular
+      description: "Cellular access on ConnectedYou CTYA01 network"
+      function: WAN_INTERFACE
+      apn: move.dataxs.mobi
+
+  - eth0-lan:
+       type: ethernet
+       description: "Eth port 0 as LAN with DHCP on address 173.16.0.1"
+       function: LAN_CONTROLLER
+       ipv4_address: 172.16.0.1
+
+# lastly we define the possible configurations for the networking in this system
+configurations:
+
+  - default:
+      ethernet-0: eth-0-wan
+      ethernet-1: eth-1-lan
+      cellular: cellular-2
+      wifi: wifi-ap-1
+
+  - sailing:
+      ethernet-0: eth-0-wan
+      ethernet-1: eth-1-lan
+      cellular: cellular-1
+      wifi: wifi-ap-1

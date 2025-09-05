@@ -1,0 +1,17 @@
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+CN = localhost  # CN is required but can be localhost
+
+[v3_req]
+keyUsage = critical, keyEncipherment, dataEncipherment, digitalSignature
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+IP.1 = 192.168.88.235   # LAN IP Ethernet
+IP.2 = 172.16.1.1       # WiFi IP
+IP.3 = 127.0.0.1       # localhost

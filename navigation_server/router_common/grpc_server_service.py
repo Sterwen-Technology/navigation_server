@@ -17,7 +17,7 @@ import threading
 import logging
 
 from .server_common import NavigationServer
-from navigation_server.router_common import ConfigurationException
+from navigation_server.router_common import ConfigurationException, MessageServerGlobals
 from .global_variables import resolve_ref
 
 from navigation_server.generated.grpc_control_pb2 import GrpcCommand, GrpcAck
@@ -60,12 +60,22 @@ class GrpcServer(NavigationServer):
         super().__init__(options)
         if self._port == 0:
             raise ValueError
+        self._secure = options.get("secure", bool, False)
         self._end_event = None
         self._wait_lock = threading.Semaphore(0)
         nb_threads = options.get('nb_thread', int, 5)
-        address = "0.0.0.0:%d" % self._port
+        # from 2.7.0 support of dual stack IPV4-IPV6
+        address = f"[::]:{self._port}"
         self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=nb_threads))
-        self._grpc_server.add_insecure_port(address)
+        if not self._secure or not MessageServerGlobals.configuration.secure_communications:
+            _logger.warning(f"Secure communications not selected for {MessageServerGlobals.server_name}")
+            self._grpc_server.add_insecure_port(address)
+        else:
+            _logger.info(f"Secure communications selected for {MessageServerGlobals.server_name}")
+            credentials = grpc.ssl_server_credentials(((MessageServerGlobals.configuration.server_key,
+                                                         MessageServerGlobals.configuration.server_cert), ))
+            self._grpc_server.add_secure_port(address, credentials)
+
         GrpcServer.grpc_server_global = self
         self._running = False
         self._services = []
@@ -105,6 +115,10 @@ class GrpcServer(NavigationServer):
     @property
     def grpc_server(self):
         return self._grpc_server
+
+    @property
+    def secure(self) -> bool:
+        return self._secure
 
     @staticmethod
     def grpc_port() -> int:

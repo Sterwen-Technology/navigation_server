@@ -89,7 +89,7 @@ class ProcessABC:
         self._name = opts.get('name', str, 'incognito')
         self._follow = opts.get('follow', str, None)
         self._post = opts.get_choice('post', ['wait', 'delay', 'none'], 'none')
-        self._autostart = opts.get('autostart', bool, True)
+        self._autostart = opts.get('autostart', bool, False)
         self._controlled = opts.get('controlled', bool, True)
         self._state = self.NOT_STARTED
         self._process_msg = None
@@ -186,6 +186,8 @@ class SystemdProcess(ProcessABC):
                 return code
             elif not self._start_event.wait(20.0):
                 _logger.error(f"Agent - systemd process {self._service} did not start within 20s")
+                # let's set a stable situation
+                self.stop()
                 return -1
             else:
                 _logger.info(f"Agent - service {self._service} successfully started")
@@ -206,7 +208,7 @@ class SystemdProcess(ProcessABC):
                 if idx := line.find('Loaded') >= 0:
                     loaded = True
                 elif (idx := line.find('Active')) >= 0:
-                    print("idx=",idx)
+                    # print("idx=",idx)
                     idx += 8
                     first_space = line.find(' ', idx)
                     state = line[idx: first_space]
@@ -275,7 +277,6 @@ class SimpleProcess(ProcessABC):
         self._run_path = opts.get('run_path', str, None)
         self._process_type = opts.get_choice('process_type', ['shell', 'python', 'other'], 'shell')
         self._arguments = opts.get('arguments', str, '')
-        self._autostart = opts.get('autostart', bool, True)
         self._pid = 0
         self._child = None
         self._console_present = False
@@ -509,10 +510,7 @@ class AgentServicerImpl(AgentServicer):
         Stop all running services, then stop itself
         Restart to be performed by systemd
         """
-        _logger.info("Start stopping all processes")
-        self._agent.stop_all_processes()
-        _logger.info("All processes stopped => stopping the agent")
-        MessageServerGlobals.main_server.stop_server()
+        MessageServerGlobals.main_server.stop_navigation()
 
     def system_halt(self, resp):
         STNC_D7_Led.green_brightness(0)
@@ -540,6 +538,8 @@ class AgentService(GrpcService):
 
     def finalize(self):
         super().finalize()
+        if not self._server.secure:
+            _logger.warning("Agent service is not secure => potential security issue")
         add_AgentServicer_to_server(AgentServicerImpl(self), self.grpc_server)
 
     def add_process(self, process):
@@ -551,6 +551,7 @@ class AgentService(GrpcService):
     def start_processes(self):
         processes = list(self._processes.values())
         for process in processes:
+            _logger.info(f"Agent starting process {process.name} autostart={process.autostart}")
             code = process.status()
             if code == 4:
                 # unknown service
@@ -603,6 +604,13 @@ class AgentTopServer(GenericTopServer):
             return True
         else:
             return False
+
+    def stop_navigation(self):
+        self._agent.stop_all_processes()
+        if self._STNC_hardware:
+            STNC_D7_Led.red_brightness(255)
+            STNC_D7_Led.green_brightness(0)
+        self.stop_server()
 
 
 

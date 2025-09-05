@@ -16,9 +16,9 @@ import sys
 
 from navigation_server.router_common import (NavigationConfiguration, NavigationLogSystem, MessageServerGlobals,
                                              init_options, set_root_package, ConfigurationException, AgentInterface,
-                                             ObjectCreationError, GrpcServer)
+                                             ObjectCreationError, GrpcServer, GrpcClient)
 
-MessageServerGlobals.version = "2.6.0"
+MessageServerGlobals.version = "2.7.0"
 default_base_dir = "/"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -50,6 +50,10 @@ def server_main():
     _logger.info("Navigation server working directory:%s" % os.getcwd())
     # dynamically import modules declared in the configuration file
     config.initialize_features(config)
+    # check security
+    if config.secure_communications and config.ca_certificate is not None:
+        GrpcClient.set_ca_certificate(config.ca_certificate)
+        _logger.info("Secure communications enabled")
     # create all server or service objects
     try:
         config.build_objects()
@@ -68,7 +72,14 @@ def server_main():
         # register the process in agent service if needed
         if not config.main_server.is_agent():
             if config.get_option('connect_agent', True):
-                agent = AgentInterface().send_confirmation()
+                unsecure_agent = config.get_option('unsecure_agent', False)
+                if not unsecure_agent and not config.secure_communications:
+                    _logger.warning("Secure gRPC is disabled but secure agent is set => trying unsecure agent")
+                    unsecure_agent = True
+                elif unsecure_agent and config.secure_communications:
+                    _logger.warning("Secure gRPC is enabled but unsecure agent is set => trying secure agent")
+                    unsecure_agent = False
+                agent = AgentInterface(unsecure_agent).send_confirmation()
         if opts.timer is not None:
             # for debug only trace running threads at a regular interval
             config.main_server.start_analyser(opts.timer)

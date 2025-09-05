@@ -14,6 +14,7 @@ server_name: STNC_Message_Server
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
+secure_grpc: true
 # log_file: test_fast_packet
 log_module:
   router_core.coupler: INFO

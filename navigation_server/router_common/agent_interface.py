@@ -171,8 +171,8 @@ class AgentInterfaceRunner(NavThread):
 
 class AgentInterface:
 
-    def __init__(self):
-        self._server = GrpcClient.get_client(MessageServerGlobals.agent_address)
+    def __init__(self, unsecure=False):
+        self._server = GrpcClient.get_client(MessageServerGlobals.agent_address, secure= not unsecure)
         self._service = AgentClient()
         self._server.add_service(self._service)
         signal.signal(signal.SIGUSR1, self.sigusr1_handler)

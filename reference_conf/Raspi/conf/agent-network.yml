@@ -13,19 +13,30 @@ function: Local system control agent
 server_name: navigation_agent
 log_level: INFO
 trace_dir: /data/solidsense/traces
+data_dir: /data/solidsense/data
+ssl_key_dir: /home/laurent/certificates
+secure_grpc: true
+
 log_module:
+    agent.agent_service: INFO
+    network.nmcli_interface: DEBUG
+    network.network_service: DEBUG
 
 features:
     - agent
+    - network
+
+STNC_hardware: false
 
 servers:
 
 - Main:
-      class: GenericTopServer
+      class: AgentTopServer
 
 - gRPCMain:
     class: GrpcServer
     port: 4545
+    secure: true
 
 services:
 
@@ -33,10 +44,18 @@ services:
     class: AgentService
     server: gRPCMain
 
+- Network:
+    class: NetworkService
+    server: gRPCMain
+    configuration: network_conf.yml
+    generate_ssl: true
+    restart_ssl: true
+    
 processes:
 
 - LogReplayServer:
       class: SimpleProcess
+      autostart: false
 
 
 

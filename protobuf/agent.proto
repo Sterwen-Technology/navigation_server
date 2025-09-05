@@ -13,6 +13,7 @@ syntax = "proto3";
 
 import "services_server.proto";
 
+// Message that carries the full status of the system
 message NavigationSystemMsg {
   uint32 id=1;
   string name=2;
@@ -36,7 +37,7 @@ message AgentResponse {
   // depending on the command the server will reply one more of the following values
   string response = 3;  // string with result or error
   NavigationSystemMsg system=4;
-  repeated SystemProcessMsg processes=5;
+  repeated SystemProcessMsg processes=5;  // For multiple processes responses
   SystemProcessMsg process=6;
   uint32 grpc_port = 7;
   repeated string status_lines = 8;

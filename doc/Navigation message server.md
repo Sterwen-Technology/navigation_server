@@ -182,12 +182,13 @@ Server for NMEA information and other navigation information using the gRPC prot
 Each of these services corresponds to one *service* in a gRPC/Protobuf definition file (.proto).
 Some services are explicitly defined in the configuration file (Console service, for instance), while some others are implicitly defined by Couplers or other entities.
 
-| Name      | Type | Default | Signification                                                 |
-|-----------|------|---------|---------------------------------------------------------------|
-| port      | int  | 4502    | listening port of the server                                  |
-| nb_thread | int  | 5       | Number of thread in the pool to process simultaneous requests |
+| Name      | Type    | Default | Signification                                                 |
+|-----------|---------|---------|---------------------------------------------------------------|
+| port      | int     | 4502    | listening port of the server                                  |
+| nb_thread | int     | 5       | Number of thread in the pool to process simultaneous requests |
+| secure    | boolean | False   | Indicates that the server is using secure communication (TLS) |
 
-
+*Note*: To enable TLS communication for the server, the **grpc_secure** global flag must be true and the corresponding certificates need to be set up accordingly. See [gPRC secure communication](gRPC_secure_communication.md)
 
 #### ShipModulConfig server
 
@@ -343,7 +344,9 @@ The coupler directly manages the device connection and initialization logic. The
 
 #### InternalGps (Coupler)
 
-No additional parameters in this version. The coupler connects to the GNSS receiver via a TTY port. For that coupler class, it is assumed that the GNSS is integrated in a cellular modem. For isolated GNSS receiver the NMEASerialPort class shall be used.
+This is intended to be used to address GPS (GNSS) chip integrated in a cellular modem. For isolated GNSS receiver the NMEASerialPort class shall be used.
+For the GNSS receiver from the STNC800 see [STNC GNSS documentation](stnc-gnss.md)
+No additional parameters in this version. The coupler connects to the GNSS receiver via a TTY port. 
 
 
 #### VEDirectCoupler(Coupler)
@@ -399,7 +402,7 @@ The coupler sends NMEA2000 messages to the CAN server using CAN service (see n2k
 
 The services are attached to the gRPC server that is declared and running in the process. If no gRPC server is declared, then all services definition and creation will fail
 All services to have a dedicated gRPC interface described in **Protobuf** language. All interfaces description files are located in the src/proto directory.
-All services must be associated with a gRPC server (one per process)
+All services must be associated with a gRPC server (one per process). They all inherit from the **GrpcService class**.
 
 
 | Name             | Type   | Default | Signification                                                                  |
@@ -418,11 +421,12 @@ This is a gRPC service used for external monitoring and control of the navigatio
 
 #### AgentService
 
-The Agent service provides a limited but useful remote control of the Linux system on which some servers are running. Protobuf interface is **agent.proto** file.
-
-**Warning: use this service only in a controlled environment as in its current version no access control is implemented**
+The Agent service provides a limited but useful remote control of the Linux system on which some servers are running.
+See [AgentService and Network services](agent-network.md)
 
 #### NetworkService
+
+See [AgentService and Network services](agent-network.md)
 
 #### EngineService
 
@@ -751,7 +755,9 @@ The global section includes the definition of the following global parameters:
 | nmea2000_xml           | string                   | ./def/PGNDefns.N2kDfn.xml      | XML file containing NMEA2000 PGN definitions                                                               |
 | trace_dir              | string                   | /var/log                       | Directory where all the traces and logs will be stored                                                     |
 | log_file               | string                   | None                           | Filename for all program traces, if None stderr is used instead                                            |
+| secure_grpc            | boolean                  | False                          | Activate gRPC over TLS initialization                                                                      |
 | connect_agent          | boolean                  | True                           | Indicates if the process is connecting to the agent. false for standalone tests                            |
+| unsecure_agent         | boolean                  | False                          | Attempt to connect to the agent using unsecured channel                                                    |
 | debug_configuration    | boolean                  | False                          | Allow debug traces during the process configuration phase                                                  |
 | decode_definition_only | boolean                  | False                          | If set true then the process stops once fully configured. To be used to test and debug configuration files |
 
@@ -774,6 +780,7 @@ The following sections are recognized:
 - filters
 - nmea2000_apps
 - functions
+- processes (agent only)
 
 Sections are not mandatory, but if no *features* are declared, only the default Python packages are loaded and not all necessary classes will be present
 
@@ -784,18 +791,19 @@ If no list is specified after the feature, then the full feature (package) is im
 
 Here are the features included with the current version
 
-| feature name     | includes                      | needed for                                           |
-|------------------|-------------------------------|------------------------------------------------------|
-| router_core      | Message router basic features |                                                      |
-| nmea2000         | NMEA2000 Handling             |                                                      |
-| nmea0183         | NMEA0183 handling             |                                                      |
-| couplers         | Non CAN couplers              |                                                      |  
-| can_interface    | direct CAN interface          | NMEA2000 Active controller, CANCoupler               |
-| agent            | Linux agent service           | Implementation of the Linux Agent                    |
-| gnss             | GNSS service                  | STNC800 GNSS module interface and management         |
-| nmea2000_devices | NMEA2000 devices (code)       | Using pre_defined NMEA2000 devices (as applications) |
+| feature name     | includes                      | needed for                                            |
+|------------------|-------------------------------|-------------------------------------------------------|
+| router_core      | Message router basic features |                                                       |
+| nmea2000         | NMEA2000 Handling             |                                                       |
+| nmea0183         | NMEA0183 handling             |                                                       |
+| couplers         | Non CAN couplers              |                                                       |  
+| can_interface    | direct CAN interface          | NMEA2000 Active controller, CANCoupler                |
+| agent            | Linux agent service           | Implementation of the Linux Agent                     |
+| network          | Network agent                 | Control of network interfaces                         |
+| gnss             | GNSS service                  | STNC800 GNSS module interface and management          |
+| nmea2000_devices | NMEA2000 devices (code)       | Using pre_defined NMEA2000 devices (as nmea2000_apps) |
 
-
+ 
 
 #### Exemple configuration files
 
@@ -920,9 +928,14 @@ Server can be launched from anywhere but must use helpers that are using the cor
 - run_server <configuration.yml>: that is starting a navigation server using the specified configuration
 - run_script <python script> <parameters>: launch any script in the navigation server environment. Useful for development and test individual features
 
-### Starting using systemd
+### Starting and controlling processes using the AgentService
 
-For flexibility, the servers can be controlled by systemd, either started by systemd itself or by the agent.
+The simplest solution to launch and control all processes in the navigation server processes using the [AgentService](agent-network.md).
+In that case, only the *navigation_agent* service is automatically started upon Linux system start. The other processes are controlled by the AgentService.
+
+### Using systemd
+
+It is recommended to integrate the servers in systemd by creating a service for each of them.
 
 here is a sample service file
 ```service

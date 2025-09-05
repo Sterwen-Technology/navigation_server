@@ -9,7 +9,7 @@ then
   exit
 fi
 PACKAGE="navigation_server"
-input_dir="$NAVIGATION_HOME/$PACKAGE/protobuf"
+input_dir="$NAVIGATION_HOME/protobuf"
 output_dir="$NAVIGATION_HOME/$PACKAGE/generated"
 cd "$NAVIGATION_HOME/develop" || exit
 

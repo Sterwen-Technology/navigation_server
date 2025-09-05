@@ -47,6 +47,7 @@ The proposed architecture is described here:[Global system recommended architect
  - ARM 64 bits systems: RPi3 or 4 (1GB RAM is enough), NXP iMX8 running Debian or Yocto
  - AMD64 systems: Running Ubuntu or Debian
  - AMD64 systems with Windows 10 or 11: partial support only.
+ - **STNC800** navigation computers have additional support
 
 ### Supported BUS and instrumentation interfaces
  - Shipmodul Miniplex3 using IP host interface (NMEA0183 and NMEA2000)
@@ -55,7 +56,7 @@ The proposed architecture is described here:[Global system recommended architect
  - NMEA0183 over a serial or TCP/IP interface
  - CAN Direct interfaces:
    - PICAN2 HAT on RPi3 or RPi4
-   - SolidRun NXP based gateways: Industrial N6 and N8 Compact with CAN interface
+   - SolidRun NXP-based gateways: Industrial N6 and N8 Compact with CAN interface
  - Victron VE Direct devices (requires a dedicated process to be configured)
  - Ublox GNSS Module on STNC800 systems. See specific documentation: [STNC internal GNSS documentation](doc/stnc-gnss.md)
 
@@ -64,7 +65,7 @@ The same device could combine some NMEA0183 inputs on serial port(s) and NMEA200
 
 ### Running the system
 
-The first step is to define a configuration file that describe your environment and the processing scheme that is to be implemented in the message_server. Several samples can be found in the **conf** directory. All details for the configuration are in the **Server-Router** documentation file.
+The first step is to define a configuration file that describes your environment and the processing scheme that is to be implemented in the message_server. Several samples can be found in the **conf** directory. All details for the configuration are in the **Server-Router** documentation file.
 
 
 ### Interactive running
@@ -106,9 +107,11 @@ To overcome the problem, a specific Python script has been developed (mod_pb2.py
 For any problem encountered, please open an issue in this GitHub repository.
 
 ## Roadmap
-The current stable version is V2.6.1 Documentation is aligned on this version.
+The current stable version is V2.7.0 Documentation is aligned on this version.
 
 From the version 2.5.0 the new STNC800 hardware is supported
+
+From version 2.7.0 gRPC secure communication is available this implies generating certificates for the server and clients. [Secure gRPC](doc/gRPC_secure_communication.md)
 
 ## Contributing
 
