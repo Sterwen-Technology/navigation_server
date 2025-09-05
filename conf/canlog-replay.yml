@@ -16,6 +16,7 @@ trace_dir: /data/navigation/traces
 debug_configuration: false
 decode_definition_only: false
 connect_agent: true
+secure_grpc: true
 
 log_module:
     router_common.agent_interface: DEBUG

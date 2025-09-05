@@ -277,7 +277,6 @@ class SimpleProcess(ProcessABC):
         self._run_path = opts.get('run_path', str, None)
         self._process_type = opts.get_choice('process_type', ['shell', 'python', 'other'], 'shell')
         self._arguments = opts.get('arguments', str, '')
-        self._autostart = opts.get('autostart', bool, True)
         self._pid = 0
         self._child = None
         self._console_present = False

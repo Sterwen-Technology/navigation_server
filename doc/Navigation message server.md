@@ -188,7 +188,7 @@ Some services are explicitly defined in the configuration file (Console service,
 | nb_thread | int     | 5       | Number of thread in the pool to process simultaneous requests |
 | secure    | boolean | False   | Indicates that the server is using secure communication (TLS) |
 
-*note*: To enable TLS communication for the server, the **grpc_secure** global flag must be true and the corresponding certificates needs to be setup accordingly. See [gPRC secure communication](gRPC_secure_communication.md)
+*Note*: To enable TLS communication for the server, the **grpc_secure** global flag must be true and the corresponding certificates need to be set up accordingly. See [gPRC secure communication](gRPC_secure_communication.md)
 
 #### ShipModulConfig server
 
@@ -344,7 +344,9 @@ The coupler directly manages the device connection and initialization logic. The
 
 #### InternalGps (Coupler)
 
-No additional parameters in this version. The coupler connects to the GNSS receiver via a TTY port. For that coupler class, it is assumed that the GNSS is integrated in a cellular modem. For isolated GNSS receiver the NMEASerialPort class shall be used.
+This is intended to be used to address GPS (GNSS) chip integrated in a cellular modem. For isolated GNSS receiver the NMEASerialPort class shall be used.
+For the GNSS receiver from the STNC800 see [STNC GNSS documentation](stnc-gnss.md)
+No additional parameters in this version. The coupler connects to the GNSS receiver via a TTY port. 
 
 
 #### VEDirectCoupler(Coupler)
@@ -789,17 +791,17 @@ If no list is specified after the feature, then the full feature (package) is im
 
 Here are the features included with the current version
 
-| feature name     | includes                      | needed for                                           |
-|------------------|-------------------------------|------------------------------------------------------|
-| router_core      | Message router basic features |                                                      |
-| nmea2000         | NMEA2000 Handling             |                                                      |
-| nmea0183         | NMEA0183 handling             |                                                      |
-| couplers         | Non CAN couplers              |                                                      |  
-| can_interface    | direct CAN interface          | NMEA2000 Active controller, CANCoupler               |
-| agent            | Linux agent service           | Implementation of the Linux Agent                    |
-| network          | Network agent                 | Control of network interfaces                        |
-| gnss             | GNSS service                  | STNC800 GNSS module interface and management         |
-| nmea2000_devices | NMEA2000 devices (code)       | Using pre_defined NMEA2000 devices (as applications) |
+| feature name     | includes                      | needed for                                            |
+|------------------|-------------------------------|-------------------------------------------------------|
+| router_core      | Message router basic features |                                                       |
+| nmea2000         | NMEA2000 Handling             |                                                       |
+| nmea0183         | NMEA0183 handling             |                                                       |
+| couplers         | Non CAN couplers              |                                                       |  
+| can_interface    | direct CAN interface          | NMEA2000 Active controller, CANCoupler                |
+| agent            | Linux agent service           | Implementation of the Linux Agent                     |
+| network          | Network agent                 | Control of network interfaces                         |
+| gnss             | GNSS service                  | STNC800 GNSS module interface and management          |
+| nmea2000_devices | NMEA2000 devices (code)       | Using pre_defined NMEA2000 devices (as nmea2000_apps) |
 
  
 

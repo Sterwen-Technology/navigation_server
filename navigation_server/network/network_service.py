@@ -748,6 +748,8 @@ class NetworkService(GrpcService):
 
         if need_to_generate:
             _logger.info("Generating SSL certificates and configuration files for interfaces")
+            if self._ipv6_ssl:
+                _logger.warning("NetworkService: IPv6 SSL certificates and configuration files generation is not supported yet")
             # ok, then we need to generate a new file
             _logger.info("Generating SSL configuration files")
             with open(os.path.join(certificate_dir, 'nav_openssl.cnf'), 'w') as fp:

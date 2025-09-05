@@ -9,7 +9,7 @@ All these processes communicate using gRPC and implement one or more services th
 
 ## Processes used in the system
 
-### Agent server
+### Agent server (navigation_agent)
 
 systemd service name: navigation_agent
 process internal name: navigation_agent
@@ -22,7 +22,7 @@ The service monitors the state of the other processes and is able to trigger sys
 
 It also embarks the NetworkService that controls system interfaces using NetworkManager (that service is still not complete in V2.5.1)
 
-### CAN server
+### CAN server (can_server)
 
 systemd service name: can_server
 process internal name: STNC_CAN_Server
