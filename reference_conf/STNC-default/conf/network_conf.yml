@@ -1,0 +1,69 @@
+#-------------------------------------------------------------------------------
+# Name:        network_conf.yml
+# Purpose:     Settings file for networking configuration
+#
+# Author:      Laurent Carré
+#
+# Created:     2/04/2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+apply_defaults: false
+applicable_hardware: STNC800
+
+#  Here we defined the physical interfaces from the system
+interfaces:
+
+  - ethernet-0:
+     device: end0
+     type: ethernet
+
+  - ethernet-1:
+     device: end1
+     type: ethernet
+
+  - wifi:
+     device: wlan0
+     type: wifi
+
+
+# now we define all possible connections over the physical interface
+connections:
+
+  - eth-0-wan:
+       type: ethernet
+       description: "Eth port 0 using DHCP"
+       function: WAN_INTERFACE
+
+  - eth-1-lan:
+       type: ethernet
+       description: "Eth port 1 as LAN with DHCP on address 173.16.2.1"
+       function: LAN_CONTROLLER
+       ipv4_address: 172.16.2.1
+
+  - wifi-ap-1:
+       type: wifi
+       description: "Wifi access point on band 2.4 Ghz with SSID=hostname"
+       function: LAN_CONTROLLER
+       ipv4_address: 172.16.1.1
+       password: pmpr23!A
+
+  - eth0-lan:
+       type: ethernet
+       description: "Eth port 0 as LAN with DHCP on address 173.16.0.1"
+       function: LAN_CONTROLLER
+       ipv4_address: 172.16.0.1
+
+# lastly we define the possible configurations for the networking in this system
+configurations:
+
+  - default:
+      ethernet-0: eth-0-wan
+      ethernet-1: eth-1-lan
+      wifi: wifi-ap-1
+
+  - sailing:
+      ethernet-0: eth-0-wan
+      ethernet-1: eth-1-lan
+      wifi: wifi-ap-1

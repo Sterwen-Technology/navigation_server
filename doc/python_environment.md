@@ -13,8 +13,10 @@ There are many existing solutions to achieve the same results. I am proposing a 
 
 ### pyenv installation and configuration
 
-To install pyenv: ```shell
-curl -fsSL https://pyenv.run | bash```
+To install pyenv:
+```shell
+curl -fsSL https://pyenv.run | bash
+```
 
 Then add the pyenv environment into .bashrc file (follow the instructions of the installation script) and restart your shell.
 
