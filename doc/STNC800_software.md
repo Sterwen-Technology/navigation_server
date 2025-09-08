@@ -24,8 +24,8 @@ In normal operation, the eMMC is used for booting and the M.2 SSD is used for st
 The firmware is available from the [Sterwen-Technology website](https://sterwen-technology.eu/softwares/).
 
 Files to be downloaded:
-- Debian base image: to be used a as bootable SD card
-- STNC800 firmware: to be flashed on the eMMC
+- Debian base image: to be used a as bootable SD card (compressed file)
+- STNC800 firmware: to be flashed on the eMMC (compressed file)
 - STNC bootloader firmware: to be flashed on the eMMC
 
 
@@ -38,8 +38,8 @@ This can be done on Linux or Windows, preferably with [Etcher](https://www.balen
 
 ### Copying the full firmware on a USB stick
 
-It is simpler to have the 2 files that have to be flashed on the eMMC on a USB stick, so copy the files:
-- stnc-base-V2-2.7.0.img
+It is simpler to have the two files that have to be flashed on the eMMC on a USB stick, so copy the files:
+- stnc-base-V2-2.7.0.img.gz => to be decompressed before flashing on the eMMC
 - u-boot-mmc:2:1-440bb39.bin
 
 ## Flashing the firmware
