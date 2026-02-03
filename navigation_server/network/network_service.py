@@ -776,7 +776,7 @@ subjectAltName = @alt_names
                     index_if += 1
                 # always need to add localhost
                 fp.write(f"IP.{index_if} = 127.0.0.1\t# localhost\n")
-                fp.write(f"DNS.1 = {gethostname()}")
+                fp.write(f"DNS.1 = {gethostname()}\n")
                 with open(os.path.join(certificate_dir, 'ssl_network_state'), 'w') as fp2:
                     json.dump(network_state, fp2)
         else:

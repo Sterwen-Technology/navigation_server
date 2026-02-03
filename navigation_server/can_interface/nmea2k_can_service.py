@@ -13,7 +13,8 @@ import logging
 import time
 
 
-from navigation_server.generated.n2k_can_service_pb2 import N2KDeviceMsg, CAN_ControllerMsg, CANRequest, CANReadRequest, CANAck
+from navigation_server.generated.n2k_can_service_pb2 import (N2KDeviceMsg, CAN_ControllerMsg, CANRequest, CANReadRequest,
+                                                             CANAck, PGN_statistic)
 from navigation_server.generated.n2k_can_service_pb2_grpc import CAN_ControllerServiceServicer, add_CAN_ControllerServiceServicer_to_server
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 from navigation_server.generated.iso_name_pb2 import ISOName
@@ -76,6 +77,12 @@ class CAN_ControllerServiceServicerImpl(CAN_ControllerServiceServicer):
                 device.product_information.set_protobuf(dev_pb.product_information)
             if device.configuration_information is not None:
                 device.configuration_information.set_protobuf(dev_pb.configuration_information)
+            # now add the statistics on PGN
+            for stat_pgn in device.pgn_received():
+                stat_pb = PGN_statistic()
+                stat_pb.pgn = stat_pgn[0]
+                stat_pb.count = stat_pgn[1]
+                dev_pb.stats.append(stat_pb)
             resp.devices.append(dev_pb)
         _logger.debug("Get NMEA Devices END")
         return resp

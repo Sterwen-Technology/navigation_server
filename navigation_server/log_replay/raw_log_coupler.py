@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     23/07/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 import logging
@@ -86,6 +86,10 @@ class AsynchLogReader(NavThread):
                 msg = self._process_message(message)
             except IncompleteMessage:
                 continue
+            except FastPacketException as err:
+                _logger.error("FastPacketException %s at:%s msg:%s" %
+                              (err, message.timestamp.strftime("%Y-%m-%d %H:%M:%S.%f"), message.message))
+                continue
             self._out_queue.put(msg)
         _logger.info("AsynchLogReader thread stops")
 
@@ -107,14 +111,27 @@ class RawLogCoupler(Coupler):
         self._reader = None
         self._max_attempt = 1  # never retry
         # filters
+        self._include_input = opts.get('include_input', bool, False)
         pgn_white_list = opts.getlist('pgn_white_list', int)
         if pgn_white_list is not None and len(pgn_white_list) > 0:
-            self._pgn_white_list = pgn_white_list
+            self._pgn_white_list = set(pgn_white_list)
         else:
-            self._pgn_white_list = None
+            self._pgn_white_list = None # default pass all
+        pgn_blacklist = opts.getlist('pgn_black_list', int)
+        if pgn_blacklist is not None and len(pgn_blacklist) > 0:
+            self._pgn_black_list = set(pgn_blacklist)
+        else:
+            self._pgn_black_list = ()
+
         self._sa_black_list = []
 
-    def _open(self):
+    def _open(self) -> bool:
+        '''
+        Open the log file and load its content into memory.
+        Returns:
+            True if the file has been correctly opened and loaded, False otherwise.
+
+        '''
         _logger.info("LogCoupler %s opening log file %s" % (self.object_name(), self._filename))
         if self._logfile is not None:
             # we can't reopen a file
@@ -125,7 +142,7 @@ class RawLogCoupler(Coupler):
         except IOError:
             return False
         try:
-            self._logfile.load_file()
+            self._logfile.load_file(self._pgn_white_list, self._pgn_black_list, input_msg_only= not self._include_input)
         except LogReadError as err:
             _logger.error(err)
             return False
