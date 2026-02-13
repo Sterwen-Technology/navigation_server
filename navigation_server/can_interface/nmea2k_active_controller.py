@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     02/10/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
@@ -253,10 +253,25 @@ class NMEA2KActiveController(NMEA2KController):
             pass
         self._read_subscribers_lock.release()
 
+    def record_stat(self, address: int, pgn: int):
+        self._gc_lock.acquire()
+        device = self.check_device(address)
+        device.add_pgn_count(pgn)
+        self._gc_lock.release()
+
     def process_msg(self, msg: NMEA2000Msg):
+        '''
+        Process all incoming messages from the CAN bus
+        Args:
+            msg ():
+
+        Returns:
+
+        '''
         _logger.debug("CAN data received sa=%d PGN=%d da=%d" % (msg.sa, msg.pgn, msg.da))
         if msg.da != 255:
             # we have a da, so call the application
+            self.record_stat(msg.sa, msg.pgn)
             try:
                 if msg.is_iso_protocol:
                     self._app_index[msg.da].receive_msg(msg)
@@ -267,7 +282,7 @@ class NMEA2KActiveController(NMEA2KController):
                 return
         else:
             if msg.is_iso_protocol:
-                super().process_msg(msg)    # proxy treatment
+                super().process_msg(msg)    # proxy treatment that includes stat computation
                 # need also to process broadcast (DA=255) messages
                 for application in self._applications:
                     application.receive_iso_msg(msg)
@@ -276,6 +291,7 @@ class NMEA2KActiveController(NMEA2KController):
                     self.apply_change_application_address()
             else:
                 _logger.debug("Active controller message dispatch sa=%d pgn =%d" % (msg.sa, msg.pgn))
+                self.record_stat(msg.sa, msg.pgn)
                 # new in version 2.4.3 dispatch to all subscribers
                 subscribers = list(self._read_subscribers.values())
                 for subscriber in subscribers:

@@ -9,5 +9,5 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
-from .nmea2000_device import AutoPilotEmulator, SystemClockDevice
+from .nmea2000_device import DeviceSimulator, DeviceReplaySimulator, AutoPilotEmulator, SystemClockDevice
 from .nmea2000_sender_device import NMEA2000SenderDevice

@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     12/04/2025
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -87,6 +87,7 @@ class GNSSInput(NMEA2000Application, GrpcService):
     def set_controller(self, controller):
         super().__init__(controller, self._requested_address)
         self._can_controller = controller
+        self.add_transmit_pgn([129025, 129026, 129029, 129539, 129540])
 
     def bus_ready_callback(self):
         _logger.info("GNSS Input - bus ready")

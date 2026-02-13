@@ -5,14 +5,14 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
 import logging
 import csv
-from navigation_server.nmea2000_datamodel import N2KUnknownPGN, PGNDef
-from navigation_server.router_common import find_pgn
+from navigation_server.nmea2000_datamodel import  PGNDef
+from navigation_server.router_common import find_pgn, N2KUnknownPGN
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 

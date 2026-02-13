@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     04/04/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -14,8 +14,8 @@ import queue
 
 from navigation_server.router_core import BufferedIPCoupler, NMEA2000Msg
 from navigation_server.nmea2000 import FastPacketHandler, FastPacketException
-from navigation_server.nmea2000_datamodel import N2KUnknownPGN
-from navigation_server.router_common import NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG, IncompleteMessage, find_pgn
+from navigation_server.router_common import (NavGenericMsg, N2K_MSG, NULL_MSG, TRANSPARENT_MSG, IncompleteMessage,
+                                             find_pgn, N2KUnknownPGN)
 
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)

@@ -9,7 +9,7 @@
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
-from .nmea2k_pgndefs import PGNDefinitions, N2KUnknownPGN
+
 from .nmea2k_init import initialize_feature
 from .nmea2k_pgn_definition import PGNDef
 from .nmea2k_manufacturers import Manufacturers

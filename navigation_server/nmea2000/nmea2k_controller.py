@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     21/10/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
@@ -88,6 +88,7 @@ class NMEA2KController(NavigationServer, NavThread):
             except Exception as e:
                 _logger.error("%s NMEA2000 Controller processing error:%s on message %s" % (self._name, e, msg.format1()))
 
+
         _logger.info("%s NMEA2000 Controller stops" % self._name)
 
     def stop(self):
@@ -110,6 +111,14 @@ class NMEA2KController(NavigationServer, NavThread):
             return dev
 
     def process_msg(self, msg: NMEA2000Msg):
+        '''
+        Process incoming messages for Proxy devices or in case on indirect access to CAN
+        Args:
+            msg (): NMEA2000Msg
+
+        Returns:
+
+        '''
         if msg.sa >= 254:
             return
         self._gc_lock.acquire()

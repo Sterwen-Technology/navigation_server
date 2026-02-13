@@ -15,6 +15,11 @@ import "iso_name.proto";
 import "nmea2000_classes_iso_gen.proto";
 import "nmea2000.proto";
 
+message PGN_statistic {
+  uint32 pgn=1;     // PGN emitted
+  uint32 count=2;   // number of occurrence since the device is seen
+}
+
 // Message representing CAN/NMEA2000 device
 message N2KDeviceMsg {
   uint32 address=1;       // CAN address 0-253
@@ -24,6 +29,7 @@ message N2KDeviceMsg {
   ISOName iso_name=4;     // Unique identifier of the Device  see J1939
   Pgn126996ClassPb product_information=5;       // NMEA2000 PGN126996 content
   Pgn126998ClassPb configuration_information=6; // NMEA2000 PGN126998 content
+  repeated PGN_statistic stats=8;
 }
 
 message CAN_ControllerMsg {

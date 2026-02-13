@@ -14,31 +14,13 @@ import time
 
 
 from navigation_server.router_core import NMEA2000Msg
-from navigation_server.nmea2000_datamodel import N2KUnknownPGN
 from .nmea2k_iso_messages import AddressClaim, ConfigurationInformation, ProductInformation, Heartbeat
-from navigation_server.router_common import MessageServerGlobals, find_pgn
+from navigation_server.router_common import MessageServerGlobals, N2KUnknownPGN
+from navigation_server.nmea_data import CanAddressStatRecord
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
-class PgnRecord:
-
-    def __init__(self, pgn: int):
-        self._pgn = pgn
-        self._pgn_def = find_pgn(pgn)
-        self._clock = time.time()
-        self._count = 1
-
-    @property
-    def pgn(self):
-        return self._pgn
-
-    @property
-    def pgn_def(self):
-        return self._pgn_def
-
-    def tick(self):
-        self._count += 1
 
 class NMEA2000Device:
     '''
@@ -54,7 +36,7 @@ class NMEA2000Device:
         self._address = address
         _logger.info("NMEA Controller new device detected at address %d" % address)
         self._lastmsg_ts = 0
-        self._pgn_received = {}
+        self._pgn_received = CanAddressStatRecord(address)
         self._process_vector = {60928: self.p60928,
                                 126993: self.p126993,
                                 126996: self.p126996,
@@ -72,10 +54,7 @@ class NMEA2000Device:
     def receive_msg(self, msg: NMEA2000Msg):
         _logger.debug("NMEA2000 Device manager: New message PGN %d for device @%d" % (msg.pgn, self._address))
         self._lastmsg_ts = time.time()
-        try:
-            pgn_def = self.add_pgn_count(msg.pgn)
-        except N2KUnknownPGN:
-            return
+        self.add_pgn_count(msg.pgn)
         try:
             self._process_vector[msg.pgn](msg)
         except KeyError:
@@ -109,14 +88,8 @@ class NMEA2000Device:
     def product_information_sent(self, flag:bool):
         self._product_info_sent = flag
 
-    def add_pgn_count(self, pgn) -> PgnRecord:
-        try:
-            pgn_def = self._pgn_received[pgn]
-            pgn_def.tick()
-        except KeyError:
-            pgn_def = PgnRecord(pgn)
-            self._pgn_received[pgn] = pgn_def
-        return pgn_def
+    def add_pgn_count(self, pgn):
+        self._pgn_received.record_pgn(pgn)
 
     def p60928(self, msg: NMEA2000Msg):
 
@@ -169,4 +142,7 @@ class NMEA2000Device:
     @property
     def last_time_seen(self):
         return self._lastmsg_ts
+
+    def pgn_received(self) -> list:
+        return self._pgn_received.sorted_tuple_list()
 

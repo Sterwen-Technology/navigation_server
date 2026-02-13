@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     12/09/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
@@ -208,7 +208,9 @@ class SocketCANInterface(NavThread):
         can_id = msg_recv.arbitration_id
         pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
         if da not in self._addresses:
-            _logger.debug("CAN interface discarding message:%s" % msg_recv)
+            # the address is not managed here, so no need to perform any action
+            # even no trace
+            _logger.debug("CAN interface discarding incoming message to:%d :%s" % (da,msg_recv))
             return
         sa = can_id & 0xFF
         prio = (can_id >> 26) & 0x7
@@ -468,7 +470,7 @@ class SocketCANWriter(NavThread):
         retry = False
         max_retry = 5
         while not self._stop_flag:
-            _logger.debug("Start Write loop STATE=%d retry=%s" % (self._state, retry))
+            # _logger.debug("Start Write loop STATE=%d retry=%s" % (self._state, retry))
             if not retry and self._state == self.RUNNING:
                 # we pick a new message in the queue
                 try:
