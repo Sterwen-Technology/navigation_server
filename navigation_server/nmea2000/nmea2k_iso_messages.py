@@ -30,7 +30,7 @@ class NMEA2000Object:
     Specific subclasses can be created to handle special processing
     '''
 
-    __slots__ = ('_pgn', '_pgn_def', '_sa', '_da', '_fields', '_message', '_prio')
+    __slots__ = ['_pgn', '_pgn_def', '_sa', '_da', '_fields', '_message', '_prio']
 
     def __init__(self, pgn: int):
         self._pgn = pgn
@@ -100,6 +100,8 @@ class NMEA2000Object:
 
 class AddressClaim(NMEA2000Object):
 
+    __slots__ = ['_name'] + NMEA2000Object.__slots__
+
     @staticmethod
     def decode_parameter(param_number, buffer, index):
         param_len, param_name = NMEA2000Name.get_field_property(param_number)
@@ -164,6 +166,8 @@ class AddressClaim(NMEA2000Object):
 
 
 class ISORequest(NMEA2000Object):
+
+    __slots__ = ['_req_pgn'] + NMEA2000Object.__slots__
 
     def __init__(self, sa=0, da=255, request_pgn=60928):
         super().__init__(59904)
