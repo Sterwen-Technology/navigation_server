@@ -1,0 +1,15 @@
+# to be added at the end of ~/.bashrc for the navigation environment
+#
+#  pyenv setup
+#
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+if command -v pyenv 1>/dev/null 2>&1
+then
+  eval "$(pyenv init -)"
+fi
+export NAVIGATION_HOME="$HOME/navigation_server"
+# poetry and others
+export PATH="$NAVIGATION_HOME:$HOME/.local/bin:$PATH"
+# data directory
+export NAV_CONF_DIR="/data/navigation/config"

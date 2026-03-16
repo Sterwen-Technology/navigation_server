@@ -1,7 +1,17 @@
 #!/bin/bash
+#
+# Run a python script in the virtual environment needed
+# The pŷthon script shall be part of the navigation_server and placed in the top directory
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
+# Licence:     Eclipse Public License 2.0
+
+if ! [ -v NAVIGATION_HOME ]
+then
 NAVIGATION_RUN_SCRIPT="$(realpath "${BASH_SOURCE}")"
 echo "Script location is: $NAVIGATION_RUN_SCRIPT"
 export NAVIGATION_HOME="$(dirname "$NAVIGATION_RUN_SCRIPT")"
+fi
+
 echo "$NAVIGATION_HOME"
 cd "$NAVIGATION_HOME"
 if [ -f $NAVIGATION_HOME/.navigationenv ]

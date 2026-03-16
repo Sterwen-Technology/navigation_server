@@ -410,6 +410,8 @@ class NetworkServicerImpl(NetworkServiceServicer):
             interface = NetInterface()
             iface.set_protobuf(interface)
             resp.if_list.append(interface)
+        resp.status = "OK"
+        resp.details = f"interfaces={len(resp.if_list)}"
 
 
 class NetworkService(GrpcService):

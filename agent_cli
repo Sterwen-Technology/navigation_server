@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+# Run the agent_cli python script in the virtual environment needed
+# The pŷthon script shall be part of the navigation_server and placed in the top directory
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
+# Licence:     Eclipse Public License 2.0
+
+if [ -v NAVIGATION_HOME ]
+then
+    "$NAVIGATION_HOME/run_script" agent_cli.py "$@"
+else
+    echo "NAVIGATION_HOME environment variable not set"
+    exit 1
+fi
+
+

@@ -74,12 +74,13 @@ All servers can be started from the command line, they don't require specific pe
 
 ### GUI access to the API
 
-A sample GUI has been developed to have a real time control of the various servers via the public API. It has been built using [guizero](https://lawsie.github.io/guizero/). Honestly that looks quick and dirty and this is really like that.
+A sample GUI has been developed to have a realtime control of the various servers via the public API. It has been built using [guizero](https://lawsie.github.io/guizero/). Honestly that looks quick and dirty and this is really like that.
 Repository for [Navigation server GUI](https://github.com/Sterwen-Technology/navigation_server_gui)
 
 ### Automatic start
 
-For production the system should be run through *systemd*. Services that can be used as samples are provided in the application. And a shell script that install all services at once.
+For production the system should be run through *systemd*. Services that can be used as samples are provided in the application.
+From version 2.7 on, a single systemd service can be used to start all the servers: the navigation_agent service, see [Agent and Network services](doc/agent-network.md)
 
 ## Documentation
 

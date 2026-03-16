@@ -302,8 +302,12 @@ class NavigationConfiguration:
             try:
                 key_dir = self._configuration['ssl_key_dir']
             except KeyError:
-                _logger.warning("Missing ssl_key_dir in configuration file")
-                key_dir = os.path.join(os.getenv('HOME'), 'certificates')
+                _logger.info("Missing ssl_key_dir in configuration file")
+                if os.getenv('NAV_CONF_DIR') is not None:
+                    cert_dir = os.getenv('NAV_CONF_DIR')
+                else:
+                    cert_dir = os.getenv('HOME')
+                key_dir = os.path.join(cert_dir, 'certificates')
             if not os.path.isdir(key_dir):
                 _logger.warning(f"Key directory {key_dir} does not exist => SSL certificate generation disabled")
             else:
@@ -336,6 +340,7 @@ class NavigationConfiguration:
 
         try:
             MessageServerGlobals.agent_address = self._configuration['agent_address']
+            _logger.info(f"Agent address: {MessageServerGlobals.agent_address}")
         except KeyError:
             MessageServerGlobals.agent_address = "127.0.0.1:4545"
             _logger.warning(f"Missing agent address, defaulting to {MessageServerGlobals.agent_address}")

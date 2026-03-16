@@ -14,7 +14,7 @@ import signal
 from socket import gethostname
 import time
 import os
-
+from typing import Any, Generator
 
 from navigation_server.router_common import (GrpcClient, ServiceClient, NavThread, MessageServerGlobals,
                                              GrpcAccessException, GrpcServer, ProtobufProxy, pb_enum_string)
@@ -135,6 +135,17 @@ class AgentClient(ServiceClient):
 
     def stop_log(self):
         self._stop_read_stream()
+
+    def get_log_msg(self, process_name: str) -> Generator[Any, Any, None]:
+        msg = AgentCmdMsg()
+        msg.cmd = 'system_log_msg'
+        msg.target = process_name
+        try:
+            for line in self._server_call_multiple(self._stub.GetSystemLog, msg, None):
+                yield line.line
+        except GrpcAccessException:
+            _logger.error(f"Error accessing server for logs on:{process_name}")
+            return
 
 class AgentInterfaceRunner(NavThread):
 
