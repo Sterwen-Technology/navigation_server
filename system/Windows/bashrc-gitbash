@@ -1,0 +1,7 @@
+#
+#  initialisation gut bash pour environnement de développement
+#
+PS1='\[\e[32m\]\u@\h \[\e[33m\]\w\[\e[0m\]\$ '
+export NAVIGATION_HOME=/c/Users/laure/navigation/navigation_server
+PATH=/c/Users/laure/AppData/Roaming/Python/Scripts:$NAVIGATION_HOME:$PATH
+
