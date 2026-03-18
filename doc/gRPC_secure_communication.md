@@ -14,10 +14,10 @@ The navigation server framework provides the necessary tools to fully set up gRP
 
 1) Generate the Certification authority (CA) key and certificate.
    There is a convenience script 'generate_CA_certificate' that is generating both files. By default, the CA private key will go in the $$HOME/certificates directory, while the certificate will be stored in $NAVIGATION_DATA.
-    The CA private key must never be shared, but shall be accessible locally to regenerate the servers keys and certificate.
+    The CA private key must never be shared but shall be accessible locally to regenerate the servers keys and certificate.
     The CA certificate shall be used by all clients wanting to connect to the system servers.
 
-    **When several computer have to interoperate, the CA key and certificate need to be shared amongst all of them to allow any client to communicate with all servers.**
+    **When several computers have to interoperate, the CA key and certificate need to be shared amongst all of them to allow any client to communicate with all servers.**
     
     File names:
 

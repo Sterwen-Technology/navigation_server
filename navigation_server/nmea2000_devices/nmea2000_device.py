@@ -82,7 +82,7 @@ class DeviceReplaySimulator(NMEA2000Application):
             return
         pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
         # check if the PGN is filtered in
-        if self._pgn_list is None or pgn not in self._pgn_list:
+        if self._pgn_list is not None and pgn not in self._pgn_list:
             _logger.debug(f"PGN {pgn} not in PGNList => discarded")
             return
             # need to avoid all protocol pgn
