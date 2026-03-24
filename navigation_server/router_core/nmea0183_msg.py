@@ -6,7 +6,7 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -99,6 +99,14 @@ class NMEA0183Msg(NavGenericMsg):
     def replace_talker(self, talker: bytes):
         self._raw[1:3] = talker[:2]
         self._address[0:2] = talker[:2]
+        # 2.7.1 => need to recompute checksum when replacing talker
+        star = self._raw.rfind(b'*')
+        if star < 0:
+            raise NMEAInvalidFrame("NMEA Frame Missing * checksum delimiter")
+        # compute the new checksum
+        checksum = reduce(operator.xor, self._raw[1:star], 0)
+        checksum_bytes = ("%2X" % checksum).encode()
+        self._raw[star + 1: star + 3] = checksum_bytes
 
     def fields(self) -> list:
         return self._raw[self._datafields_s:self._datalen_s].split(b',')

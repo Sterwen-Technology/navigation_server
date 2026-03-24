@@ -13,8 +13,9 @@ import time
 import queue
 import logging
 
+from .core_exceptions import CouplerWriteError
 from .filters import FilterSet
-from navigation_server.router_common import resolve_ref, set_hook, NavThread
+from navigation_server.router_common import resolve_ref, set_hook, NavThread, ConfigurationException
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -24,9 +25,6 @@ _logger = logging.getLogger("ShipDataServer."+__name__)
 #
 ########################################################################
 
-
-class PublisherOverflow(Exception):
-    pass
 
 
 class Publisher(NavThread):
@@ -209,14 +207,25 @@ class Injector(ExternalPublisher):
         super().__init__(opts)
         # warning _target is a variable of thread and create a conflict
         # 2024-10-29 rename _target to _target_coupler
-        self._target_coupler = resolve_ref(opts['target'])
+        try:
+            self._target_coupler = resolve_ref(opts['target'])
+        except KeyError:
+            _logger.error(f"Injector target {opts['target']} not found")
+            raise ConfigurationException("Injector target %s not found" % opts['target'])
         set_hook(self._target_coupler.object_name(), self.refresh_target)
 
     def process_msg(self, msg) -> bool:
-        _logger.debug("Injector process msg %s" % msg.printable())
-        result = self._target_coupler.send_msg_gen(msg)
-        _logger.debug('Injector process msg result: %s' % result)
-        return result
+        if self._target_coupler.is_running():
+            _logger.debug("Injector process msg %s" % msg.printable())
+            try:
+                result = self._target_coupler.send_msg_gen(msg)
+            except CouplerWriteError as e:
+                _logger.error(e)
+                return False
+            _logger.debug('Injector process msg result: %s' % result)
+            return result
+        else:
+            return True
 
     def descr(self):
         return "Injector %s" % self._name
