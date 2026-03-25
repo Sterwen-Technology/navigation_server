@@ -18,7 +18,7 @@ from navigation_server.router_common import (NavigationConfiguration, Navigation
                                              init_options, set_root_package, ConfigurationException, AgentInterface,
                                              ObjectCreationError, GrpcServer, GrpcClient)
 
-MessageServerGlobals.version = "2.7.1"
+MessageServerGlobals.version = "2.7.2"
 default_base_dir = "/"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -43,7 +43,7 @@ def server_main():
     # build the configuration from the file
     try:
         config = NavigationConfiguration().build_configuration(opts.settings)
-    except (FileNotFoundError, IOError) as err:
+    except (FileNotFoundError, IOError, ConfigurationException) as err:
         _logger.critical("Error on configuration file => STOP")
         return
     NavigationLogSystem.finalize_log(config)

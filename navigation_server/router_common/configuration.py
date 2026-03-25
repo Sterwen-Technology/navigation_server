@@ -253,7 +253,7 @@ class NavigationConfiguration:
         except yaml.YAMLError as e:
             _logger.error("Settings file decoding error %s" % str(e))
             fp.close()
-            raise
+            raise ConfigurationException("Yaml file decoding error %s" % str(e))
         # check if we debug the configuration analysis
         if self._configuration.get('debug_configuration', False):
             _logger.setLevel(logging.DEBUG)
