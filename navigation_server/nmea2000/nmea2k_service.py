@@ -13,9 +13,15 @@ import logging
 import time
 
 
+<<<<<<<< HEAD:navigation_server/nmea2000/nmea2k_service.py
 from navigation_server.generated.nmea2000_service_pb2 import (N2KDeviceMsg, Nmea2000ControllerMsg, Nmea2000Request, Nmea2000ReadRequest,
                                                              Nmea2000Ack, PGN_statistic)
 from navigation_server.generated.nmea2000_service_pb2_grpc import Nmea2000ControllerServiceServicer, add_Nmea2000ControllerServiceServicer_to_server
+========
+from navigation_server.generated.n2k_can_service_pb2 import (N2KDeviceMsg, CAN_ControllerMsg, CANRequest, CANReadRequest,
+                                                             CANAck, PGN_statistic)
+from navigation_server.generated.n2k_can_service_pb2_grpc import CAN_ControllerServiceServicer, add_CAN_ControllerServiceServicer_to_server
+>>>>>>>> ac15aad (V2.8.0 release):navigation_server/can_interface/nmea2k_can_service.py
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 from navigation_server.generated.iso_name_pb2 import ISOName
 from navigation_server.generated.nmea_messages_pb2 import server_resp
