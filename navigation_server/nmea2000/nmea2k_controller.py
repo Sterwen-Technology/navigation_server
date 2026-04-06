@@ -350,8 +350,8 @@ class NMEA2KController(NavigationServer, NavThread):
     def is_trace_active(self) -> bool:
         return self._interface.is_trace_active()
 
-    def start_trace(self):
-        self._interface.start_trace()
+    def start_trace(self, file_root:str=None):
+        self._interface.start_trace(file_root)
 
     def stop_trace(self):
         self._interface.stop_trace()

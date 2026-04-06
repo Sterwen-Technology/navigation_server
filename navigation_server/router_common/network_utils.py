@@ -19,9 +19,9 @@ def get_mac(interface: str) -> str:
     try:
         addr_file = f"/sys/class/net/{interface}/address"
         fd = open(addr_file)
-    except IOError as e:
+    except (IOError, FileNotFoundError) as e:
         _logger.error(str(e))
-        raise
+        raise ValueError
     line = fd.readline()
     fd.close()
     return line[:17]

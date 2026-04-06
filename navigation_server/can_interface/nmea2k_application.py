@@ -50,7 +50,11 @@ class NMEA2000ApplicationPool:
         self._controller = controller
         mac_source = opts.get('mac_source', str, 'eth0')
         self._mfg_code = opts.get('manufacturer_id', int, 999)
-        unique_id_root = get_id_from_mac(mac_source)
+        try:
+            unique_id_root = get_id_from_mac(mac_source)
+        except ValueError:
+            _logger.critical(f"Source interface for MAC address {mac_source} is not valid")
+            raise
         self._max_application = opts.get('max_applications', int, 8)
         self._unique_id_root = unique_id_root << (self._max_application - 1).bit_length()
         address_pool_start = opts.get('first_address', int, 128)

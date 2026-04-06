@@ -371,7 +371,7 @@ This coupler is intended to be used by the energy management agent, rather than 
 This coupler class works when a CAN bus interface with a socketcan driver is installed on the system. By construction, only NMEA2000 messages can be processed.
 The CAN bus coupler must be declared as **nmea2000_app** with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters, and the coupler is considered as a specific device (CA) on the CAN bus. 
 
-#### GrpcNmeaCoupler(Coupler)
+#### GrpcNmeaCoupler(Coupler) -*DEPRECATED for NMEA2000*
 
 The coupler creates a gRPC service on which NMEA0183 or NMEA2000 can be pushed (see input_server.proto).
 
@@ -379,6 +379,8 @@ The coupler creates a gRPC service on which NMEA0183 or NMEA2000 can be pushed (
 |------------------|--------|---------|--------------------------------------------------------------------------------|
 | server           | string | None    | gRPC server associated. This is a mandatory parameter                          |
 | decoded_nmea2000 | bool   | False   | Indicates whether the coupler accepts fully decoded protobuf NMEA2000 messages |
+
+For NMEA2000, the Nmea2000Service to is to be used.
 
 #### N2KGrpcCoupler (Coupler)
 
@@ -551,6 +553,8 @@ NMEA0183 processing flags:
 * **convert_strict**: messages are converted to NMEA2000 when possible and are discarded otherwise
 * **convert_pass**: messages are converted to NMEA2000 when possible or are forwarded as-is when not possible
 
+**This publisher will be deprecated in future versions.**
+
 #### N2KJsonPublisher
 
 The publisher is serializing NMEA2000 messages using JSON syntax. Messages are separated by a newline character (ASCII 10)
@@ -605,6 +609,18 @@ Messages modes definition:
 - **transparent** : The content of the message is not interpreted, and the raw format from the coupler is passed to the application
 - **message** : NMEA2000 binary message format with Fast packet reassembly
 - **decoded** : NMEA2000 fully decoded (Python object)
+
+#### N2KForwarderToServer (Publisher)
+
+The publisher is a gRPC client that forwards NMEA2000 messages to a server implementing the Nmea2000Service.
+It replaces the GrpcPublisher for NMEA2000 messages.
+
+| Name    | Type   | Default | Signification                                         |
+|---------|--------|---------|-------------------------------------------------------|
+| address | string | none    | IP address or URL of the server                       |
+| port    | int    | 4512    | port number                                           |
+| device  | string | none    | Name of the application sending frames on the CAN BUS |
+
 
 ### NMEA2000 Applications
 

@@ -13,7 +13,7 @@ import time
 import queue
 import logging
 
-from .core_exceptions import CouplerWriteError
+from .core_exceptions import CouplerWriteError, PublisherOverflow
 from .filters import FilterSet
 from navigation_server.router_common import resolve_ref, set_hook, NavThread, ConfigurationException
 

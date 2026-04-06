@@ -39,7 +39,7 @@ def server_main():
         return
 
     # set log for the configuration phase
-    NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2025")
+    NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2026")
     # build the configuration from the file
     try:
         config = NavigationConfiguration().build_configuration(opts.settings)
