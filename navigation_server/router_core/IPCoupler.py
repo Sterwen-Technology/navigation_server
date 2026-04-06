@@ -3,12 +3,11 @@
 # Purpose:     Abstract class and implementation classes for all
 #               instruments with a IP transport interface
 #               Includes NMEA0183 messages buffering reassembly
-#               Includes Shipmodul MXPGN NMEA2000 frame decoding (no payload decoding)
 #
 # Author:      Laurent Carré
 #
 # Created:     27/02/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -17,8 +16,8 @@ import queue
 import time
 import logging
 
-from navigation_server.router_common import IncompleteMessage, NavThread, NavGenericMsg, TRANSPARENT_MSG
-from .coupler import Coupler, CouplerReadError, CouplerTimeOut
+from navigation_server.router_common import IncompleteMessage, NavThread, NavGenericMsg, TRANSPARENT_MSG, NMEAMsgTrace, MessageTraceError
+from navigation_server.router_core import Coupler, CouplerReadError, CouplerTimeOut
 from .nmea0183_msg import process_nmea0183_frame, NMEAInvalidFrame
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
@@ -152,11 +151,11 @@ class TCP_reader(IP_transport):
         try:
             msg = self._socket.recv(self._buffer_size)
         except (TimeoutError, socket.timeout):
-            _logger.info("Timeout error on TCP socket %s" % self._ref)
-            raise CouplerTimeOut
+            _logger.info("TCP Transport timeout error on TCP socket %s" % self._ref)
+            raise CouplerTimeOut(f"TCP timeout on {self._ref}")
         except socket.error as e:
             _logger.error("Error receiving from TCP socket %s: %s" % (self._ref, str(e)))
-            raise CouplerReadError
+            raise CouplerReadError(f"TCP read error on {self._ref}: {e}")
         return msg
 
     def send(self, msg):
@@ -183,7 +182,7 @@ class IPAsynchReader(NavThread):
 
     def __init__(self, coupler, out_queue, separator, msg_processing):
         super().__init__(name=f"{coupler.name}-IPAsynchReader", daemon=True)
-        if isinstance(coupler, IPCoupler):
+        if isinstance(coupler, (IPCoupler, IPBufferedReader)):
             self._transport = coupler.transport()
             self._coupler = coupler
             self._cname = "Coupler %s" % coupler.object_name()
@@ -287,7 +286,7 @@ class IPAsynchReader(NavThread):
                     # _logger.critical("Asynchronous reader output Queue full for %s" % self._transport.ref())
                     # self._stop_flag = True
                     # break
-                    _logger.error("Message overflow from %s lost 1 message" % self._transport.ref())
+                    _logger.error("IPAsynchReader -> message overflow from %s lost 1 message" % self._transport.ref())
                     time.sleep(0.3)
                     continue
                 if self._stop_flag:
@@ -403,8 +402,106 @@ class TCPBufferedReader:
         return self._ref
 
 
+class IPBufferedReader:
+    '''
+    This class implement buffered read of IP for other interfaces than couplers
+    It manages the transport
+    '''
 
+    def __init__(self, opts):
+        self._name = opts.get('name', str, "IPBufferedReader")
+        self._address = opts.get('address', str, 'localhost')
+        self._port = opts.get('port', int, 0)
+        self._buffer_size = opts.get('buffer_size', int, 256)
+        self._timeout = opts.get('timeout', float, 10)
+        self._asynch_io = None
+        self._protocol = opts.get('transport', str, 'TCP')
+        self._state = Coupler.NOT_READY
+        if self._protocol == 'TCP':
+            self._transport = TCP_reader(self._address, self._port, self._timeout, self._buffer_size)
+        elif self._protocol == 'UDP':
+            self._transport = UDP_reader(self._address, self._port, self._timeout, self._buffer_size)
+        self._trace_raw: bool = opts.get('trace', bool, False)
+        if self._trace_raw:
+            try:
+                self._tracer = NMEAMsgTrace(self._name, self.__class__.__name__)
+            except MessageTraceError:
+                self._trace_raw = False
+        else:
+            self._tracer = None
 
+        self._total_msg_raw: int = 0
+        self._total_msg_raw_out: int = 0
+
+    def set_message_processing(self, separator, msg_processing, in_queue):
+        if msg_processing is None:
+            raise ValueError
+        self._asynch_io = IPAsynchReader(self, in_queue, separator, msg_processing)
+        self._asynch_io.start()
+
+    def open(self):
+        self._transport.open()
+        self._state = Coupler.CONNECTED
+
+    def start(self):
+        # do nothing start is differed to the controller effcetive start
+        pass
+
+    def stop(self):
+        self._asynch_io.stop()
+        self._asynch_io.join()
+        self._transport.close()
+        self._state = Coupler.NOT_READY
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def object_name(self):
+        return self._name
+
+    def transport(self):
+        return self._transport
+
+    def state(self):
+        return self._state
+
+    def trace_raw(self, direction, msg, strip_suffix: str = None):
+        if self._trace_raw and self._tracer is not None:
+            self._tracer.trace_raw(direction, msg, strip_suffix)
+
+    def total_msg_raw(self) -> int:
+        return self._total_msg_raw
+
+    def total_msg_raw_out(self) -> int:
+        return self._total_msg_raw_out
+
+    def is_trace_active(self) -> bool:
+        return self._trace_raw
+
+    def start_trace(self):
+        if self._tracer is not None:
+            _logger.error(f"{self._name} - Trace already started")
+            return
+        try:
+            self._tracer = NMEAMsgTrace(self._name, self.__class__.__name__)
+        except MessageTraceError:
+            return
+        self._trace_raw = True
+
+    def stop_trace(self):
+        if self._tracer is None:
+            _logger.error(f"{self._name} - Trace already stopped")
+            return
+        self._tracer.stop_trace()
+        self._tracer = None
+        self._trace_raw = False
+
+    def send_n2k_msg(self, msg):
+        raise NotImplementedError("To be implemented in subclasses")
+
+    def add_event_trace(self, trace: str):
+        _logger.error(f"{self._name} - Event trace {trace}")
 
 
 

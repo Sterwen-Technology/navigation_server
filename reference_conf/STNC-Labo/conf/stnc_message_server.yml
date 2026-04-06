@@ -61,12 +61,12 @@ couplers:
 
 - CANCoupler:
     class: N2KGrpcCoupler
-    source_server: 127.0.0.1
+    source_server: 192.168.1.28
     source_port: 4512
 
 - CANSendCoupler:
     class: N2KGrpcSendCoupler
-    target_server: 127.0.0.1
+    target_server: 192.168.1.28
     target_port: 4512
     device: NavigationControl
 

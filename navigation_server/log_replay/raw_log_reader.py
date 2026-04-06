@@ -5,14 +5,18 @@
 # Author:      Laurent Carré
 #
 # Created:     23/07/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
 import logging
 import datetime
+import sys
 import time
 import threading
+
+from navigation_server.nmea2000_datamodel import PGNDef
+from navigation_server.nmea_data import CanStat
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -74,23 +78,36 @@ class VEDirectRecord(RawLogRecord):
 
 class RawLogCANMessage(RawLogRecord):
 
-    source_addresses = []
-
-    def __init__(self, timestamp, message):
-        self._timestamp = timestamp
+    def __init__(self, timestamp, message, direction):
+        __slots__ = ('_timestamp', '_message', '_direction', '_sa', '_pgn', '_da')
+        super().__init__(timestamp)
         self._message = message
+        self._direction = direction
         # find the source address
         try:
-            sa = int(message[6:8], 16)
+            can_id = int(message[:8], 16)
+            self._sa = can_id & 0xFF
         except ValueError:
             _logger.error("RawLog read message error %s" % message)
             return
-        if sa not in self.source_addresses:
-            self.source_addresses.append(sa)
 
-    @staticmethod
-    def seen_addresses():
-        return RawLogCANMessage.source_addresses
+        self._pgn, self._da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
+
+    @property
+    def pgn(self) -> int:
+        return self._pgn
+
+    @property
+    def sa(self) -> int:
+        return self._sa
+
+    @property
+    def da(self) -> int:
+        return self._da
+
+    @property
+    def direction(self) -> str:
+        return self._direction
 
 
 class RawLogFile:
@@ -107,9 +124,15 @@ class RawLogFile:
         self._lock = threading.Lock()  # to prevent race conditions while moving around in the logs
         self._records = []
         self._tick_index = []
+        self._pgn_present = {}
         self._type = None
+        self._can_stats = CanStat()
 
-    def load_file(self):
+    @property
+    def records(self):
+        return self._records
+
+    def load_file(self, pgn_white_list, pgn_black_list, input_msg_only=True):
 
         def read_decode(l):
             if l[0] != 'R':
@@ -119,12 +142,33 @@ class RawLogFile:
             if ih == -1:
                 raise ValueError
             i_sup = l.find('>')
+            # only input messages are read
             if i_sup == -1:
-                raise ValueError
+                if input_msg_only:
+                    raise ValueError
+                i_sup = l.find('<')
+                if i_sup == -1:
+                    raise ValueError
+                direction = 'O'
+            else:
+                direction = 'I'
             date_str = l[ih+1:i_sup]
             message = l[i_sup+1:-1]  # removing trailing LF
             timestamp = datetime.datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f")
-            return timestamp, message
+            return timestamp, message, direction
+
+        def append_can_record(timestamp, message, direction_p):
+            rec = record_class(timestamp, message, direction)
+            self._can_stats.record_msg(rec.sa, rec.pgn)
+            if rec.pgn in pgn_black_list:
+                return
+            if pgn_white_list is None:
+                self._records.append(rec)
+            elif rec.pgn in pgn_white_list:
+                self._records.append(rec)
+
+        def append_record(timestamp, message, direction_p):
+            self._records.append(record_class(timestamp, message))
 
         _logger.info("Start reading log file %s" % self._logfile)
         # read the first line
@@ -138,10 +182,13 @@ class RawLogFile:
         _logger.info("Log file type:%s" % self._type)
         if self._type == "SocketCANInterface":
             record_class = RawLogCANMessage
+            append_method = append_can_record
         elif self._type == "ShipModulInterface":
             record_class = RawLogNMEARecord
+            append_method = append_record
         elif self._type == "VEDirectInterface":
             record_class = VEDirectRecord
+            append_method = append_record
         else:
             _logger.critical(f"Log Reader => unknown file type {self._type}")
             raise ValueError
@@ -152,14 +199,14 @@ class RawLogFile:
         while True:
             # sometimes first lines are output that needs to be filtered out
             try:
-                ts, msg = read_decode(first_line)
+                ts, msg, direction = read_decode(first_line)
                 break
             except ValueError:
                 first_line = self._fd.readline()
                 continue
 
         self._t0 = ts
-        self._records.append(record_class(ts, msg))
+        append_method(ts, msg, direction)
         self._nb_tick = 0
         self._next_tick_date = self._t0 + datetime.timedelta(seconds=self._tick_interval)
 
@@ -170,7 +217,7 @@ class RawLogFile:
                 raise LogReadError("Abort requested")
             line_nb += 1
             try:
-                ts, msg = read_decode(line)
+                ts, msg, direction = read_decode(line)
             except ValueError:
                 continue
             except LogReadError as err:
@@ -178,7 +225,8 @@ class RawLogFile:
                 _logger.error("Log file error %s on line %d:%s" % (err.reason, line_nb, line.rstrip('\r\n')))
                 continue
 
-            self._records.append(record_class(ts, msg))
+            append_method(ts, msg, direction)
+
             if ts >= self._next_tick_date:
                 # ok we record the index of the tick
                 self._tick_index.append(nb_record)
@@ -205,6 +253,7 @@ class RawLogFile:
         self._index = 0
         self._running = False
         self._first_record = False
+        self._can_stats.print_stat(sys.stdout)
 
     def filename(self):
         return self._logfile
@@ -330,6 +379,11 @@ class RawLogFile:
         self._lock.acquire()
         self.prepare_read()
         self._lock.release()
+
+    def can_statistics(self):
+        return self._can_stats
+
+
 
 
 

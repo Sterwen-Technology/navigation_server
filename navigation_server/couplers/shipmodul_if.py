@@ -11,10 +11,12 @@
 
 import socket
 import logging
+from typing import Any, Generator
 
 from navigation_server.router_core import (NavTCPServer, ConnectionRecord, Publisher, Coupler, BufferedIPCoupler,
-                                            NMEA0183Msg, NMEA0183Sentences, NMEA2000Msg, CouplerReadError)
-from navigation_server.router_common import IncompleteMessage, N2KUnknownPGN, NavGenericMsg, TRANSPARENT_MSG, N2K_MSG, NULL_MSG
+                                            NMEA0183Msg, NMEA0183Sentences, NMEA2000Msg, CouplerReadError,
+                                           CouplerTimeOut,IPBufferedReader)
+from navigation_server.router_common import IncompleteMessage, N2KUnknownPGN, NavGenericMsg, TRANSPARENT_MSG, N2K_MSG, NULL_MSG, NavThread
 from navigation_server.nmea2000 import FastPacketHandler, FastPacketException
 from navigation_server.nmea2000_datamodel import PGNDef
 
@@ -125,33 +127,32 @@ class ShipModulInterface(BufferedIPCoupler):
             self._check_ok = False
             self.send(self.msg_check)
 
-    def encode_nmea2000(self, msg: NMEA2000Msg) -> NavGenericMsg:
+    def encode_nmea2000(self, msg: NMEA2000Msg) -> Generator[NavGenericMsg, Any, None]:
         _logger.debug("Shipmodul sending N2K message %s" % msg)
-        pgn = b'%06X' % msg.pgn
-        priow = msg.prio << 12
-        rdata = bytearray(8)
-
-        def encode(data) -> NavGenericMsg:
-            l = len(data)
-            id = 7
-            for b in data[:l]:
-                rdata[id] = b
-                id -= 1
-            attr = 0x8000 | priow | l << 8 | msg.da
-            # print("Shipmodul encode source:", data.hex(), "result:", rdata[id+1:].hex())
-            sd = b'$MXPGN,%s,%4X,%s' % (pgn, attr, rdata[id+1:].hex().encode())
-            checksum = NMEA0183Sentences.b_checksum(sd[1:])
-            frame = b'%s*%02X\r\n' % (sd, checksum)
-            return NavGenericMsg(TRANSPARENT_MSG, raw=frame)
-
-        if msg.fast_packet:
-            for data_packet in self._fast_packet_handler.split_message(msg.pgn, msg.payload):
-                yield encode(data_packet)
-        else:
-            yield encode(msg.payload)
+        for frame in self.mxpgn_encode(msg, self._fast_packet_handler):
+            yield NavGenericMsg(TRANSPARENT_MSG, raw=frame)
 
     def validate_n2k_frame(self, frame):
         pass
+
+    @staticmethod
+    def mxpgn_encode(msg: NMEA2000Msg, fp_handler: FastPacketHandler) -> Generator[bytes, Any, None]:
+        pgn = b'%06X' % msg.pgn
+        priow = (msg.prio & 7) << 12
+
+        def encode(data) -> bytes:
+            rdata = bytearray(data)
+            rdata.reverse()
+            attr = 0x8000 | priow | len(rdata) << 8 | msg.da
+            sd = b'$MXPGN,%s,%4X,%s' % (pgn, attr, rdata.hex().encode())
+            checksum = NMEA0183Sentences.b_checksum(sd[1:])
+            return b'%s*%02X\r\n' % (sd, checksum)
+
+        if msg.fast_packet:
+            for data_packet in fp_handler.split_message(msg.pgn, msg.payload):
+                yield encode(data_packet)
+        else:
+            yield encode(msg.payload)
 
     @staticmethod
     def mxpgn_decode(coupler, m0183: NMEA0183Msg) -> NavGenericMsg:
@@ -203,7 +204,7 @@ class ShipModulInterface(BufferedIPCoupler):
             return fp
 
         # self.trace_n2k_raw(pgn, source_addr, prio, data)
-        _logger.debug("start processing PGN %d" % pgn)
+        _logger.debug("MXPGN decode start processing PGN %d" % pgn)
         if coupler.fast_packet_handler.is_pgn_active(pgn, source_addr, data):
             _logger.debug("Shipmodul PGN %d on address %d fast packet active" % (pgn, source_addr))
             try:
@@ -283,30 +284,47 @@ class ShipModulConfig(NavTCPServer):
             except OSError:
                 break
             _logger.info("New configuration connection from %s:%d" % self._address)
-            pub = ConfigPublisher(self._connection, self._reader, self, self._address)
-            if not self._reader.configModeOn(pub):
-                self._connection.close()
-                continue
-            self._pub = pub
-            pub.start()
-            _logger.info("Shipmodul configuration active")
+            if isinstance(self._reader, BufferedIPCoupler):
+                pub = ConfigPublisher(self._connection, self._reader, self, self._address)
+                if not self._reader.configModeOn(pub):
+                    self._connection.close()
+                    continue
+                self._pub = pub
+                pub.start()
+
+
             # reader = TCPBufferedReader(self._connection, b'\r\n', address)
-            self._reader.set_transparency(True)
+                self._reader.set_transparency(True)
+            else:
+                # case for NMEA2000 controller
+                pub = self._reader.start_config_mode(self._connection)
+            _logger.info("Shipmodul configuration active")
             while pub.is_alive():
 
-                msg = self._connection.recv(256)
-                if len(msg) == 0:
-                    _logger.error("Shipmodul config coupler null message received")
+                try:
+                    msg = self._connection.recv(256)
+                except (TimeoutError, socket.timeout):
+                    _logger.debug("Shipmodul config connection timeout")
+                    continue
+                except OSError:
+                    _logger.debug("Shipmodul config connection error => stop connection")
                     break
-                _logger.debug("Shipmodul conf msg %s" % msg)
+                if len(msg) == 0:
+                    _logger.debug("Shipmodul config coupler null message received from client")
+                    break
+                _logger.debug("Shipmodul conf msg from MPXConfig %s" % msg)
                 int_msg = NavGenericMsg(TRANSPARENT_MSG, raw=msg)
                 if not self._reader.send(int_msg):
                     _logger.error("Shipmodul config coupler write error")
                     break
 
             _logger.info("Connection with configuration application lost running %s" % pub.is_alive())
-            self._reader.set_transparency(False)
-            self._pub.stop()
+            if isinstance(self._reader, BufferedIPCoupler):
+                self._reader.set_transparency(False)
+                self._pub.stop()
+            else:
+                self._reader.stop_config_mode()
+
             self._connection.close()
             self._connection = None
         _logger.info("Configuration server thread stops")
@@ -339,5 +357,108 @@ class ShipModulConfig(NavTCPServer):
 
 
 
+class MPX3Nmea2000Interface(IPBufferedReader):
+    '''
+    class added in 2.8.0
+    This class is interfacing the Miniplex3 in the scope of the NMEA2000 (CAN) service
+    It is reduced and adapted version of the Coupler class
+    '''
+    def __init__(self, opts):
+        super().__init__(opts)
+        self._controller = None
+        self._publisher = None
+        self._fast_packet_handler = FastPacketHandler(self)
+
+    def set_controller(self, controller):
+        self._controller = controller
+        self.open()
+        self.set_message_processing(b'\r\n', self.mpx3_receive_msg, controller.input_queue)
+
+    @property
+    def mode(self):
+        return Coupler.NMEA2000
+
+    def channel(self):
+        return f"MPX3 {self._name}@{self._address}:{self._port}"
+
+    @property
+    def fast_packet_handler(self):
+        return self._fast_packet_handler
+
+    def mpx3_receive_msg(self, frame):
+        if frame[0] == 4:
+            # EOT
+            return NavGenericMsg(NULL_MSG)
+        if frame[:1] == b'\\':
+            # ignore messages with tags
+            raise IncompleteMessage
+        msg = NMEA0183Msg(frame)
+        if msg.formatter() != b'PGN':
+            _logger.warning(f"Miniplex3 NMEA2000 interface => unexpected NMEA0183 message:{msg}")
+            raise IncompleteMessage
+        self._total_msg_raw += 1
+        gmsg = ShipModulInterface.mxpgn_decode(self, msg)
+        return gmsg.msg
+
+    def send_n2k_msg(self, msg: NMEA2000Msg):
+        '''
+
+        Args:
+            msg (): Nmea2000 msg to be sent to the Miniplex3
+
+        Returns: None
+        No flow control on out messages
+        '''
+        for frame in ShipModulInterface.mxpgn_encode(msg, self._fast_packet_handler):
+            self._transport.send(frame)
+
+    def send(self, msg:NavGenericMsg) -> bool:
+        _logger.debug("ShipModulInterface.send %s" % msg.raw)
+        return self._transport.send(msg.raw)
+
+    def start_config_mode(self, server_connection):
+        _logger.debug("ShipModulConfig start config mode")
+        self._asynch_io.stop()
+        self._asynch_io.join()
+        self._publisher = DirectPublisher(self._transport, server_connection)
+        self._publisher.start()
+        _logger.debug("ShipModulConfig config mode started")
+        return self._publisher
+
+    def stop_config_mode(self):
+        _logger.debug("ShipModulConfig stop config mode")
+        self._publisher.stop()
+        self._publisher.join()
+        _logger.debug("ShipModulConfig config mode stopped -> restarting normal mode")
+        self.set_message_processing(b'\r\n', self.mpx3_receive_msg, self._controller.input_queue)
+        self._publisher = None
+
+
+class DirectPublisher(NavThread):
+    def __init__(self, transport, server_connection):
+        super().__init__(name="DirectConfigurationPublisher")
+        self._transport = transport
+        self._server_connection = server_connection
+        self._stop_flag = False
+
+    def stop(self):
+        self._stop_flag = True
+
+    def nrun(self):
+        while not self._stop_flag:
+            _logger.debug("DirectPublisher.nrun loop")
+            try:
+                buffer = self._transport.recv()
+            except CouplerTimeOut:
+                continue
+            except CouplerReadError as e:
+                break
+            _logger.debug("ShipModulConfig received %s" % buffer)
+            try:
+                self._server_connection.sendall(buffer)
+            except OSError as e:
+                _logger.debug("Error writing response on config:%s" % str(e))
+                break
+        _logger.debug("DirectPublisher.nrun loop stopped")
 
 

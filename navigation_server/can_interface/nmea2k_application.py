@@ -7,7 +7,7 @@
 # Author:      Laurent Carré
 #
 # Created:     16/09/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ from navigation_server.router_core import NMEA2000Msg
 from navigation_server.nmea2000_datamodel import NMEA2000MutableName, PGNDef
 from navigation_server.nmea2000 import (AddressClaim, ISORequest, ProductInformation, ConfigurationInformation,
                                           AcknowledgeGroupFunction, create_group_function, CommandedAddress,
-                                          CommandGroupFunction, Heartbeat, get_n2k_decoded_object, NMEA2000Device)
+                                          CommandGroupFunction, Heartbeat, get_n2k_decoded_object, NMEA2000Device, PGNList)
 from navigation_server.router_common import get_id_from_mac, MessageServerGlobals, resolve_ref, SocketCanError
 
 
@@ -176,6 +176,8 @@ class NMEA2000Application(NMEA2000Device):
         self._manufacturer_name = MessageServerGlobals.manufacturers.by_code(self._iso_name.manufacturer_code).name
         self._id = self.application_id
         NMEA2000Application.application_id += 1
+        self._transmit_pgn = [59904, 60928, 126996, 126998]
+        self._receive_pgn = [59904, 60928, 126208, 126996, 126998]
 
     def is_proxy(self):
         return False
@@ -191,6 +193,12 @@ class NMEA2000Application(NMEA2000Device):
     def device_class_function(self):
         # to be overloaded if a specific class and function have to be defined for the device
         return 25, 130
+
+    def add_transmit_pgn(self, pgn:(list[int], set[int])):
+        self._transmit_pgn.extend(pgn)
+
+    def add_receive_pgn(self, pgn:list[int]):
+        self._receive_pgn.extend(pgn)
 
     def stop_request(self):
         self._app_state = self.STOP_IN_PROGRESS
@@ -331,6 +339,9 @@ class NMEA2000Application(NMEA2000Device):
                 self.send_product_information()
             elif request.request_pgn == 126998:
                 self.send_configuration_information()
+            elif request.request_pgn == 126464:
+                # send back the PGN list
+                self.send_pgn_list(msg.sa)
             else:
                 _logger.error("ISO Request on PGN %d not supported" % request.request_pgn)
 
@@ -382,6 +393,15 @@ class NMEA2000Application(NMEA2000Device):
         self._configuration_information.sa = self._address
         self._send_to_bus(self._configuration_information.message())
 
+    def send_pgn_list(self, destination: int):
+        _logger.debug("Sending transmit PGN list for address %d destination %d" % (self._address, destination))
+        pgn_list = PGNList(self._address, destination, 0,self._transmit_pgn)
+        _logger.debug("PGN126464 encoded=%s", pgn_list.message().format1())
+        self._send_to_bus(pgn_list.message())
+        _logger.debug("Sending receive PGN list for address %d destination %d" % (self._address, destination))
+        pgn_list = PGNList(self._address, destination, 1,self._receive_pgn)
+        self._send_to_bus(pgn_list.message())
+
     def send_heartbeat(self):
         if self._app_state == self.STOP_IN_PROGRESS:
             return
@@ -400,7 +420,8 @@ class NMEA2000Application(NMEA2000Device):
 
     def group_function_handler(self, msg: NMEA2000Msg):
         '''
-        Handle PGN 126408 Group Function handler
+        Handle PGN 126208 Group Function handler
+        the group_function is one subclass of GroupFunction class
         '''
         group_function = create_group_function(message=msg)
         _logger.debug("Received Group Function for address %d function=%d on PGN %d" % (self._address,
@@ -418,6 +439,15 @@ class NMEA2000Application(NMEA2000Device):
         self._send_to_bus(acknowledge.message())
 
     def process_command_group_function(self, group_function, acknowledge):
+        '''
+
+        Args:
+            group_function ():
+            acknowledge ():
+
+        Returns: None
+
+        '''
         if group_function.function_pgn == 60928:
             _logger.debug("Command Group Function on name %s" % self._iso_name)
             group_function.pgn_class.execute_command_parameters(self._iso_name, group_function.parameters, acknowledge)
@@ -431,83 +461,4 @@ class NMEA2000Application(NMEA2000Device):
     def wake_up(self):
         # wake up call every second
         pass
-
-
-class DeviceReplaySimulator(NMEA2000Application):
-
-    def __init__(self, opts):
-        self._app_name = opts['name']
-        self._source = opts.get('source', int, 255)
-        if self._source in (253, 254):
-            raise ValueError
-        _logger.info(f"Starting DeviceReplaySimulator {self._app_name} with source {self._source}")
-        self._publisher_name = opts.get('publisher', str, None)
-        self._publisher = None
-        if self._publisher_name is None:
-            _logger.error(f"DeviceReplaySimulator {self._app_name} missing publisher")
-            raise ValueError
-        self._model_id = opts.get('model_id', str, 'Replay Simulator')
-
-
-    def init_product_information(self):
-        super().init_product_information()
-        self._product_information.model_id = self._model_id
-
-    def set_controller(self, controller):
-        super().__init__(controller)
-        # here we assume that the publisher has been instantiated as well
-        try:
-            self._publisher = resolve_ref(self._publisher_name)
-        except KeyError:
-            _logger.error(f"DeviceReplaySimulator {self._app_name} incorrect publisher {self._publisher_name}")
-            return
-        assert self._publisher is not None
-        _logger.info(f"DeviceReplaySimulator {self._app_name} subscribing on published {self._publisher.name}")
-        self._publisher.subscribe(self._source, self.input_message)
-
-    def input_message(self, can_id, data):
-        _logger.debug("DeviceReplaySimulator message %4X %s" % (can_id, data.hex()))
-        if self._app_state != self.ACTIVE:
-            _logger.warning(f"Application {self._app_name} not ready to take messages")
-            return
-        pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
-        # need to avoid all protocol pgn
-        if PGNDef.pgn_for_controller(pgn):
-            return
-        # adjust the CAN ID
-        can_id_sent = (can_id & 0xFFFFF00) | self._address
-        assert self._controller is not None
-        self._controller.CAN_interface.put_can_msg(can_id_sent, data)
-
-
-class DeviceSimulator(NMEA2000Application):
-    '''
-    This class is a default NMEA2000 device simulator (or even implementation)
-    '''
-
-    def __init__(self, opts):
-        self._app_name = opts['name']
-        self._requested_address = opts.get('address', int, -1)
-        self._model_id = opts.get('model_id', str, 'Device Simulator')
-        self._processed_pgn = opts.getlist('pgn_list',int, None)
-        if self._processed_pgn is None:
-            _logger.error(f"Device Simulator {self._app_name} must have a set of pgn assigned")
-            raise ValueError
-
-    def init_product_information(self):
-        super().init_product_information()
-        self._product_information.model_id = self._model_id
-
-    def set_controller(self, controller):
-        super().__init__(controller, self._requested_address)
-        # here we assume that the publisher has been instantiated as well
-        _logger.info(f"Device Simulator {self._app_name} ready")
-        controller.set_pgn_vector(self, self._processed_pgn)
-
-    def receive_data_msg(self, msg: NMEA2000Msg):
-        '''
-        This is a generic method that is only printing the message received
-        '''
-        n2k_obj = get_n2k_decoded_object(msg)
-        print("Device", self._address, "PGN", msg.pgn, "receive:", n2k_obj)
 

@@ -3,9 +3,9 @@
 
 ## Description
 
-The Navigation Messages & Data Server toolbox is a set of software that can run in a distributed environment that collects, process and distributes the data from the boat navigation and power systems.
-It is built around several Python application running independently and communicating via various messaging systems. The preferred internal system is based on Google RPC or [gPRC](https://grpc.io/) and [Protobuf](https://protobuf.dev/).
-Other possibility is to use NMEA0183 type streams on pseudo NMEA0183 streams encapsulating NMEA2000 (see documentation on NMEA2000 and data formats)
+The Navigation Messages & Data Server toolbox is a set of software that can run in a distributed environment that collects, processes and distributes the data from the boat navigation and power systems.
+It is built around several Python applications running independently and communicating via various messaging systems. The preferred internal system is based on Google RPC or [gPRC](https://grpc.io/) and [Protobuf](https://protobuf.dev/).
+Another possibility is to use NMEA0183 type streams on pseudo NMEA0183 streams encapsulating NMEA2000 (see documentation on NMEA2000 and data formats)
 
 **The toolbox** is focusing on NMEA2000 messages and data, whatever is the format. NMEA0183 messages are also carried but with a minimum of semantic analysis. All applications are using the same Python program.
 
@@ -16,13 +16,13 @@ Based on the configuration file (using YamL syntax), all types of application ca
    - **local agent** this is a local service controlling other services via systemd through commands sent via gRPC, it can also act on the system network and operation (reboot)
    - **data manager** collecting messages and creating datasets like engine start and stop. That is a big area for future development
 
-The above list is not limitative and either by combining existing building block or creating new one in Python, there is no limit on what can be done with our **Navigation Message Server**.
+The above list is not limitative, and either by combining an existing building block or creating a new one in Python, there is no limit on what can be done with our **Navigation Message Server**.
 
-The navigation application is outside the scope of the project and most of the tests have been performed using [Scannav](https://www.scannav.com/).
+The navigation application is outside the scope of the project, and most of the tests have been performed using [Scannav](https://www.scannav.com/).
 
-The toolbox also includes utilities for NMEA2000 that are described in details the NMEA2000 documentation page like the **code_generator** that is generating Protobuf and Python code to process NMEA2000 PGN.
+The toolbox also includes utilities for NMEA2000 that are described in detail on the NMEA2000 documentation page, like the **code_generator** that is generating Protobuf and Python code to process NMEA2000 PGN.
 
-A sample GUI application for the control of the various server is also available [see repository](https://github.com/Sterwen-Technology/navigation_server_gui). It interacts using gRPC with the servers described above. It is based on TkInter.
+A sample GUI application for the control of the various servers is also available [see repository](https://github.com/Sterwen-Technology/navigation_server_gui). It interacts using gRPC with the servers described above. It is based on TkInter.
 
 
 ## Installation
@@ -50,11 +50,11 @@ The proposed architecture is described here:[Global system recommended architect
  - **STNC800** navigation computers have additional support
 
 ### Supported BUS and instrumentation interfaces
- - Shipmodul Miniplex3 using IP host interface (NMEA0183 and NMEA2000)
+ - Shipmodul Miniplex3 using IP host interface (NMEA0183 and NMEA2000) with NMEA2000 controller features
  - DigitalYacht iKonvert NMEA2000 USB adapter
  - Yacht Devices IP based systems (NMEA2000 and NMEA0183)
  - NMEA0183 over a serial or TCP/IP interface
- - CAN Direct interfaces:
+ - CAN Direct interfaces with NMEA2000 controller features and the capability to add NMEA2000 virtual devices:
    - PICAN2 HAT on RPi3 or RPi4
    - SolidRun NXP-based gateways: Industrial N6 and N8 Compact with CAN interface
  - Victron VE Direct devices (requires a dedicated process to be configured)
@@ -74,12 +74,13 @@ All servers can be started from the command line, they don't require specific pe
 
 ### GUI access to the API
 
-A sample GUI has been developed to have a real time control of the various servers via the public API. It has been built using [guizero](https://lawsie.github.io/guizero/). Honestly that looks quick and dirty and this is really like that.
+A sample GUI has been developed to have a realtime control of the various servers via the public API. It has been built using [guizero](https://lawsie.github.io/guizero/). Honestly that looks quick and dirty and this is really like that.
 Repository for [Navigation server GUI](https://github.com/Sterwen-Technology/navigation_server_gui)
 
 ### Automatic start
 
-For production the system should be run through *systemd*. Services that can be used as samples are provided in the application. And a shell script that install all services at once.
+For production the system should be run through *systemd*. Services that can be used as samples are provided in the application.
+From version 2.7 on, a single systemd service can be used to start all the servers: the navigation_agent service, see [Agent and Network services](doc/agent-network.md)
 
 ## Documentation
 
@@ -107,7 +108,7 @@ To overcome the problem, a specific Python script has been developed (mod_pb2.py
 For any problem encountered, please open an issue in this GitHub repository.
 
 ## Roadmap
-The current stable version is V2.7.0 Documentation is aligned on this version.
+The current stable version is V2.8.0 Documentation is aligned on this version.
 
 From the version 2.5.0 the new STNC800 hardware is supported
 

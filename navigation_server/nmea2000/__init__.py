@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     26/02/2024
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -20,7 +20,9 @@ from .nmea2k_publisher import N2KTracePublisher, N2KStatisticPublisher, N2KSourc
 from .nmea2k_device import NMEA2000Device
 from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter
 from .nmea2k_iso_messages import (AddressClaim, ConfigurationInformation, ProductInformation, Heartbeat, ISORequest,
-                                  CommandedAddress, AcknowledgeGroupFunction, create_group_function, CommandGroupFunction)
+                                  CommandedAddress, AcknowledgeGroupFunction, create_group_function, CommandGroupFunction,
+                                  PGNList)
+from .nmea2k_service import Nmea2000Service
 # from .nmea2k_name import NMEA2000Name
 
 from navigation_server.nmea2000_datamodel import initialize_feature as init_datamodel

@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     29/11/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 import socket
@@ -16,7 +16,7 @@ import logging
 import time
 # from publisher import Publisher
 
-from .publisher import PublisherOverflow
+from .core_exceptions import PublisherOverflow, CouplerReadError, CouplerTimeOut, CouplerWriteError, CouplerNotPresent, CouplerOpenRefused
 from navigation_server.router_common import (NavGenericMsg, NULL_MSG, N2K_MSG, NavThread, MessageServerGlobals,
                                              N0183_MSG, NMEAMsgTrace, MessageTraceError, IncompleteMessage,
                                              resolve_ref, resolve_class)
@@ -26,25 +26,6 @@ from .nmea0183_msg import NMEAInvalidFrame
 
 _logger = logging.getLogger("ShipDataServer"+"."+__name__)
 
-
-class CouplerReadError(Exception):
-    pass
-
-
-class CouplerWriteError(Exception):
-    pass
-
-
-class CouplerTimeOut(CouplerReadError):
-    pass
-
-
-class CouplerNotPresent(Exception):
-    pass
-
-
-class CouplerOpenRefused(Exception):
-    pass
 
 
 class Coupler(NavThread):
@@ -93,7 +74,7 @@ class Coupler(NavThread):
         # print(self.object_name(), ":", direction)
         self._direction = self.dir_dict.get(direction, self.BIDIRECTIONAL)
         self._mode_str = opts.get('protocol', str, 'nmea0183').lower()
-        self._mode = self.protocol_dict[self._mode_str]
+        self._mode = self.protocol_dict.get(self._mode_str, self.NMEA0183)
         _logger.info("Coupler %s mode %d direction %d" % (self._name, self._mode, self._direction))
         if self._mode == self.NMEA2000 and self._direction != self.READ_ONLY:
             self._n2k_writer = self.define_n2k_writer()
@@ -114,6 +95,7 @@ class Coupler(NavThread):
                 self._trace_raw = False
         else:
             self._tracer = None
+        _logger.info(f"Coupler {object_name} traces=> {self._trace_msg} {self._trace_raw}")
         self._stop_system = opts.get('stop_system', bool, False)
         self._check_in_progress = False
         self._fast_packet_handler = None
@@ -451,6 +433,12 @@ class Coupler(NavThread):
     def is_suspended(self) -> bool:
         return self._suspend_flag
 
+    def is_running(self) -> bool:
+        if self._state >= self.OPEN and not self._suspend_flag:
+            return True
+        else:
+            return False
+
     def read(self) -> NavGenericMsg:
         """
         Generic Read function with specific intercept
@@ -503,7 +491,7 @@ class Coupler(NavThread):
         raise NotImplementedError("Coupler.open => To be implemented in subclass")
 
     def close(self):
-        raise NotImplementedError("Couple.close => To be implemented in subclass")
+        raise NotImplementedError("Coupler.close => To be implemented in subclass")
 
     def send(self, msg: NavGenericMsg):
         raise NotImplementedError("Coupler.send => To be implemented in subclass")

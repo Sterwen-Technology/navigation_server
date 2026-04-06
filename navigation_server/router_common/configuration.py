@@ -234,6 +234,7 @@ class NavigationConfiguration:
         MessageServerGlobals.global_variables = self
         # print(settings_file)
         if not os.path.exists(settings_file):
+            _logger.info(f"Settings file {settings_file} does not exist from path:{os.getcwd()}")
             # we merge with the home dir
             settings_file = os.path.join(MessageServerGlobals.home_dir, "conf", settings_file)
         # keep the configuration path
@@ -253,7 +254,7 @@ class NavigationConfiguration:
         except yaml.YAMLError as e:
             _logger.error("Settings file decoding error %s" % str(e))
             fp.close()
-            raise
+            raise ConfigurationException("Yaml file decoding error %s" % str(e))
         # check if we debug the configuration analysis
         if self._configuration.get('debug_configuration', False):
             _logger.setLevel(logging.DEBUG)
@@ -284,7 +285,7 @@ class NavigationConfiguration:
             else:
                 _logger.error(f"Not enough permissions for data_directory:{data_directory}")
         else:
-            _logger.error(f"Non existent data directory {data_directory} - some features will not work")
+            _logger.warning(f"Non existent data directory {data_directory} - some features will not work")
 
         try:
             trace_dir = self._configuration['trace_dir']
@@ -302,8 +303,12 @@ class NavigationConfiguration:
             try:
                 key_dir = self._configuration['ssl_key_dir']
             except KeyError:
-                _logger.warning("Missing ssl_key_dir in configuration file")
-                key_dir = os.path.join(os.getenv('HOME'), 'certificates')
+                _logger.info("Missing ssl_key_dir in configuration file")
+                if os.getenv('NAV_CONF_DIR') is not None:
+                    cert_dir = os.getenv('NAV_CONF_DIR')
+                else:
+                    cert_dir = os.getenv('HOME')
+                key_dir = os.path.join(cert_dir, 'certificates')
             if not os.path.isdir(key_dir):
                 _logger.warning(f"Key directory {key_dir} does not exist => SSL certificate generation disabled")
             else:
@@ -336,6 +341,7 @@ class NavigationConfiguration:
 
         try:
             MessageServerGlobals.agent_address = self._configuration['agent_address']
+            _logger.info(f"Agent address: {MessageServerGlobals.agent_address}")
         except KeyError:
             MessageServerGlobals.agent_address = "127.0.0.1:4545"
             _logger.warning(f"Missing agent address, defaulting to {MessageServerGlobals.agent_address}")

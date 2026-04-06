@@ -63,3 +63,9 @@ class SocketCanError(Exception):
     @property
     def can_error(self) -> int:
         return self._can_error
+
+class NavigationCriticalError(Exception):
+    '''
+    NavigationCriticalError to be raised when execution cannot continue
+    '''
+    pass

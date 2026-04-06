@@ -15,15 +15,15 @@ import time
 
 from navigation_server.router_common import (N2K_MSG, NavGenericMsg,
                                               GrpcStreamTimeout, GrpcAccessException)
-from navigation_server.router_core import NMEA2000Msg, Coupler, CANGrpcStreamReader, CouplerReadError, CouplerTimeOut
+from navigation_server.router_core import NMEA2000Msg, Coupler, Nmea2000GrpcStreamReader, CouplerReadError, CouplerTimeOut
 
-from navigation_server.generated.n2k_can_service_pb2 import CANReadRequest
+from navigation_server.generated.nmea2000_service_pb2 import Nmea2000ReadRequest
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-class N2KGrpcCoupler(Coupler, CANGrpcStreamReader):
+class N2KGrpcCoupler(Coupler, Nmea2000GrpcStreamReader):
 
     def __init__(self, opts):
         super().__init__(opts)
@@ -33,7 +33,7 @@ class N2KGrpcCoupler(Coupler, CANGrpcStreamReader):
         input_stream_opts['select_sources'] = opts.getlist('select_sources', int, None)
         input_stream_opts['reject_sources'] = opts.getlist('reject_sources', int, None)
         input_stream_opts['reject_pgn'] = None
-        CANGrpcStreamReader.__init__(self, self.object_name(), input_stream_opts)
+        Nmea2000GrpcStreamReader.__init__(self, self.object_name(), input_stream_opts)
         self._mode = self.NMEA2000
 
     def open(self):

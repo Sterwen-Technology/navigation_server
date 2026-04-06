@@ -15,17 +15,19 @@ The NavigationServer platform provides a set of software components to manage th
 The **GNSSService** component is providing both the communication towards the chip and the presentation of the status via gRPC.
 Here are the parameters:
 
-| Name           | Type      | Default                  | Signification                                                             |
-|----------------|-----------|--------------------------|---------------------------------------------------------------------------|
-| device         | string    | /dev/ttyUSB0             | serial device for communication                                           |
-| baudrate       | int       | 38400                    | data rate, that is the default. Currently no other value is supported     |
-| push_to_server | boolean   | false                    | indicates that the data must be pushed towards another server (see below) | 
-| push_pgn       | list(int) | [129025, 129026, 129029] | List of NMEA2000 to be pushed                                             |
-| address        | string    | 127.0.0.1                | address of a gRPC server                                                  |
-| port           | int       | 4502                     | port of the server                                                        |
-| trace          | boolean   | false                    | If true all data from the GNSS chip atr logged in a file                  |
+| Name           | Type                    | Default                  | Signification                                                             |
+|----------------|-------------------------|--------------------------|---------------------------------------------------------------------------|
+| device         | string                  | /dev/ttyUSB0             | serial device for communication                                           |
+| baudrate       | int                     | 38400                    | data rate, that is the default. Currently no other value is supported     |
+| push_to_server | [device, generic, none] | none                     | indicates that the data must be pushed towards another server (see below) | 
+| push_pgn       | list(int)               | [129025, 129026, 129029] | List of NMEA2000 to be pushed                                             |
+| address        | string                  | 127.0.0.1                | address of a gRPC server                                                  |
+| port           | int                     | 4502                     | port of the server                                                        |
+| trace          | boolean                 | false                    | If true all data from the GNSS chip atr logged in a file                  |
 
 The system is pushing NMEA2000 PGN 129025, 129026, 129029 by default. To be extended with PGN 129539 and 129540.
+If 'device' is selected, the GNSS PGN are pushed towards a virtual device via the GNSSInput service (see below). So the target server must have such service declared.
+When 'generic' is selected the PGN are pushed towards the input for the NMEA2000 Controller (NMEA2000) via the Nmea2000Service. In that case the address selected is the default one for the controller.
 
 All satellites and fix data are recorded and made available through the gRPC service. The Ublox device supports the following GNSS systems:
 

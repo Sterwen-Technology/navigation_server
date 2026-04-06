@@ -25,13 +25,16 @@
       * [N2KGrpcCoupler (Coupler)](#n2kgrpccoupler-coupler)
       * [N2KGrpcSendCoupler (Coupler)](#n2kgrpcsendcoupler-coupler)
     * [Services](#services)
-      * [CAN Service](#can-service)
+      * [Nmea2000Service](#nmea2000service)
       * [Console service](#console-service)
       * [AgentService](#agentservice)
-      * [DataDispatchService](#datadispatchservice)
-      * [NavigationDataService](#navigationdataservice)
+      * [NetworkService](#networkservice)
+      * [EngineService](#engineservice)
       * [Energy management service](#energy-management-service)
         * [MPPTService](#mpptservice)
+    * [Functions](#functions)
+      * [NMEA2000InputConnector](#nmea2000inputconnector)
+      * [MPX3Nmea2000Interface](#mpx3nmea2000interface)
     * [Publishers](#publishers)
       * [Generic Publisher (Abstract class)](#generic-publisher-abstract-class)
       * [GrpcPublisher](#grpcpublisher)
@@ -40,7 +43,7 @@
       * [PrintPublisher](#printpublisher)
       * [Injector (Publisher)](#injector-publisher)
     * [N2KSourceDispatcher (Publisher)](#n2ksourcedispatcher-publisher)
-    * [Applications](#applications)
+    * [NMEA2000 Applications](#nmea2000-applications)
       * [NMEA2000Application](#nmea2000application)
       * [GrpcInputApplication(GrpcDataService, NMEA2000Application)](#grpcinputapplicationgrpcdataservice-nmea2000application)
     * [Filters](#filters)
@@ -62,7 +65,8 @@
     * [Default port assignments for servers / services](#default-port-assignments-for-servers--services)
   * [Starting servers](#starting-servers)
     * [Application directory python launch helpers](#application-directory-python-launch-helpers)
-    * [Starting using systemd](#starting-using-systemd)
+    * [Starting and controlling processes using the AgentService](#starting-and-controlling-processes-using-the-agentservice)
+    * [Using systemd](#using-systemd)
 <!-- TOC -->
 ## Description
 The navigation server-router aggregates and distributes navigation and other operational data aboard recreational or small professional vessels.
@@ -104,8 +108,8 @@ There are 2 server classes with external access: NMEA0183 based protocol over TC
 
 The NMEA0183 based protocol can be understood and messages starting with '$' or '!' including only printable ASCII characters and separated by the 'CR' and 'LF' characters
 That is not exactly a real protocol over TCP/IP but this is working and the messages (data frames) and directly inherited from the standards NMEA0183 messages.
-Even NMEA2000 data frames are carrier over such messages like it is done for Digital Yacht or Shipmodul miniplex.
-Using efficient binary encoding with Protobuf and a real protocol like gRPC allows an increase in efficiency. THis is particularly true for NMEA2000 that is a binary protocol by nature.
+Even NMEA2000 data frames are carrier over such messages like it is done for Digital Yacht or Shipmodul Miniplex3.
+Using efficient binary encoding with Protobuf and a real protocol like gRPC allows an increase in efficiency. This is particularly true for NMEA2000 that is a binary protocol by nature.
 For more information on [gPRC](https://grpc.io/) and [Protobuf](https://developers.google.com/protocol-buffers/)
 
 #### NavigationMainServer class
@@ -207,9 +211,12 @@ This is an internal server that has no direct TCP access. All accesses to this s
 It shall be associated with a coupler by defining the **nmea2000_controller** parameter to capture all relevant messages. This coupler must be configured with **nmea2000** or **nmea_mix** protocol.
 This server is to be used if the access to the NMEA2000 bus is done via an adapter device (see corresponding couplers here below), meaning that the controller has no control on the bus and can only monitor activity.
 
+Associated with Miniplex3 it can be turned into a full NMEA2000 server with the associated NMEA2000 service. However, no virtual devices can be created. The Miniplex3 adapter function shall be declared to associate it with the controller.
+
 | Name       | Type   | Default | Signification                                                |
 |------------|--------|---------|--------------------------------------------------------------|
 | queue_size | int    | 20      | input message queue size                                     |
+| interface  | str    | None    | The interface function for the NMEA2000 adapter              |
 | save_file  | string | None    | Name of the file for saving the NMEA2000 devices             |
 | max_silent | float  | 60.0    | Maximum time between message for one device (see note below) |
 
@@ -391,10 +398,10 @@ This coupler is processing only NMEA2000 messages. Communication is using the CA
 
 The coupler sends NMEA2000 messages to the CAN server using CAN service (see n2k_can_service.proto).
 
-| Name          | Type   | Default | Signification                                                                 |
-|---------------|--------|---------|-------------------------------------------------------------------------------|
-| target_server | string | None    | ip address or URL for the target                                              |
-| target_port   | int    | 0       | port on the target server                                                     |
+| Name          | Type   | Default | Signification                                                                  |
+|---------------|--------|---------|--------------------------------------------------------------------------------|
+| target_server | string | None    | ip address or URL for the target                                               |
+| target_port   | int    | 0       | port on the target server                                                      |
 | device        | str    | None    | name of the device (nmea2000_app) in the CAN server that will send the message |
 
 
@@ -409,11 +416,16 @@ All services must be associated with a gRPC server (one per process). They all i
 |------------------|--------|---------|--------------------------------------------------------------------------------|
 | server           | string | None    | gRPC server associated. This is a mandatory parameter                          |
 
-#### CAN Service
+#### Nmea2000Service
 
-This service handles the control of one CAN channel, it shall be associated with a CAN Controller (NMEA2KActiveController). The association is automatic.
-If several CAN interfaces are available and active, a process/server shall be instantiated for each interface.
-The service interface is defined by **n2k_can_service.proto**
+This service handles the control of one NMEA2000 channel via a direct CAN connection or an adapter, it shall be associated with a NMEA2000 Controller (NMEA2KController or NMEA2KActiveController). The association is automatic.
+If several NMEA2000 interfaces are available and active, a process/server shall be instantiated for each interface.
+The service interface is defined by **nmea2000_service.proto**
+
+
+| Name                | Type   | Default | Signification                                      |
+|---------------------|--------|---------|----------------------------------------------------|
+| nmea2000_controller | string | None    | NMEA2000 Controller. This is a mandatory parameter |
 
 #### Console service
 
@@ -482,6 +494,19 @@ The NavigationDataService can support the following data services:
 - PositionDataService (future)
 
 **note: PGN do not need to be explicitly selected. By default, they are selected based on the subscription by the services or function processing the data**
+
+#### MPX3Nmea2000Interface
+
+This function provides a direct interface to the Miniplex3 via TCP/IP, that is to be used as interface for the NMEA2000 controller.
+The Miniplex3 shall be configured to send and receive only MXPGN sentences.
+
+
+| Name           | Type     | Default    | Signification                     |
+|----------------|----------|------------|-----------------------------------|
+| address        | string   | no default | Address (IP or hostname)          |
+| port           | integer  | no default | Port of the server                |
+| buffer_size    | integer  | 256        | size in bytes of input buffer     |
+| msg_queue_size | integer  | 50         | size of reading message queue     |
 
 
 ### Publishers

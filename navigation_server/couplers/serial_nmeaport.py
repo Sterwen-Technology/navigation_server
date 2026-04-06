@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     15/04/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -29,6 +29,7 @@ class NMEASerialPort(Coupler):
             _logger.error("SerialPort %s no device specified" % self.object_name())
             raise ValueError
         self._baudrate = opts.get('baudrate', int, 4800)
+        self._mode = self.NMEA0183
         self._tty = None
 
     def open(self):
@@ -39,6 +40,7 @@ class NMEASerialPort(Coupler):
             _logger.error("Serial Port %s cannot open TTY:%s" % (self.object_name(), e))
             return False
         self._state = self.CONNECTED
+        _logger.info("Serial Port %s connected" % self.object_name())
         return True
 
     def _read(self):
@@ -49,7 +51,7 @@ class NMEASerialPort(Coupler):
             try:
                 data = self._tty.readline()
             except serial.serialutil.SerialException as e:
-                if not self._stop_flag:
+                if not self._stopflag:
                     _logger.error("Serial Port %s error reading %s" % (self.object_name(), e))
                     raise CouplerReadError("Serial Port error")
             if len(data) == 0:
@@ -74,4 +76,5 @@ class NMEASerialPort(Coupler):
 
     def close(self):
         # super().close()
+        self._state = self.NOT_READY
         self._tty.close()

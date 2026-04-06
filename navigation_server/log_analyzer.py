@@ -1,12 +1,12 @@
 #-------------------------------------------------------------------------------
-# Name:        module1
-# Purpose:
+# Name:        log_analyzer
+# Purpose:      Interactive log analyzer for NMEA2000 CAN messages
 #
-# Author:      Laurent
+# Author:      Laurent Carré
 #
-# Created:     14/04/2019
-# Copyright:   (c) Laurent 2019
-# Licence:     <your licence>
+# Created:     06/02/2026
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
+# Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
 import sys
@@ -20,19 +20,11 @@ _logger = logging.getLogger("ShipDataServer")
 
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
-    p.add_argument("-o", "--output", action="store", type=str)
-    p.add_argument('-f', '--file', action='store', default=None, help='File for input instead of server')
-    p.add_argument("-p", "--port", action="store", type=int,
-                   default=3555,
-                   help="Listening port for NMEA input, default is 3555")
-    p.add_argument("-a", "--address", action="store", type=str,
-                   default='',
-                   help="IP address or URL for NMEA Input, default is localhost")
-    p.add_argument("-pr", "--protocol", action="store", type=str,
-                   choices=['TCP','UDP'], default='TCP',
-                   help="Protocol to read NMEA sentences, default TCP")
-    p.add_argument('-s','--sleep', action='store', type=float, default=0.25)
-
+    p.add_argument('-f', '--file', action='store', default=None, help='File for input')
+    p.add_argument('-s','--start', action='store', default=0, type=int, help='Start record')
+    p.add_argument('-e','--end', action='store', default=0, type=int, help='End record')
+    p.add_argument('--pgn_list', action='store', default=None, help='PGN list')
+    p.add_argument('-a', '--analyse', action='store_true', default=False, help='analyse only the file')
     return p
 
 
@@ -65,10 +57,22 @@ def main():
         _logger.error("Input file name is mandatory")
         return
 
-    records = RawLogFile(opts.file)
-    for msg in records.get_messages(0, 50):
-        print(msg)
-    print("Source addresses", RawLogCANMessage.source_addresses)
+    log_file = RawLogFile(opts.file)
+    log_file.load_file(None, [], input_msg_only=False)
+    if opts.analyse:
+        return
+    records = log_file.records
+    index = opts.start
+    if opts.end == -1:
+        end = len(records)
+    else:
+        end = opts.end
+    while index < end:
+        msg = records[index]
+        print(f"{msg.direction}|{msg.sa}|{msg.da}|{msg.pgn}:{msg.message}")
+        index += 1
+
+
 
 
 if __name__ == '__main__':

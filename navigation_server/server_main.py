@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     25/10/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ from navigation_server.router_common import (NavigationConfiguration, Navigation
                                              init_options, set_root_package, ConfigurationException, AgentInterface,
                                              ObjectCreationError, GrpcServer, GrpcClient)
 
-MessageServerGlobals.version = "2.7.0"
+MessageServerGlobals.version = "2.8.0"
 default_base_dir = "/"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -43,7 +43,7 @@ def server_main():
     # build the configuration from the file
     try:
         config = NavigationConfiguration().build_configuration(opts.settings)
-    except (FileNotFoundError, IOError) as err:
+    except (FileNotFoundError, IOError, ConfigurationException) as err:
         _logger.critical("Error on configuration file => STOP")
         return
     NavigationLogSystem.finalize_log(config)

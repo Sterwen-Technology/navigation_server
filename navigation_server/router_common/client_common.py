@@ -233,7 +233,7 @@ class GrpcClient:
                 return response
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info(f"Server error:{err.details()}")
+                _logger.info(f"client_common server call => Server error:{err.details()}")
                 # self._state = self.NOT_CONNECTED
             else:
                 _logger.error(f"Error accessing server:{err.details()}")
@@ -277,7 +277,7 @@ class GrpcClient:
                     yield response
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info(f"Server error:{err.details()}")
+                _logger.info(f"client_common server call multiple => Server error:{err.details()}")
                 # self._state = self.NOT_CONNECTED
             else:
                 _logger.error(f"Error accessing server:{err.details()}")
@@ -383,7 +383,7 @@ class GrpcStreamingReader(NavThread):
                 self._process_func(msg)
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info(f"Server error:{err.details()}")
+                _logger.info(f"client_common streaming => Server error:{err.details()}")
                 # self._state = self.NOT_CONNECTED
             else:
                 _logger.error(f"GrpcStreamReader => Error accessing server:{err.details()}")

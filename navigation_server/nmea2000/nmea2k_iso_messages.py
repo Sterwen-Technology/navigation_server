@@ -30,7 +30,7 @@ class NMEA2000Object:
     Specific subclasses can be created to handle special processing
     '''
 
-    __slots__ = ('_pgn', '_pgn_def', '_sa', '_da', '_fields', '_message', '_prio')
+    __slots__ = ['_pgn', '_pgn_def', '_sa', '_da', '_fields', '_message', '_prio']
 
     def __init__(self, pgn: int):
         self._pgn = pgn
@@ -55,9 +55,9 @@ class NMEA2000Object:
         self.update()
         return self
 
-    def message(self):
+    def message(self) -> NMEA2000Msg:
         if self._message is None:
-            self._message = NMEA2000Msg(self._pgn, self._prio, self._sa, self._da, self.encode_payload())
+            self._message = NMEA2000Msg(self._pgn, self._prio, self._sa, self._da, payload=self.encode_payload())
         if self._pgn_def.pdu_format == PGNDef.PDU1 and self._da == 0:
             _logger.warning("NMEA2000 Message with PDU1 format and no destination address")
         return self._message
@@ -65,7 +65,7 @@ class NMEA2000Object:
     def update(self):
         raise NotImplementedError("Method update To be implemented in subclass")
 
-    def encode_payload(self) -> bytes:
+    def encode_payload(self) -> bytearray:
         raise NotImplementedError("Method encode_payload To be implemented in subclass")
 
     @property
@@ -99,6 +99,8 @@ class NMEA2000Object:
         return NavGenericMsg(N2K_MSG, msg= self.to_message())
 
 class AddressClaim(NMEA2000Object):
+
+    __slots__ = ['_name'] + NMEA2000Object.__slots__
 
     @staticmethod
     def decode_parameter(param_number, buffer, index):
@@ -165,6 +167,8 @@ class AddressClaim(NMEA2000Object):
 
 class ISORequest(NMEA2000Object):
 
+    __slots__ = ['_req_pgn'] + NMEA2000Object.__slots__
+
     def __init__(self, sa=0, da=255, request_pgn=60928):
         super().__init__(59904)
         self._sa = sa
@@ -185,6 +189,35 @@ class ISORequest(NMEA2000Object):
     @property
     def request_pgn(self):
         return self._req_pgn
+
+
+class PGNList(NMEA2000Object):
+    '''
+    This class implements the PGN 126464
+    '''
+    def __init__(self, sa, da, direction:int, pgn:list):
+        '''
+
+        Args:
+            sa : source address
+            da : destination address
+            direction (): 0 => transmit PGN, 1 receive PGN
+            pgn: list of PGN to be sent in PGN126464
+        '''
+        super().__init__(126464)
+        self._sa = sa
+        self._da = da
+        self._pgn_set = set(pgn)
+        self._direction = direction
+        self._priority = 6
+
+    def encode_payload(self) -> bytearray:
+        res = bytearray()
+        res.extend(self._direction.to_bytes(1))
+        for pgn in self._pgn_set:
+            encoded_pgn = pgn.to_bytes(3, 'little')
+            res.extend(encoded_pgn)
+        return res
 
 
 class ProductInformation(Pgn126996Class):
