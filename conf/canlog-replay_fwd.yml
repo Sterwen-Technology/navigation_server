@@ -15,8 +15,8 @@ log_level: INFO
 trace_dir: /data/navigation/traces
 debug_configuration: false
 decode_definition_only: false
-connect_agent: true
-secure_grpc: true
+connect_agent: false
+secure_grpc: false
 
 log_module:
     router_common.agent_interface: DEBUG
@@ -41,8 +41,8 @@ servers:
 couplers:
 
 - LogReader:
-    logfile: /data/navigation/traces/TRACE-CAN-if-can0-240823-1304.log
-    class: TransparentCanLogCoupler
+    logfile: /mnt/meaban/Bateau/traces_ref/TRACE-CAN-if-can0-240823-1304.log
+    class: RawLogCoupler
     autostart: true
     direction: read_only
     stop_system: true
@@ -52,16 +52,17 @@ services:
 - Console:
    class: Console
    server: gRPCMainServer
+
 publishers:
 
-- Dispatcher:
-    class: N2KSourceDispatcher
-    mode: transparent
+- Forwarder:
+    class: N2KForwarderToServer
+    address: 192.168.1.23
+    port: 4512
+    device: LogInjector
+    queue_size: 60
     couplers: [LogReader]
 
 applications:
 
-- LogInjector:
-    class: DeviceReplaySimulator
-    source: 255
-    publisher: Dispatcher
+

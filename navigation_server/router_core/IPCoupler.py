@@ -479,7 +479,7 @@ class IPBufferedReader:
     def is_trace_active(self) -> bool:
         return self._trace_raw
 
-    def start_trace(self):
+    def start_trace(self, file_root:str=None):
         if self._tracer is not None:
             _logger.error(f"{self._name} - Trace already started")
             return

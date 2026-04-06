@@ -15,7 +15,7 @@ log_level: INFO
 trace_dir: /data/solidsense/traces
 data_dir: /data/solidsense/data
 ssl_key_dir: /home/laurent/certificates
-secure_grpc: true
+secure_grpc: false
 
 log_module:
     agent.agent_service: INFO
@@ -56,8 +56,19 @@ processes:
 - LogReplayServer:
       class: SimpleProcess
       autostart: false
+      
+- STNC_CAN_Server:
+      class: SystemdProcess
+      service: can_server
+      autostart: false
 
+- STNC_Message_Server:
+      class: SystemdProcess
+      service: navigation
+      autostart: false
 
-
-
+- CAN:
+      class: SystemdProcess
+      service: can
+      controlled: false
 

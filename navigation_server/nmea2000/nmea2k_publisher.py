@@ -17,11 +17,15 @@ import threading
 
 from navigation_server.router_core import ExternalPublisher, NMEAInvalidFrame
 from navigation_server.nmea2000_datamodel import FormattingOptions
+
 from .nmea2k_decode_dispatch import get_n2k_decoded_object, N2KMissingDecodeEncodeException
 from navigation_server.nmea_data import N2KStatistics, NMEA183Statistics
 from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter
 from navigation_server.router_common import get_global_option, NavGenericMsg, N2K_MSG, N2KDecodeException, N0183_MSG, \
-    N2KInvalidMessageException
+    N2KInvalidMessageException, ServiceClient, GrpcAccessException, GrpcClient
+from navigation_server.generated.nmea2000_service_pb2 import Nmea2000SendRequest
+from navigation_server.generated.nmea2000_service_pb2_grpc import Nmea2000ControllerServiceStub
+from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 
 _logger = logging.getLogger("ShipDataServer" + "." + __name__)
 
@@ -317,3 +321,39 @@ class N2KJsonPublisher(ExternalPublisher):
             self._stats.print_entries()
         super().stop()
 
+class N2KForwarderToServer(ServiceClient, ExternalPublisher):
+
+    def __init__(self, opts):
+        ExternalPublisher.__init__(self, opts)
+        ServiceClient.__init__(self, Nmea2000ControllerServiceStub)
+        self._push_address = opts.get('address', str, '127.0.0.1')
+        self._push_port = opts.get('port', int, 4512)
+        self._device = opts.get('device', str, None)
+        if self._device is None:
+            _logger.error(f"N2KForwarderToServer Device number {self._device} out of range")
+            raise ValueError
+        self._push_server = GrpcClient.get_client(f"{self._push_address}:{self._push_port}", use_request_id=False)
+
+    def start(self):
+        self._push_server.add_service(self)
+        self._push_server.connect()
+        super().start()
+
+    def process_msg(self, msg: NavGenericMsg):
+        if msg.type != N2K_MSG:
+            return True
+        n2k_msg = msg.msg
+        msg = Nmea2000SendRequest()
+        n2k_msg.as_protobuf(msg.n2k_msg)
+        msg.device = self._device
+
+        try:
+            resp = self._server_call(self._stub.SendNmea2000Msg, msg, None)
+        except GrpcAccessException:
+            _logger.error("Failed to send N2K MSG")
+            return True
+
+        if resp.error != 0:
+            _logger.error(f"Failed to send N2K MSG: {resp.error}")
+
+        return True

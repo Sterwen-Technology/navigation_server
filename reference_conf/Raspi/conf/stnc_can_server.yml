@@ -1,0 +1,82 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the can server
+#
+# Author:      Laurent Carré
+#
+# Created:     02/04/2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+#
+function: CAN and coupler interfaces server
+server_name: STNC_CAN_Server
+log_level: INFO
+trace_dir: /data/navigation/traces
+data_dir: /data/navigation/data
+
+log_module:
+  nmea2000.nmea2000_msg: INFO
+  nmea2000.nmea2k_controller: INFO
+  can_interface.nmea2k_active_controller: INFO
+  nmea2000.nmea2k_device: INFO
+  can_interface.nmea2k_application: INFO
+  can_interface.nmea2k_can_interface: INFO
+  can_interface.nmea2k_can_coupler: INFO
+  nmea2000_devices.nmea2000_device: INFO
+  nmea2000.nmea2000_service: DEBUG
+
+features:
+  - router_core
+  - can_interface
+  - nmea2000
+  - nmea2000_devices
+  - gnss
+
+
+
+servers:
+
+- Main:
+    class: NavigationMainServer
+
+- gRPCMain:
+      class: GrpcServer
+      port: 4512
+
+- NMEANetwork:
+      class: NMEA2KActiveController
+      trace: true
+      mac_source: eth0
+      channel: can0
+      max_silent: 60.0
+      applications: [LogInjector]
+
+
+couplers:
+
+    
+filters:
+
+services:
+
+- NMEA2000_CAN:
+      class: Nmea2000Service
+      server: gRPCMain
+      
+
+publishers:
+
+
+applications:
+
+- LogInjector:
+    class: NMEA2000SenderDevice
+    address: 24
+
+
+
+
+
+
+

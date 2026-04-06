@@ -339,12 +339,13 @@ class NavigationConfiguration:
         else:
             _logger.warning("Secure GRPC disabled")
 
-        try:
-            MessageServerGlobals.agent_address = self._configuration['agent_address']
-            _logger.info(f"Agent address: {MessageServerGlobals.agent_address}")
-        except KeyError:
-            MessageServerGlobals.agent_address = "127.0.0.1:4545"
-            _logger.warning(f"Missing agent address, defaulting to {MessageServerGlobals.agent_address}")
+        if self._configuration.get('connect_agent', True):
+            try:
+                MessageServerGlobals.agent_address = self._configuration['agent_address']
+                _logger.info(f"Agent address: {MessageServerGlobals.agent_address}")
+            except KeyError:
+                MessageServerGlobals.agent_address = "127.0.0.1:4545"
+                _logger.warning(f"Missing agent address, defaulting to {MessageServerGlobals.agent_address}")
 
         # create entries for allways included classes
         self.import_internal()
