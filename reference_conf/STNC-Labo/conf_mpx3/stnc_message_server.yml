@@ -46,7 +46,6 @@ servers:
     port: 4503
     nmea2000: dyfmt
     coupler: NMEA2000SendCoupler
-    coupler: MiniPlex3
 
 - gRPCMain:
       class: GrpcServer
@@ -98,11 +97,13 @@ publishers:
 #    filters: [Engine]
 #    couplers: [CANCoupler]
 
-- GPSInjector:
-   class: Injector
-   couplers: [GPS]
-   target: MiniPlex3
 
+- TraceOutput:
+    class: N2KStatisticPublisher
+    couplers: [NMEA2000Coupler]
+    # filters: [NMEAOutput, AIS]
+    active: true
+    flexible_decode: false
 
 applications:
 
