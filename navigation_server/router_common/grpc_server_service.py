@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     25/01/2024
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -99,7 +99,7 @@ class GrpcServer(NavigationServer):
         self._running = False
 
     def join(self):
-        _logger.debug("gRPC server enter join - number of running services:%d" % len(self._services))
+        _logger.info("gRPC server enter join - number of running services:%d" % len(self._services))
         if len(self._services) == 0:
             self.stop()
             return

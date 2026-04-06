@@ -53,10 +53,17 @@ processes:
   - STNC_CAN_Server:
       class: SystemdProcess
       service: can_server
+      autostart: false
+
+  - STNC_MPX3_Server:
+      class: SystemdProcess
+      service: mpx3_server
+      autostart: false
 
   - STNC_Message_Server:
       class: SystemdProcess
       service: navigation
+      autostart: false
 
   - CAN:
       class: SystemdProcess

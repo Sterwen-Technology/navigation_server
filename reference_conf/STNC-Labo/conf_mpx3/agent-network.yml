@@ -14,9 +14,8 @@ server_name: navigation_agent
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
-ssl_key_dir: /home/laurent/certificates
 log_module:
-  network.nmcli_interface: INFO 
+  network.nmcli_interface: DEBUG
   network.network_service: DEBUG
   agent.agent_service: INFO
   router_common.agent_interface: INFO
@@ -48,14 +47,28 @@ services:
     class: NetworkService
     server: gRPCMain
     configuration: network_conf.yml
-    generate_ssl: true
 
 processes:
+
+  - STNC_CAN_Server:
+      class: SystemdProcess
+      service: can_server
+      autostart: false
+
+  - STNC_MPX3_Server:
+      class: SystemdProcess
+      service: mpx3_server
+      autostart: false
 
   - STNC_Message_Server:
       class: SystemdProcess
       service: navigation
-      autostart: true
+      autostart: false
+
+  - CAN:
+      class: SystemdProcess
+      service: can
+      controlled: false
 
   - GNSS:
       class: SystemdProcess

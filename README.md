@@ -50,11 +50,11 @@ The proposed architecture is described here:[Global system recommended architect
  - **STNC800** navigation computers have additional support
 
 ### Supported BUS and instrumentation interfaces
- - Shipmodul Miniplex3 using IP host interface (NMEA0183 and NMEA2000)
+ - Shipmodul Miniplex3 using IP host interface (NMEA0183 and NMEA2000) with NMEA2000 controller features
  - DigitalYacht iKonvert NMEA2000 USB adapter
  - Yacht Devices IP based systems (NMEA2000 and NMEA0183)
  - NMEA0183 over a serial or TCP/IP interface
- - CAN Direct interfaces:
+ - CAN Direct interfaces with NMEA2000 controller features and the capability to add NMEA2000 virtual devices:
    - PICAN2 HAT on RPi3 or RPi4
    - SolidRun NXP-based gateways: Industrial N6 and N8 Compact with CAN interface
  - Victron VE Direct devices (requires a dedicated process to be configured)
@@ -108,7 +108,7 @@ To overcome the problem, a specific Python script has been developed (mod_pb2.py
 For any problem encountered, please open an issue in this GitHub repository.
 
 ## Roadmap
-The current stable version is V2.7.0 Documentation is aligned on this version.
+The current stable version is V2.8.0 Documentation is aligned on this version.
 
 From the version 2.5.0 the new STNC800 hardware is supported
 

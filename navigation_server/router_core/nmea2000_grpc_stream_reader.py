@@ -1,11 +1,11 @@
 #-------------------------------------------------------------------------------
-# Name:        nmea2k_grpc_coupler.py
+# Name:        nmea2000_grpc_stream_reader.py
 # Purpose:     coupler over the gRPC service for the NMEA2000/CAN data access
 #
 # Author:      Laurent Carré
 #
 # Created:     24/05/2025
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -16,14 +16,14 @@ import time
 from navigation_server.router_common import GrpcClient, ServiceClient, GrpcAccessException, GrpcStreamTimeout
 from navigation_server.router_core import NMEA2000Msg
 
-from navigation_server.generated.n2k_can_service_pb2 import CANReadRequest
-from navigation_server.generated.n2k_can_service_pb2_grpc import CAN_ControllerServiceStub
+from navigation_server.generated.nmea2000_service_pb2 import Nmea2000ReadRequest
+from navigation_server.generated.nmea2000_service_pb2_grpc import Nmea2000ControllerServiceStub
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-class CANGrpcStreamReader(ServiceClient):
+class Nmea2000GrpcStreamReader(ServiceClient):
     """
     CANGrpcStreamReader is a specialized client for reading CAN messages over a gRPC interface.
 
@@ -79,7 +79,7 @@ class CANGrpcStreamReader(ServiceClient):
         Raises:
             ValueError: Raised if the 'server' or 'port' parameter is not provided in the options.
         """
-        super().__init__(CAN_ControllerServiceStub)
+        super().__init__(Nmea2000ControllerServiceStub)
         self._server = kwargs.get('source_server', None)
         if self._server is None:
             _logger.error(f"class {self.__class__.__name__} the 'server' parameter is mandatory")
@@ -95,7 +95,7 @@ class CANGrpcStreamReader(ServiceClient):
         self._reject_pgn = kwargs.get('reject_pgn', None)
         self._client:GrpcClient = GrpcClient.get_client(f"{self._server}:{self._port}")
         self._client.add_service(self)
-        self._can_request = CANReadRequest()
+        self._can_request = Nmea2000ReadRequest()
         self._can_request.client = f"{reference}-reader"
         if self._select_sources is not None:
             self._can_request.select_sources.extend(self._select_sources)

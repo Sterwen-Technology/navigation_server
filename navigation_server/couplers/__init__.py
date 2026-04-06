@@ -10,7 +10,7 @@
 #-------------------------------------------------------------------------------
 
 from .ikonvert import iKonvert
-from .shipmodul_if import ShipModulInterface, ShipModulConfig
+from .shipmodul_if import ShipModulInterface, ShipModulConfig, MPX3Nmea2000Interface
 # from .internal_gps import InternalGps
 from .serial_nmeaport import NMEASerialPort
 from .grpc_nmea_coupler import GrpcNmeaCoupler

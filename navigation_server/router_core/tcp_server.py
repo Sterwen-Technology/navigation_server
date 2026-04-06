@@ -37,7 +37,11 @@ class NavTCPServer(NavigationServer, NavThread):
         self._max_silent_period = max((int(self._max_silent / self._heartbeat), 1))
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._socket.bind(('0.0.0.0', self._port))
+        try:
+            self._socket.bind(('0.0.0.0', self._port))
+        except OSError as e:
+            _logger.error(f"Failed to bind server {self._name} to port {self._port}: {e}")
+            raise ValueError
         self._socket.settimeout(self._timeout)
         self._stop_flag = False
         self._filters = None

@@ -81,5 +81,6 @@ gen_protobuf navigation_objects uuid
 gen_protobuf gnss nmea_messages nmea2000
 gen_protobuf network uuid
 gen_protobuf n2k_can_service nmea2000 iso_name nmea2000_classes_iso_gen
+gen_protobuf nmea2000_service nmea2000 iso_name nmea2000_classes_iso_gen nmea_messages
 gen_protobuf grpc_control
 

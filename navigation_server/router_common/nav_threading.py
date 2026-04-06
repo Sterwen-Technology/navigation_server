@@ -14,6 +14,7 @@ import cProfile
 import pstats
 import logging
 import time
+import traceback
 
 from navigation_server.router_common.global_variables import MessageServerGlobals
 
@@ -56,6 +57,7 @@ class NavThread(threading.Thread):
             self.nrun()
         except Exception as err:
             _logger.error(f"NavThreading => {__name__}|Fatal error in thread: {self._name} class{err.__class__.__name__}:{err} - stopped")
+            _logger.error(traceback.format_exc())
         MessageServerGlobals.thread_controller.record_stop(self)
         _logger.debug("NavThreading => Thread %s stops" % self._name)
         if self._callback_on_stop is not None:

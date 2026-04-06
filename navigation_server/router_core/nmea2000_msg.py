@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     26/12/2021
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 import binascii
@@ -395,5 +395,6 @@ class NMEA2000Writer(NavThread):
         _logger.info("%s thread stops" % self._name)
 
     def stop(self):
+        _logger.info("NMEA2000Writer %s stops" % self._name)
         self._stop_flag = True
         self._queue.put(NavGenericMsg(NULL_MSG))

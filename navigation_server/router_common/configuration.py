@@ -234,6 +234,7 @@ class NavigationConfiguration:
         MessageServerGlobals.global_variables = self
         # print(settings_file)
         if not os.path.exists(settings_file):
+            _logger.info(f"Settings file {settings_file} does not exist from path:{os.getcwd()}")
             # we merge with the home dir
             settings_file = os.path.join(MessageServerGlobals.home_dir, "conf", settings_file)
         # keep the configuration path
@@ -284,7 +285,7 @@ class NavigationConfiguration:
             else:
                 _logger.error(f"Not enough permissions for data_directory:{data_directory}")
         else:
-            _logger.error(f"Non existent data directory {data_directory} - some features will not work")
+            _logger.warning(f"Non existent data directory {data_directory} - some features will not work")
 
         try:
             trace_dir = self._configuration['trace_dir']

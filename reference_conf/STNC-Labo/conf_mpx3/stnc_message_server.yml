@@ -15,19 +15,20 @@ log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
 secure_grpc: true
+connect_agent: true
+# log_file: test_fast_packet
 log_module:
   router_core.coupler: INFO
-  router_core.publisher: INFO
-  router_core.IPCoupler: INFO
+  couplers.nmea2k_grpc_coupler: INFO
+  router_common.client_common: INFO
+  router_common.nmea2000_grpc_stream_reader: INFO
   
   
 
 features:
   - router_core
   - nmea2000
-  - nmea2000_devices
   - couplers
-  - gnss
 
 
 servers:
@@ -44,66 +45,37 @@ servers:
     class: NMEASenderServer
     port: 4503
     nmea2000: dyfmt
-    coupler: MiniPlex3
+    coupler: NMEA2000SendCoupler
 
 - gRPCMain:
       class: GrpcServer
       port: 4502
 
-- ShipModulConfig:
-    class: ShipModulConfig
-    port: 4501
-    coupler: MiniPlex3
-  
-- NMEANetwork:
-     class: NMEA2KController
-
 couplers:
 
-- GPS:
-    class: SerialGPS
-    device: /dev/ttyUSB0
-    baudrate: 38400
-    autostart: false
-    trace_messages: true
-    talker: GP
-    formatters: [RMC, GLL, VTG]
-    
-- SerialOutput:
-    class: NMEASerialPort
-    device: /dev/ttyUSB1
-    baudrate: 9600
-    autostart: true
-    
+- NMEA2000Coupler:
+    class: N2KGrpcCoupler
+    source_server: 127.0.0.1
+    source_port: 4512
+ 
+- NMEA2000SendCoupler:
+    class: N2KGrpcSendCoupler
+    target_server: 127.0.0.1
+    target_port: 4512
+    device: NavigationControl
+
 - MiniPlex3:
     class: ShipModulInterface
     address: 172.16.2.48
     port: 10110
     transport: TCP
     nmea2000_controller: NMEANetwork
-    protocol: nmea_mix
-    autostart: true
+    protocol: nmea2000
+    autostart: false
     trace_raw: false
-
-- SolarPanel:
-    class: MpptCoupler
-    port: 4505
-    server: NMEAServer
-    direction: read_only
-    report_timer: 20
 
     
 filters:
-
-- Engine:
-    class: NMEA2000Filter
-    pgn: [127488, 127489]
-    type: select
-    
-- Position:
-    class: NMEA2000Filter
-    pgn: [129025, 129026]
-    type: select
 
 services:
 
@@ -125,11 +97,13 @@ publishers:
 #    filters: [Engine]
 #    couplers: [CANCoupler]
 
-- GPSInjector:
-   class: Injector
-   couplers: [GPS]
-   target: MiniPlex3
 
+- TraceOutput:
+    class: N2KStatisticPublisher
+    couplers: [NMEA2000Coupler]
+    # filters: [NMEAOutput, AIS]
+    active: true
+    flexible_decode: false
 
 applications:
 

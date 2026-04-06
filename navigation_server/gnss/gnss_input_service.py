@@ -55,7 +55,7 @@ class GNSSInput(NMEA2000Application, GrpcService):
         self._servicer = None
         self._requested_address = opts.get('address', int, -1)
         self._forward = opts.get('forward_upstream', bool, True)
-        self._can_controller = None
+        self._nmea2000_controller = None
         self._output_queue: queue.Queue = None
         self._lost_msg = 0
         self._can_ready = True
@@ -86,7 +86,7 @@ class GNSSInput(NMEA2000Application, GrpcService):
 
     def set_controller(self, controller):
         super().__init__(controller, self._requested_address)
-        self._can_controller = controller
+        self._nmea2000_controller = controller
         self.add_transmit_pgn([129025, 129026, 129029, 129539, 129540])
 
     def bus_ready_callback(self):
@@ -100,26 +100,26 @@ class GNSSInput(NMEA2000Application, GrpcService):
         """
         n2k_msg = None
         _logger.debug("GNSSInput receive_msg %d %d %d" % (msg.pgn, msg.priority, msg.sa))
-        if self._can_controller is not None:
+        if self._nmea2000_controller is not None:
             n2k_msg = NMEA2000Msg(msg.pgn, protobuf=msg)
             n2k_msg.sa = self._address
             if self._can_ready:
                 try:
-                    self._can_controller.CAN_interface.send(n2k_msg)
+                    self._nmea2000_controller.CAN_interface.send(n2k_msg)
                 except SocketCanError as err:
                     _logger.error(f"GNSS Input - SocketCanError {err}")
-                    if self._can_controller.CAN_interface.is_bus_ready():
+                    if self._nmea2000_controller.CAN_interface.is_bus_ready():
                         _logger.error("GNSS Input - bus ready, but still error")
                         raise
                     else:
                         _logger.error("GNSS Input - bus not ready, stopping sending message")
                         self._can_ready = False
-                        self._can_controller.CAN_interface.register_read_callback(self.bus_ready_callback)
+                        self._nmea2000_controller.CAN_interface.register_read_callback(self.bus_ready_callback)
                         return
 
             if self._forward:
                 # if the forward flag is true, the message is also sent for direct local distribution
-                self._can_controller.process_msg(n2k_msg)
+                self._nmea2000_controller.process_msg(n2k_msg)
 
         if self._output_queue is not None:
             if n2k_msg is None:

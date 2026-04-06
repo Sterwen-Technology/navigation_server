@@ -15,12 +15,67 @@ import queue
 import time
 from typing import Generator
 
-from .nmea2k_device import NMEA2000Device
-from navigation_server.router_common import NavigationServer, NavThread, set_global_var
+from navigation_server.router_common import NavigationServer, NavThread, set_global_var, resolve_ref, NavigationCriticalError, N2K_MSG
 from navigation_server.router_core import NMEA2000Msg
 from .nmea2k_iso_messages import ISORequest
+from .nmea2k_device import NMEA2000Device
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
+
+
+class N2KReadTimeOut(Exception):
+    pass
+
+class N2KReadSubscriber:
+
+    def __init__(self, client: str, select_source: list, reject_source: list, select_pgn: list, reject_pgn: list,
+                 timeout=60.00):
+        self._client = client
+        self._queue = queue.Queue(20)
+        self._select_source = None
+        self._reject_source = None
+        if len(select_source) > 0:
+            self._select_source = {sa for sa in select_source}
+        elif len(reject_source) > 0:
+            self._reject_source = {sa for sa in reject_source}
+        self._select_pgn = None
+        self._reject_pgn = None
+        if len(select_pgn) > 0:
+            self._select_pgn = {pgn for pgn in select_pgn}
+        elif len(reject_pgn) > 0:
+            self._reject_pgn = {pgn for pgn in reject_pgn}
+        self._timeout = timeout
+
+    @property
+    def client(self):
+        return self._client
+
+    def get_message(self) -> NMEA2000Msg:
+        try:
+            return self._queue.get(block=True, timeout=self._timeout)
+        except queue.Empty:
+            raise N2KReadTimeOut
+
+    def push_message(self, msg: NMEA2000Msg):
+        if self._select_source is not None:
+            if msg.sa not in self._select_source:
+                return
+        elif self._reject_source is not None:
+            if msg.sa in self._reject_source:
+                return
+        if self._select_pgn is not None:
+            if msg.pgn not in self._select_pgn:
+                return
+        elif self._reject_pgn is not None:
+            if msg.pgn in self._reject_pgn:
+                return
+        try:
+            self._queue.put(msg, block=False)
+        except queue.Full:
+            _logger.error(f"N2KReadSubscriber queue for {self._client} full, ignoring message")
+            raise
+
+
 
 class NMEA2KController(NavigationServer, NavThread):
 
@@ -42,6 +97,11 @@ class NMEA2KController(NavigationServer, NavThread):
         self._gc_timer = threading.Timer(self._max_silent, self.device_gc)
         self._gc_lock = threading.Lock()
         self._coupler = None
+        # remote access
+        self._read_subscribers = {}  # 2025-06-10 changed to dictionary
+        self._read_subscribers_lock = threading.Lock()
+        self._interface_name = opts.get('interface', str, None)
+        self._interface = None
 
     def server_type(self):
         return 'NMEA2000_CONTROLLER'
@@ -58,6 +118,22 @@ class NMEA2KController(NavigationServer, NavThread):
     @property
     def min_queue_size(self):
         return 20
+
+    @property
+    def input_queue(self) -> queue.Queue:
+        return self._input_queue
+
+    def start(self):
+        if self._interface_name is not None:
+            try:
+                self._interface = resolve_ref(self._interface_name)
+            except KeyError:
+                _logger.critical(f"")
+                raise NavigationCriticalError
+            self._interface.set_controller(self)
+            # self._interface.start()
+
+        super().start()
 
     def delete_device(self, address):
         del self._devices[address]
@@ -81,20 +157,39 @@ class NMEA2KController(NavigationServer, NavThread):
                 msg = self._input_queue.get(block=True, timeout=1.0)
             except queue.Empty:
                 continue
-            _logger.debug("NMEA Controller input %s" % msg.format1())
+            _logger.debug("NMEA Controller input %s" % str(msg))
+            if msg.type != N2K_MSG:
+                _logger.info(f"NMEA2000 Controller input not NMEA2000")
+                continue
             # further processing here
             try:
                 self.process_msg(msg)
             except Exception as e:
                 _logger.error("%s NMEA2000 Controller processing error:%s on message %s" % (self._name, e, msg.format1()))
 
-
+       # end of run loop
         _logger.info("%s NMEA2000 Controller stops" % self._name)
 
     def stop(self):
         self._stop_flag = True
         if self._gc_timer is not None:
             self._gc_timer.cancel()
+
+    def add_read_subscriber(self, client, select_source:list, reject_source:list, select_pgn:list, reject_pgn:list, timeout:float) -> N2KReadSubscriber:
+        self._read_subscribers_lock.acquire()
+        sub = N2KReadSubscriber(client, select_source, reject_source, select_pgn, reject_pgn, timeout)
+        self._read_subscribers[client] = sub
+        self._read_subscribers_lock.release()
+        return sub
+
+    def remove_read_subscriber(self, client):
+        self._read_subscribers_lock.acquire()
+        try:
+            del self._read_subscribers[client]
+        except KeyError:
+            _logger.error(f"CAN Read subscribers removing non existing client {client} => ignored")
+            pass
+        self._read_subscribers_lock.release()
 
     def check_device(self, address: int) -> NMEA2000Device:
         """
@@ -110,7 +205,7 @@ class NMEA2KController(NavigationServer, NavThread):
             self._devices[address] = dev
             return dev
 
-    def process_msg(self, msg: NMEA2000Msg):
+    def process_msg(self, msg: NMEA2000Msg) -> bool:
         '''
         Process incoming messages for Proxy devices or in case on indirect access to CAN
         Args:
@@ -120,12 +215,25 @@ class NMEA2KController(NavigationServer, NavThread):
 
         '''
         if msg.sa >= 254:
-            return
+            return True
+        self.record_stat(msg.sa, msg.pgn)
+        _logger.debug("NMEA2000 Controller process msg %s" % msg.format1())
         self._gc_lock.acquire()
         device = self.check_device(msg.sa)
         device.receive_msg(msg)
         self.call_subscribers(msg.pgn, msg)
         self._gc_lock.release()
+        if msg.is_iso_protocol:
+            return True
+        else:
+            # new in version 2.4.3 dispatch to all subscribers
+            subscribers = list(self._read_subscribers.values())
+            for subscriber in subscribers:
+                try:
+                    subscriber.push_message(msg)
+                except queue.Full:
+                    self.remove_read_subscriber(subscriber.client)
+            return False
 
     def store_devices(self):
 
@@ -212,19 +320,57 @@ class NMEA2KController(NavigationServer, NavThread):
         It is used in case the CAN is connected via a coupler-adapter, not when directly connected to the CAN
 
         '''
-        if self._coupler is not None:
-            _logger.info("N2K Controller sending request for Product en Configuration information")
-            # request the product information
-            request = ISORequest(0, 255,126996)
-            msg = request.nav_message()
-            self._coupler.send_msg_gen(msg)
-            # request the configuration information
-            request = ISORequest(0, 255, 126998)
-            msg = request.nav_message()
-            self._coupler.send_msg_gen(msg)
-        else:
-            _logger.error("N2K Controller => no coupler associated")
 
+        _logger.info("N2K Controller sending request for Product en Configuration information")
+        # request the product information
+        request = ISORequest(0, 255,126996)
+        msg = request.nav_message()
+        self._interface.send_n2k_msg(msg)
+        # request the configuration information
+        request = ISORequest(0, 255, 126998)
+        msg = request.nav_message()
+        self._interface.send_n2k_msg(msg)
+
+    def record_stat(self, address: int, pgn: int):
+        self._gc_lock.acquire()
+        device = self.check_device(address)
+        device.add_pgn_count(pgn)
+        self._gc_lock.release()
+
+    @property
+    def channel(self):
+        return self._interface.channel()
+
+    def total_msg_raw(self) -> int:
+        return self._interface.total_msg_raw()
+
+    def total_msg_raw_out(self) -> int:
+        return self._interface.total_msg_raw_out()
+
+    def is_trace_active(self) -> bool:
+        return self._interface.is_trace_active()
+
+    def start_trace(self):
+        self._interface.start_trace()
+
+    def stop_trace(self):
+        self._interface.stop_trace()
+
+    def send_message(self, msg: NMEA2000Msg):
+        self._interface.send_n2k_msg(msg)
+
+    def send_message_from_application(self, application: str, msg: NMEA2000Msg) -> int:
+        '''
+
+        Args:
+            application (): for the generic controller without applications, this is ignored. Kept for compatibility only
+            msg (): NMEA2000Msg to be sent to the network
+
+        Returns: None
+
+        '''
+        self._interface.send_n2k_msg(msg)
+        return 0
 
 
 

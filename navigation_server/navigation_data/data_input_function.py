@@ -4,7 +4,7 @@
 # Author:      Laurent Carré
 #
 # Created:     09/06/2025
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ import logging
 from collections import namedtuple
 
 from navigation_server.router_common import NavThread
-from navigation_server.router_core import NMEA2000Msg, CANGrpcStreamReader
+from navigation_server.router_core import NMEA2000Msg, Nmea2000GrpcStreamReader
 from navigation_server.nmea2000 import get_n2k_decoded_object
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 
@@ -52,12 +52,11 @@ class NMEA2000InputConnector(NavThread):
         self._name = opts['name']
         super().__init__(self._name)
         self._input_stream = None
-        self._input_stream_opts = {}
-        self._input_stream_opts['source_server'] = opts.get('source_server', str, None)
-        self._input_stream_opts['source_port'] = opts.get('source_port', int, 0)
-        self._input_stream_opts['select_sources'] = opts.getlist('select_sources', int, None)
-        self._input_stream_opts['reject_sources'] = opts.getlist('reject_sources', int, None)
-        self._input_stream_opts['reject_pgn'] = None
+        self._input_stream_opts = {'source_server': opts.get('source_server', str, None),
+                                   'source_port': opts.get('source_port', int, 0),
+                                   'select_sources': opts.getlist('select_sources', int, None),
+                                   'reject_sources': opts.getlist('reject_sources', int, None),
+                                   'reject_pgn': None}
         self._dispatch_table = {}
         self._stop_flag = False
 
@@ -82,17 +81,17 @@ class NMEA2000InputConnector(NavThread):
     def start(self):
         pgn_list = [k for k in self._dispatch_table.keys()]
         self._input_stream_opts['select_pgn'] = pgn_list
-        self._input_stream = CANGrpcStreamReader(self._name, self._input_stream_opts)
+        self._input_stream = Nmea2000GrpcStreamReader(self._name, self._input_stream_opts)
         super().start()
 
     def nrun(self):
 
         while not self._stop_flag:
             # start or restart input stream
-            if self._input_stream.start_stream_to_callback(self.process_can_protobuf):
+            if self._input_stream.start_stream_to_callback(self.process_nmea2000_protobuf):
                 self._input_stream.wait_for_stream()
 
-    def process_can_protobuf(self, pb_msg:nmea2000pb):
+    def process_nmea2000_protobuf(self, pb_msg:nmea2000pb):
         try:
             vector = self._dispatch_table[pb_msg.pgn]
         except KeyError:

@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     12/06/2025
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -14,8 +14,8 @@ import queue
 
 from navigation_server.router_core import Coupler, CouplerTimeOut, CouplerWriteError, NMEA2000Msg
 from navigation_server.router_common import GrpcClient, ServiceClient, GrpcAccessException
-from navigation_server.generated.n2k_can_service_pb2_grpc import CAN_ControllerServiceStub
-from navigation_server.generated.n2k_can_service_pb2 import CANSendRequest
+from navigation_server.generated.nmea2000_service_pb2_grpc import Nmea2000ControllerServiceStub
+from navigation_server.generated.nmea2000_service_pb2 import Nmea2000SendRequest
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 
 
@@ -68,7 +68,7 @@ class N2KGrpcSendCoupler(Coupler, ServiceClient):
         if self._device is None:
             _logger.error(f"GrpcSendStreamCoupler {self.object_name()} missing device")
             raise ValueError
-        ServiceClient.__init__(self, CAN_ControllerServiceStub)
+        ServiceClient.__init__(self, Nmea2000ControllerServiceStub)
         server.add_service(self)
         
     def open(self):
@@ -86,7 +86,7 @@ class N2KGrpcSendCoupler(Coupler, ServiceClient):
 
     def send_n2k_msg(self, msg: NMEA2000Msg):
         _logger.debug("GrpcNmeaSenderCoupler %s send PGN=%d" % (self.object_name(), msg.pgn))
-        request = CANSendRequest()
+        request = Nmea2000SendRequest()
         request.device = self._device
         msg.as_protobuf(request.n2k_msg)
         try:
@@ -96,5 +96,9 @@ class N2KGrpcSendCoupler(Coupler, ServiceClient):
             return
         if resp.error != 0:
             raise CouplerWriteError(f"GrpcNmeaSenderCoupler {self.object_name()} server error {resp.error}")
+
+    def stop(self):
+        _logger.debug("GrpcNmeaSenderCoupler %s stop" % self.object_name())
+
 
 

@@ -11,8 +11,8 @@
 
 import logging
 
-from navigation_server.generated.n2k_can_service_pb2_grpc import CAN_ControllerServiceStub
-from navigation_server.generated.n2k_can_service_pb2 import N2KDeviceMsg, CAN_ControllerMsg, CANRequest
+from navigation_server.generated.nmea2000_service_pb2_grpc import Nmea2000ControllerServiceStub
+from navigation_server.generated.nmea2000_service_pb2 import N2KDeviceMsg, Nmea2000ControllerMsg, Nmea2000Request
 
 from navigation_server.router_common import ServiceClient, ProtobufProxy, GrpcAccessException
 
@@ -39,7 +39,7 @@ class N2KDeviceProxy(ProtobufProxy):
 
 class NMEA2000CanControllerProxy(ProtobufProxy):
 
-    def __init__(self, msg:CAN_ControllerMsg):
+    def __init__(self, msg:Nmea2000ControllerMsg):
         super().__init__(msg)
 
     @property
@@ -53,10 +53,10 @@ class NMEA2000CanControllerProxy(ProtobufProxy):
 class NMEA2000CanClient(ServiceClient):
 
     def __init__(self):
-        super().__init__(CAN_ControllerServiceStub)
+        super().__init__(Nmea2000ControllerServiceStub)
 
     def get_status(self, cmd=None) -> NMEA2000CanControllerProxy:
-        req = CANRequest()
+        req = Nmea2000Request()
         if cmd is not None:
             req.cmd = cmd
         try:
@@ -65,11 +65,11 @@ class NMEA2000CanClient(ServiceClient):
             return None
 
     def stop_trace(self):
-        req = CANRequest()
+        req = Nmea2000Request()
         return self._server_call(self._stub.StopTrace, req, NMEA2000CanControllerProxy)
 
     def start_trace(self, trace_name):
-        req = CANRequest()
+        req = Nmea2000Request()
         req.cmd = trace_name
         return self._server_call(self._stub.StartTrace, req, NMEA2000CanControllerProxy)
 

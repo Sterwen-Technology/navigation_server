@@ -1,0 +1,85 @@
+#-------------------------------------------------------------------------------
+# Name:        settings.yml
+# Purpose:     Settings file for the can server
+#
+# Author:      Laurent Carré
+#
+# Created:     02/04/2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+#
+function: NMEA2000 and coupler interfaces using MPX3 server
+server_name: STNC_MPX3_Server
+log_level: INFO
+trace_dir: /data/navigation/traces
+data_dir: /data/navigation/data
+secure_grpc: true
+connect_agent: true
+
+# log_file: test_fast_packet
+log_module:
+  nmea2000.nmea2000_msg: INFO
+  nmea2000.nmea2k_controller: INFO
+  router_common.grpc_server_service: INFO
+  couplers.shipmodul_if: INFO
+  nmea2000.nmea2k_service: INFO
+
+
+features:
+  - router_core
+  - nmea2000
+  - couplers
+
+
+
+servers:
+
+- Main:
+    class: NavigationMainServer
+
+- gRPCMain:
+      class: GrpcServer
+      port: 4512
+
+- NMEANetwork:
+      class: NMEA2KController
+      interface: MiniPlex3
+      max_silent: 60.0
+
+- MPX3Config:
+    class: ShipModulConfig
+    port: 4501
+    coupler: MiniPlex3
+
+couplers:
+
+
+functions:
+
+- MiniPlex3:
+      class:  MPX3Nmea2000Interface
+      address: 172.16.2.48
+      port: 10110
+
+filters:
+
+services:
+
+- NMEA2000:
+    class: Nmea2000Service
+    server: gRPCMain
+    nmea2000_controller: NMEANetwork
+      
+
+publishers:
+
+
+applications:
+
+
+
+
+
+
+

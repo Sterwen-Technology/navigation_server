@@ -16,6 +16,7 @@ import threading
 import datetime
 
 from .global_variables import MessageServerGlobals
+from .global_exceptions import NavigationCriticalError
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -55,14 +56,17 @@ class GenericTopServer:
     def add_process(self, process):
         raise NotImplementedError("GenericTopServer does not support process management")
 
-    def start(self):
-        for service in self._services:
-            service.finalize()
-        for function in self._functions:
-            function.start()
-        for server in self._servers:
-            _logger.debug("starting server %s class:%s" % (server.name, server.__class__.__name__))
-            server.start()
+    def start(self) -> bool:
+        try:
+            for service in self._services:
+                service.finalize()
+            for function in self._functions:
+                function.start()
+            for server in self._servers:
+                _logger.debug("starting server %s class:%s" % (server.name, server.__class__.__name__))
+                server.start()
+        except NavigationCriticalError:
+            return False
         self._is_running = True
         self._start_time = datetime.datetime.now()
         self._start_time_s = self._start_time.strftime("%Y/%m/%d-%H:%M:%S")
