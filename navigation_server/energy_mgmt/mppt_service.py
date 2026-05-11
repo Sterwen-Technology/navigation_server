@@ -6,7 +6,7 @@
 # Author:      Laurent Carré
 #
 # Created:     31/03/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -18,7 +18,8 @@ from collections import namedtuple, deque
 
 from navigation_server.generated.energy_pb2 import solar_output, request, MPPT_device, trend_response
 from navigation_server.generated.energy_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
-from navigation_server.router_common import GrpcService, MessageServerGlobals, resolve_ref, copy_protobuf_data
+from navigation_server.router_common import (GrpcService, MessageServerGlobals, resolve_ref, copy_protobuf_data,
+                                            NavGenericMsg, N2K_MSG)
 from navigation_server.router_core import NMEA0183Sentences
 from navigation_server.couplers import mppt_nmea0183
 
@@ -52,6 +53,7 @@ class MPPTData:
     state_dict = {0: 0, 2: 9, 3: 1, 4: 2, 5: 5, 7: 4, 247: 4}  # correspondence between Victron and NMEA2000 state
 
     def gen_pgn_127507(self):
+        # 12/05/2026 (2.8.1) - the PGN is currently wrongly encoded do not use it for now
         res = Pgn127507Class()
         res.charger_instance = 1
         res.battery_instance = 1
@@ -179,11 +181,17 @@ class VictronMPPT:
         self._publisher.publish(msg)
 
     def publish2000(self):
+        _logger.debug("MPPT Service publish NMEA2000")
+        '''
+        PGN127507 is currently not supported (encoding error) 12/05/206 2.8.1
         msg = self._current_data.gen_pgn_127507()
-        self._publisher.publish(msg)
+        msg_sent = NavGenericMsg(N2K_MSG, msg=msg.message())
+        self._publisher.publish(msg_sent)
+        '''
         msg = self._current_data.gen_pgn_127751(self._sid)
+        msg_sent = NavGenericMsg(N2K_MSG, msg=msg.message())
         self._sid += 1
-        self._publisher.publish(msg)
+        self._publisher.publish(msg_sent)
 
     def object_name(self):
         # for debug only

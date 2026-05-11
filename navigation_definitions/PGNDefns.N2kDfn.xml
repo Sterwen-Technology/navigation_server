@@ -2033,6 +2033,7 @@
     <PGNDefn PGN="127507">
       <Name>Charger Status</Name>
       <Scope>Generate</Scope>
+      <Comment>Field definition to be corrected and Fast Packet</Comment>
       <ByteLength>7</ByteLength>
       <Fields>
         <InstanceField Name="Charger Instance" key="charger_instance">

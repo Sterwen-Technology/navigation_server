@@ -25,7 +25,7 @@ ProcessVector = namedtuple('ProcessVector', ['subscriber', 'msg_id', 'handler', 
 
 class NMEA2000InputConnector(NavThread):
     """
-    Handles the NMEA2000 input stream over gRPC  to
+    Handles the NMEA2000 input stream over gRPC to
     process and dispatch navigation data using Protocol Group Numbers (PGNs).
 
     The NMEA2000InputConnector class is responsible for subscribing to specific navigation

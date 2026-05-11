@@ -13,6 +13,14 @@ else
 fi
 
 echo "running $PYTHON"
-${PYTHON} run_server.py --settings "$1"
+SCRIPT="$1"
+shift
+if [ -z $1 ]
+then
+	${PYTHON} run_server.py --settings "$SCRIPT"
+else
+	${PYTHON} run_server.py --settings "$SCRIPT" "$*"
+fi
+
 
 

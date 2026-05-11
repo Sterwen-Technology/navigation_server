@@ -21,8 +21,7 @@ import time
 import os
 
 from navigation_server.router_common import MessageServerGlobals, NavGenericMsg, TRANSPARENT_MSG, NULL_MSG
-from navigation_server.router_core import (Coupler, CouplerReadError, CouplerTimeOut, XDR, NMEA0183SentenceMsg,
-                                           NMEA0183Sentences, NMEA0183Msg)
+from navigation_server.router_core import (Coupler, XDR, NMEA0183Sentences, NMEA0183Msg)
 from navigation_server.log_replay import RawLogFile, LogReadError
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -75,6 +74,7 @@ class Vedirect(threading.Thread):
     def open(self):
         try:
             self._serial_fd = serial.Serial(self._serialport, 19200, timeout=self._timeout)
+            _logger.info("Vedirect serial port %s opened" % self._serialport)
         except (serial.SerialException, BrokenPipeError) as e:
             _logger.error("Cannot open VEdirect serial interface %s" % str(e))
             return False
@@ -265,12 +265,13 @@ class VEDirectMsg(NavGenericMsg):
 
 class VEDirectLogReader(threading.Thread):
 
-    def __init__(self, log_file, output_queue):
+    def __init__(self, log_file, output_queue, output_format='vedirect'):
         self._log_file = log_file
         self._log_reader = None
         self._output_queue = output_queue
         super().__init__(name="VEDirectLogReader", daemon=True)
         self._stop_flag = False
+        self._output_format = {'vedirect':self.output_vedirect, 'raw': self.output_raw}[output_format]
 
     def open(self):
         try:
@@ -290,6 +291,24 @@ class VEDirectLogReader(threading.Thread):
     def close(self):
         pass
 
+    @staticmethod
+    def output_vedirect(msg) -> VEDirectMsg:
+        buffer = bytearray.fromhex(msg.message)
+        msg_dec = {}
+        fields = buffer.split(b'\r\n')
+        for f in fields:
+            if len(f) == 0:
+                continue
+            label, value = f.split(b'\t')
+            if label == b'Checksum':
+                break
+            msg_dec[label.decode()] = value.decode()  # to be consistent all is converted in str
+        return VEDirectMsg(msg_dec)
+
+    @staticmethod
+    def output_raw(msg) -> bytearray:
+        return msg.message
+
     def run(self):
         while True:
             if self._stop_flag:
@@ -305,20 +324,9 @@ class VEDirectLogReader(threading.Thread):
                                    err.reason))
                 self._output_queue.put(NavGenericMsg(NULL_MSG))
                 break
-            # now let's decode
-            # msg = msg.message.rstrip('\n')
-            buffer = bytearray.fromhex(msg.message)
-            msg_dec = {}
-            fields = buffer.split(b'\r\n')
-            for f in fields:
-                if len(f) == 0:
-                    continue
-                label, value = f.split(b'\t')
-                if label == b'Checksum':
-                    break
-                msg_dec[label.decode()] = value.decode()  # to be consistent all is converted in str
+
             try:
-                self._output_queue.put(VEDirectMsg(msg_dec), timeout=10.0)
+                self._output_queue.put(self._output_format(msg), timeout=10.0)
             except queue.Full:
                 _logger.error("LogReader queue full, message discarded")
 

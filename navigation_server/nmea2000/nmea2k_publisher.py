@@ -343,12 +343,13 @@ class N2KForwarderToServer(ServiceClient, ExternalPublisher):
         if msg.type != N2K_MSG:
             return True
         n2k_msg = msg.msg
-        msg = Nmea2000SendRequest()
-        n2k_msg.as_protobuf(msg.n2k_msg)
-        msg.device = self._device
+        _logger.debug("N2KForwarderToServer N2K input msg %s" % n2k_msg.format2())
+        msg_pb = Nmea2000SendRequest()
+        n2k_msg.as_protobuf(msg_pb.n2k_msg)
+        msg_pb.device = self._device
 
         try:
-            resp = self._server_call(self._stub.SendNmea2000Msg, msg, None)
+            resp = self._server_call(self._stub.SendNmea2000Msg, msg_pb, None)
         except GrpcAccessException:
             _logger.error("Failed to send N2K MSG")
             return True

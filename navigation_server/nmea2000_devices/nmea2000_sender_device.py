@@ -6,7 +6,7 @@
 # Author:      Laurent Carré
 #
 # Created:     16/06/2025
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
@@ -26,6 +26,7 @@ class NMEA2000SenderDevice(NMEA2000Application):
         self._model_id = opts.get('model_id', str, 'Generic Device')
         self._device_class = opts.get('device_class', int, 25)
         self._device_function = opts.get('device_function', int, 130)
+        _logger.info(f"NMEA2000SenderDevice {self._name} created: {self._model_id}")
 
     def init_product_information(self):
         super().init_product_information()
@@ -45,4 +46,5 @@ class NMEA2000SenderDevice(NMEA2000Application):
 
     def send_message(self, msg: NMEA2000Msg):
         msg.sa = self._address
+        _logger.debug(f"NMEA2000SenderDevice {self.name} sending {msg.format2()}")
         self._send_to_bus(msg)

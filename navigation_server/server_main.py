@@ -18,7 +18,7 @@ from navigation_server.router_common import (NavigationConfiguration, Navigation
                                              init_options, set_root_package, ConfigurationException, AgentInterface,
                                              ObjectCreationError, GrpcServer, GrpcClient)
 
-MessageServerGlobals.version = "2.8.0"
+MessageServerGlobals.version = "2.8.1"
 default_base_dir = "/"
 _logger = logging.getLogger("ShipDataServer.main")
 
@@ -31,15 +31,15 @@ def server_main():
     --working_dir: working directory for the service, practically this shall be the head directory of the
                    navigation-server software
     """
-    # initialise command line arguments
-    opts = init_options(default_base_dir)
+    # initialize command line arguments
     set_root_package(server_main)
+    opts = init_options(default_base_dir)
     if opts.version:
         sys.stdout.write(MessageServerGlobals.version)
         return
 
     # set log for the configuration phase
-    NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2026")
+    NavigationLogSystem.create_log("Starting %s version %s - copyright Sterwen Technology 2021-2026", opts)
     # build the configuration from the file
     try:
         config = NavigationConfiguration().build_configuration(opts.settings)
