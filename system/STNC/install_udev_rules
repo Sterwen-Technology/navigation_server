@@ -1,0 +1,5 @@
+#! /bin/bash
+sudo cp 99-usb-slot.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+

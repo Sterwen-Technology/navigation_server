@@ -17,7 +17,8 @@ trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
 secure_grpc: true
 log_module:
-    energy_mgmt.mppt_service: INFO
+    energy_mgmt.mppt_service: DEBUG
+    nmea2000.nmea2k_publisher: DEBUG
 
 features:
     - router_core
@@ -39,9 +40,9 @@ couplers:
 
 - MPPTVEDirect:
     class: VEDirectCoupler
-    device: /dev/ttyUSB4
+    device: /dev/mppt
     interface: serial
-    # logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
+    logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
     protocol: non_nmea
     max_attempt: 1
 
@@ -52,8 +53,8 @@ services:
     coupler: MPPTVEDirect
     server: gRPCMain
     publisher: NMEAPush
-    protocol: nmea0183
-    talker: EM
+    protocol: nmea2000
+    # talker: EM
 
 - Console:
     class: Console
@@ -63,19 +64,18 @@ publishers:
 
 - NMEAPrint:
       class: N2KTracePublisher
-      active: true
+      active: false
       flexible_decode: false
       output: PRINT
       couplers: [MPPTVEDirect]
 
 - NMEAPush:
-    class: GrpcPublisher
+    class: N2KForwarderToServer
     active: true
-    decode_nmea2000: false
     service: EnergyService
-    nmea0183: pass_thru
     address: 127.0.0.1
-    port: 4502
+    port: 4512
+    device: MPPT
 
 
 

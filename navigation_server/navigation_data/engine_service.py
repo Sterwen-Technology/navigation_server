@@ -635,7 +635,7 @@ class EngineRun:
         self._engine_id = engine_id
         if from_dict is not None:
             self._start_time = datetime.datetime.fromisoformat(from_dict['start_time'])
-            if from_dict['stop_time'] is not None:
+            if from_dict.get('stop_time', None) is not None:
                 self._stop_time = datetime.datetime.fromisoformat(from_dict['stop_time'])
             else:
                 self._stop_time = None

@@ -525,6 +525,7 @@ Parameters
 | queue_size    | int             | 20      | Size of the input queue (nb of messages)                            |
 | max_lost      | int             | 5       | Number of messages allowed to be lost before stopping the Publisher |
 | couplers      | list of strings | None    | List of couplers associated with this publisher                     |
+| service       | str             | None    | The name of the service associated with the Publisher               |
 | active        | bool            | true    | specify whether the publisher is active upon system start           |
 | filters       | list of strings | None    | List of filters that are to applied before sending messages         |
 | filter_select | bool            | false   | Specify the behavior of filtering (see below)                       |
@@ -532,6 +533,8 @@ Parameters
 The parameter **filter_select** indicates the behavior of the publisher on filtering.
     - **filter_select** is false, then all messages not matching the filter are published. Messages that match the filter are published if their **type** is 'select'
     - **filter_select** is true, then only the messages matching the filter are published when their **type** is 'select'
+
+If no 'couplers' are specified, then a 'service' must be specified. If none is specified, the Publisher configuration will fail.
 
 #### GrpcPublisher
 

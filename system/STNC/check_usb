@@ -1,0 +1,2 @@
+# !/bin/bash
+udevadm info -a -p $(udevadm info -q path -n /dev/$1) | grep -E "devpath|busnum|devnum|bInterfaceNumber"

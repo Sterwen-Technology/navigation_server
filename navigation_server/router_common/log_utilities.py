@@ -23,6 +23,17 @@ class NavigationLogSystem:
     start_string = " "
 
     @staticmethod
+    def _set_level_on_module(module_name, level):
+        module_full_name = f"{MessageServerGlobals.root_package}.{module_name}"
+        mod_log = _logger.getChild(module_full_name)
+        # print(module, level, mod_log.level)
+        if mod_log is not None:
+            mod_log.setLevel(level)
+            # print(module, level, mod_log.level)
+        else:
+            _logger.error("Module %s non-existent" % module_name)
+
+    @staticmethod
     def adjust_log_level(config):
         '''
         Adjust the log level for each individual module (file)
@@ -37,17 +48,10 @@ class NavigationLogSystem:
             return
         # print(modules)
         for module, level in modules.items():
-            module_full_name = f"{MessageServerGlobals.root_package}.{module}"
-            mod_log = _logger.getChild(module_full_name)
-            # print(module, level, mod_log.level)
-            if mod_log is not None:
-                mod_log.setLevel(level)
-                # print(module, level, mod_log.level)
-            else:
-                _logger.error("Module %s non-existent" % module)
+            NavigationLogSystem._set_level_on_module(module, level)
 
     @staticmethod
-    def create_log(start_string: str):
+    def create_log(start_string: str, options):
         NavigationLogSystem.loghandler = logging.StreamHandler()
         logformat = logging.Formatter("%(asctime)s | [%(levelname)s] %(message)s")
         NavigationLogSystem.loghandler.setFormatter(logformat)
@@ -55,6 +59,8 @@ class NavigationLogSystem:
         _logger.setLevel('INFO')
         NavigationLogSystem.start_string = start_string
         _logger.info("Initializing log system")
+        if options.debug:
+            NavigationLogSystem._set_level_on_module("router_common.configuration", "DEBUG")
 
     @staticmethod
     def log_start_string():

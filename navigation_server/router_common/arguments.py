@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     26/02/2024
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -18,16 +18,17 @@ def _parser():
     p = ArgumentParser(description=sys.argv[0])
 
     p.add_argument('-s', '--settings', action='store', type=str, default='settings.yml')
-    p.add_argument('-d', '--working_dir', action='store', type=str, default=None)
+    p.add_argument('-w', '--working_dir', action='store', type=str, default=None)
     p.add_argument("-t", "--timer", action='store', type=float, default=None)
     p.add_argument('-v', '--version', action='store_true', help='print the version and exit')
+    p.add_argument('-d', '--debug', action='store_true', default=False, help='debug mode for configuration')
 
     return p
 
 
 def init_options(default_base_dir: str, parser_def=_parser):
     '''
-    This functions init the options versus the command line and adjust working directory
+    This function init the options versus the command line and adjust working directory
     '''
     parser = parser_def()
     opts = parser.parse_args()

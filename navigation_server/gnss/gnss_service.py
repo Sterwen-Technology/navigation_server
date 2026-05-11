@@ -295,7 +295,7 @@ class GNSSPushClient(ServiceClient, NavThread):
                 else:
                     time.sleep(10. - (t - time_disconnect))
         self._forwarder.suspend()
-        self._reader.clear_n2k_subcriber()
+        self._reader.clear_n2k_subscriber()
 
     def stop(self):
         self._stop_flag = True
