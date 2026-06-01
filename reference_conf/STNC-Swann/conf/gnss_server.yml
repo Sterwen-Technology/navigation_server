@@ -51,7 +51,7 @@ services:
       device: /dev/ttyUSB0
       baudrate: 38400
       trace: false
-      push_to_server: true
+      push_to_server: device
       address: 127.0.0.1
       port: 4512
 

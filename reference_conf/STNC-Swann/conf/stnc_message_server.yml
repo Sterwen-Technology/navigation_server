@@ -57,6 +57,9 @@ servers:
     port: 4501
     coupler: MiniPlex3
 
+- NMEANetwork:
+     class: NMEA2KController
+
 couplers:
 
 - CANCoupler:
@@ -75,18 +78,10 @@ couplers:
     address: 172.16.2.26
     port: 10110
     transport: TCP
-    nmea2000_controller: NMEANetwork
-    protocol: nmea2000
+    # nmea2000_controller: NMEANetwork
+    protocol: nmea_mix
     autostart: false
     trace_raw: false
-
-- SolarPanel:
-    class: MpptCoupler
-    port: 4505
-    server: NMEAServer
-    direction: read_only
-    report_timer: 20
-
     
 filters:
 
@@ -115,13 +110,6 @@ publishers:
 #    filters: [Engine]
 #    couplers: [CANCoupler]
 
-
-- TraceOutput:
-    class: N2KStatisticPublisher
-    couplers: [CANCoupler]
-    # filters: [NMEAOutput, AIS]
-    active: true
-    flexible_decode: false
 
 applications:
 

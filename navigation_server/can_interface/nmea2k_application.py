@@ -460,7 +460,7 @@ class NMEA2000Application(NMEA2000Device):
             group_function.pgn_class.execute_command_parameters(self._configuration_information,
                                                                 group_function.parameters, acknowledge)
         else:
-            _logger.error("Command Group Function PGN %d not supported" % group_function.function_pgn)
+            _logger.debug("Command Group Function PGN %d not supported" % group_function.function_pgn)
 
     def wake_up(self):
         # wake up call every second

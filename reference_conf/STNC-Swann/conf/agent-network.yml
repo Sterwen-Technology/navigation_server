@@ -54,45 +54,33 @@ services:
 
 processes:
 
-  - STNC_CAN_Server:
-      class: SystemdProcess
-      service: can_server
-      autostart: true
+- STNC_CAN_Server:
+    class: SystemdProcess
+    service: can_server
+    autostart: true
 
-  - STNC_Message_Server:
-      class: SystemdProcess
-      service: navigation
-      autostart: true
+- STNC_Message_Server:
+    class: SystemdProcess
+    service: navigation
+    autostart: true
 
-  - CAN:
-      class: SystemdProcess
-      service: can
-      controlled: false
+- GNSS:
+    class: SystemdProcess
+    service: gnss
+    autostart: false
 
-  - GNSS:
-      class: SystemdProcess
-      service: gnss
-      autostart: false
+- GNSSConfig:
+    class: SystemdProcess
+    service: gnss_config
+    controlled: false
 
-  - GNSSConfig:
-      class: SystemdProcess
-      service: gnss_config
-      controlled: false
+- Data:
+    class: SystemdProcess
+    service: navigation_data
+    autostart: false
 
-  - Data:
-      class: SystemdProcess
-      service: navigation_data
-      autostart: false
-
-  - Energy:
-      class: SystemdProcess
-      service: energy
-      autostart: false
-
-
-
-
-
-
-
+- Energy:
+    class: SystemdProcess
+    service: energy
+    autostart: false
 

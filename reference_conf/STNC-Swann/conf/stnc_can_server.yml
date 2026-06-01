@@ -66,7 +66,7 @@ filters:
 services:
 
 - NMEA2000_CAN:
-      class: N2KCanService
+      class: Nmea2000Service
       server: gRPCMain
 
 - GNSS:

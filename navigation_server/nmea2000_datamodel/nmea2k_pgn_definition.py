@@ -12,7 +12,7 @@
 import logging
 from collections import namedtuple
 
-from navigation_server.router_common import (N2KDecodeException, N2KDefinitionError, N2KDecodeEOLException,
+from navigation_server.router_common import (N2KDecodeException, N2KDefinitionError, N2KDecodeEOLException, N2KUnknownPGN,
                                              N2KMissingEnumKeyException,MessageServerGlobals, build_subclass_dict)
 
 from .nmea2k_fielddefs import RepeatedFieldSet, Field
@@ -90,7 +90,11 @@ class PGNDef (BitFieldGenerator):
         r = PGNDef.find_range(pgn)
         if r.value != PGNDef.STD_MIXED:
             return True
-        pgn_def = MessageServerGlobals.pgn_definitions.pgn_definition(pgn)
+        try:
+            pgn_def = MessageServerGlobals.pgn_definitions.pgn_definition(pgn)
+        except N2KUnknownPGN:
+            _logger.error(f"Fast packet check - Unknown PGN {pgn}")
+            return False
         return pgn_def.fast_packet()
 
     @staticmethod

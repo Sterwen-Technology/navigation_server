@@ -9,7 +9,7 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
-apply_default_connections: true
+apply_default_connections: false
 applicable_hardware: STNC800
 
 #  Here we defined the physical interfaces from the system
@@ -70,11 +70,12 @@ connections:
       function: WAN_INTERFACE
       apn: move.dataxs.mobi
 
-  - eth0-lan:
+  - eth-0-lan:
        type: ethernet
        description: "Eth port 0 as LAN with DHCP on address 173.16.0.1"
        function: LAN_CONTROLLER
        ipv4_address: 172.16.0.1
+       support_ssl: true
 
 # lastly we define the possible configurations for the networking in this system
 configurations:
@@ -86,7 +87,7 @@ configurations:
       wifi: wifi-ap-1
 
   - sailing:
-      ethernet-0: eth-0-wan
+      ethernet-0: eth-0-lan
       ethernet-1: eth-1-lan
-      cellular: cellular-1
+      cellular: cellular-2
       wifi: wifi-ap-1
