@@ -361,11 +361,12 @@ No additional parameters in this version. The coupler connects to the GNSS recei
 This class manages Victron VEDirect serial interface or a VEDirect log file as simulation. As VEDirect is not NMEA, they have a specific internal format by default. If the coupler mode is set to NMEA0183, then a XDR sentence is generated with the current, voltage and power from the panel.
 This coupler is intended to be used by the energy management agent, rather than the global messaging router-server. However, if only some measurements are needed for display, it can be integrated like any other coupler but only in NMEA mode (protocol => nmea0183)
 
-| Name      | Type               | Default | Signification                                          |
-|-----------|--------------------|---------|--------------------------------------------------------|
-| device    | string             | None    | name of the serial device with the VEDirect connection |
-| interface | serial, simulation | serial  | type of input: direct serial or simulation             |
-| logfile   | string             | None    | name of the file to be used for VEDirect simulation    |
+| Name       | Type               | Default | Signification                                          |
+|------------|--------------------|---------|--------------------------------------------------------|
+| device     | string             | None    | name of the serial device with the VEDirect connection |
+| alt_device | string             | None    | name of an alternative device to be used               |
+| interface  | serial, simulation | serial  | type of input: direct serial or simulation             |
+| logfile    | string             | None    | name of the file to be used for VEDirect simulation    |
 
 #### DirectCANCoupler(Coupler)
 This coupler class works when a CAN bus interface with a socketcan driver is installed on the system. By construction, only NMEA2000 messages can be processed.

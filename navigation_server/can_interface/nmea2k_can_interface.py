@@ -164,9 +164,10 @@ class SocketCANInterface(NavThread):
         return self._writer.total_msg()
 
     def wait_for_bus_ready(self):
+        _logger.debug("NMEA CAN Interface (wait for BUS ready) => wait")
         self._bus_ready.wait()
-        _logger.debug("NMEA CAN Interface BUS ready")
-        self._send_readiness_callbacks()
+        _logger.debug("NMEA CAN Interface (wait for BUS ready) => ready")
+        # self._send_readiness_callbacks() => shall be removed only bus_online is sending callbacks
 
     def bus_offline(self):
         self._state = self.BUS_OFFLINE
@@ -517,13 +518,15 @@ class SocketCANWriter(NavThread):
                     retry = False
                     nberr = 0
                     if self._state == self.OFFLINE:
+                        _logger.debug("CAN Writer Bus is becoming ONLINE")
                         self._can_interface.bus_online()
                         self._state = self.RUNNING
+                        _logger.debug("CAN Writer Bus is ONLINE")
                     max_retry = 19
                 except ValueError:
                     # can happen if the thread was blocked while the CAN interface is closed
-                    self._last_error = 5
-                    raise SocketCanError(f"SocketCANWriter {self.name} CAN access closed during write => STOP", 5)
+                    self._last_error = 205
+                    raise SocketCanError(f"SocketCANWriter {self.name} CAN access closed during write => STOP", 205)
                 except CanError as e:
                     nberr += 1
                     _logger.debug("SocketCANWriter: Error writing message (%4X) to channel %s: %s retry:%d" %
@@ -553,6 +556,8 @@ class SocketCANWriter(NavThread):
 
                     else:
                         _logger.info(f"CAN Write error {e} => retrying")
+                        retry = True
+
                 burst -= 1
                 if burst > 0:
                     # in case of burst limit anyway to 1000 msg/sec
@@ -563,7 +568,7 @@ class SocketCANWriter(NavThread):
                         msg = self._in_queue.get(block=False)
                     except queue.Empty:
                         break  # stop burst
-
+            # _logger.debug("CAN Writer end of send loop")
 
             # end of the run loop
         _logger.info("Socket CAN Write thread stops")

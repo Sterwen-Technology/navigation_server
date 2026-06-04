@@ -1,10 +1,10 @@
 #-------------------------------------------------------------------------------
-# Name:        log_analyzer
-# Purpose:      Interactive log analyzer for NMEA2000 CAN messages
+# Name:        nmea2000_decoder
+# Purpose:      Interactive decoder for NMEA2000 CAN messages
 #
 # Author:      Laurent Carré
 #
-# Created:     06/02/2026
+# Created:     03/06/2026
 # Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
@@ -16,15 +16,14 @@ from argparse import ArgumentParser
 
 from log_replay.raw_log_reader import RawLogFile, RawLogCANMessage
 
+from nmea2000_datamodel import PGNDef
+
 _logger = logging.getLogger("ShipDataServer")
 
 def _parser():
     p = ArgumentParser(description=sys.argv[0])
-    p.add_argument('-f', '--file', action='store', default=None, help='File for input')
-    p.add_argument('-s','--start', action='store', default=0, type=int, help='Start record')
-    p.add_argument('-e','--end', action='store', default=0, type=int, help='End record')
-    p.add_argument('--pgn_list', action='store', type=int, default=None, help='PGN list')
-    p.add_argument('-a', '--analyse', action='store_true', default=False, help='analyse only the file')
+    p.add_argument('-i', '--id', action='store', default=None, type=str, help='CNA ID as HEX string')
+    p.add_argument('-d','--data', action='store', default=None, type=str, help='Data as HEX string')
     return p
 
 
@@ -53,29 +52,10 @@ def main():
     _logger.addHandler(loghandler)
     _logger.setLevel('INFO')
 
-    if opts.file is None:
-        _logger.error("Input file name is mandatory")
-        return
-
-    log_file = RawLogFile(opts.file)
-    if opts.pgn_list is not None:
-        white_list = [opts.pgn_list]
-    else:
-        white_list = None
-    log_file.load_file(white_list, [], input_msg_only=False)
-    if opts.analyse:
-        return
-    records = log_file.records
-    index = opts.start
-    if opts.end == -1:
-        end = len(records)
-    else:
-        end = opts.end
-    while index < end:
-        msg = records[index]
-        print(f"{msg.direction}|{msg.sa}|{msg.da}|{msg.pgn}:{msg.message}")
-        index += 1
-
+    if opts.id is not None:
+        can_id = int(opts.id, 16)
+        pgn, da, sa, prio = PGNDef.decode_canid(can_id)
+        print(f"PGN={pgn}, DA={da}, SA={sa}, Prio={prio}")
 
 
 

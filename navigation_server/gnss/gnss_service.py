@@ -94,7 +94,9 @@ class GNSSSerialReader(NavThread):
                 self._trace.trace(NMEAMsgTrace.TRACE_IN, msg)
             if self._n0183_subscriber is not None:
                 self._n0183_subscriber.push(msg)
-            gnss_data.process_nmea0183(msg, self._n2k_subscriber)
+            if self._n2k_subscriber is not None:
+                # added 26-06-02 to avoid permanent errors when the subscriber is removed
+                gnss_data.process_nmea0183(msg, self._n2k_subscriber)
         self._trace.stop_trace()
 
     def set_n2k_subscriber(self, n2k_subscriber: N2KForwarder):
@@ -278,10 +280,17 @@ class GNSSPushClient(ServiceClient, NavThread):
             if self._server.wait_connect(10.):
                 self._forwarder.resume()
                 try:
-                    resp = self._server_call(self._push_method, GrpcSendStreamIterator(self, self.get_gnss_nmea), None)
-                    if resp.reportCode != 0:
-                        _logger.error(f"GNSSPushClient stopped due to remote error:{resp.reportCode}")
-                        break
+                    while not self._stop_flag:
+                        resp = self._server_call(self._push_method, GrpcSendStreamIterator(self, self.get_gnss_nmea), None)
+                        if resp.reportCode >= 1000:
+                            _logger.error(f"GNSSPushClient stopped due to remote error:{resp.reportCode}")
+                            self._stop_flag = True
+                            break
+                        else:
+                            _logger.error(f"GNSSPushClient remote error {resp.status} - waiting {resp.reportCode}s")
+                            time.sleep(resp.reportCode)
+                            continue
+
                 except GrpcAccessException:
                     _logger.info("GNSSPushClient suspended")
                     self._forwarder.suspend()
@@ -294,6 +303,7 @@ class GNSSPushClient(ServiceClient, NavThread):
                     time_disconnect = t
                 else:
                     time.sleep(10. - (t - time_disconnect))
+        _logger.info("GNSSPushClient stopped")
         self._forwarder.suspend()
         self._reader.clear_n2k_subscriber()
 

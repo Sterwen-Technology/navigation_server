@@ -105,6 +105,13 @@ class PGNDef (BitFieldGenerator):
             return True
         return False
 
+    @staticmethod
+    def decode_canid(can_id: int) -> (int, int, int, int) :
+        pgn, da = PGNDef.pgn_pdu1_adjust((can_id >> 8) & 0x1FFFF)
+        sa = can_id & 0xFF
+        prio = (can_id >> 26) & 0x7
+        return pgn, da, sa, prio
+
     def __init__(self, pgnxml):
 
         BitFieldGenerator.__init__(self)
