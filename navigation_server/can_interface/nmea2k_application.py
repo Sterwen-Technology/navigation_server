@@ -217,7 +217,7 @@ class NMEA2000Application(NMEA2000Device):
                 _logger.error(f"Application {self._app_name} Error sending message to CAN bus")
                 if e.can_error == 105:
                     self._bus_ready = False
-                    self._controller.CAN_interface.register_readiness_callback(self.wait_for_bus_ready)
+                    self._controller.CAN_interface.register_readiness_callback(self._bus_ready_cb)
                     self._app_state = self.WAIT_FOR_BUS
                 else:
                     raise e
@@ -276,6 +276,11 @@ class NMEA2000Application(NMEA2000Device):
         self._controller.CAN_interface.wait_for_bus_ready()
         self._bus_ready = True
         _logger.debug("CAN bus ready")
+        self.send_address_claim()
+
+    def _bus_ready_cb(self):
+        _logger.debug("CAN bus ready cb from device %d" % self._address)
+        self._bus_ready = True
         self.send_address_claim()
 
     def start_application(self):

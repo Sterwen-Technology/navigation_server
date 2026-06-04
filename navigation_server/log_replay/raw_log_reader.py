@@ -134,6 +134,8 @@ class RawLogFile:
 
     def load_file(self, pgn_white_list, pgn_black_list, input_msg_only=True):
 
+        nb_record = 0
+
         def read_decode(l):
             if l[0] != 'R':
                 raise LogReadError('WRONG PREFIX', message=l)
@@ -158,17 +160,22 @@ class RawLogFile:
             return timestamp, message, direction
 
         def append_can_record(timestamp, message, direction_p):
+            nonlocal nb_record
             rec = record_class(timestamp, message, direction)
             self._can_stats.record_msg(rec.sa, rec.pgn)
             if rec.pgn in pgn_black_list:
                 return
             if pgn_white_list is None:
                 self._records.append(rec)
+                nb_record += 1
             elif rec.pgn in pgn_white_list:
                 self._records.append(rec)
+                nb_record += 1
 
         def append_record(timestamp, message, direction_p):
+            nonlocal nb_record
             self._records.append(record_class(timestamp, message))
+            nb_record += 1
 
         _logger.info("Start reading log file %s" % self._logfile)
         # read the first line
@@ -193,7 +200,7 @@ class RawLogFile:
             _logger.critical(f"Log Reader => unknown file type {self._type}")
             raise ValueError
 
-        nb_record = 1
+
 
         first_line = self._fd.readline()
         while True:
@@ -232,13 +239,16 @@ class RawLogFile:
                 self._tick_index.append(nb_record)
                 self._nb_tick += 1
                 self._next_tick_date = self._t0 + datetime.timedelta(seconds=self._tick_interval * (self._nb_tick+1))
-            nb_record += 1
+            # nb_record += 1
             # give some time back to the scheduler
-            if nb_record % 5000 == 0:
+            if nb_record >0 and nb_record % 5000 == 0:
                 time.sleep(0.01) # sleep 0.01 sec every 5000 lines
 
         self._fd.close()
         _logger.info("Logfile %s number of records:%d" % (self._logfile, nb_record))
+        if nb_record == 0:
+            _logger.info("No records found => improper file or filter")
+            return
         # self._t0 = self._records[0].timestamp
         self._tend = self._records[nb_record-1].timestamp
         self._duration = self._tend - self._t0

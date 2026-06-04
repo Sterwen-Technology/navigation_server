@@ -37,9 +37,10 @@ class Vedirect(threading.Thread):
 
     (HEX, WAIT_HEADER, IN_KEY, IN_VALUE, IN_CHECKSUM) = range(5)
 
-    def __init__(self, serialport, timeout, input_queue, trace_input=False):
+    def __init__(self, serialport: str, alt_serialport: str, timeout, input_queue, trace_input=False):
         super().__init__(name="Vedirect", daemon=True)
         self._serialport = serialport
+        self._alt_serialport = alt_serialport
         self._timeout = timeout
         self._serial_fd = None
         self._queue = input_queue
@@ -72,13 +73,29 @@ class Vedirect(threading.Thread):
                 _logger.error("Trace file error %s" % e)
 
     def open(self):
-        try:
-            self._serial_fd = serial.Serial(self._serialport, 19200, timeout=self._timeout)
-            _logger.info("Vedirect serial port %s opened" % self._serialport)
-        except (serial.SerialException, BrokenPipeError) as e:
-            _logger.error("Cannot open VEdirect serial interface %s" % str(e))
+        '''
+        Added in 2.8.2 the possibility to have an alternative port for the MPPT VE direct link
+        '''
+        def open_port(port):
+            try:
+                self._serial_fd = serial.Serial(self._serialport, 19200, timeout=self._timeout)
+                _logger.info("Vedirect serial port %s opened" % self._serialport)
+                return True
+            except (serial.SerialException, BrokenPipeError) as e:
+                _logger.error("Cannot open VEdirect serial interface %s" % str(e))
+                return False
+
+        if open_port(self._serialport):
+            return True
+        elif self._alt_serialport is not None:
+            # let's try the alternate
+            if open_port(self._alt_serialport):
+                return True
+            else:
+                return False
+        else:
             return False
-        return True
+
 
     def close(self):
         if self._serial_fd is not None:
@@ -339,8 +356,9 @@ class VEDirectCoupler(Coupler):
         self._interface = opts.get('interface', str, 'serial')
         if self._interface == 'serial':
             device = opts.get('device', str, '/dev/ttyUSB0')
+            alt_device = opts.get('alt_device', str, None)
             trace = opts.get('trace_vedirect', bool, False)
-            self._reader = Vedirect(device, self._timeout, self._input_queue, trace)
+            self._reader = Vedirect(device, alt_device, self._timeout, self._input_queue, trace)
         elif self._interface == 'simulation':
             log_file = opts.get('logfile', str, None)
             if log_file is None:

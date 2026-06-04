@@ -35,13 +35,20 @@ class GNSS_InputServicerImpl(GNSS_InputServicer):
         try:
             for msg in request_iterator:
                 self._callback(msg)
+        except SocketCanError as err:
+            if err.can_error == 105:
+                resp.reportCode = 10    # number of second to wait before restarting
+            else:
+                resp.reportCode = 1000 + err.can_error
+            resp.status = str(err)
         except Exception as err:
             _logger.error(f"GNSS Input processing error:{err}")
-            resp.reportCode = 101
+            resp.reportCode = 1000
             resp.status = str(err)
         else:
             _logger.info("GNSS Input processing stream ends")
             resp.reportCode = 0
+        _logger.info(f"GNSS Input stream ends with code {resp.reportCode} {resp.status}")
         return resp
 
 
@@ -103,19 +110,7 @@ class GNSSInput(NMEA2000Application, GrpcService):
         if self._nmea2000_controller is not None:
             n2k_msg = NMEA2000Msg(msg.pgn, protobuf=msg)
             n2k_msg.sa = self._address
-            if self._can_ready:
-                try:
-                    self._nmea2000_controller.CAN_interface.send(n2k_msg)
-                except SocketCanError as err:
-                    _logger.error(f"GNSS Input - SocketCanError {err}")
-                    if self._nmea2000_controller.CAN_interface.is_bus_ready():
-                        _logger.error("GNSS Input - bus ready, but still error")
-                        raise
-                    else:
-                        _logger.error("GNSS Input - bus not ready, stopping sending message")
-                        self._can_ready = False
-                        self._nmea2000_controller.CAN_interface.register_read_callback(self.bus_ready_callback)
-                        return
+            self._nmea2000_controller.CAN_interface.send(n2k_msg)
 
             if self._forward:
                 # if the forward flag is true, the message is also sent for direct local distribution
