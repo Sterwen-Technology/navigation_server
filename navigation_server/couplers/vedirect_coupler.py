@@ -78,8 +78,8 @@ class Vedirect(threading.Thread):
         '''
         def open_port(port):
             try:
-                self._serial_fd = serial.Serial(self._serialport, 19200, timeout=self._timeout)
-                _logger.info("Vedirect serial port %s opened" % self._serialport)
+                self._serial_fd = serial.Serial(port, 19200, timeout=self._timeout)
+                _logger.info("Vedirect serial port %s opened" % port)
                 return True
             except (serial.SerialException, BrokenPipeError) as e:
                 _logger.error("Cannot open VEdirect serial interface %s" % str(e))

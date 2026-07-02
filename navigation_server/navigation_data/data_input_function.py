@@ -1,10 +1,10 @@
 #-------------------------------------------------------------------------------
-# Name:        generic service classes for data
+# Name:        generic service classes for data input from gRPC
 #
 # Author:      Laurent Carré
 #
 # Created:     09/06/2025
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 

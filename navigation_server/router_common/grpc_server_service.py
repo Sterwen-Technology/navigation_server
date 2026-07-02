@@ -72,8 +72,8 @@ class GrpcServer(NavigationServer):
             self._grpc_server.add_insecure_port(address)
         else:
             _logger.info(f"Secure communications selected for {MessageServerGlobals.server_name}")
-            credentials = grpc.ssl_server_credentials(((MessageServerGlobals.configuration.server_key,
-                                                         MessageServerGlobals.configuration.server_cert), ))
+            credentials = grpc.ssl_server_credentials([(MessageServerGlobals.configuration.server_key,
+                                                         MessageServerGlobals.configuration.server_cert), ])
             self._grpc_server.add_secure_port(address, credentials)
 
         GrpcServer.grpc_server_global = self

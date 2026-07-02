@@ -1,11 +1,11 @@
 #-------------------------------------------------------------------------------
-# Name:        configuration
-# Purpose:     Decode Yaml configuration file and manage the related objects
+# Name:        engine_service
+# Purpose:     interpret NMEA2000 PGN linked to engines and stotre engine state
 #
 # Author:      Laurent Carré
 #
-# Created:     08/01/2022 - new version with features 20/03/2024
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Created:      16/07/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
