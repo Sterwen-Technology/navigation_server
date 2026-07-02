@@ -1,0 +1,13 @@
+//-------------------------------------------------------------------------------
+// Name:        navigation_objects.proto
+// Purpose:     protobuf and grpc for navigation database
+//
+// Author:      Laurent Carré
+//
+// Created:     8/06/2026
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
