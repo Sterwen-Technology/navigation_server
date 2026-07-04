@@ -20,7 +20,7 @@ import time
 import subprocess
 from queue import Queue
 
-from can import Message, CanError, ThreadSafeBus, Bus
+from can import Message, CanError, ThreadSafeBus, Bus, CanOperationError
 
 from navigation_server.router_core import NMEA2000Msg
 from navigation_server.nmea2000 import FastPacketHandler, FastPacketException, IsoTransportHandler, IsoTransportException
@@ -99,6 +99,7 @@ class SocketCANInterface(NavThread):
         # self._notifier = None
         # self._listener = NMEA2000MsgListener(self, self._bus_queue)
         self._state = self.BUS_NOT_CONNECTED
+        self._send_buffer_full = False
 
         if trace:
             try:
@@ -190,7 +191,7 @@ class SocketCANInterface(NavThread):
         self._callback_lock.acquire()
         for callback in self._readiness_callbacks:
             callback()
-        self._readiness_callbacks = []
+        # self._readiness_callbacks = []
         self._callback_lock.release()
 
     def send_trace(self, direction, can_id, timestamp, data):
@@ -214,6 +215,7 @@ class SocketCANInterface(NavThread):
             _logger.debug("CAN interface discarding incoming message to:%d :%s" % (da,msg_recv))
             return
         sa = can_id & 0xFF
+        _logger.debug("CAN Receive Msg from %d to %d pgn:%d" % (sa, da, pgn))
         prio = (can_id >> 26) & 0x7
         data = msg_recv.data
         if self._trace is not None:
@@ -319,7 +321,9 @@ class SocketCANInterface(NavThread):
                 msg = self.read_can()
             except SocketCanReadInvalid:
                 continue
-            _logger.debug("CAN RECV:%s" % str(msg))
+            # _logger.debug("CAN RECV:%s" % str(msg))
+            if self._state != self.BUS_READY:
+                self.bus_online()
             self.process_receive_msg(msg)
 
             # end of the run loop
@@ -338,8 +342,11 @@ class SocketCANInterface(NavThread):
         msg = Message(arbitration_id=can_id, is_extended_id=True, timestamp=time.time(), data=data)
         try:
             self._in_queue.put(msg, timeout=5.0)
+            if self._send_buffer_full:
+                self._send_buffer_full = False
         except queue.Full:
             self._write_errors += 1
+            self._send_buffer_full = True
             _logger.error(f"CAN Interface {self.name} Write buffer full occurrence {self._write_errors}")
             raise SocketCanError("Socket write buffer full", self._writer.last_error)
 
@@ -427,6 +434,7 @@ class SocketCANWriter(NavThread):
         self._state = self.RUNNING  # we assume running by default
         self._start_stop_mode = None
         self._last_error = 0
+        self._burst = 1
         self._stop_mode_retry_period = 30.0
         self._stop_flag = False
         self._total_msg = 0
@@ -458,6 +466,38 @@ class SocketCANWriter(NavThread):
     def last_error(self) -> int:
         return self._last_error
 
+    def _send_with_time_out(self, msg: Message, time_out: float):
+
+        start_time = time.monotonic()
+        end_time = start_time + time_out
+        while time.monotonic() < end_time:
+            if self._stop_flag:
+                return
+            try:
+                self._bus.send(msg)
+                return
+            except CanOperationError as err:
+                if err.error_code == 105:
+                    # that is a buffer full error so let's slow down
+                    _logger.debug("SocketCANWriter - bus error of buffer full -> retry")
+                    time.sleep(0.05) # sleep 50ms
+                    self._last_error = 105
+                    continue
+                else:
+                    raise err
+        # if we are here, the bus is not working correctly
+        _logger.info("CAN Write error - bus error - suspecting no one is listening on CAN bus")
+        self._state = self.OFFLINE
+        self._can_interface.bus_offline()
+        self._start_stop_mode = time.monotonic()
+        self._burst = 0
+        if self._last_error == 105:
+            raise SocketCanError(f"SocketCANWriter {self.name} suspected inactive bus after {time_out} seconds", 105)
+        else:
+            self._last_error = 206
+            raise SocketCanError(f"SocketCANWriter {self.name} Suspected time-out on write", 206)
+
+
     def nrun(self):
         """
         CAN bus write loop
@@ -471,7 +511,7 @@ class SocketCANWriter(NavThread):
         retry = False
         max_retry = 5
         while not self._stop_flag:
-            # _logger.debug("Start Write loop STATE=%d retry=%s" % (self._state, retry))
+            _logger.debug("Start Write loop STATE=%d retry=%s" % (self._state, retry))
             if not retry and self._state == self.RUNNING:
                 # we pick a new message in the queue
                 try:
@@ -493,16 +533,18 @@ class SocketCANWriter(NavThread):
             # Burst implemented in version 2.2 to speed up the processing of the queue
             if self._in_queue.qsize() > self._in_queue_size - 2:
                 # the input is filling up => burst mode
-                burst = 5
+                self._burst = 5
             else:
-                burst = 1
-            if burst == 1 and msg_pace < self._min_interval:
+                self._burst = 1
+            if self._burst == 1 and msg_pace < self._min_interval:
                 # stop the thread for the delta
                 time.sleep(self._min_interval - msg_pace)
-            while burst > 0:
+            while self._burst > 0:
                 #
                 # message can be sent as burst when the queue is filling up
                 #
+                if self._stop_flag:
+                    break
                 if self._trace is not None:
                     dts = datetime.datetime.fromtimestamp(msg.timestamp)
                     self._trace.trace_n2k_raw_can(dts, self._total_msg, NMEAMsgTrace.TRACE_OUT,
@@ -511,7 +553,7 @@ class SocketCANWriter(NavThread):
                 try:
                     _logger.debug("CAN sending: %s" % str(msg))
                     self._total_msg += 1
-                    self._bus.send(msg, 5.0)
+                    self._send_with_time_out(msg, 5.0)
                     last_write_time = time.monotonic()
                     if retry:
                         _logger.info("SocketCANWriter success after retry (%4X) attempt:%d" % (msg.arbitration_id, nberr))
@@ -522,44 +564,18 @@ class SocketCANWriter(NavThread):
                         self._can_interface.bus_online()
                         self._state = self.RUNNING
                         _logger.debug("CAN Writer Bus is ONLINE")
-                    max_retry = 19
                 except ValueError:
                     # can happen if the thread was blocked while the CAN interface is closed
                     self._last_error = 205
                     raise SocketCanError(f"SocketCANWriter {self.name} CAN access closed during write => STOP", 205)
-                except CanError as e:
+                except SocketCanError as e:
+                    _logger.error(f"SocketCANWriter {self.name}: {e}")
                     nberr += 1
-                    _logger.debug("SocketCANWriter: Error writing message (%4X) to channel %s: %s retry:%d" %
-                                  (msg.arbitration_id, self._can_interface.channel, e, nberr))
-                    burst = 1 # we stop burst
                     retry = True
-                    self._last_error = e.error_code
                     last_write_time = time.monotonic()
-                    if nberr > max_retry:
-                        # more than 20 consecutive errors let see what we do [changed in 2.6.1 31/07/2025)
-                        _logger.debug("CAN Writer too many errors %d code %s" % (nberr, e.error_code))
-                        if e.error_code == 105:
-                            _logger.info("CAN Write error 105 - bus error - suspecting no one is listening on CAN bus")
-                            self._state = self.OFFLINE
-                            self._can_interface.bus_offline()
-                            self._start_stop_mode = time.monotonic()
-                            nberr = 0
-                            retry = False
-                            burst = 0
-                            max_retry = 4
-                            continue
-                        else:
-                            _logger.critical(f"CAN Write too many errors {e} stopping write operations")
-                            self._can_interface.stop_on_error()
-                            self._stop_flag = True
-                            break
 
-                    else:
-                        _logger.info(f"CAN Write error {e} => retrying")
-                        retry = True
-
-                burst -= 1
-                if burst > 0:
+                self._burst -= 1
+                if self._burst > 0:
                     # in case of burst limit anyway to 1000 msg/sec
                     # decrease to 500msg/sec 25-04-2025
                     time.sleep(0.002)
@@ -568,9 +584,11 @@ class SocketCANWriter(NavThread):
                         msg = self._in_queue.get(block=False)
                     except queue.Empty:
                         break  # stop burst
+
+            # end of the burst loop
             # _logger.debug("CAN Writer end of send loop")
 
-            # end of the run loop
+        # end of the run loop
         _logger.info("Socket CAN Write thread stops")
 
 

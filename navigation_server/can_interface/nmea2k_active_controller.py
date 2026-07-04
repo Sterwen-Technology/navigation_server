@@ -22,6 +22,10 @@ from navigation_server.router_common import ObjectCreationError, set_global_var,
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
+class CanNotReady(Exception):
+    pass
+
+
 class NMEA2KActiveController(NMEA2KController):
 
     def __init__(self, opts):
@@ -44,10 +48,12 @@ class NMEA2KActiveController(NMEA2KController):
         self._create_default_application = opts.get('default_application', bool, True)
         self._address_change_request = None
         self._start_application_lock = threading.Lock()
+        self._context_lock = threading.Lock()
         self._pgn_vector = {}
         self._app_timer = None
         self._timer_vector = []
         self._catch_all = []
+        self._retry_context = []
         set_global_var("NMEA2K_ECU", self)
 
 
@@ -83,6 +89,7 @@ class NMEA2KActiveController(NMEA2KController):
         self._can.start()
         super().start()
         self.start_applications()
+        self._can.register_readiness_callback(self.bus_online_callback)
         # start timer
         self._app_timer = threading.Timer(1.0, self._timer_lapse)
         self._app_timer.start()
@@ -200,6 +207,9 @@ class NMEA2KActiveController(NMEA2KController):
                     self._app_index[msg.da].receive_msg(msg)
                 else:
                     self._app_index[msg.da].receive_data_msg(msg)
+            except CanNotReady:
+                _logger.debug("CAN not ready for sa=%d PGN=%d da=%d" % (msg.sa, msg.pgn, msg.da))
+                return
             except KeyError:
                 _logger.error("Wrongly routed message for destination %d pgn %d" % (msg.da, msg.pgn))
                 return
@@ -249,6 +259,58 @@ class NMEA2KActiveController(NMEA2KController):
     def send_message(self, msg: NMEA2000Msg):
         application = self._applications[0]
         application.send_message(msg)
+
+    def check_internal(self, msg: NMEA2000Msg) -> bool:
+        '''
+        This method is checking if the destination address is local
+        If Local the message is directly send to the local device via function call
+        '''
+        def _check_internal():
+            try:
+                dev = self.get_device_by_address(msg.da)
+            except KeyError:
+                return False
+            if dev.is_proxy():
+                return False
+            # process locally
+            self.process_msg(msg)
+            return True
+
+        if msg.da == 255:
+            # broadcast => let is go
+            return False
+        else:
+            return _check_internal()
+
+    def send_to_bus(self, msg: NMEA2000Msg, context=None):
+        '''
+        Actual sending of the message when the bus is ready, otherwise record the context for use when the bus become ready
+        '''
+        if self._can.is_bus_ready():
+            try:
+                self._can.send(msg)
+            except SocketCanError as e:
+                # message is lost
+                _logger.error("ActiveController - send_to_bus - Message lost due to:%s" % e)
+
+    def add_retry_context(self, context):
+        self._context_lock.acquire(timeout=2.0)
+        self._retry_context.append(context)
+        self._context_lock.release()
+
+    def bus_online_callback(self):
+        _logger.info("Active Controller => bus online")
+        # we need to relaunch claim so restart all apps
+        self.start_applications()
+
+    def is_bus_ready(self) -> bool:
+        return self._can.is_bus_ready()
+
+
+
+
+
+
 
 
 

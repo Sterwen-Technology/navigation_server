@@ -61,7 +61,7 @@ class NMEA2000Device:
             _logger.debug("Device address %d => no process function for PGN %d" % (self._address, msg.pgn))
             return
 
-    def is_proxy(self):
+    def is_proxy(self) -> bool:
         return True
 
     @property

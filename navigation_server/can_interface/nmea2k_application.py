@@ -13,6 +13,8 @@
 
 import logging
 import threading
+import random
+import time
 
 from navigation_server.router_core import NMEA2000Msg
 from navigation_server.nmea2000_datamodel import NMEA2000MutableName, PGNDef
@@ -209,20 +211,8 @@ class NMEA2000Application(NMEA2000Device):
         if self._heartbeat_timer is not None:
             self._heartbeat_timer.cancel()
 
-    def _send_to_bus(self, msg:NMEA2000Msg):
-        if self._bus_ready:
-            try:
-                self._controller.CAN_interface.send(msg)
-            except SocketCanError as e:
-                _logger.error(f"Application {self._app_name} Error sending message to CAN bus")
-                if e.can_error == 105:
-                    self._bus_ready = False
-                    self._controller.CAN_interface.register_readiness_callback(self._bus_ready_cb)
-                    self._app_state = self.WAIT_FOR_BUS
-                else:
-                    raise e
-        else:
-            _logger.debug(f"Application {self._app_name} Error sending message to CAN bus => bus not ready")
+    def _send_to_bus(self, msg:NMEA2000Msg, context=None):
+        self._controller.send_to_bus(msg, context)
 
     def init_product_information(self):
         '''
@@ -247,6 +237,9 @@ class NMEA2000Application(NMEA2000Device):
     def send_address_claim(self):
         if self._app_state == self.STOP_IN_PROGRESS:
             return
+        # wait a random number of millisec
+        wait_time = random.random() * .200
+        time.sleep(wait_time)
         self.respond_address_claim()
         self._app_state = self.ADDRESS_CLAIM
         self._claim_timer = threading.Timer(0.4, self.address_claim_delay)
@@ -260,16 +253,14 @@ class NMEA2000Application(NMEA2000Device):
     def address_claim_delay(self):
         # we consider that we are good to go
         _logger.debug("Address claim for %d delay exhausted" % self._address)
-        self._app_state = self.ACTIVE
-        self.send_iso_request(255, 60928)
-        # start sending heartbeat
-        self.send_heartbeat()
         self._controller.application_started(self)
-        self._claim_timer = None # indicates that no timer is running
-        # request = ISORequest(self._address)
-        # self._send_to_bus(request.message())
-        # t = threading.Timer(1.0, self.send_product_information)
-        # t.start()
+        self._claim_timer = None  # indicates that no timer is running
+        if self._controller.is_bus_ready():
+            # start sending only is the bus is ready
+            self._app_state = self.ACTIVE
+            self.send_iso_request(255, 60928)
+            # start sending heartbeat
+            self.send_heartbeat()
 
     def wait_for_bus_ready(self):
         _logger.debug("Waiting for CAN Bus to be ready")
@@ -278,14 +269,15 @@ class NMEA2000Application(NMEA2000Device):
         _logger.debug("CAN bus ready")
         self.send_address_claim()
 
-    def _bus_ready_cb(self):
-        _logger.debug("CAN bus ready cb from device %d" % self._address)
+    def bus_ready_cb(self):
+        _logger.debug("CAN bus ready cb for device %d" % self._address)
         self._bus_ready = True
         self.send_address_claim()
 
     def start_application(self):
         _logger.debug("NMEA2000 Application device address %d starts" % self._address)
-        t = threading.Thread(target=self.wait_for_bus_ready, daemon=True)
+        # self._controller.CAN_interface.register_readiness_callback(self._bus_ready_cb)
+        t = threading.Thread(target=self.send_address_claim, daemon=True)
         t.start()
 
     def address_claim_receipt(self, msg: NMEA2000Msg):
@@ -367,7 +359,7 @@ class NMEA2000Application(NMEA2000Device):
     def send_product_information(self):
         self._product_information.sa = self._address
         _logger.debug("Send product information from address %d" % self._address)
-        self._send_to_bus(self._product_information.message())
+        self._send_to_bus(self._product_information.message(), self.send_product_information)
 
     def receive_data_msg(self, msg: NMEA2000Msg):
         _logger.critical("Missing receive_data_msg in class %s" % self.__class__.__name__)
