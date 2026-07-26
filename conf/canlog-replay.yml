@@ -38,6 +38,15 @@ servers:
       class: GrpcServer
       port: 4502
 
+- NMEANetwork:
+      class: NMEA2KActiveController
+      trace: false
+      channel: can0
+      mac_source: eno1
+      max_silent: 60.0
+      applications: [LogInjector]
+
+
 couplers:
 
 - LogReader:
