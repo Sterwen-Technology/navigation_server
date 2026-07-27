@@ -191,6 +191,24 @@ class ISORequest(NMEA2000Object):
         return self._req_pgn
 
 
+class ISOAcknowledgment(NMEA2000Object):
+
+    __slots__ = ['_req_pgn', '_control'] + NMEA2000Object.__slots__
+
+    def __init__(self, sa: int, da: int, control: int, request_pgn: int):
+        super().__init__(59392)
+        self._sa = sa
+        self._da = da
+        self._control = control & 0xFF
+        self._req_pgn = request_pgn & 0xFFFFFF
+
+    def encode_payload(self) -> bytes:
+
+        return bytes([self._control, 0xFF, 0xFF, 0xFF, 0xFF,
+                      self._req_pgn & 0xFF, (self._req_pgn >> 8) & 0xFF, (self._req_pgn >> 16) & 0xFF])
+
+
+
 class PGNList(NMEA2000Object):
     '''
     This class implements the PGN 126464

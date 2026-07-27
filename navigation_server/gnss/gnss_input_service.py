@@ -11,6 +11,7 @@
 
 import logging
 import queue
+import grpc
 
 
 from navigation_server.generated.gnss_pb2_grpc import add_GNSS_InputServicer_to_server, GNSS_InputServicer
@@ -25,8 +26,8 @@ _logger = logging.getLogger("ShipDataServer."+__name__)
 
 class GNSS_InputServicerImpl(GNSS_InputServicer):
 
-    def __init__(self, callback):
-        self._callback = callback
+    def __init__(self, gnss_application):
+        self._gnss_application = gnss_application
 
     def gnss_message(self, request_iterator, context):
 
@@ -34,21 +35,37 @@ class GNSS_InputServicerImpl(GNSS_InputServicer):
         _logger.info("GNSS Input stream starts")
         try:
             for msg in request_iterator:
-                self._callback(msg)
+                self._gnss_application.receive_input_msg(msg)
         except SocketCanError as err:
             if err.can_error == 105:
                 resp.reportCode = 10    # number of second to wait before restarting
             else:
                 resp.reportCode = 1000 + err.can_error
             resp.status = str(err)
+        except grpc.RpcError as err:
+            _logger.info(f"GNSS Input stream ends with error: {err.code()}")
+            resp.reportCode = 0
+            resp.status = err.details()
         except Exception as err:
-            _logger.error(f"GNSS Input processing error:{err}")
+            _logger.error(f"GNSS Input processing error:{err} {err.__class__.__name__}")
             resp.reportCode = 1000
             resp.status = str(err)
         else:
             _logger.info("GNSS Input processing stream ends")
             resp.reportCode = 0
+            resp.status = "End"
         _logger.info(f"GNSS Input stream ends with code {resp.reportCode} {resp.status}")
+        return resp
+
+    def nmea2000_server_status(self, request, context):
+        _logger.info("GNSS Input server status")
+        resp = server_resp()
+        if self._gnss_application.check_bus_ready():
+            resp.reportCode = 0
+            resp.status = "NMEA2000 Bus ready"
+        else:
+            resp.reportCode = 105
+            resp.status = "NMEA2000 Bus NOT ready"
         return resp
 
 
@@ -76,7 +93,7 @@ class GNSSInput(NMEA2000Application, GrpcService):
         except GrpcServerError:
             return
         _logger.info("Adding service %s to server" % self._name)
-        self._servicer = GNSS_InputServicerImpl(self.receive_input_msg)
+        self._servicer = GNSS_InputServicerImpl(self)
         add_GNSS_InputServicer_to_server(self._servicer, self.grpc_server)
 
     def init_product_information(self):
@@ -99,6 +116,9 @@ class GNSSInput(NMEA2000Application, GrpcService):
     def bus_ready_callback(self):
         _logger.info("GNSS Input - bus ready")
         self._can_ready = True
+
+    def check_bus_ready(self):
+        return self._nmea2000_controller.is_bus_ready()
 
     def receive_input_msg(self, msg: nmea2000pb):
         """

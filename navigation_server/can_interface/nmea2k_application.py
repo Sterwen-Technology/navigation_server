@@ -20,7 +20,8 @@ from navigation_server.router_core import NMEA2000Msg
 from navigation_server.nmea2000_datamodel import NMEA2000MutableName, PGNDef
 from navigation_server.nmea2000 import (AddressClaim, ISORequest, ProductInformation, ConfigurationInformation,
                                           AcknowledgeGroupFunction, create_group_function, CommandedAddress,
-                                          CommandGroupFunction, Heartbeat, get_n2k_decoded_object, NMEA2000Device, PGNList)
+                                          CommandGroupFunction, Heartbeat, get_n2k_decoded_object, NMEA2000Device,
+                                          PGNList, ISOAcknowledgment)
 from navigation_server.router_common import get_id_from_mac, MessageServerGlobals, resolve_ref, SocketCanError
 
 
@@ -175,6 +176,12 @@ class NMEA2000Application(NMEA2000Device):
             60928: self.remote_address_claim,
             65240: self.commanded_address_request
         }
+        self._iso_request_vector = {
+            60928: self.respond_address_claim,
+            126464: self.send_pgn_list,
+            126996: self.send_product_information,
+            126998: self.send_configuration_information
+        }
         self._product_information = ProductInformation()
         self.init_product_information()
         self._configuration_information = ConfigurationInformation()
@@ -205,6 +212,9 @@ class NMEA2000Application(NMEA2000Device):
 
     def add_receive_pgn(self, pgn:list[int]):
         self._receive_pgn.extend(pgn)
+
+    def add_iso_request_handler(self, pgn: int, handler):
+        self._iso_request_vector[pgn] = handler
 
     def stop_request(self):
         self._app_state = self.STOP_IN_PROGRESS
@@ -245,7 +255,7 @@ class NMEA2000Application(NMEA2000Device):
         self._claim_timer = threading.Timer(0.4, self.address_claim_delay)
         self._claim_timer.start()
 
-    def respond_address_claim(self):
+    def respond_address_claim(self, msg: NMEA2000Msg=None):
         claim_msg = AddressClaim(self._address, name=self._iso_name, da=255)
         _logger.debug("Application address %d sending address claim to %d" % (self._address, claim_msg.da))
         self._send_to_bus(claim_msg.message())
@@ -320,7 +330,7 @@ class NMEA2000Application(NMEA2000Device):
                 # need to send an Address Claimed response
                 self.respond_address_claim()
 
-    def change_address(self, address):
+    def change_address(self, address: int):
         _logger.info("Reassigning new address %d" % address)
         old_address = self._address
         self._address = address
@@ -328,23 +338,20 @@ class NMEA2000Application(NMEA2000Device):
         # we go ahead for a new address claim
         self.send_address_claim()
 
-    def iso_request(self, msg):
+    def iso_request(self, msg: NMEA2000Msg):
         # _logger.debug("Received ISO request from %d da=%d" % (msg.sa, msg.da))
         if msg.da == self._address or msg.da == 255:
             request = ISORequest().from_message(msg)
             _logger.debug("Application %d ISO request received from %d for pgn %d" % (self._address, msg.sa, request.request_pgn))
-            if request.request_pgn == 60928:
-                self.respond_address_claim()
-            elif request.request_pgn == 126996:
-                # ok we send back the ProductInformation
-                self.send_product_information()
-            elif request.request_pgn == 126998:
-                self.send_configuration_information()
-            elif request.request_pgn == 126464:
-                # send back the PGN list
-                self.send_pgn_list(msg.sa)
-            else:
-                _logger.error("ISO Request on PGN %d not supported" % request.request_pgn)
+            # version 2.8.3 => move the if-elif structure to dictionary will call vector
+            try:
+                self._iso_request_vector[request.request_pgn](msg)
+                return
+            except KeyError:
+                _logger.info("ISO Request on PGN %d from %d not supported" % (request.request_pgn, msg.sa))
+            # send a NACK acknowledgment
+            nack_resp = ISOAcknowledgment(self._address, msg.sa, 1, request.request_pgn)
+            self._send_to_bus(nack_resp.message())
 
     def commanded_address_request(self, msg: NMEA2000Msg):
         _logger.debug("Commanded address request for address %d" % self._address)
@@ -356,14 +363,15 @@ class NMEA2000Application(NMEA2000Device):
         _logger.info("Commanded address => success")
         self.change_address(request.commanded_address)
 
-    def send_product_information(self):
+    def send_product_information(self, msg: NMEA2000Msg=None):
         self._product_information.sa = self._address
         _logger.debug("Send product information from address %d" % self._address)
         self._send_to_bus(self._product_information.message(), self.send_product_information)
 
     def receive_data_msg(self, msg: NMEA2000Msg):
-        _logger.critical("Missing receive_data_msg in class %s" % self.__class__.__name__)
-        raise NotImplementedError("Missing receive_data_msg")
+        # change in 2.8.3 simply trace and ignore addressed PGN that cannot be processed
+        _logger.info("NMEA2000Application: No data processing handler in class %s" % self.__class__.__name__)
+        return
 
     def receive_iso_msg(self, msg: NMEA2000Msg):
         '''
@@ -376,7 +384,7 @@ class NMEA2000Application(NMEA2000Device):
             # _logger.debug("Receive ISO message => No handler for device %d on PGN %d" % (self._address, msg.pgn))
             pass
 
-    def remote_address_claim(self, msg):
+    def remote_address_claim(self, msg: NMEA2000Msg):
         _logger.debug("Receive address claim from address %d" % msg.sa)
         device = self._controller.get_device_by_address(msg.sa)
         if device.product_information is None:
@@ -389,18 +397,18 @@ class NMEA2000Application(NMEA2000Device):
         request = ISORequest(self._address, da, pgn)
         self._send_to_bus(request.message())
 
-    def send_configuration_information(self):
+    def send_configuration_information(self, msg:NMEA2000Msg=None):
         _logger.debug("Sending configuration information for address %d" % self._address)
         self._configuration_information.sa = self._address
         self._send_to_bus(self._configuration_information.message())
 
-    def send_pgn_list(self, destination: int):
-        _logger.debug("Sending transmit PGN list for address %d destination %d" % (self._address, destination))
-        pgn_list = PGNList(self._address, destination, 0,self._transmit_pgn)
+    def send_pgn_list(self, msg: NMEA2000Msg):
+        _logger.debug("Sending transmit PGN list for address %d destination %d" % (self._address, msg.sa))
+        pgn_list = PGNList(self._address, msg.sa, 0,self._transmit_pgn)
         _logger.debug("PGN126464 encoded=%s", pgn_list.message().format1())
         self._send_to_bus(pgn_list.message())
-        _logger.debug("Sending receive PGN list for address %d destination %d" % (self._address, destination))
-        pgn_list = PGNList(self._address, destination, 1,self._receive_pgn)
+        _logger.debug("Sending receive PGN list for address %d destination %d" % (self._address, msg.sa))
+        pgn_list = PGNList(self._address, msg.sa, 1,self._receive_pgn)
         self._send_to_bus(pgn_list.message())
 
     def send_heartbeat(self):

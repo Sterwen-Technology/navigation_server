@@ -162,6 +162,8 @@ class N2KForwarder:
         self._messages_lost = 0
         self._total_messages = 1    # to avoid any division by 0 in boundary cases
         self._gnss_system = None
+        self._block_queue = True
+        self._queue_time_out = 0.2
         if constellation is not None:
             self._gnss_system = gnss_dict.get(constellation, None)
 
@@ -176,7 +178,7 @@ class N2KForwarder:
                 return
             self._total_messages += 1
             try:
-                self._output_queue.put(n2k_msg, block=True, timeout=0.5)
+                self._output_queue.put(n2k_msg, block=self._block_queue, timeout=self._queue_time_out)
             except queue.Full:
                 _logger.error("N2KForwarder queue Full - message discarded - PGN %d" % msg.pgn)
                 self._messages_lost += 1

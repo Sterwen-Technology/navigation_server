@@ -21,7 +21,7 @@ from .nmea2k_device import NMEA2000Device
 from .nmea0183_to_nmea2k import NMEA0183ToNMEA2000Converter
 from .nmea2k_iso_messages import (AddressClaim, ConfigurationInformation, ProductInformation, Heartbeat, ISORequest,
                                   CommandedAddress, AcknowledgeGroupFunction, create_group_function, CommandGroupFunction,
-                                  PGNList)
+                                  PGNList, ISOAcknowledgment)
 from .nmea2k_service import Nmea2000Service
 # from .nmea2k_name import NMEA2000Name
 

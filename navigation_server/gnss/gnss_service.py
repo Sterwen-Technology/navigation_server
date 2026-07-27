@@ -25,6 +25,7 @@ from navigation_server.router_common import (GrpcService, GrpcServerError, GrpcC
                                              GrpcAccessException, GrpcStreamTimeout,
                                              GrpcSendStreamIterator, GrpcStreamIteratorError)
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
+from navigation_server.generated.nmea_messages_pb2 import server_cmd
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -155,6 +156,7 @@ class GNSSService(GrpcService):
         self._push_constellation = opts.get('push_constellation', str, None)
         self._push_server = GrpcClient.get_client(f"{self._push_address}:{self._push_port}", use_request_id=False)
         self._trace = opts.get('trace', bool, False)
+        self._report_progress = opts.get('report_progress', bool, False)
         self._timer = None
 
 
@@ -178,8 +180,9 @@ class GNSSService(GrpcService):
                 self._pusher = GNSSPushClientGeneric(self._reader, self._push_server, self._push_pgn,
                                                     self._push_constellation)
                 self._pusher.start()
-            self._timer = threading.Timer(10., self.timer_elapse)
-            self._timer.start()
+            if self._report_progress:
+                self._timer = threading.Timer(10., self.timer_elapse)
+                self._timer.start()
         else:
             _logger.error("GNSS Service cannot open device -> service will not start")
 
@@ -272,37 +275,70 @@ class GNSSPushClient(ServiceClient, NavThread):
     def nrun(self) -> None:
 
         time_disconnect = 0.0
+        server_connected = False
+        nmea2000_connected = False
+
+        def check_and_connect_server():
+            nonlocal server_connected
+            while not server_connected and not self._stop_flag:
+                _logger.debug("GNSSPushClient (re)connecting")
+                self._server.connect()
+                self.set_stub()
+                if self._server.wait_connect(10.):
+                    server_connected = True
+                    return
+                else:
+                    server_connected = False
+                    time.sleep(10.)
+
+        def check_nmea2000():
+            nonlocal nmea2000_connected, server_connected
+            while not nmea2000_connected and not self._stop_flag:
+                try:
+                    nmea2000_connected = self.server_ready()
+                    if nmea2000_connected:
+                        return
+                except GrpcAccessException:
+                    server_connected = False
+                    break
+                time.sleep(10.)
+
         while not self._stop_flag:
             # First connect to the server
-            _logger.debug("GNSSPushClient (re)connecting")
-            self._server.connect()
-            self.set_stub()
-            if self._server.wait_connect(10.):
-                self._forwarder.resume()
+            if not server_connected:
+                check_and_connect_server()
+            if not server_connected:
+                continue
+            # now check that NMEA2000 bus is ready
+            if not nmea2000_connected:
+                check_nmea2000()
+            if not nmea2000_connected:
+                continue
+            # at that stage we are ready
+            self._forwarder.resume()
+
+            while server_connected and nmea2000_connected and not self._stop_flag:
                 try:
-                    while not self._stop_flag:
-                        resp = self._server_call(self._push_method, GrpcSendStreamIterator(self, self.get_gnss_nmea), None)
-                        if resp.reportCode >= 1000:
-                            _logger.error(f"GNSSPushClient stopped due to remote error:{resp.reportCode}")
-                            self._stop_flag = True
-                            break
-                        else:
-                            _logger.error(f"GNSSPushClient remote error {resp.status} - waiting {resp.reportCode}s")
-                            time.sleep(resp.reportCode)
-                            continue
+                    resp = self._server_call(self._push_method, GrpcSendStreamIterator(self, self.get_gnss_nmea), None)
+                    if resp.reportCode >= 1000:
+                        _logger.error(f"GNSSPushClient stopped due to remote error:{resp.reportCode}")
+                        self._stop_flag = True
+                        break
+                    else:
+                        _logger.error(f"GNSSPushClient remote error {resp.status} - waiting {resp.reportCode}s")
+                        nmea2000_connected = False
+                        time_disconnect = time.time()
+                        self._forwarder.suspend()
+                        break
 
                 except GrpcAccessException:
                     _logger.info("GNSSPushClient suspended")
+                    server_connected = False
+                    nmea2000_connected = False
                     self._forwarder.suspend()
                     time_disconnect = time.time()
-                    continue
-            else:
-                t = time.time()
-                if t - time_disconnect > 10.0:
+                    break # exit the inner loop on bus ready
 
-                    time_disconnect = t
-                else:
-                    time.sleep(10. - (t - time_disconnect))
         _logger.info("GNSSPushClient stopped")
         self._forwarder.suspend()
         self._reader.clear_n2k_subscriber()
@@ -313,6 +349,10 @@ class GNSSPushClient(ServiceClient, NavThread):
     def counter(self):
         return self._pushed_msg
 
+    def server_ready(self):
+        raise NotImplementedError("server_ready is to be implemented is sub classes")
+
+
 
 class GNSSPushClientDevice(GNSSPushClient):
 
@@ -322,6 +362,19 @@ class GNSSPushClientDevice(GNSSPushClient):
 
     def set_stub(self):
         self._push_method = self._stub.gnss_message
+
+    def server_ready(self) -> bool:
+        _logger.info("GNSSPushClient NMEA2000 readiness check")
+        cmd = server_cmd()
+        cmd.id = 1
+        cmd.cmd = 'can_status'
+        resp = self._server_call(self._stub.nmea2000_server_status, cmd, None)
+        _logger.info(f"GNSSPushClient server_ready result: {resp.status}")
+        if resp.reportCode == 0:
+            return True
+        else:
+            return False
+
 
 
 

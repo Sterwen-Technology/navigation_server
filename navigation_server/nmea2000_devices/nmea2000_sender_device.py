@@ -42,7 +42,7 @@ class NMEA2000SenderDevice(NMEA2000Application):
         _logger.info(f"NMEA2000SenderDevice {self.name} ready")
 
     def receive_data_msg(self, msg: NMEA2000Msg):
-        _logger.error(f"Device {self.name} received NMEA2000 message {msg.format2()}")
+        _logger.info(f"Device {self.name} received NMEA2000 ignored message {msg.format2()}")
 
     def send_message(self, msg: NMEA2000Msg):
         msg.sa = self._address

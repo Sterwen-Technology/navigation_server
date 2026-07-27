@@ -45,6 +45,11 @@ class GNSS_InputStub(object):
                 request_serializer=nmea2000__pb2.nmea2000pb.SerializeToString,
                 response_deserializer=nmea__messages__pb2.server_resp.FromString,
                 _registered_method=True)
+        self.nmea2000_server_status = channel.unary_unary(
+                '/GNSS_Input/nmea2000_server_status',
+                request_serializer=nmea__messages__pb2.server_cmd.SerializeToString,
+                response_deserializer=nmea__messages__pb2.server_resp.FromString,
+                _registered_method=True)
 
 
 class GNSS_InputServicer(object):
@@ -57,12 +62,23 @@ class GNSS_InputServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def nmea2000_server_status(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_GNSS_InputServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'gnss_message': grpc.stream_unary_rpc_method_handler(
                     servicer.gnss_message,
                     request_deserializer=nmea2000__pb2.nmea2000pb.FromString,
+                    response_serializer=nmea__messages__pb2.server_resp.SerializeToString,
+            ),
+            'nmea2000_server_status': grpc.unary_unary_rpc_method_handler(
+                    servicer.nmea2000_server_status,
+                    request_deserializer=nmea__messages__pb2.server_cmd.FromString,
                     response_serializer=nmea__messages__pb2.server_resp.SerializeToString,
             ),
     }
@@ -93,6 +109,33 @@ class GNSS_Input(object):
             target,
             '/GNSS_Input/gnss_message',
             nmea2000__pb2.nmea2000pb.SerializeToString,
+            nmea__messages__pb2.server_resp.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def nmea2000_server_status(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/GNSS_Input/nmea2000_server_status',
+            nmea__messages__pb2.server_cmd.SerializeToString,
             nmea__messages__pb2.server_resp.FromString,
             options,
             channel_credentials,

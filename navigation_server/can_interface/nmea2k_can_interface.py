@@ -250,7 +250,8 @@ class SocketCANInterface(NavThread):
                 if data is None:
                     return
             except FastPacketException as e:
-                _logger.error("CAN interface Fast packet (active) error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
+                # version 2.8.3 => debug only
+                _logger.debug("CAN interface Fast packet (active) error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
                 return
         else:
             if PGNDef.fast_packet_check(pgn):
@@ -259,7 +260,8 @@ class SocketCANInterface(NavThread):
                     if data is None:
                         return
                 except FastPacketException as e:
-                    _logger.error("CAN interface Fast packet (start) error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
+                    # version 2.8.3 => debug only
+                    _logger.debug("CAN interface Fast packet (start) error %s pgn %d sa %d data %s" % (e, pgn, sa, data.hex()))
                     return
         # end fast packet handling
         n2k_msg = NMEA2000Msg(pgn, prio, sa, da, data)
