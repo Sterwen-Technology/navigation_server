@@ -38,10 +38,18 @@ servers:
       class: GrpcServer
       port: 4502
 
+- NMEANetwork:
+      class: NMEA2KActiveController
+      trace: false
+      mac_source: eno1
+      channel: can0
+      max_silent: 60.0
+      applications: [LogInjector]
+
 couplers:
 
 - LogReader:
-    logfile: /data/navigation/traces/TRACE-CAN-if-can0-240823-1304.log
+    logfile: /mnt/meaban/Bateau/traces_ref/TRACE-CAN-if-can0-240823-1304.log
     class: TransparentCanLogCoupler
     autostart: true
     direction: read_only
@@ -52,6 +60,7 @@ services:
 - Console:
    class: Console
    server: gRPCMainServer
+
 publishers:
 
 - Dispatcher:

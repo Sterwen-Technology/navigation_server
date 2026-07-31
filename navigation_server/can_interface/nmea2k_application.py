@@ -23,6 +23,7 @@ from navigation_server.nmea2000 import (AddressClaim, ISORequest, ProductInforma
                                           CommandGroupFunction, Heartbeat, get_n2k_decoded_object, NMEA2000Device,
                                           PGNList, ISOAcknowledgment)
 from navigation_server.router_common import get_id_from_mac, MessageServerGlobals, resolve_ref, SocketCanError
+from navigation_server.nmea_data import CanAddressStatRecord
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -161,6 +162,7 @@ class NMEA2000Application(NMEA2000Device):
         self._heartbeat_timer = None
         self._heartbeat_interval = 60.0  # can be adjusted in subclasses
         self._sequence = 0
+        self._pgn_sent = CanAddressStatRecord(self._address)
         self._master_app = False
         super().__init__(self._address, name=self._iso_name)
 
@@ -203,6 +205,9 @@ class NMEA2000Application(NMEA2000Device):
     def name(self) -> str:
         return self._app_name
 
+    def pgn_sent(self) -> list:
+        return self._pgn_sent.sorted_tuple_list()
+
     def device_class_function(self):
         # to be overloaded if a specific class and function have to be defined for the device
         return 25, 130
@@ -223,6 +228,7 @@ class NMEA2000Application(NMEA2000Device):
 
     def _send_to_bus(self, msg:NMEA2000Msg, context=None):
         self._controller.send_to_bus(msg, context)
+        self._pgn_sent.record_pgn(msg.pgn)
 
     def init_product_information(self):
         '''
@@ -468,6 +474,6 @@ class NMEA2000Application(NMEA2000Device):
             _logger.debug("Command Group Function PGN %d not supported" % group_function.function_pgn)
 
     def wake_up(self):
-        # wake up call every second
+        # wake-up call every second
         pass
 

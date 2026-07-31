@@ -89,6 +89,7 @@ class NMEA2000Device:
         self._product_info_sent = flag
 
     def add_pgn_count(self, pgn):
+        _logger.debug("Device %d received PGN %d count added" % (self._address, pgn))
         self._pgn_received.record_pgn(pgn)
 
     def p60928(self, msg: NMEA2000Msg):

@@ -32,7 +32,7 @@ import navigation_server.generated.nmea_messages_pb2 as nmea__messages__pb2
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16nmea2000_service.proto\x1a\x0eiso_name.proto\x1a\x1enmea2000_classes_iso_gen.proto\x1a\x0enmea2000.proto\x1a\x13nmea_messages.proto\"+\n\rPGN_statistic\x12\x0b\n\x03pgn\x18\x01 \x01(\r\x12\r\n\x05\x63ount\x18\x02 \x01(\r\"\xfb\x01\n\x0cN2KDeviceMsg\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\r\x12\x0f\n\x07\x63hanged\x18\x02 \x01(\x08\x12\x10\n\x08is_proxy\x18\x07 \x01(\x08\x12\x16\n\x0elast_time_seen\x18\x03 \x01(\x02\x12\x1a\n\x08iso_name\x18\x04 \x01(\x0b\x32\x08.ISOName\x12.\n\x13product_information\x18\x05 \x01(\x0b\x32\x11.Pgn126996ClassPb\x12\x34\n\x19\x63onfiguration_information\x18\x06 \x01(\x0b\x32\x11.Pgn126998ClassPb\x12\x1d\n\x05stats\x18\x08 \x03(\x0b\x32\x0e.PGN_statistic\"\x99\x01\n\x15Nmea2000ControllerMsg\x12\x0f\n\x07\x63hannel\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x15\n\rincoming_rate\x18\x03 \x01(\x02\x12\x15\n\routgoing_rate\x18\x04 \x01(\x02\x12\x11\n\ttraces_on\x18\x05 \x01(\x08\x12\x1e\n\x07\x64\x65vices\x18\x06 \x03(\x0b\x32\r.N2KDeviceMsg\"*\n\x0fNmea2000Request\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0b\n\x03\x63md\x18\x02 \x01(\t\"@\n\x0bNmea2000Ack\x12\n\n\x02id\x18\x01 \x01(\r\x12\x16\n\x0emessages_count\x18\x02 \x01(\r\x12\r\n\x05\x65rror\x18\x03 \x01(\r\"\x89\x01\n\x13Nmea2000ReadRequest\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0e\n\x06\x63lient\x18\x02 \x01(\t\x12\x16\n\x0eselect_sources\x18\x03 \x03(\r\x12\x16\n\x0ereject_sources\x18\x04 \x03(\r\x12\x12\n\nselect_pgn\x18\x05 \x03(\r\x12\x12\n\nreject_pgn\x18\x06 \x03(\r\"O\n\x13Nmea2000SendRequest\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0e\n\x06\x64\x65vice\x18\x02 \x01(\t\x12\x1c\n\x07n2k_msg\x18\x03 \x01(\x0b\x32\x0b.nmea2000pb2\xef\x02\n\x19Nmea2000ControllerService\x12\x37\n\tGetStatus\x12\x10.Nmea2000Request\x1a\x16.Nmea2000ControllerMsg\"\x00\x12\x38\n\nStartTrace\x12\x10.Nmea2000Request\x1a\x16.Nmea2000ControllerMsg\"\x00\x12\x37\n\tStopTrace\x12\x10.Nmea2000Request\x1a\x16.Nmea2000ControllerMsg\"\x00\x12\x38\n\x0fReadNmea2000Msg\x12\x14.Nmea2000ReadRequest\x1a\x0b.nmea2000pb\"\x00\x30\x01\x12\x37\n\x0fSendNmea2000Msg\x12\x14.Nmea2000SendRequest\x1a\x0c.Nmea2000Ack\"\x00\x12\x33\n\x12SendNmea2000Stream\x12\x0b.nmea2000pb\x1a\x0c.server_resp\"\x00(\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16nmea2000_service.proto\x1a\x0eiso_name.proto\x1a\x1enmea2000_classes_iso_gen.proto\x1a\x0enmea2000.proto\x1a\x13nmea_messages.proto\"+\n\rPGN_statistic\x12\x0b\n\x03pgn\x18\x01 \x01(\r\x12\r\n\x05\x63ount\x18\x02 \x01(\r\"1\n\x0ePGN_definition\x12\x0b\n\x03pgn\x18\x01 \x01(\r\x12\x12\n\ndefinition\x18\x02 \x01(\t\"\x9e\x02\n\x0cN2KDeviceMsg\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\r\x12\x0f\n\x07\x63hanged\x18\x02 \x01(\x08\x12\x10\n\x08is_proxy\x18\x07 \x01(\x08\x12\x16\n\x0elast_time_seen\x18\x03 \x01(\x02\x12\x1a\n\x08iso_name\x18\x04 \x01(\x0b\x32\x08.ISOName\x12.\n\x13product_information\x18\x05 \x01(\x0b\x32\x11.Pgn126996ClassPb\x12\x34\n\x19\x63onfiguration_information\x18\x06 \x01(\x0b\x32\x11.Pgn126998ClassPb\x12\x1d\n\x05stats\x18\x08 \x03(\x0b\x32\x0e.PGN_statistic\x12!\n\tout_stats\x18\t \x03(\x0b\x32\x0e.PGN_statistic\"\x99\x01\n\x15Nmea2000ControllerMsg\x12\x0f\n\x07\x63hannel\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x15\n\rincoming_rate\x18\x03 \x01(\x02\x12\x15\n\routgoing_rate\x18\x04 \x01(\x02\x12\x11\n\ttraces_on\x18\x05 \x01(\x08\x12\x1e\n\x07\x64\x65vices\x18\x06 \x03(\x0b\x32\r.N2KDeviceMsg\"G\n\x0fNmea2000Request\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0b\n\x03\x63md\x18\x02 \x01(\t\x12\x0e\n\x06\x64\x65vice\x18\x03 \x01(\r\x12\x0b\n\x03pgn\x18\x04 \x01(\r\"@\n\x0bNmea2000Ack\x12\n\n\x02id\x18\x01 \x01(\r\x12\x16\n\x0emessages_count\x18\x02 \x01(\r\x12\r\n\x05\x65rror\x18\x03 \x01(\r\"\x89\x01\n\x13Nmea2000ReadRequest\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0e\n\x06\x63lient\x18\x02 \x01(\t\x12\x16\n\x0eselect_sources\x18\x03 \x03(\r\x12\x16\n\x0ereject_sources\x18\x04 \x03(\r\x12\x12\n\nselect_pgn\x18\x05 \x03(\r\x12\x12\n\nreject_pgn\x18\x06 \x03(\r\"O\n\x13Nmea2000SendRequest\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0e\n\x06\x64\x65vice\x18\x02 \x01(\t\x12\x1c\n\x07n2k_msg\x18\x03 \x01(\x0b\x32\x0b.nmea2000pb2\xde\x03\n\x19Nmea2000ControllerService\x12\x37\n\tGetStatus\x12\x10.Nmea2000Request\x1a\x16.Nmea2000ControllerMsg\"\x00\x12\x34\n\x0fGetDeviceStatus\x12\x10.Nmea2000Request\x1a\r.N2KDeviceMsg\"\x00\x12\x37\n\x10GetPgnDefinition\x12\x10.Nmea2000Request\x1a\x0f.PGN_definition\"\x00\x12\x38\n\nStartTrace\x12\x10.Nmea2000Request\x1a\x16.Nmea2000ControllerMsg\"\x00\x12\x37\n\tStopTrace\x12\x10.Nmea2000Request\x1a\x16.Nmea2000ControllerMsg\"\x00\x12\x38\n\x0fReadNmea2000Msg\x12\x14.Nmea2000ReadRequest\x1a\x0b.nmea2000pb\"\x00\x30\x01\x12\x37\n\x0fSendNmea2000Msg\x12\x14.Nmea2000SendRequest\x1a\x0c.Nmea2000Ack\"\x00\x12\x33\n\x12SendNmea2000Stream\x12\x0b.nmea2000pb\x1a\x0c.server_resp\"\x00(\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -41,18 +41,20 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_PGN_STATISTIC']._serialized_start=111
   _globals['_PGN_STATISTIC']._serialized_end=154
-  _globals['_N2KDEVICEMSG']._serialized_start=157
-  _globals['_N2KDEVICEMSG']._serialized_end=408
-  _globals['_NMEA2000CONTROLLERMSG']._serialized_start=411
-  _globals['_NMEA2000CONTROLLERMSG']._serialized_end=564
-  _globals['_NMEA2000REQUEST']._serialized_start=566
-  _globals['_NMEA2000REQUEST']._serialized_end=608
-  _globals['_NMEA2000ACK']._serialized_start=610
-  _globals['_NMEA2000ACK']._serialized_end=674
-  _globals['_NMEA2000READREQUEST']._serialized_start=677
-  _globals['_NMEA2000READREQUEST']._serialized_end=814
-  _globals['_NMEA2000SENDREQUEST']._serialized_start=816
-  _globals['_NMEA2000SENDREQUEST']._serialized_end=895
-  _globals['_NMEA2000CONTROLLERSERVICE']._serialized_start=898
-  _globals['_NMEA2000CONTROLLERSERVICE']._serialized_end=1265
+  _globals['_PGN_DEFINITION']._serialized_start=156
+  _globals['_PGN_DEFINITION']._serialized_end=205
+  _globals['_N2KDEVICEMSG']._serialized_start=208
+  _globals['_N2KDEVICEMSG']._serialized_end=494
+  _globals['_NMEA2000CONTROLLERMSG']._serialized_start=497
+  _globals['_NMEA2000CONTROLLERMSG']._serialized_end=650
+  _globals['_NMEA2000REQUEST']._serialized_start=652
+  _globals['_NMEA2000REQUEST']._serialized_end=723
+  _globals['_NMEA2000ACK']._serialized_start=725
+  _globals['_NMEA2000ACK']._serialized_end=789
+  _globals['_NMEA2000READREQUEST']._serialized_start=792
+  _globals['_NMEA2000READREQUEST']._serialized_end=929
+  _globals['_NMEA2000SENDREQUEST']._serialized_start=931
+  _globals['_NMEA2000SENDREQUEST']._serialized_end=1010
+  _globals['_NMEA2000CONTROLLERSERVICE']._serialized_start=1013
+  _globals['_NMEA2000CONTROLLERSERVICE']._serialized_end=1491
 # @@protoc_insertion_point(module_scope)

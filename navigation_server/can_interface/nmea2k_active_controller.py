@@ -17,7 +17,7 @@ from navigation_server.router_core import NMEA2000Msg
 from navigation_server.nmea2000 import NMEA2KController
 from .nmea2k_application import NMEA2000Application, NMEA2000ApplicationPool
 from .nmea2k_can_interface import SocketCANInterface
-from navigation_server.router_common import ObjectCreationError, set_global_var, SocketCanError
+from navigation_server.router_common import ObjectCreationError, set_global_var, SocketCanError, ObjectFatalError
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -36,8 +36,8 @@ class NMEA2KActiveController(NMEA2KController):
         try:
             self._can = SocketCANInterface(self._channel, self._input_queue, self._trace)
         except SocketCanError as e:
-            _logger.error(e)
-            raise ObjectCreationError(str(e))
+            _logger.critical(f"SocketCanInterface creation error {e}")
+            raise ObjectFatalError(str(e))
         self._interface = self._can
         self._coupler_queue = None
         self._applications = []

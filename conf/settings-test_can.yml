@@ -12,20 +12,22 @@
 function: trace CAN
 log_level: INFO
 trace_dir: /mnt/meaban/Bateau/tests
+connect_agent: false
 # log_file: test_fast_packet
 log_module:
   router_core.coupler: INFO
   nmea2000.nmea2000_msg: INFO
-  can_interface.nmea2k_controller: DEBUG
+  can_interface.nmea2k_controller: INFO
   nmea2000.nmea2k_active_controller: INFO
   nmea2000.nmea2k_device: INFO
   can_interface.nmea2k_application: INFO
   nmea2000.n2k_name: INFO
-  can_interface.nmea2k_can_interface: DEBUG
+  can_interface.nmea2k_can_interface: INFO
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
-  can_interface.nmea2k_can_coupler: DEBUG
-  nmea2000_devices.nmea2000_device: DEBUG
+  nmea2000.nmea2k_service: INFO
+  can_interface.nmea2k_can_coupler: INFO
+  nmea2000_devices.nmea2000_device: INFO
 
 features:
   - router_core
@@ -56,7 +58,7 @@ servers:
 - NMEANetwork:
       class: NMEA2KActiveController
       trace: false
-      mac_source: end0
+      mac_source: eno1
       channel: can0
       max_silent: 60.0
       applications: [CANCoupler, APEmulator]
@@ -77,13 +79,17 @@ services:
       class: Console
       server: gRPCMain
 
+- NMEA2000_CAN:
+      class: Nmea2000Service
+      server: gRPCMain
+
 publishers:
 
 - TraceOutput:
     class: N2KStatisticPublisher
     couplers: [CANCoupler]
     # filters: [NMEAOutput, AIS]
-    active: true
+    active: false
     flexible_decode: false
 
 applications:

@@ -21,6 +21,11 @@ message PGN_statistic {
   uint32 count=2;   // number of occurrence since the device is seen
 }
 
+message PGN_definition {
+  uint32 pgn=1;
+  string definition=2;
+}
+
 // Message representing CAN/NMEA2000 device
 message N2KDeviceMsg {
   uint32 address=1;       // CAN address 0-253
@@ -31,6 +36,7 @@ message N2KDeviceMsg {
   Pgn126996ClassPb product_information=5;       // NMEA2000 PGN126996 content
   Pgn126998ClassPb configuration_information=6; // NMEA2000 PGN126998 content
   repeated PGN_statistic stats=8;
+  repeated PGN_statistic out_stats=9;
 }
 
 message Nmea2000ControllerMsg {
@@ -45,6 +51,8 @@ message Nmea2000ControllerMsg {
 message Nmea2000Request{
   uint32 id = 1;
   string cmd = 2;
+  uint32 device = 3;
+  uint32 pgn=4;
 }
 
 message Nmea2000Ack {
@@ -71,6 +79,8 @@ message Nmea2000SendRequest {
 
 service Nmea2000ControllerService {
   rpc GetStatus(Nmea2000Request) returns (Nmea2000ControllerMsg) {}
+  rpc GetDeviceStatus(Nmea2000Request) returns (N2KDeviceMsg) {}
+  rpc GetPgnDefinition(Nmea2000Request) returns (PGN_definition) {}
   rpc StartTrace(Nmea2000Request) returns (Nmea2000ControllerMsg) {}
   rpc StopTrace(Nmea2000Request) returns (Nmea2000ControllerMsg) {}
   rpc ReadNmea2000Msg(Nmea2000ReadRequest) returns (stream nmea2000pb) {}

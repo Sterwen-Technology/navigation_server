@@ -216,7 +216,7 @@ class NMEA2KController(NavigationServer, NavThread):
         '''
         if msg.sa >= 254:
             return True
-        self.record_stat(msg.sa, msg.pgn)
+        # self.record_stat(msg.sa, msg.pgn)
         _logger.debug("NMEA2000 Controller process msg %s" % msg.format1())
         self._gc_lock.acquire()
         device = self.check_device(msg.sa)

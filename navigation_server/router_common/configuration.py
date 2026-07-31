@@ -524,7 +524,7 @@ class NavigationConfiguration:
         for server_descr in self._servers.values():
             try:
                 server = server_descr.build_object()
-            except (ConfigurationException, ObjectCreationError, ObjectFatalError) as e:
+            except (ConfigurationException, ObjectCreationError) as e:
                 _logger.error("Error building server %s" % e)
                 continue
             self._main_server.add_server(server)

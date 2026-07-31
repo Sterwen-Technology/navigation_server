@@ -16,7 +16,7 @@ import sys
 
 from navigation_server.router_common import (NavigationConfiguration, NavigationLogSystem, MessageServerGlobals,
                                              init_options, set_root_package, ConfigurationException, AgentInterface,
-                                             ObjectCreationError, GrpcServer, GrpcClient)
+                                             ObjectCreationError, GrpcServer, GrpcClient, ObjectFatalError)
 
 MessageServerGlobals.version = "2.8.3"
 default_base_dir = "/"
@@ -57,7 +57,7 @@ def server_main():
     # create all server or service objects
     try:
         config.build_objects()
-    except (ConfigurationException, ObjectCreationError):
+    except (ConfigurationException, ObjectCreationError, ObjectFatalError):
         _logger.critical("Error in configuration during build => STOP")
         return
 

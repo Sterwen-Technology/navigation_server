@@ -68,11 +68,15 @@ class SocketCANInterface(NavThread):
 
     def __init__(self, channel: str, out_queue: queue.Queue, trace=False):
 
+        can_ready = False
         try:
             check_can_device(channel)
+            can_ready = True
         except SocketCanError as err:
             err_str = "CAN bus not available"
             _logger.critical("%s: %s" % (err_str, err))
+
+        if not can_ready:
             raise ObjectFatalError(err_str)
 
         super().__init__(name="CAN-if-%s" % channel, callback_on_stop=MessageServerGlobals.main_server.stop_server)

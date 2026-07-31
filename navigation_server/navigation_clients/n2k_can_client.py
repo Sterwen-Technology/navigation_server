@@ -12,7 +12,7 @@
 import logging
 
 from navigation_server.generated.nmea2000_service_pb2_grpc import Nmea2000ControllerServiceStub
-from navigation_server.generated.nmea2000_service_pb2 import N2KDeviceMsg, Nmea2000ControllerMsg, Nmea2000Request
+from navigation_server.generated.nmea2000_service_pb2 import N2KDeviceMsg, Nmea2000ControllerMsg, Nmea2000Request, PGN_definition
 
 from navigation_server.router_common import ServiceClient, ProtobufProxy, GrpcAccessException
 
@@ -59,10 +59,20 @@ class NMEA2000CanClient(ServiceClient):
         req = Nmea2000Request()
         if cmd is not None:
             req.cmd = cmd
-        try:
-            return self._server_call(self._stub.GetStatus, req, NMEA2000CanControllerProxy)
-        except GrpcAccessException:
-            return None
+        return self._server_call(self._stub.GetStatus, req, NMEA2000CanControllerProxy)
+
+    def get_device(self, device_address) -> N2KDeviceProxy:
+        req = Nmea2000Request()
+        req.device = device_address
+
+        return self._server_call(self._stub.GetDeviceStatus, req, N2KDeviceProxy)
+
+    def get_pgn_definition(self, pgn:int) -> str:
+        req = Nmea2000Request()
+        req.pgn = pgn
+        resp = self._server_call(self._stub.GetPgnDefinition, req, None)
+        return resp.definition
+
 
     def stop_trace(self):
         req = Nmea2000Request()

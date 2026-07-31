@@ -14,12 +14,12 @@ import time
 
 
 from navigation_server.generated.nmea2000_service_pb2 import (N2KDeviceMsg, Nmea2000ControllerMsg, Nmea2000Request, Nmea2000ReadRequest,
-                                                             Nmea2000Ack, PGN_statistic)
+                                                             Nmea2000Ack, PGN_statistic, PGN_definition)
 from navigation_server.generated.nmea2000_service_pb2_grpc import Nmea2000ControllerServiceServicer, add_Nmea2000ControllerServiceServicer_to_server
 from navigation_server.generated.nmea2000_pb2 import nmea2000pb
 from navigation_server.generated.iso_name_pb2 import ISOName
 from navigation_server.generated.nmea_messages_pb2 import server_resp
-from navigation_server.router_common import GrpcService, get_global_var, resolve_ref, MessageTraceError
+from navigation_server.router_common import GrpcService, get_global_var, resolve_ref, MessageTraceError, find_pgn, N2KUnknownPGN
 from navigation_server.router_core import NMEA2000Msg
 from navigation_server.nmea2000 import NMEA2KController
 
@@ -38,11 +38,8 @@ class Nmea2000ControllerServiceServicerImpl(Nmea2000ControllerServiceServicer):
     def GetStatus(self, request, context):
         _logger.debug("Get NMEA200 status and devices request")
         resp = Nmea2000ControllerMsg()
-        if self._controller is None:
-            _logger.error("No NMEA200 Server present")
-            resp.channel = "NO_NMEA2000"
-            resp.status = "No CAN interface and controller available"
-            return resp
+        assert self._controller is not None
+
         if request.cmd == 'poll':
             _logger.debug("Poll for devices first")
             self._controller.poll_devices()
@@ -64,29 +61,71 @@ class Nmea2000ControllerServiceServicerImpl(Nmea2000ControllerServiceServicer):
 
         for device in self._controller.get_device():
             dev_pb = N2KDeviceMsg()
-            dev_pb.address = device.address
-            dev_pb.changed = device.changed()
-            device.clear_change_flag()
-            _logger.debug("Console sending NMEA2000 Device address %d info" % device.address)
-            if device.iso_name is not None:
-                device.iso_name.set_protobuf(dev_pb.iso_name)
-                dev_pb.iso_name.manufacturer_name = device.manufacturer_name
-            else:
-                _logger.debug("Device address %d partial info only" % device.address)
-            dev_pb.last_time_seen = device.last_time_seen
-            if device.product_information is not None:
-                device.product_information.set_protobuf(dev_pb.product_information)
-            if device.configuration_information is not None:
-                device.configuration_information.set_protobuf(dev_pb.configuration_information)
-            # now add the statistics on PGN
-            for stat_pgn in device.pgn_received():
-                stat_pb = PGN_statistic()
-                stat_pb.pgn = stat_pgn[0]
-                stat_pb.count = stat_pgn[1]
-                dev_pb.stats.append(stat_pb)
+            self.fill_device_data(device, dev_pb)
             resp.devices.append(dev_pb)
         _logger.debug("Get NMEA Devices END")
         return resp
+
+    def GetDeviceStatus(self, request, context):
+        _logger.debug("NMEA2000 Service get device status for device %d" % request.device)
+        assert self._controller is not None
+        dev_pb = N2KDeviceMsg()
+        # get the device first
+        try:
+            device = self._controller.get_device_by_address(request.device)
+        except KeyError:
+            dev_pb.address = -1
+            return dev_pb
+
+        self.fill_device_data(device, dev_pb)
+
+        return dev_pb
+
+    @staticmethod
+    def fill_device_data(device, dev_pb:N2KDeviceMsg):
+
+        dev_pb.address = device.address
+        dev_pb.changed = device.changed()
+        device.clear_change_flag()
+        _logger.debug("Console sending NMEA2000 Device address %d info" % device.address)
+        if device.iso_name is not None:
+            device.iso_name.set_protobuf(dev_pb.iso_name)
+            dev_pb.iso_name.manufacturer_name = device.manufacturer_name
+        else:
+            _logger.debug("Device address %d partial info only" % device.address)
+        dev_pb.last_time_seen = device.last_time_seen
+        dev_pb.is_proxy = device.is_proxy()
+        if device.product_information is not None:
+            device.product_information.set_protobuf(dev_pb.product_information)
+        if device.configuration_information is not None:
+            device.configuration_information.set_protobuf(dev_pb.configuration_information)
+        # now add the statistics on PGN
+        for stat_pgn in device.pgn_received():
+            stat_pb = PGN_statistic()
+            stat_pb.pgn = stat_pgn[0]
+            stat_pb.count = stat_pgn[1]
+            dev_pb.stats.append(stat_pb)
+        if device.is_proxy():
+            return
+        for stat_pgn in device.pgn_sent():
+            stat_pb = PGN_statistic()
+            stat_pb.pgn = stat_pgn[0]
+            stat_pb.count = stat_pgn[1]
+            dev_pb.out_stats.append(stat_pb)
+
+    def GetPgnDefinition(self, request, context):
+        _logger.debug("NMEA2000 Service get pgn %d definition" % request.pgn)
+        resp = PGN_definition()
+        resp.pgn = request.pgn
+        try:
+            pgn_def = find_pgn(request.pgn)
+            resp.definition = pgn_def.name
+        except N2KUnknownPGN:
+            resp.definition = 'Unknown PGN'
+        return resp
+
+
+
 
     def StartTrace(self, request, context):
         _logger.debug("NMEA2000 Service Start trace")

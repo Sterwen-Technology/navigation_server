@@ -44,6 +44,16 @@ class Nmea2000ControllerServiceStub(object):
                 request_serializer=nmea2000__service__pb2.Nmea2000Request.SerializeToString,
                 response_deserializer=nmea2000__service__pb2.Nmea2000ControllerMsg.FromString,
                 _registered_method=True)
+        self.GetDeviceStatus = channel.unary_unary(
+                '/Nmea2000ControllerService/GetDeviceStatus',
+                request_serializer=nmea2000__service__pb2.Nmea2000Request.SerializeToString,
+                response_deserializer=nmea2000__service__pb2.N2KDeviceMsg.FromString,
+                _registered_method=True)
+        self.GetPgnDefinition = channel.unary_unary(
+                '/Nmea2000ControllerService/GetPgnDefinition',
+                request_serializer=nmea2000__service__pb2.Nmea2000Request.SerializeToString,
+                response_deserializer=nmea2000__service__pb2.PGN_definition.FromString,
+                _registered_method=True)
         self.StartTrace = channel.unary_unary(
                 '/Nmea2000ControllerService/StartTrace',
                 request_serializer=nmea2000__service__pb2.Nmea2000Request.SerializeToString,
@@ -75,6 +85,18 @@ class Nmea2000ControllerServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def GetStatus(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetDeviceStatus(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetPgnDefinition(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -117,6 +139,16 @@ def add_Nmea2000ControllerServiceServicer_to_server(servicer, server):
                     servicer.GetStatus,
                     request_deserializer=nmea2000__service__pb2.Nmea2000Request.FromString,
                     response_serializer=nmea2000__service__pb2.Nmea2000ControllerMsg.SerializeToString,
+            ),
+            'GetDeviceStatus': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetDeviceStatus,
+                    request_deserializer=nmea2000__service__pb2.Nmea2000Request.FromString,
+                    response_serializer=nmea2000__service__pb2.N2KDeviceMsg.SerializeToString,
+            ),
+            'GetPgnDefinition': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetPgnDefinition,
+                    request_deserializer=nmea2000__service__pb2.Nmea2000Request.FromString,
+                    response_serializer=nmea2000__service__pb2.PGN_definition.SerializeToString,
             ),
             'StartTrace': grpc.unary_unary_rpc_method_handler(
                     servicer.StartTrace,
@@ -171,6 +203,60 @@ class Nmea2000ControllerService(object):
             '/Nmea2000ControllerService/GetStatus',
             nmea2000__service__pb2.Nmea2000Request.SerializeToString,
             nmea2000__service__pb2.Nmea2000ControllerMsg.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetDeviceStatus(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Nmea2000ControllerService/GetDeviceStatus',
+            nmea2000__service__pb2.Nmea2000Request.SerializeToString,
+            nmea2000__service__pb2.N2KDeviceMsg.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetPgnDefinition(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Nmea2000ControllerService/GetPgnDefinition',
+            nmea2000__service__pb2.Nmea2000Request.SerializeToString,
+            nmea2000__service__pb2.PGN_definition.FromString,
             options,
             channel_credentials,
             insecure,
