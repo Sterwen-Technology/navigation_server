@@ -266,6 +266,7 @@ class SystemClockDevice(NMEA2000Application):
         self._requested_address = opts.get('address', int, -1)
         self._model_id = "SystemClock"
         self._period = opts.get("period", int, 1)
+        self._offset = opts.get("offset", int, 0)
         self._period_count = 0
         self._sequence_id = 0
         self._controller = None
@@ -296,7 +297,7 @@ class SystemClockDevice(NMEA2000Application):
             msg.sa = self._address
             ts = datetime.now(timezone.utc)
             date_val = ts.toordinal() - self.jan1970
-            seconds = (ts.hour * 3600 + ts.minute * 60 + ts.second) + (ts.microsecond / 1e6)
+            seconds = ((ts.hour + self._offset)* 3600 + ts.minute * 60 + ts.second) + (ts.microsecond / 1e6)
             msg.date = date_val
             msg.time = seconds
             self._send_to_bus(msg.message())

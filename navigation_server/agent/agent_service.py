@@ -329,6 +329,7 @@ class AgentServicerImpl(AgentServicer):
             'reboot' : self.system_reboot,
             'navigation_restart': self.navigation_restart
         }
+        self._STNC_hardware = MessageServerGlobals.configuration.get_option('STNC_hardware', False)
 
     def RegisterProcess(self, request: SystemProcessMsg, context):
         _logger.info("AgentService RegisterProcess received for %s" % request.name)
@@ -513,15 +514,17 @@ class AgentServicerImpl(AgentServicer):
         MessageServerGlobals.main_server.stop_navigation()
 
     def system_halt(self, resp):
-        STNC_D7_Led.green_brightness(0)
-        STNC_D7_Led.red_brightness(0)
+        if self._STNC_hardware and STNC_D7_Led is not None:
+            STNC_D7_Led.green_brightness(0)
+            STNC_D7_Led.red_brightness(0)
         ex = AgentExecutor('halt')
         ex.start()
         resp.err_code = 0
 
     def system_reboot(self, resp):
-        STNC_D7_Led.green_brightness(0)
-        STNC_D7_Led.red_brightness(0)
+        if self._STNC_hardware and STNC_D7_Led is not None:
+            STNC_D7_Led.green_brightness(0)
+            STNC_D7_Led.red_brightness(0)
         ex = AgentExecutor('reboot')
         ex.start()
         resp.err_code = 0

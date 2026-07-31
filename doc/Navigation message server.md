@@ -414,6 +414,7 @@ The services are attached to the gRPC server that is declared and running in the
 All services to have a dedicated gRPC interface described in **Protobuf** language. All interfaces description files are located in the src/proto directory.
 All services must be associated with a gRPC server (one per process). They all inherit from the **GrpcService class**.
 
+Common parameters
 
 | Name             | Type   | Default | Signification                                                                  |
 |------------------|--------|---------|--------------------------------------------------------------------------------|
@@ -495,6 +496,7 @@ The NavigationDataService can support the following data services:
 
 - EngineService with the **engine_data.proto** interface file
 - PositionDataService (future)
+- EnvironmentService (future)
 
 **note: PGN do not need to be explicitly selected. By default, they are selected based on the subscription by the services or function processing the data**
 
@@ -654,6 +656,26 @@ All messages received on the gRPC interface are forwarded to the NMEA2000 CAN bu
 |------------------|--------|---------|--------------------------------------------------------------------------------|
 | server           | string | None    | gRPC server associated. This is a mandatory parameter                          |
 
+
+#### SystemClockDevice(NMEA2000Application)
+
+The device class implements a NMEA2000 System clock that send the PGN 129992 on the NMEA2000 bus at the defined period. The reference is the computer system clock or RTC if present.
+
+| Name   | Type | Default | Signification                                         |
+|--------|------|---------|-------------------------------------------------------|
+| period | int  | 1       | period in seconds at which the PGN is sent on the bus |
+| offset | int  | 0       | Timezone offset in hours                              |
+
+#### NMEA2000SenderDevice(NMEA2000Application)
+
+The device class implements a function that injects the NMEA2000 messages received by a Nmea2000Service (via gRPC) on the NMEA2000 bus.
+
+| Name            | Type   | Default        | Signification                                                                                                  |
+|-----------------|--------|----------------|----------------------------------------------------------------------------------------------------------------|
+| address         | int    | -1             | NMEA2000 device address if a specific address is requested. If -1, then the address is allocated from the pool |
+| model_id        | string | Generic Device | Type of device. This is purely informational and has no functional impact                                      |
+| device_class    | int    | 25             | NMEA2000 Device class                                                                                          |
+| device_function | int    | 130            | NMEA2000 Device function                                                                                       |
 
 
 ### Filters
