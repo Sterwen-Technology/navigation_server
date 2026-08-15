@@ -14,11 +14,12 @@ server_name: STNC_CAN_Server
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
-
+secure_grpc: true
+# log_file: test_fast_packet
 log_module:
   nmea2000.nmea2000_msg: INFO
-  can_interface.nmea2k_controller: INFO
-  nmea2000.nmea2k_active_controller: INFO
+  can_interface.nmea2k_active_controller: INFO
+  nmea2000.nmea2k_controller: INFO
   nmea2000.nmea2k_device: INFO
   can_interface.nmea2k_application: INFO
   nmea2000.n2k_name: INFO
@@ -26,8 +27,8 @@ log_module:
   nmea2000.nmea2k_iso_transport: INFO
   nmea2000.nmea2k_iso_messages: INFO
   can_interface.nmea2k_can_coupler: INFO
-  nmea2000_devices.nmea2000_device: INFO
-  can_interface.nmea2k_can_service: INFO
+  nmea2000_devices.nmea2000_sender_device: INFO
+  nmea2000.nmea2k_service: INFO
 
 features:
   - router_core
@@ -49,11 +50,11 @@ servers:
 
 - NMEANetwork:
       class: NMEA2KActiveController
-      trace: true
+      trace: false
       mac_source: end0
       channel: can0
       max_silent: 60.0
-      applications: [GNSS, NavigationControl]
+      applications: [GNSS, NavigationControl, MPPT]
 
 
 couplers:
@@ -64,8 +65,9 @@ filters:
 services:
 
 - NMEA2000_CAN:
-      class: N2KCanService
+      class: Nmea2000Service
       server: gRPCMain
+      nmea2000_controller: NMEANetwork
 
 - GNSS:
       class: GNSSInput
@@ -84,6 +86,13 @@ applications:
     model_id: Route Control
     device_class: 60
     device_function: 190
+    
+- MPPT:
+    class: NMEA2000SenderDevice
+    address: 18
+    model_id: MPPT
+    device_class: 35
+    devive_function: 142
 
 
 

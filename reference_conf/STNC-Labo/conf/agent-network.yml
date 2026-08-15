@@ -22,6 +22,7 @@ log_module:
 
 decode_definition_only: False
 secure_grpc: true
+STNC_hardware: true
 
 features:
     - agent

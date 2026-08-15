@@ -40,12 +40,14 @@ connections:
        type: ethernet
        description: "Eth port 0 using DHCP"
        function: WAN_INTERFACE
+       support_ssl: true
 
   - eth-1-lan:
        type: ethernet
        description: "Eth port 1 as LAN with DHCP on address 173.16.2.1"
        function: LAN_CONTROLLER
        ipv4_address: 172.16.2.1
+       support_ssl: true
 
   - wifi-ap-1:
        type: wifi
@@ -86,5 +88,5 @@ configurations:
   - sailing:
       ethernet-0: eth-0-wan
       ethernet-1: eth-1-lan
-      cellular: cellular-1
+      cellular: cellular-2
       wifi: wifi-ap-1
