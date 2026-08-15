@@ -2,3 +2,5 @@
 dist
 .navigationenv
 .python-version
+__pycache__/
+*.pyc

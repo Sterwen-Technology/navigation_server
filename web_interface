@@ -1,0 +1,13 @@
+#!/bin/bash
+#
+# Run the navigation_server web interface in the virtual environment.
+# Copyright:   (c) Sterwen Technology 2021-2025
+# Licence:     Eclipse Public License 2.0
+
+if [ -v NAVIGATION_HOME ]
+then
+    "$NAVIGATION_HOME/run_script" web_interface.py "$@"
+else
+    echo "NAVIGATION_HOME environment variable not set"
+    exit 1
+fi

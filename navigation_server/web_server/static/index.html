@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation Server — Interface Web</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --panel-2: #334155;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --green: #22c55e;
+            --red: #ef4444;
+            --amber: #f59e0b;
+            --border: #475569;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+        header {
+            background: linear-gradient(90deg, #1e293b, #0f172a);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        header h1 .sub { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-pill.connected { background: rgba(34,197,94,0.15); color: var(--green); }
+        .status-pill.disconnected { background: rgba(239,68,68,0.15); color: var(--red); }
+        .status-pill::before {
+            content: "";
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        button {
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.15s;
+        }
+        button:hover:not(:disabled) { background: var(--accent); color: #0f172a; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button.danger:hover:not(:disabled) { background: var(--red); color: white; }
+        main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+        }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            overflow: hidden;
+        }
+        .card h2 {
+            margin: 0 0 12px 0;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .card h2 .proc-name { color: var(--accent); }
+        .badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .badge.RUNNING { background: rgba(34,197,94,0.15); color: var(--green); }
+        .badge.STOPPED { background: rgba(239,68,68,0.15); color: var(--red); }
+        .badge.NOT_STARTED { background: rgba(148,163,184,0.15); color: var(--muted); }
+        .row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 0.82rem; }
+        .row .k { color: var(--muted); }
+        .row .v { font-family: ui-monospace, "SFMono-Regular", monospace; }
+        .servers { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+        .server-item { font-size: 0.78rem; padding: 4px 0; color: var(--muted); }
+        .server-item strong { color: var(--text); }
+        .card-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+        .card-actions button { padding: 4px 10px; font-size: 0.78rem; }
+        .empty { color: var(--muted); text-align: center; padding: 48px 0; }
+        .refresh-spin { animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .toast {
+            position: fixed; bottom: 24px; right: 24px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            padding: 12px 16px; border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            max-width: 360px; font-size: 0.85rem;
+            opacity: 0; transform: translateY(10px);
+            transition: opacity 0.2s, transform 0.2s;
+            z-index: 100;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.ok { border-left: 4px solid var(--green); }
+        .toast.err { border-left: 4px solid var(--red); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>
+            Navigation Server
+            <span class="sub" id="agent-info">— agent: …</span>
+        </h1>
+        <div class="actions">
+            <span id="conn-status" class="status-pill disconnected">déconnecté</span>
+            <button id="refresh-btn" title="Rafraîchir">⟳ <span id="last-refresh">—</span></button>
+            <label style="font-size:0.8rem; color:var(--muted); display:inline-flex; gap:4px; align-items:center;">
+                <input type="checkbox" id="auto-refresh"> auto (5s)
+            </label>
+        </div>
+    </header>
+    <main>
+        <div id="system-summary" class="card" style="margin-bottom:16px;">
+            <div class="empty">Aucune donnée. Cliquez sur ⟳ pour rafraîchir.</div>
+        </div>
+        <div id="processes-grid" class="grid"></div>
+    </main>
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const REFRESH_INTERVAL = 5000;
+        let autoTimer = null;
+        let isRefreshing = false;
+
+        const $ = (id) => document.getElementById(id);
+
+        function toast(msg, ok = true) {
+            const t = $("toast");
+            t.textContent = msg;
+            t.className = "toast show " + (ok ? "ok" : "err");
+            setTimeout(() => t.classList.remove("show"), 3500);
+        }
+
+        async function apiGet(path) {
+            const r = await fetch(path, { cache: "no-store" });
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        }
+
+        async function apiPost(path, body) {
+            const r = await fetch(path, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+            return r.json();
+        }
+
+        function escapeHtml(s) {
+            return String(s ?? "").replace(/[&<>"']/g, c => ({
+                "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+            }[c]));
+        }
+
+        function fmt(v) { return v === 0 || v ? escapeHtml(v) : "—"; }
+
+        async function refresh() {
+            if (isRefreshing) return;
+            isRefreshing = true;
+            const btn = $("refresh-btn");
+            btn.disabled = true;
+            try {
+                const data = await apiGet("/api/status");
+                render(data);
+                $("last-refresh").textContent = new Date().toLocaleTimeString("fr-FR");
+            } catch (e) {
+                toast("Erreur de rafraîchissement : " + e.message, false);
+            } finally {
+                isRefreshing = false;
+                btn.disabled = false;
+            }
+        }
+
+        function render(data) {
+            const pill = $("conn-status");
+            const info = $("agent-info");
+            const summary = $("system-summary");
+            const grid = $("processes-grid");
+
+            if (!data.connected) {
+                pill.className = "status-pill disconnected";
+                pill.textContent = "déconnecté";
+                info.textContent = data.agent_address ? `— agent: ${data.agent_address}` : "— agent: ?";
+                summary.innerHTML = `<div class="empty">${escapeHtml(data.error || "Non connecté")}</div>`;
+                grid.innerHTML = "";
+                return;
+            }
+
+            pill.className = "status-pill connected";
+            pill.textContent = "connecté";
+            info.textContent = `— agent: ${data.agent_address}`;
+
+            const s = data.system;
+            summary.innerHTML = `
+                <h2>${escapeHtml(s.name)} <span class="sub" style="color:var(--muted);font-weight:400;">v${fmt(s.version)}</span></h2>
+                <div class="row"><span class="k">Hôte</span><span class="v">${fmt(s.hostname)}</span></div>
+                <div class="row"><span class="k">Adresse IP</span><span class="v">${fmt(s.ip_address)}</span></div>
+                <div class="row"><span class="k">Démarré le</span><span class="v">${fmt(s.start_time)}</span></div>
+                <div class="row"><span class="k">Configuration</span><span class="v">${fmt(s.settings)}</span></div>
+                <div class="card-actions">
+                    <button class="danger" onclick="systemCmd('halt')">⏻ Halt</button>
+                    <button class="danger" onclick="systemCmd('reboot')">⟲ Reboot</button>
+                </div>
+            `;
+
+            const procs = s.processes || [];
+            if (!procs.length) {
+                grid.innerHTML = `<div class="empty">Aucun processus enregistré.</div>`;
+                return;
+            }
+            grid.innerHTML = procs.map(procCard).join("");
+        }
+
+        function procCard(p) {
+            const servers = (p.servers || []).map(srv => `
+                <div class="server-item">
+                    <strong>${escapeHtml(srv.name)}</strong> [${escapeHtml(srv.server_class)}]
+                    ${srv.running ? '· <span style="color:var(--green)">running</span>' : '· <span style="color:var(--red)">stopped</span>'}
+                    ${srv.port ? `· port ${srv.port}` : ""}
+                    ${srv.protocol ? `· ${escapeHtml(srv.protocol)}` : ""}
+                    ${srv.nb_connections ? `· ${srv.nb_connections} conn.` : ""}
+                </div>
+            `).join("");
+            return `
+                <div class="card">
+                    <h2>
+                        <span class="proc-name">${escapeHtml(p.name)}</span>
+                        <span class="badge ${p.state}">${p.state}</span>
+                    </h2>
+                    <div class="row"><span class="k">PID</span><span class="v">${fmt(p.pid)}</span></div>
+                    <div class="row"><span class="k">Port gRPC</span><span class="v">${fmt(p.grpc_port)}</span></div>
+                    <div class="row"><span class="k">Version</span><span class="v">${fmt(p.version)}</span></div>
+                    <div class="row"><span class="k">Démarré</span><span class="v">${fmt(p.start_time)}</span></div>
+                    <div class="row"><span class="k">Objectif</span><span class="v">${fmt(p.purpose)}</span></div>
+                    ${p.status ? `<div class="row"><span class="k">Statut</span><span class="v">${fmt(p.status)}</span></div>` : ""}
+                    ${p.error ? `<div class="row"><span class="k">Erreur</span><span class="v" style="color:var(--red)">${fmt(p.error)}</span></div>` : ""}
+                    ${p.console_present ? '<div class="row"><span class="k">Console</span><span class="v">présente</span></div>' : ""}
+                    ${p.is_systemd ? '<div class="row"><span class="k">Contrôle</span><span class="v">systemd</span></div>' : ""}
+                    ${servers ? `<div class="servers">${servers}</div>` : ""}
+                    <div class="card-actions">
+                        <button onclick="procCmd('${escapeHtml(p.name)}','start')">▶ Start</button>
+                        <button onclick="procCmd('${escapeHtml(p.name)}','stop')">■ Stop</button>
+                        <button onclick="procCmd('${escapeHtml(p.name)}','restart')">⟲ Restart</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function procCmd(target, cmd) {
+            if (!confirm(`${cmd} → ${target} ?`)) return;
+            try {
+                const r = await apiPost("/api/process", { target, cmd });
+                toast(`${cmd} ${target}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
+                if (r.ok) setTimeout(refresh, 800);
+            } catch (e) {
+                toast("Erreur: " + e.message, false);
+            }
+        }
+
+        async function systemCmd(cmd) {
+            if (!confirm(`Commande système ${cmd} ?`)) return;
+            try {
+                const r = await apiPost("/api/system", { cmd });
+                toast(`${cmd}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
+                if (r.ok) setTimeout(refresh, 800);
+            } catch (e) {
+                toast("Erreur: " + e.message, false);
+            }
+        }
+
+        function toggleAuto() {
+            if ($("auto-refresh").checked) {
+                autoTimer = setInterval(refresh, REFRESH_INTERVAL);
+            } else if (autoTimer) {
+                clearInterval(autoTimer);
+                autoTimer = null;
+            }
+        }
+
+        window.procCmd = procCmd;
+        window.systemCmd = systemCmd;
+
+        $("refresh-btn").addEventListener("click", refresh);
+        $("auto-refresh").addEventListener("change", toggleAuto);
+        refresh();
+    </script>
+</body>
+</html>
