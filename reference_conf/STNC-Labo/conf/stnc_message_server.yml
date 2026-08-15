@@ -15,21 +15,20 @@ log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
 secure_grpc: true
-
+connect_agent: true
+# log_file: test_fast_packet
 log_module:
   router_core.coupler: INFO
   couplers.nmea2k_grpc_coupler: INFO
   router_common.client_common: INFO
-  router_common.can_grpc_stream_reader: INFO
+  router_common.nmea2000_grpc_stream_reader: INFO
   
   
 
 features:
   - router_core
   - nmea2000
-  - nmea2000_devices
   - couplers
-  - gnss
 
 
 servers:
@@ -46,27 +45,22 @@ servers:
     class: NMEASenderServer
     port: 4503
     nmea2000: dyfmt
-    coupler: CANCoupler
+    coupler: NMEA2000SendCoupler
 
 - gRPCMain:
       class: GrpcServer
       port: 4502
 
-- ShipModulConfig:
-    class: ShipModulConfig
-    port: 4501
-    coupler: MiniPlex3
-
 couplers:
 
-- CANCoupler:
+- NMEA2000Coupler:
     class: N2KGrpcCoupler
-    source_server: 192.168.1.28
+    source_server: 127.0.0.1
     source_port: 4512
-
-- CANSendCoupler:
+ 
+- NMEA2000SendCoupler:
     class: N2KGrpcSendCoupler
-    target_server: 192.168.1.28
+    target_server: 127.0.0.1
     target_port: 4512
     device: NavigationControl
 
@@ -80,20 +74,8 @@ couplers:
     autostart: false
     trace_raw: false
 
-- SolarPanel:
-    class: MpptCoupler
-    port: 4505
-    server: NMEAServer
-    direction: read_only
-    report_timer: 20
-
     
 filters:
-
-- Engine:
-    class: NMEA2000Filter
-    pgn: [127488, 127489]
-    type: select
 
 services:
 
@@ -118,7 +100,7 @@ publishers:
 
 - TraceOutput:
     class: N2KStatisticPublisher
-    couplers: [CANCoupler]
+    couplers: [NMEA2000Coupler]
     # filters: [NMEAOutput, AIS]
     active: true
     flexible_decode: false
