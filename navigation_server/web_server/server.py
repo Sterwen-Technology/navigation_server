@@ -85,13 +85,18 @@ class NavigationSystemCollector:
     def _get_console(self, process_name: str):
         """Return a (GrpcClient, ConsoleClient) pair for a process console.
 
-        The gRPC port of the target process is fetched from the agent, then a
-        dedicated GrpcClient is created (cached per process name) with a
-        ConsoleClient attached. Returns (None, None) if the port cannot be
-        obtained or the process has no console.
+        The connection is cached per process name so that repeated calls
+        (status refresh, coupler commands) reuse the same gRPC channel
+        instead of creating a new one each time. The channel is only
+        reconnected if it has dropped to NOT_CONNECTED.
         """
         cached = self._consoles.get(process_name)
         if cached is not None:
+            grpc_server, console = cached
+            # Reconnect only if the channel has dropped.
+            if grpc_server.not_connected:
+                grpc_server.connect()
+                grpc_server.wait_connect(5.0)
             return cached
         port = self._agent.get_port(process_name)
         if port == 0:
@@ -112,17 +117,11 @@ class NavigationSystemCollector:
             self._connect()
             if self._server.not_connected:
                 return {"ok": False, "error": "Agent gRPC server unreachable"}
-            port = self._agent.get_port(process_name)
-            if port == 0:
+            grpc_server, console = self._get_console(process_name)
+            if grpc_server is None:
                 return {"ok": False, "error": f"No console for process {process_name}"}
-            server_key = f"{self._address}:{port}"
-            grpc_server = GrpcClient.get_client(server_key, secure=self._secure)
-            console = ConsoleClient()
-            grpc_server.add_service(console)
-            grpc_server.connect()
-            grpc_server.wait_connect(5.0)
             if grpc_server.not_connected:
-                return {"ok": False, "error": f"Cannot reach console at {server_key}"}
+                return {"ok": False, "error": f"Cannot reach console for {process_name}"}
             # server status (SystemProcessMsg with TCP/UDP servers + connections)
             try:
                 status = console.server_status()
@@ -175,7 +174,7 @@ class NavigationSystemCollector:
             return {
                 "ok": True,
                 "process": process_name,
-                "grpc_port": port,
+                "grpc_port": grpc_server.address.rsplit(":", 1)[-1] if ":" in grpc_server.address else 0,
                 "servers": servers,
                 "couplers": couplers,
             }
@@ -189,17 +188,11 @@ class NavigationSystemCollector:
             self._connect()
             if self._server.not_connected:
                 return {"ok": False, "error": "Agent gRPC server unreachable"}
-            port = self._agent.get_port(process_name)
-            if port == 0:
+            grpc_server, console = self._get_console(process_name)
+            if grpc_server is None:
                 return {"ok": False, "error": f"No console for process {process_name}"}
-            server_key = f"{self._address}:{port}"
-            grpc_server = GrpcClient.get_client(server_key, secure=self._secure)
-            console = ConsoleClient()
-            grpc_server.add_service(console)
-            grpc_server.connect()
-            grpc_server.wait_connect(5.0)
             if grpc_server.not_connected:
-                return {"ok": False, "error": f"Cannot reach console at {server_key}"}
+                return {"ok": False, "error": f"Cannot reach console for {process_name}"}
             # Fetch the current coupler state to validate the command.
             try:
                 coupler = console.get_coupler(coupler_name)
