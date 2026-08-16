@@ -116,8 +116,6 @@ class NavigationSystemCollector:
             if port == 0:
                 return {"ok": False, "error": f"No console for process {process_name}"}
             server_key = f"{self._address}:{port}"
-            _logger.info(f"Console connection to {server_key} secure={self._secure} "
-                         f"ca_cert={'loaded' if GrpcClient._ca_certificate is not None else 'NONE'}")
             grpc_server = GrpcClient.get_client(server_key, secure=self._secure)
             console = ConsoleClient()
             grpc_server.add_service(console)
