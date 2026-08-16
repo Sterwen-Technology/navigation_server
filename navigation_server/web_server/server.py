@@ -199,6 +199,17 @@ class NavigationSystemCollector:
             grpc_server.wait_connect(5.0)
             if grpc_server.not_connected:
                 return {"ok": False, "error": f"Cannot reach console at {server_key}"}
+            # Fetch the current coupler state to validate the command.
+            try:
+                coupler = console.get_coupler(coupler_name)
+            except GrpcAccessException:
+                return {"ok": False, "error": "Console GetCoupler call failed"}
+            state = coupler.state
+            # Check command consistency with the actual coupler state.
+            valid = _validate_coupler_cmd(cmd, state)
+            if not valid[0]:
+                return {"ok": False, "error": f"Cannot '{cmd}' coupler {coupler_name} "
+                                              f"(state={state}): {valid[1]}"}
             try:
                 if cmd == "start":
                     # start uses a different console RPC than the other coupler commands
@@ -207,7 +218,7 @@ class NavigationSystemCollector:
                     result = console.send_cmd(coupler_name, cmd)
             except GrpcAccessException:
                 return {"ok": False, "error": "Console command call failed"}
-            return {"ok": True, "response": result}
+            return {"ok": True, "response": result, "state": state}
 
     def _connect(self):
         if self._server.not_connected:
@@ -346,6 +357,32 @@ class NavigationSystemCollector:
                 "nm_running": status.nm_running,
                 "interfaces": interfaces,
             }
+
+
+def _validate_coupler_cmd(cmd: str, state: str) -> tuple:
+    """Validate that a coupler command is consistent with its current state.
+
+    Returns (True, "") if valid, (False, reason) otherwise.
+    """
+    running = state == "RUNNING"
+    suspended = state == "SUSPENDED"
+    active = running or suspended
+    if cmd == "start" and active:
+        return False, "coupler is already active"
+    if cmd == "stop" and not active:
+        return False, "coupler is not active"
+    if cmd == "suspend" and not running:
+        return False, "coupler is not running"
+    if cmd == "resume" and not suspended:
+        return False, "coupler is not suspended"
+    # trace commands: start_trace_raw requires the coupler to be active,
+    # stop_trace requires it to be running (tracing implies running)
+    if cmd == "start_trace_raw" and not active:
+        return False, "coupler is not active"
+    if cmd == "stop_trace" and not running:
+        return False, "coupler is not running"
+    return True, ""
+
 
 
 class _RequestHandler(BaseHTTPRequestHandler):
