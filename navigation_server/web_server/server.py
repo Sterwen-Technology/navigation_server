@@ -168,6 +168,7 @@ class NavigationSystemCollector:
                         "input_rate": c.input_rate,
                         "input_rate_raw": c.input_rate_raw,
                         "output_rate": c.output_rate,
+                        "trace_on": c.trace_on,
                     })
             except GrpcAccessException:
                 return {"ok": False, "error": "Console GetCouplers call failed"}
