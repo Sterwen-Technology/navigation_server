@@ -58,6 +58,9 @@ class NavigationSystemCollector:
         self._address = address
         self._port = port
         self._secure = secure
+        # The security mode (and CA certificate, shared at class level) applies
+        # to the agent and to all console connections, since all gRPC servers in
+        # a deployment share the same certificate.
         self._server = GrpcClient.get_client(f"{address}:{port}", secure=secure)
         self._agent = AgentClient()
         self._server.add_service(self._agent)

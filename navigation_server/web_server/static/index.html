@@ -308,7 +308,7 @@
             const stopBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','stop')">■ Stop</button>`;
             const restartBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','restart')">⟲ Restart</button>`;
             const openBtn = p.console_present
-                ? `<button class="open-btn" onclick="openConsole('${escapeHtml(p.name)}')"><?= open</button>`
+                ? `<button class="open-btn" onclick="openConsole('${escapeHtml(p.name)}')">⤓ Open</button>`
                 : '';
             return `
                 <div class="card">
