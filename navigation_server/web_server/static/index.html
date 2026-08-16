@@ -203,6 +203,8 @@
         let autoTimer = null;
         let isRefreshing = false;
         let autoEnabled = true;
+        let consoleProcess = null;
+        let consoleTimer = null;
 
         const $ = (id) => document.getElementById(id);
 
@@ -370,15 +372,25 @@
         async function openConsole(processName) {
             const modal = $("console-modal");
             const title = $("console-title");
-            const body = $("console-body");
             title.textContent = `Console — ${processName}`;
-            body.innerHTML = '<div class="empty">Chargement…</div>';
+            $("console-body").innerHTML = '<div class="empty">Chargement…</div>';
             modal.classList.add("show");
+            consoleProcess = processName;
+            await refreshConsole();
+        }
+
+        async function refreshConsole() {
+            if (!consoleProcess) return;
+            const processName = consoleProcess;
             try {
                 const d = await apiGet(`/api/console/${encodeURIComponent(processName)}`);
-                renderConsole(d, processName);
+                if (consoleProcess === processName) {
+                    renderConsole(d, processName);
+                    consoleTimer = setTimeout(refreshConsole, REFRESH_INTERVAL);
+                }
             } catch (e) {
-                body.innerHTML = `<div class="empty">Erreur: ${escapeHtml(e.message)}</div>`;
+                $("console-body").innerHTML = `<div class="empty">Erreur: ${escapeHtml(e.message)}</div>`;
+                consoleTimer = setTimeout(refreshConsole, REFRESH_INTERVAL);
             }
         }
 
@@ -457,6 +469,11 @@
 
         function closeConsole() {
             $("console-modal").classList.remove("show");
+            consoleProcess = null;
+            if (consoleTimer) {
+                clearTimeout(consoleTimer);
+                consoleTimer = null;
+            }
         }
 
         function toggleAuto() {
