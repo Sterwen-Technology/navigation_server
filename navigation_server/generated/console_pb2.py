@@ -28,7 +28,7 @@ import navigation_server.generated.services_server_pb2 as services__server__pb2
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rconsole.proto\x1a\x0f\x61rguments.proto\x1a\x15services_server.proto\"\xaa\x03\n\nCouplerMsg\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x15\n\rcoupler_class\x18\x02 \x01(\t\x12(\n\x05state\x18\x03 \x01(\x0e\x32\x19.CouplerMsg.Coupler_state\x12+\n\tdev_state\x18\x04 \x01(\x0e\x32\x18.CouplerMsg.Device_state\x12\x10\n\x08protocol\x18\x05 \x01(\t\x12\x0e\n\x06msg_in\x18\x06 \x01(\r\x12\x0f\n\x07msg_raw\x18\r \x01(\r\x12\x0f\n\x07msg_out\x18\x07 \x01(\r\x12\x0e\n\x06status\x18\x08 \x01(\t\x12\r\n\x05\x65rror\x18\t \x01(\r\x12\x12\n\ninput_rate\x18\n \x01(\x02\x12\x16\n\x0einput_rate_raw\x18\x0c \x01(\x02\x12\x13\n\x0boutput_rate\x18\x0b \x01(\x02\"8\n\rCoupler_state\x12\x0b\n\x07STOPPED\x10\x00\x12\x0b\n\x07RUNNING\x10\x01\x12\r\n\tSUSPENDED\x10\x03\"B\n\x0c\x44\x65vice_state\x12\r\n\tNOT_READY\x10\x00\x12\x08\n\x04OPEN\x10\x01\x12\r\n\tCONNECTED\x10\x02\x12\n\n\x06\x41\x43TIVE\x10\x03\")\n\nServiceMsg\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x63lass\x18\x02 \x01(\t\";\n\x0cPublisherMsg\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x63lass\x18\x02 \x01(\t\x12\x0e\n\x06\x61\x63tive\x18\x03 \x01(\x08\"Q\n\x07Request\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0b\n\x03\x63md\x18\x02 \x01(\t\x12\x0e\n\x06target\x18\x03 \x01(\t\x12\x1d\n\x06kwargs\x18\x04 \x01(\x0b\x32\r.ArgumentList\"N\n\x08Response\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0e\n\x06status\x18\x02 \x01(\t\x12&\n\x0fresponse_values\x18\x03 \x01(\x0b\x32\r.ArgumentList2\xdc\x01\n\x11NavigationConsole\x12\"\n\tServerCmd\x12\x08.Request\x1a\t.Response\"\x00\x12-\n\x0cServerStatus\x12\x08.Request\x1a\x11.SystemProcessMsg\"\x00\x12(\n\x0bGetCouplers\x12\x08.Request\x1a\x0b.CouplerMsg\"\x00\x30\x01\x12%\n\nGetCoupler\x12\x08.Request\x1a\x0b.CouplerMsg\"\x00\x12#\n\nCouplerCmd\x12\x08.Request\x1a\t.Response\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rconsole.proto\x1a\x0f\x61rguments.proto\x1a\x15services_server.proto\"\xbc\x03\n\nCouplerMsg\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x15\n\rcoupler_class\x18\x02 \x01(\t\x12(\n\x05state\x18\x03 \x01(\x0e\x32\x19.CouplerMsg.Coupler_state\x12+\n\tdev_state\x18\x04 \x01(\x0e\x32\x18.CouplerMsg.Device_state\x12\x10\n\x08protocol\x18\x05 \x01(\t\x12\x0e\n\x06msg_in\x18\x06 \x01(\r\x12\x0f\n\x07msg_raw\x18\r \x01(\r\x12\x0f\n\x07msg_out\x18\x07 \x01(\r\x12\x0e\n\x06status\x18\x08 \x01(\t\x12\r\n\x05\x65rror\x18\t \x01(\r\x12\x12\n\ninput_rate\x18\n \x01(\x02\x12\x16\n\x0einput_rate_raw\x18\x0c \x01(\x02\x12\x13\n\x0boutput_rate\x18\x0b \x01(\x02\x12\x10\n\x08trace_on\x18\x0e \x01(\x08\"8\n\rCoupler_state\x12\x0b\n\x07STOPPED\x10\x00\x12\x0b\n\x07RUNNING\x10\x01\x12\r\n\tSUSPENDED\x10\x03\"B\n\x0c\x44\x65vice_state\x12\r\n\tNOT_READY\x10\x00\x12\x08\n\x04OPEN\x10\x01\x12\r\n\tCONNECTED\x10\x02\x12\n\n\x06\x41\x43TIVE\x10\x03\")\n\nServiceMsg\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x63lass\x18\x02 \x01(\t\";\n\x0cPublisherMsg\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x63lass\x18\x02 \x01(\t\x12\x0e\n\x06\x61\x63tive\x18\x03 \x01(\x08\"Q\n\x07Request\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0b\n\x03\x63md\x18\x02 \x01(\t\x12\x0e\n\x06target\x18\x03 \x01(\t\x12\x1d\n\x06kwargs\x18\x04 \x01(\x0b\x32\r.ArgumentList\"N\n\x08Response\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0e\n\x06status\x18\x02 \x01(\t\x12&\n\x0fresponse_values\x18\x03 \x01(\x0b\x32\r.ArgumentList2\xdc\x01\n\x11NavigationConsole\x12\"\n\tServerCmd\x12\x08.Request\x1a\t.Response\"\x00\x12-\n\x0cServerStatus\x12\x08.Request\x1a\x11.SystemProcessMsg\"\x00\x12(\n\x0bGetCouplers\x12\x08.Request\x1a\x0b.CouplerMsg\"\x00\x30\x01\x12%\n\nGetCoupler\x12\x08.Request\x1a\x0b.CouplerMsg\"\x00\x12#\n\nCouplerCmd\x12\x08.Request\x1a\t.Response\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,19 +36,19 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'console_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_COUPLERMSG']._serialized_start=58
-  _globals['_COUPLERMSG']._serialized_end=484
-  _globals['_COUPLERMSG_COUPLER_STATE']._serialized_start=360
-  _globals['_COUPLERMSG_COUPLER_STATE']._serialized_end=416
-  _globals['_COUPLERMSG_DEVICE_STATE']._serialized_start=418
-  _globals['_COUPLERMSG_DEVICE_STATE']._serialized_end=484
-  _globals['_SERVICEMSG']._serialized_start=486
-  _globals['_SERVICEMSG']._serialized_end=527
-  _globals['_PUBLISHERMSG']._serialized_start=529
-  _globals['_PUBLISHERMSG']._serialized_end=588
-  _globals['_REQUEST']._serialized_start=590
-  _globals['_REQUEST']._serialized_end=671
-  _globals['_RESPONSE']._serialized_start=673
-  _globals['_RESPONSE']._serialized_end=751
-  _globals['_NAVIGATIONCONSOLE']._serialized_start=754
-  _globals['_NAVIGATIONCONSOLE']._serialized_end=974
+  _globals['_COUPLERMSG']._serialized_end=502
+  _globals['_COUPLERMSG_COUPLER_STATE']._serialized_start=378
+  _globals['_COUPLERMSG_COUPLER_STATE']._serialized_end=434
+  _globals['_COUPLERMSG_DEVICE_STATE']._serialized_start=436
+  _globals['_COUPLERMSG_DEVICE_STATE']._serialized_end=502
+  _globals['_SERVICEMSG']._serialized_start=504
+  _globals['_SERVICEMSG']._serialized_end=545
+  _globals['_PUBLISHERMSG']._serialized_start=547
+  _globals['_PUBLISHERMSG']._serialized_end=606
+  _globals['_REQUEST']._serialized_start=608
+  _globals['_REQUEST']._serialized_end=689
+  _globals['_RESPONSE']._serialized_start=691
+  _globals['_RESPONSE']._serialized_end=769
+  _globals['_NAVIGATIONCONSOLE']._serialized_start=772
+  _globals['_NAVIGATIONCONSOLE']._serialized_end=992
 # @@protoc_insertion_point(module_scope)

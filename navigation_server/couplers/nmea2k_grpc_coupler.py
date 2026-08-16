@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     24/05/2025
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
@@ -35,6 +35,7 @@ class N2KGrpcCoupler(Coupler, Nmea2000GrpcStreamReader):
         input_stream_opts['reject_pgn'] = None
         Nmea2000GrpcStreamReader.__init__(self, self.object_name(), input_stream_opts)
         self._mode = self.NMEA2000
+        self._mode_str = 'nmea2000'
 
     def open(self):
         _logger.debug("N2KGrpcCoupler open attempt with state %d" % self._state)

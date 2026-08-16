@@ -54,6 +54,7 @@ class N2KGrpcSendCoupler(Coupler, ServiceClient):
         # create the server
         self._direction = self.WRITE_ONLY # that is a mono directional coupler
         self._mode = self.NMEA2000
+        self._mode_str = 'nmea2000'
         self._n2k_writer = self
         self._target_server = opts.get('target_server', str, None)
         if self._target_server is None:

@@ -536,6 +536,9 @@ class Coupler(NavThread):
         if self._tracer is not None and self._trace_raw:
             self._tracer.trace_n2k_raw(pgn, sa, prio, data, direction)
 
+    def trace_status(self) -> bool:
+        return self._tracer is not None
+
     def add_event_trace(self, message: str):
         if self._tracer is not None:
             self._tracer.add_event_trace(message)
