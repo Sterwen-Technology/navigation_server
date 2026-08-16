@@ -30,6 +30,7 @@ from urllib.parse import urlparse
 from navigation_server.router_common import GrpcClient, GrpcAccessException
 from navigation_server.router_common.agent_interface import AgentClient
 from navigation_server.navigation_clients import NetworkClient
+from navigation_server.navigation_clients.console_client import ConsoleClient
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -61,6 +62,7 @@ class NavigationSystemCollector:
         self._agent = AgentClient()
         self._server.add_service(self._agent)
         self._network = None
+        self._consoles = {}
         self._lock = threading.Lock()
 
     @property
@@ -76,6 +78,129 @@ class NavigationSystemCollector:
             self._network = NetworkClient()
             self._server.add_service(self._network)
         return self._network
+
+    def _get_console(self, process_name: str):
+        """Return a (GrpcClient, ConsoleClient) pair for a process console.
+
+        The gRPC port of the target process is fetched from the agent, then a
+        dedicated GrpcClient is created (cached per process name) with a
+        ConsoleClient attached. Returns (None, None) if the port cannot be
+        obtained or the process has no console.
+        """
+        cached = self._consoles.get(process_name)
+        if cached is not None:
+            return cached
+        port = self._agent.get_port(process_name)
+        if port == 0:
+            return None, None
+        server_key = f"{self._address}:{port}"
+        grpc_server = GrpcClient.get_client(server_key, secure=self._secure)
+        console = ConsoleClient()
+        grpc_server.add_service(console)
+        grpc_server.connect()
+        grpc_server.wait_connect(5.0)
+        pair = (grpc_server, console)
+        self._consoles[process_name] = pair
+        return pair
+
+    def console_status(self, process_name: str) -> dict:
+        """Return the console view (servers + couplers) of a process."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            port = self._agent.get_port(process_name)
+            if port == 0:
+                return {"ok": False, "error": f"No console for process {process_name}"}
+            server_key = f"{self._address}:{port}"
+            grpc_server = GrpcClient.get_client(server_key, secure=self._secure)
+            console = ConsoleClient()
+            grpc_server.add_service(console)
+            grpc_server.connect()
+            grpc_server.wait_connect(5.0)
+            if grpc_server.not_connected:
+                return {"ok": False, "error": f"Cannot reach console at {server_key}"}
+            # server status (SystemProcessMsg with TCP/UDP servers + connections)
+            try:
+                status = console.server_status()
+            except GrpcAccessException:
+                return {"ok": False, "error": "Console ServerStatus call failed"}
+            servers = []
+            for srv in status.get_sub_servers():
+                connections = [
+                    {
+                        "remote_ip": c.remote_ip,
+                        "remote_port": c.remote_port,
+                        "total_msg": c.total_msg,
+                        "msg_rate": c.msg_rate,
+                        "max_delay": c.max_delay,
+                    }
+                    for c in srv.connections
+                ]
+                servers.append({
+                    "server_class": srv.server_class,
+                    "name": srv.name,
+                    "server_type": srv.server_type,
+                    "running": srv.running,
+                    "nb_connections": srv.nb_connections,
+                    "port": srv.port,
+                    "protocol": srv.protocol,
+                    "connections": connections,
+                })
+            # couplers
+            couplers = []
+            try:
+                for c in console.get_couplers():
+                    couplers.append({
+                        "name": c.name,
+                        "coupler_class": c.coupler_class,
+                        "state": c.state,
+                        "dev_state": c.dev_state,
+                        "protocol": c.protocol,
+                        "msg_in": c.msg_in,
+                        "msg_raw": c.msg_raw,
+                        "msg_out": c.msg_out,
+                        "status": c.status,
+                        "error": c.error,
+                        "input_rate": c.input_rate,
+                        "input_rate_raw": c.input_rate_raw,
+                        "output_rate": c.output_rate,
+                    })
+            except GrpcAccessException:
+                return {"ok": False, "error": "Console GetCouplers call failed"}
+            return {
+                "ok": True,
+                "process": process_name,
+                "grpc_port": port,
+                "servers": servers,
+                "couplers": couplers,
+            }
+
+    def coupler_cmd(self, process_name: str, coupler_name: str, cmd: str) -> dict:
+        """Send a command to a coupler on a process console."""
+        allowed = ("stop", "start_trace_raw", "stop_trace", "suspend", "resume")
+        if cmd not in allowed:
+            return {"ok": False, "error": f"Unsupported coupler command: {cmd}"}
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            port = self._agent.get_port(process_name)
+            if port == 0:
+                return {"ok": False, "error": f"No console for process {process_name}"}
+            server_key = f"{self._address}:{port}"
+            grpc_server = GrpcClient.get_client(server_key, secure=self._secure)
+            console = ConsoleClient()
+            grpc_server.add_service(console)
+            grpc_server.connect()
+            grpc_server.wait_connect(5.0)
+            if grpc_server.not_connected:
+                return {"ok": False, "error": f"Cannot reach console at {server_key}"}
+            try:
+                result = console.send_cmd(coupler_name, cmd)
+            except GrpcAccessException:
+                return {"ok": False, "error": "Console CouplerCmd call failed"}
+            return {"ok": True, "response": result}
 
     def _connect(self):
         if self._server.not_connected:
@@ -237,6 +362,13 @@ class _RequestHandler(BaseHTTPRequestHandler):
             self._serve_json(self.collector.system_status())
         elif path == "/api/network":
             self._serve_json(self.collector.network_status())
+        elif path.startswith("/api/console/"):
+            process_name = path[len("/api/console/"):]
+            if process_name:
+                self._serve_json(self.collector.console_status(process_name))
+            else:
+                self._serve_json({"ok": False, "error": "missing process name"},
+                                 status=HTTPStatus.BAD_REQUEST)
         elif path == "/health":
             self._serve_json({"ok": True, "time": time.time()})
         else:
@@ -262,6 +394,15 @@ class _RequestHandler(BaseHTTPRequestHandler):
                                  status=HTTPStatus.BAD_REQUEST)
                 return
             self._serve_json(self.collector.system_cmd(cmd))
+        elif path == "/api/coupler":
+            process = body.get("process")
+            coupler = body.get("coupler")
+            cmd = body.get("cmd")
+            if not process or not coupler or not cmd:
+                self._serve_json({"ok": False, "error": "missing 'process', 'coupler' or 'cmd'"},
+                                 status=HTTPStatus.BAD_REQUEST)
+                return
+            self._serve_json(self.collector.coupler_cmd(process, coupler, cmd))
         else:
             self._serve_json({"ok": False, "error": "not found"},
                              status=HTTPStatus.NOT_FOUND)

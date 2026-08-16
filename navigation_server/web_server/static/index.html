@@ -130,6 +130,40 @@
         .toast.show { opacity: 1; transform: translateY(0); }
         .toast.ok { border-left: 4px solid var(--green); }
         .toast.err { border-left: 4px solid var(--red); }
+        button.open-btn { background: rgba(56,189,248,0.15); color: var(--accent); border-color: var(--accent); }
+        button.open-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a; }
+        .modal {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 50; padding: 24px;
+            overflow-y: auto;
+        }
+        .modal.show { display: block; }
+        .modal-content {
+            background: var(--bg); border: 1px solid var(--border);
+            border-radius: 12px; max-width: 1200px; margin: 0 auto;
+            padding: 24px; min-height: 200px;
+        }
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px;
+        }
+        .modal-header h2 { margin: 0; font-size: 1.1rem; color: var(--accent); }
+        .modal-close {
+            background: none; border: none; color: var(--muted);
+            font-size: 1.5rem; cursor: pointer; padding: 0 8px;
+        }
+        .modal-close:hover { color: var(--text); }
+        .console-section { margin-bottom: 24px; }
+        .console-section h3 {
+            font-size: 0.95rem; color: var(--muted); margin: 0 0 12px 0;
+            border-bottom: 1px solid var(--border); padding-bottom: 6px;
+        }
+        .console-server {
+            background: var(--panel); border-radius: 8px; padding: 10px 12px;
+            margin-bottom: 8px; font-size: 0.82rem;
+        }
+        .coupler-card { padding: 12px; }
     </style>
 </head>
 <body>
@@ -153,6 +187,16 @@
         <div id="processes-grid" class="grid"></div>
     </main>
     <div id="toast" class="toast"></div>
+
+    <div id="console-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="console-title">Console</h2>
+                <button class="modal-close" onclick="closeConsole()" title="Fermer">&times;</button>
+            </div>
+            <div id="console-body"><div class="empty">Chargement…</div></div>
+        </div>
+    </div>
 
     <script>
         const REFRESH_INTERVAL = 5000;
@@ -258,6 +302,14 @@
                     ${srv.nb_connections ? `· ${srv.nb_connections} conn.` : ""}
                 </div>
             `).join("");
+            // Contextual action buttons based on process state.
+            const isRunning = p.state === "RUNNING";
+            const startBtn = `<button ${isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','start')">▶ Start</button>`;
+            const stopBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','stop')">■ Stop</button>`;
+            const restartBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','restart')">⟲ Restart</button>`;
+            const openBtn = p.console_present
+                ? `<button class="open-btn" onclick="openConsole('${escapeHtml(p.name)}')"><?= open</button>`
+                : '';
             return `
                 <div class="card">
                     <h2>
@@ -275,16 +327,16 @@
                     ${p.is_systemd ? '<div class="row"><span class="k">Contrôle</span><span class="v">systemd</span></div>' : ""}
                     ${servers ? `<div class="servers">${servers}</div>` : ""}
                     <div class="card-actions">
-                        <button onclick="procCmd('${escapeHtml(p.name)}','start')">▶ Start</button>
-                        <button onclick="procCmd('${escapeHtml(p.name)}','stop')">■ Stop</button>
-                        <button onclick="procCmd('${escapeHtml(p.name)}','restart')">⟲ Restart</button>
+                        ${startBtn}
+                        ${stopBtn}
+                        ${restartBtn}
+                        ${openBtn}
                     </div>
                 </div>
             `;
         }
 
         async function procCmd(target, cmd) {
-            if (!confirm(`${cmd} → ${target} ?`)) return;
             try {
                 const r = await apiPost("/api/process", { target, cmd });
                 toast(`${cmd} ${target}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
@@ -295,7 +347,6 @@
         }
 
         async function systemCmd(cmd) {
-            if (!confirm(`Commande système ${cmd} ?`)) return;
             try {
                 const r = await apiPost("/api/system", { cmd });
                 toast(`${cmd}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
@@ -303,6 +354,99 @@
             } catch (e) {
                 toast("Erreur: " + e.message, false);
             }
+        }
+
+        // --- Console view ----------------------------------------------------
+        async function openConsole(processName) {
+            const modal = $("console-modal");
+            const title = $("console-title");
+            const body = $("console-body");
+            title.textContent = `Console — ${processName}`;
+            body.innerHTML = '<div class="empty">Chargement…</div>';
+            modal.classList.add("show");
+            try {
+                const d = await apiGet(`/api/console/${encodeURIComponent(processName)}`);
+                renderConsole(d, processName);
+            } catch (e) {
+                body.innerHTML = `<div class="empty">Erreur: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        function renderConsole(d, processName) {
+            const body = $("console-body");
+            if (!d.ok) {
+                body.innerHTML = `<div class="empty">${escapeHtml(d.error || "Erreur console")}</div>`;
+                return;
+            }
+            const servers = (d.servers || []).map(srv => {
+                const conns = (srv.connections || []).map(c => `
+                    <div class="server-item">
+                        ${escapeHtml(c.remote_ip)}:${fmt(c.remote_port)}
+                        · ${fmt(c.total_msg)} msg · ${fmt(c.msg_rate.toFixed(1))}/s
+                    </div>
+                `).join("");
+                return `
+                    <div class="console-server">
+                        <strong>${escapeHtml(srv.name)}</strong> [${escapeHtml(srv.server_class)}]
+                        ${srv.running ? '· <span style="color:var(--green)">running</span>' : '· <span style="color:var(--red)">stopped</span>'}
+                        ${srv.port ? `· port ${srv.port}` : ""}
+                        ${srv.protocol ? `· ${escapeHtml(srv.protocol)}` : ""}
+                        ${srv.nb_connections ? `· ${srv.nb_connections} conn.` : ""}
+                        ${conns ? `<div class="servers">${conns}</div>` : ""}
+                    </div>
+                `;
+            }).join("");
+
+            const couplers = (d.couplers || []).map(c => {
+                const isRunning = c.state === "RUNNING";
+                const stopBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','stop')">■ Stop</button>`;
+                const suspendBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','suspend')">⏸ Suspend</button>`;
+                const resumeBtn = `<button ${isRunning ? 'disabled' : ''} onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','resume')">▶ Resume</button>`;
+                const traceBtn = isRunning
+                    ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','stop_trace')">⏹ Stop trace</button>`
+                    : `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','start_trace_raw')">⏵ Trace raw</button>`;
+                return `
+                    <div class="card coupler-card">
+                        <h2>
+                            <span class="proc-name">${escapeHtml(c.name)}</span>
+                            <span class="badge ${c.state}">${c.state}</span>
+                        </h2>
+                        <div class="row"><span class="k">Classe</span><span class="v">${fmt(c.coupler_class)}</span></div>
+                        <div class="row"><span class="k">Protocole</span><span class="v">${fmt(c.protocol)}</span></div>
+                        <div class="row"><span class="k">État device</span><span class="v">${fmt(c.dev_state)}</span></div>
+                        <div class="row"><span class="k">Msg in/out</span><span class="v">${fmt(c.msg_in)} / ${fmt(c.msg_out)}</span></div>
+                        <div class="row"><span class="k">Débit in/out</span><span class="v">${fmt(c.input_rate && c.input_rate.toFixed(1))} / ${fmt(c.output_rate && c.output_rate.toFixed(1))} /s</span></div>
+                        ${c.error ? `<div class="row"><span class="k">Erreur</span><span class="v" style="color:var(--red)">${fmt(c.error)}</span></div>` : ""}
+                        ${c.status ? `<div class="row"><span class="k">Statut</span><span class="v">${fmt(c.status)}</span></div>` : ""}
+                        <div class="card-actions">${stopBtn}${suspendBtn}${resumeBtn}${traceBtn}</div>
+                    </div>
+                `;
+            }).join("");
+
+            body.innerHTML = `
+                <div class="console-section">
+                    <h3>Serveurs TCP/UDP (${(d.servers||[]).length})</h3>
+                    ${servers || '<div class="empty">Aucun serveur.</div>'}
+                </div>
+                <div class="console-section">
+                    <h3>Coupleurs (${(d.couplers||[]).length})</h3>
+                    <div class="grid">${couplers || '<div class="empty">Aucun coupleur.</div>'}</div>
+                </div>
+            `;
+        }
+
+        async function couplerCmd(process, coupler, cmd) {
+            try {
+                const r = await apiPost("/api/coupler", { process, coupler, cmd });
+                toast(`${cmd} ${coupler}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
+                if (r.ok) setTimeout(() => openConsole(process), 800);
+            } catch (e) {
+                toast("Erreur: " + e.message, false);
+            }
+        }
+
+        function closeConsole() {
+            $("console-modal").classList.remove("show");
         }
 
         function toggleAuto() {
@@ -316,6 +460,9 @@
 
         window.procCmd = procCmd;
         window.systemCmd = systemCmd;
+        window.openConsole = openConsole;
+        window.closeConsole = closeConsole;
+        window.couplerCmd = couplerCmd;
 
         $("refresh-btn").addEventListener("click", refresh);
         $("auto-refresh").addEventListener("change", toggleAuto);
