@@ -176,7 +176,7 @@
             <span id="conn-status" class="status-pill disconnected">déconnecté</span>
             <button id="refresh-btn" title="Rafraîchir">⟳ <span id="last-refresh">—</span></button>
             <label style="font-size:0.8rem; color:var(--muted); display:inline-flex; gap:4px; align-items:center;">
-                <input type="checkbox" id="auto-refresh"> auto (5s)
+                <input type="checkbox" id="auto-refresh" checked> auto (5s)
             </label>
         </div>
     </header>
@@ -202,6 +202,7 @@
         const REFRESH_INTERVAL = 5000;
         let autoTimer = null;
         let isRefreshing = false;
+        let autoEnabled = true;
 
         const $ = (id) => document.getElementById(id);
 
@@ -250,6 +251,15 @@
                 isRefreshing = false;
                 btn.disabled = false;
             }
+            // Schedule the next refresh if auto is enabled (recursive timer
+            // avoids piling up calls when a request takes longer than the
+            // interval).
+            if (autoEnabled) scheduleNext();
+        }
+
+        function scheduleNext() {
+            if (autoTimer) clearTimeout(autoTimer);
+            autoTimer = setTimeout(refresh, REFRESH_INTERVAL);
         }
 
         function render(data) {
@@ -450,10 +460,11 @@
         }
 
         function toggleAuto() {
-            if ($("auto-refresh").checked) {
-                autoTimer = setInterval(refresh, REFRESH_INTERVAL);
+            autoEnabled = $("auto-refresh").checked;
+            if (autoEnabled) {
+                scheduleNext();
             } else if (autoTimer) {
-                clearInterval(autoTimer);
+                clearTimeout(autoTimer);
                 autoTimer = null;
             }
         }
