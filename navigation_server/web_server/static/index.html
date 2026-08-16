@@ -420,13 +420,21 @@
             }).join("");
 
             const couplers = (d.couplers || []).map(c => {
-                const isRunning = c.state === "RUNNING";
-                const stopBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','stop')">■ Stop</button>`;
-                const suspendBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','suspend')">⏸ Suspend</button>`;
-                const resumeBtn = `<button ${isRunning ? 'disabled' : ''} onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','resume')">▶ Resume</button>`;
+                const state = c.state;
+                const isRunning = state === "RUNNING";
+                const isSuspended = state === "SUSPENDED";
+                const isActive = isRunning || isSuspended;
+                const startStopBtn = isActive
+                    ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','stop')">■ Stop</button>`
+                    : `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','start')">▶ Start</button>`;
+                const suspendResumeBtn = isRunning
+                    ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','suspend')">⏸ Suspend</button>`
+                    : (isSuspended
+                        ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','resume')">▶ Resume</button>`
+                        : `<button disabled>⏸ Suspend</button>`);
                 const traceBtn = isRunning
                     ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','stop_trace')">⏹ Stop trace</button>`
-                    : `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','start_trace_raw')">⏵ Trace raw</button>`;
+                    : `<button ${!isActive ? 'disabled' : ''} onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','start_trace_raw')">⏵ Start trace</button>`;
                 return `
                     <div class="card coupler-card">
                         <h2>
@@ -440,7 +448,7 @@
                         <div class="row"><span class="k">Débit in/out</span><span class="v">${fmt(c.input_rate && c.input_rate.toFixed(1))} / ${fmt(c.output_rate && c.output_rate.toFixed(1))} /s</span></div>
                         ${c.error ? `<div class="row"><span class="k">Erreur</span><span class="v" style="color:var(--red)">${fmt(c.error)}</span></div>` : ""}
                         ${c.status ? `<div class="row"><span class="k">Statut</span><span class="v">${fmt(c.status)}</span></div>` : ""}
-                        <div class="card-actions">${stopBtn}${suspendBtn}${resumeBtn}${traceBtn}</div>
+                        <div class="card-actions">${startStopBtn}${suspendResumeBtn}${traceBtn}</div>
                     </div>
                 `;
             }).join("");

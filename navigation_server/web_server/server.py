@@ -181,7 +181,7 @@ class NavigationSystemCollector:
 
     def coupler_cmd(self, process_name: str, coupler_name: str, cmd: str) -> dict:
         """Send a command to a coupler on a process console."""
-        allowed = ("stop", "start_trace_raw", "stop_trace", "suspend", "resume")
+        allowed = ("start", "stop", "start_trace_raw", "stop_trace", "suspend", "resume")
         if cmd not in allowed:
             return {"ok": False, "error": f"Unsupported coupler command: {cmd}"}
         with self._lock:
@@ -200,9 +200,13 @@ class NavigationSystemCollector:
             if grpc_server.not_connected:
                 return {"ok": False, "error": f"Cannot reach console at {server_key}"}
             try:
-                result = console.send_cmd(coupler_name, cmd)
+                if cmd == "start":
+                    # start uses a different console RPC than the other coupler commands
+                    result = console.server_cmd("start_coupler", coupler_name)
+                else:
+                    result = console.send_cmd(coupler_name, cmd)
             except GrpcAccessException:
-                return {"ok": False, "error": "Console CouplerCmd call failed"}
+                return {"ok": False, "error": "Console command call failed"}
             return {"ok": True, "response": result}
 
     def _connect(self):
