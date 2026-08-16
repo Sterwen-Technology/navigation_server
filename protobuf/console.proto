@@ -41,6 +41,7 @@ message CouplerMsg {
   float input_rate=10;  // messages / sec
   float input_rate_raw=12;
   float output_rate=11;
+  bool trace_on=14;  // true if traces are on
 }
 
 message ServiceMsg {
