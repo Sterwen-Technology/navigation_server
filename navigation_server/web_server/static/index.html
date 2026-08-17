@@ -191,9 +191,8 @@
             <span id="conn-status" class="status-pill disconnected">déconnecté</span>
             <button id="refresh-btn" title="Rafraîchir">⟳ <span id="last-refresh">—</span></button>
             <label style="font-size:0.8rem; color:var(--muted); display:inline-flex; gap:4px; align-items:center;">
-                <input type="checkbox" id="auto-refresh" checked> auto (5s)
+                <input type="checkbox" id="auto-refresh" checked> Rafraîch. auto (5s)
             </label>
-            <button onclick="systemCmdConfirm('navigation_restart')" title="Redémarrer tous les processus">⟲ Restart App</button>
             <button class="open-btn" onclick="openNetwork()">⚙ Network</button>
         </div>
     </header>
@@ -333,6 +332,7 @@
                 <div class="card-actions">
                     <button class="danger" onclick="systemCmdConfirm('halt')">⏻ Halt</button>
                     <button class="danger" onclick="systemCmdConfirm('reboot')">⟲ Reboot</button>
+                    <button onclick="systemCmdConfirm('navigation_restart')" title="Redémarrer tous les processus">⟲ Restart App</button>
                 </div>
             `;
 

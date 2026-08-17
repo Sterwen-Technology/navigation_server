@@ -343,25 +343,43 @@ class NavigationSystemCollector:
     def get_log(self, process_name: str) -> list:
         """Fetch system logs for a process via the agent GetSystemLog stream.
 
-        Collects a bounded number of lines (the agent can only handle one log
-        stream at a time). Returns a list of log line strings.
+        The gRPC stream is read in a separate thread with a timeout so that
+        it does not block the HTTP server. The lock is only held briefly to
+        initiate the connection, not during the stream read.
         """
-        lines = []
+        # Brief connection check under lock.
         with self._lock:
             self._connect()
             if self._server.not_connected:
                 return ["Error: Agent gRPC server unreachable"]
+
+        # Collect lines in a background thread to avoid blocking.
+        result = {"lines": [], "done": threading.Event()}
+
+        def _collect():
             try:
                 count = 0
                 for line in self._agent.get_log_msg(process_name):
-                    lines.append(line)
+                    result["lines"].append(line)
                     count += 1
                     if count >= 500:
-                        lines.append("... (truncated at 500 lines)")
+                        result["lines"].append("... (truncated at 500 lines)")
                         break
             except GrpcAccessException:
-                return ["Error: Cannot fetch logs for " + process_name]
-        return lines
+                result["lines"].append("Error: Cannot fetch logs for " + process_name)
+            except Exception as e:
+                result["lines"].append(f"Error: {e}")
+            finally:
+                result["done"].set()
+
+        collector = threading.Thread(target=_collect, daemon=True)
+        collector.start()
+        # Wait up to 8 seconds for the log stream.
+        result["done"].wait(timeout=8.0)
+        if not result["done"].is_set():
+            # The stream is still going (likely infinite); return what we have.
+            result["lines"].append("... (timeout, partial log)")
+        return result["lines"]
 
     def network_status(self) -> dict:
         with self._lock:
