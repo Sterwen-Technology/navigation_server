@@ -449,7 +449,7 @@
                 const conns = (srv.connections || []).map(c => `
                     <div class="server-item">
                         ${escapeHtml(c.remote_ip)}:${fmt(c.remote_port)}
-                        · ${fmt(c.total_msg)} msg · ${fmt(c.msg_rate.toFixed(1))}/s
+                        · ${fmt(c.total_msg)} msg · ${fmt(c.msg_rate && c.msg_rate.toFixed(1))}/s
                     </div>
                 `).join("");
                 return `
