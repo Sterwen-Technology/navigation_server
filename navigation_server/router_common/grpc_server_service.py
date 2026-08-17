@@ -67,6 +67,7 @@ class GrpcServer(NavigationServer):
         # from 2.7.0 support of dual stack IPV4-IPV6
         address = f"[::]:{self._port}"
         self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=nb_threads))
+        # 16/8/26 change and by or to have a correct test
         if not self._secure or not MessageServerGlobals.configuration.secure_communications:
             _logger.warning(f"Secure communications not selected for {MessageServerGlobals.server_name}")
             self._grpc_server.add_insecure_port(address)
@@ -78,7 +79,7 @@ class GrpcServer(NavigationServer):
 
         GrpcServer.grpc_server_global = self
         self._running = False
-        self._services = []
+        self._services = {}
         # print(__name__, "Building GrpcServer", self.name)
         # add the default service
         self._grpc_service = NavigationGrpcControlServicerImpl()
@@ -128,11 +129,11 @@ class GrpcServer(NavigationServer):
     def running(self) -> bool:
         return self._running
 
-    def add_service(self, name):
-        self._services.append(name)
+    def add_rpc_service(self, name: str, service_name:str, rpc_service: str):
+        self._services[name] = (service_name, rpc_service)
 
-    def remove_service(self, name):
-        self._services.remove(name)
+    def remove_rpc_service(self, name):
+        del self._services[name]
         if len(self._services) == 0:
             self.stop()
 
@@ -147,19 +148,19 @@ class GrpcService:
         self._server = None
         _logger.info("Creating service %s on server %s" % (self._name, self._server_name))
 
-    def finalize(self):
+    def finalize(self, service_name: str, rpc_name: str):
         if self._server_name is None:
             raise GrpcServerError("No server defined for the service: %s" % self._name)
         self._server = resolve_ref(self._server_name)
         assert self._server is not None
-        self._server.add_service(self._name)
+        self._server.add_rpc_service(self._name, service_name, rpc_name)
 
     @property
     def grpc_server(self):
         return self._server.grpc_server
 
     def stop_service(self):
-        self._server.remove_service(self._name)
+        self._server.remove_rpc_service(self._name)
 
     @property
     def name(self):
@@ -177,7 +178,7 @@ class GrpcSecondaryService(GrpcService):
         _logger.info("Creating service %s on service %s" % (self._name, self._primary_name))
 
     def finalize(self):
-        super().finalize()
+        super().finalize('GrpcSecondary', 'None')
         self._primary_service = resolve_ref(self._primary_name)
         assert self._primary_service is not None
 

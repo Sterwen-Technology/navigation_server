@@ -226,7 +226,7 @@ class Nmea2000Service(GrpcService):
             except KeyError:
                 _logger.critical(f"NMEA2000Service {self._name} => No NMEA2000 controller")
                 return
-        super().finalize()
+        super().finalize('NMEA2000', 'Nmea2000ControllerService')
         self._servicer = Nmea2000ControllerServiceServicerImpl(self._controller)
         add_Nmea2000ControllerServiceServicer_to_server(self._servicer, self.grpc_server)
         _logger.debug("N2KCanService %s ready" % self.name)

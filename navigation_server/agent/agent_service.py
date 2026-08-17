@@ -540,7 +540,7 @@ class AgentService(GrpcService):
         self._processes = {}
 
     def finalize(self):
-        super().finalize()
+        super().finalize('Agent', 'Agent')
         if not self._server.secure:
             _logger.warning("Agent service is not secure => potential security issue")
         add_AgentServicer_to_server(AgentServicerImpl(self), self.grpc_server)

@@ -460,7 +460,7 @@ class NetworkService(GrpcService):
 
     def finalize(self):
         try:
-            super().finalize()
+            super().finalize('Network', 'NetworkService')
         except GrpcServerError:
             return
         _logger.info("Adding service %s to server" % self._name)

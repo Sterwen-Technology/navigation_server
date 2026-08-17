@@ -163,7 +163,7 @@ class GNSSService(GrpcService):
     def finalize(self):
         if self._open_gnss():
             try:
-                super().finalize()
+                super().finalize('GNSS', 'GNSSService')
             except GrpcServerError:
                 return
             _logger.info("Adding service %s to server" % self._name)
