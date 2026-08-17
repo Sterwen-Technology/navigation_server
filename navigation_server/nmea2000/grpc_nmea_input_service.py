@@ -169,7 +169,7 @@ class GrpcInputDataService(GrpcService):
 
     def finalize(self):
         try:
-            super().finalize()
+            super().finalize('NmeaInput', 'NMEAInputServer')
         except GrpcServerError:
             return
         _logger.info("Adding service %s to server" % self._name)
@@ -210,7 +210,7 @@ class DataInputDispatchService(GrpcService):
 
     def finalize(self):
         try:
-            super().finalize()
+            super().finalize('DataInputDispatch', 'NMEAInputServer')
         except GrpcServerError:
             return
         _logger.info("Adding service %s to server" % self._name)

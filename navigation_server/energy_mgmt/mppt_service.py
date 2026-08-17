@@ -242,6 +242,6 @@ class MPPTService(GrpcService):
         self._mppt_device = VictronMPPT(opts, self)
 
     def finalize(self):
-        super().finalize()
+        super().finalize('Energy', 'energy_service')
         add_solar_mpptServicer_to_server(MPPT_Servicer(self._mppt_device), self.grpc_server)
         self._mppt_device.start()

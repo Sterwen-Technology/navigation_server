@@ -60,6 +60,7 @@ def build_server_status_head(server) -> SystemProcessMsg:
     resp.name = MessageServerGlobals.server_name
     resp.version = MessageServerGlobals.version
     resp.grpc_port = GrpcServer.grpc_port()
+    resp.secure_grpc = MessageServerGlobals.configuration.secure_communications
     resp.start_time = server.start_time_str()
     resp.state = ProcessState.RUNNING
     resp.pid = os.getpid()

@@ -82,7 +82,7 @@ class GrpcNMEAServerService(GrpcService):
 
     def finalize(self):
         try:
-            super().finalize()
+            super().finalize('NMEAServer', 'NMEAServer')
         except GrpcServerError:
             return
         _logger.info("Adding service %s to server" % self._name)

@@ -138,7 +138,7 @@ class EngineDataService(GrpcService):
                     self._engines[engine_id] = engine_object
 
     def finalize(self):
-        super().finalize()
+        super().finalize('Engine', 'EngineData')
         self._servicer = EngineDataServicerImpl(self)
         try:
             self._source_function = resolve_ref(self._source)

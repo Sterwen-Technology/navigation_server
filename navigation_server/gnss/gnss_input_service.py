@@ -89,7 +89,7 @@ class GNSSInput(NMEA2000Application, GrpcService):
 
     def finalize(self):
         try:
-            GrpcService.finalize(self)
+            GrpcService.finalize(self, 'GNSS_Input', 'GNSS_Input')
         except GrpcServerError:
             return
         _logger.info("Adding service %s to server" % self._name)

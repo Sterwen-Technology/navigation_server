@@ -188,7 +188,7 @@ class Console(GrpcService):
         self._main_server = None
 
     def finalize(self):
-        super().finalize()
+        super().finalize('Console', 'NavigationConsole')
         add_NavigationConsoleServicer_to_server(ConsoleServicer(self), self.grpc_server)
         self._main_server = MessageServerGlobals.configuration.main_server
 

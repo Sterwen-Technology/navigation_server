@@ -42,6 +42,7 @@ message SystemProcessMsg {
   string name=2;
   ProcessState state=3;
   uint32 grpc_port = 4;  // port gRPC based communication
+  bool secure_grpc = 16;  // true when secure gRPC is enabled
   bool console_present = 13;  //True when console is present
   string status=5;
   uint32 error=6;
