@@ -340,46 +340,27 @@ class NavigationSystemCollector:
                 return {"ok": False, "error": f"System command '{cmd}' failed"}
             return {"ok": True, "err_code": err}
 
-    def get_log(self, process_name: str) -> list:
-        """Fetch system logs for a process via the agent GetSystemLog stream.
+    def start_log_stream(self, process_name: str, line_callback) -> bool:
+        """Start streaming logs for a process via the agent GetSystemLog.
 
-        The gRPC stream is read in a separate thread with a timeout so that
-        it does not block the HTTP server. The lock is only held briefly to
-        initiate the connection, not during the stream read.
+        Uses the callback-based streaming reader (non-blocking). The
+        line_callback is invoked for each received log line. Only one log
+        stream can be active at a time (agent limitation).
         """
-        # Brief connection check under lock.
         with self._lock:
             self._connect()
             if self._server.not_connected:
-                return ["Error: Agent gRPC server unreachable"]
+                return False
+        try:
+            self._agent.get_log(process_name, line_callback)
+        except GrpcAccessException:
+            _logger.error(f"Error starting log stream for {process_name}")
+            return False
+        return True
 
-        # Collect lines in a background thread to avoid blocking.
-        result = {"lines": [], "done": threading.Event()}
-
-        def _collect():
-            try:
-                count = 0
-                for line in self._agent.get_log_msg(process_name):
-                    result["lines"].append(line)
-                    count += 1
-                    if count >= 500:
-                        result["lines"].append("... (truncated at 500 lines)")
-                        break
-            except GrpcAccessException:
-                result["lines"].append("Error: Cannot fetch logs for " + process_name)
-            except Exception as e:
-                result["lines"].append(f"Error: {e}")
-            finally:
-                result["done"].set()
-
-        collector = threading.Thread(target=_collect, daemon=True)
-        collector.start()
-        # Wait up to 8 seconds for the log stream.
-        result["done"].wait(timeout=8.0)
-        if not result["done"].is_set():
-            # The stream is still going (likely infinite); return what we have.
-            result["lines"].append("... (timeout, partial log)")
-        return result["lines"]
+    def stop_log_stream(self):
+        """Stop the active log stream."""
+        self._agent.stop_log()
 
     def network_status(self) -> dict:
         with self._lock:
@@ -486,10 +467,10 @@ class _RequestHandler(BaseHTTPRequestHandler):
             self._serve_json(self.collector.network_status())
         elif path == "/api/network/configs":
             self._serve_json(self.collector.network_configurations())
-        elif path.startswith("/api/log/"):
-            process_name = path[len("/api/log/"):]
+        elif path.startswith("/api/log/stream/"):
+            process_name = path[len("/api/log/stream/"):]
             if process_name:
-                self._serve_json({"ok": True, "lines": self.collector.get_log(process_name)})
+                self._serve_log_stream(process_name)
             else:
                 self._serve_json({"ok": False, "error": "missing process name"},
                                  status=HTTPStatus.BAD_REQUEST)
@@ -532,6 +513,9 @@ class _RequestHandler(BaseHTTPRequestHandler):
                                  status=HTTPStatus.BAD_REQUEST)
                 return
             self._serve_json(self.collector.set_global_configuration(config_name))
+        elif path == "/api/log/stop":
+            self.collector.stop_log_stream()
+            self._serve_json({"ok": True})
         elif path == "/api/coupler":
             process = body.get("process")
             coupler = body.get("coupler")
@@ -554,6 +538,58 @@ class _RequestHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(data)
+
+    def _serve_log_stream(self, process_name: str):
+        """Stream log lines to the client via Server-Sent Events (SSE).
+
+        The gRPC log stream is started with a callback that pushes each line
+        as an SSE event. The connection stays open until the client
+        disconnects or the stream ends.
+        """
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Connection", "keep-alive")
+        self.end_headers()
+
+        import queue
+        line_queue = queue.Queue(maxsize=200)
+        client_disconnected = [False]
+
+        def on_line(msg):
+            try:
+                # msg is a LogLines protobuf; extract the line string
+                line_text = msg.line if hasattr(msg, 'line') else str(msg)
+                line_queue.put_nowait(line_text)
+            except queue.Full:
+                pass
+
+        # Start the gRPC log stream
+        started = self.collector.start_log_stream(process_name, on_line)
+        if not started:
+            self.wfile.write(b"event: error\ndata: Cannot start log stream\n\n")
+            self.wfile.flush()
+            return
+
+        self.wfile.write(b"event: started\ndata: ok\n\n")
+        self.wfile.flush()
+
+        try:
+            while not client_disconnected[0]:
+                try:
+                    line = line_queue.get(timeout=1.0)
+                    # SSE format: escape newlines in the data
+                    data = line.replace("\n", "\ndata: ")
+                    self.wfile.write(f"data: {data}\n\n".encode("utf-8"))
+                    self.wfile.flush()
+                except queue.Empty:
+                    # Send a keepalive comment
+                    self.wfile.write(b": keepalive\n\n")
+                    self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            client_disconnected[0] = True
+        finally:
+            self.collector.stop_log_stream()
 
     def _serve_static(self, relative_path: str, content_type: str = None):
         # Guard against path traversal.

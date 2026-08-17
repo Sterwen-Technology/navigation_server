@@ -219,11 +219,12 @@
             <div class="modal-header">
                 <h2 id="log-title">Logs</h2>
                 <div>
-                    <button onclick="refreshLog()" title="Rafraîchir" style="margin-right:8px;">⟳</button>
+                    <button id="log-start-btn" onclick="startLogStream()" title="Démarrer">▶ Start</button>
+                    <button id="log-stop-btn" onclick="stopLogStream()" title="Arrêter" disabled>■ Stop</button>
                     <button class="modal-close" onclick="closeLog()" title="Fermer">&times;</button>
                 </div>
             </div>
-            <div id="log-body" class="log-content">Chargement…</div>
+            <div id="log-body" class="log-content">Cliquez sur Start pour démarrer le flux de logs…</div>
         </div>
     </div>
 
@@ -554,32 +555,60 @@
         }
 
         let logProcess = null;
-        let logTimer = null;
+        let logEventSource = null;
 
-        async function openLog(processName) {
+        function openLog(processName) {
             logProcess = processName;
             $("log-title").textContent = `Logs — ${processName}`;
-            $("log-body").textContent = "Chargement…";
+            $("log-body").textContent = "";
             $("log-modal").classList.add("show");
-            await refreshLog();
+            // Auto-start the stream
+            startLogStream();
         }
 
-        async function refreshLog() {
+        function startLogStream() {
             if (!logProcess) return;
-            try {
-                const d = await apiGet(`/api/log/${encodeURIComponent(logProcess)}`);
-                if (d.ok) {
-                    $("log-body").textContent = (d.lines || []).join("\n") || "(vide)";
-                    $("log-body").scrollTop = $("log-body").scrollHeight;
-                } else {
-                    $("log-body").textContent = d.error || "Erreur";
-                }
-            } catch (e) {
-                $("log-body").textContent = "Erreur: " + e.message;
+            if (logEventSource) {
+                logEventSource.close();
+                logEventSource = null;
             }
+            $("log-body").textContent = "";
+            $("log-start-btn").disabled = true;
+            $("log-stop-btn").disabled = false;
+            logEventSource = new EventSource(`/api/log/stream/${encodeURIComponent(logProcess)}`);
+            logEventSource.addEventListener("started", () => {
+                appendLogLine("--- Flux démarré ---");
+            });
+            logEventSource.addEventListener("error", (e) => {
+                if (e.data) appendLogLine("ERREUR: " + e.data);
+                stopLogStream();
+            });
+            logEventSource.onmessage = (e) => {
+                appendLogLine(e.data);
+            };
+        }
+
+        async function stopLogStream() {
+            if (logEventSource) {
+                logEventSource.close();
+                logEventSource = null;
+            }
+            $("log-start-btn").disabled = false;
+            $("log-stop-btn").disabled = true;
+            appendLogLine("--- Flux arrêté ---");
+            try {
+                await apiPost("/api/log/stop", {});
+            } catch (e) { /* ignore */ }
+        }
+
+        function appendLogLine(line) {
+            const body = $("log-body");
+            body.textContent += line + "\n";
+            body.scrollTop = body.scrollHeight;
         }
 
         function closeLog() {
+            stopLogStream();
             $("log-modal").classList.remove("show");
             logProcess = null;
         }
@@ -655,7 +684,8 @@
         window.systemCmd = systemCmd;
         window.systemCmdConfirm = systemCmdConfirm;
         window.openLog = openLog;
-        window.refreshLog = refreshLog;
+        window.startLogStream = startLogStream;
+        window.stopLogStream = stopLogStream;
         window.closeLog = closeLog;
         window.openNetwork = openNetwork;
         window.closeNetwork = closeNetwork;
