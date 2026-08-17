@@ -164,6 +164,21 @@
             margin-bottom: 8px; font-size: 0.82rem;
         }
         .coupler-card { padding: 12px; }
+        .secure-badge { font-size: 0.75rem; color: var(--green); margin-left: 4px; }
+        .log-content {
+            background: #0b1120; border: 1px solid var(--border);
+            border-radius: 6px; padding: 12px; font-family: ui-monospace, monospace;
+            font-size: 0.78rem; max-height: 60vh; overflow-y: auto;
+            white-space: pre-wrap; word-break: break-all; color: #cbd5e1;
+        }
+        .net-interface {
+            background: var(--panel); border-radius: 8px; padding: 10px 12px;
+            margin-bottom: 8px; font-size: 0.82rem;
+        }
+        .net-config-select {
+            background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+            padding: 6px 10px; border-radius: 6px; font-size: 0.82rem; margin-left: 8px;
+        }
     </style>
 </head>
 <body>
@@ -178,6 +193,8 @@
             <label style="font-size:0.8rem; color:var(--muted); display:inline-flex; gap:4px; align-items:center;">
                 <input type="checkbox" id="auto-refresh" checked> auto (5s)
             </label>
+            <button onclick="systemCmdConfirm('navigation_restart')" title="Redémarrer tous les processus">⟲ Restart App</button>
+            <button class="open-btn" onclick="openNetwork()">⚙ Network</button>
         </div>
     </header>
     <main>
@@ -195,6 +212,29 @@
                 <button class="modal-close" onclick="closeConsole()" title="Fermer">&times;</button>
             </div>
             <div id="console-body"><div class="empty">Chargement…</div></div>
+        </div>
+    </div>
+
+    <div id="log-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="log-title">Logs</h2>
+                <div>
+                    <button onclick="refreshLog()" title="Rafraîchir" style="margin-right:8px;">⟳</button>
+                    <button class="modal-close" onclick="closeLog()" title="Fermer">&times;</button>
+                </div>
+            </div>
+            <div id="log-body" class="log-content">Chargement…</div>
+        </div>
+    </div>
+
+    <div id="network-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Configuration réseau</h2>
+                <button class="modal-close" onclick="closeNetwork()" title="Fermer">&times;</button>
+            </div>
+            <div id="network-body"><div class="empty">Chargement…</div></div>
         </div>
     </div>
 
@@ -291,8 +331,8 @@
                 <div class="row"><span class="k">Démarré le</span><span class="v">${fmt(s.start_time)}</span></div>
                 <div class="row"><span class="k">Configuration</span><span class="v">${fmt(s.settings)}</span></div>
                 <div class="card-actions">
-                    <button class="danger" onclick="systemCmd('halt')">⏻ Halt</button>
-                    <button class="danger" onclick="systemCmd('reboot')">⟲ Reboot</button>
+                    <button class="danger" onclick="systemCmdConfirm('halt')">⏻ Halt</button>
+                    <button class="danger" onclick="systemCmdConfirm('reboot')">⟲ Reboot</button>
                 </div>
             `;
 
@@ -322,17 +362,20 @@
             const openBtn = p.console_present
                 ? `<button class="open-btn" onclick="openConsole('${escapeHtml(p.name)}')">⤓ Open</button>`
                 : '';
+            const logBtn = p.is_systemd
+                ? `<button onclick="openLog('${escapeHtml(p.name)}')">📋 Log</button>`
+                : '';
             return `
                 <div class="card">
                     <h2>
                         <span class="proc-name">${escapeHtml(p.name)}</span>
+                        ${p.secure_grpc ? '<span class="secure-badge" title="TLS">🔒</span>' : ''}
                         <span class="badge ${p.state}">${p.state}</span>
                     </h2>
                     <div class="row"><span class="k">PID</span><span class="v">${fmt(p.pid)}</span></div>
                     <div class="row"><span class="k">Port gRPC</span><span class="v">${fmt(p.grpc_port)}</span></div>
                     <div class="row"><span class="k">Version</span><span class="v">${fmt(p.version)}</span></div>
                     <div class="row"><span class="k">Démarré</span><span class="v">${fmt(p.start_time)}</span></div>
-                    <div class="row"><span class="k">Objectif</span><span class="v">${fmt(p.purpose)}</span></div>
                     ${p.status ? `<div class="row"><span class="k">Statut</span><span class="v">${fmt(p.status)}</span></div>` : ""}
                     ${p.error ? `<div class="row"><span class="k">Erreur</span><span class="v" style="color:var(--red)">${fmt(p.error)}</span></div>` : ""}
                     ${p.console_present ? '<div class="row"><span class="k">Console</span><span class="v">présente</span></div>' : ""}
@@ -343,6 +386,7 @@
                         ${stopBtn}
                         ${restartBtn}
                         ${openBtn}
+                        ${logBtn}
                     </div>
                 </div>
             `;
@@ -496,8 +540,126 @@
             }
         }
 
+        async function systemCmdConfirm(cmd) {
+            const labels = {halt: 'arrêter le système', reboot: 'redémarrer le système',
+                            navigation_restart: 'redémarrer TOUS les processus (y compris l\'agent)'};
+            if (!confirm(`Confirmer : ${labels[cmd] || cmd} ?`)) return;
+            try {
+                const r = await apiPost("/api/system", { cmd });
+                toast(`${cmd}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
+                if (r.ok) setTimeout(refresh, 1500);
+            } catch (e) {
+                toast("Erreur: " + e.message, false);
+            }
+        }
+
+        let logProcess = null;
+        let logTimer = null;
+
+        async function openLog(processName) {
+            logProcess = processName;
+            $("log-title").textContent = `Logs — ${processName}`;
+            $("log-body").textContent = "Chargement…";
+            $("log-modal").classList.add("show");
+            await refreshLog();
+        }
+
+        async function refreshLog() {
+            if (!logProcess) return;
+            try {
+                const d = await apiGet(`/api/log/${encodeURIComponent(logProcess)}`);
+                if (d.ok) {
+                    $("log-body").textContent = (d.lines || []).join("\n") || "(vide)";
+                    $("log-body").scrollTop = $("log-body").scrollHeight;
+                } else {
+                    $("log-body").textContent = d.error || "Erreur";
+                }
+            } catch (e) {
+                $("log-body").textContent = "Erreur: " + e.message;
+            }
+        }
+
+        function closeLog() {
+            $("log-modal").classList.remove("show");
+            logProcess = null;
+        }
+
+        async function openNetwork() {
+            $("network-modal").classList.add("show");
+            $("network-body").innerHTML = '<div class="empty">Chargement…</div>';
+            try {
+                const [status, configs] = await Promise.all([
+                    apiGet("/api/network"),
+                    apiGet("/api/network/configs"),
+                ]);
+                renderNetwork(status, configs);
+            } catch (e) {
+                $("network-body").innerHTML = `<div class="empty">Erreur: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        function renderNetwork(status, configs) {
+            const body = $("network-body");
+            if (!status.ok) {
+                body.innerHTML = `<div class="empty">${escapeHtml(status.error || "Erreur")}</div>`;
+                return;
+            }
+            const interfaces = (status.interfaces || []).map(iface => `
+                <div class="net-interface">
+                    <strong>${escapeHtml(iface.name)}</strong>
+                    · ${escapeHtml(iface.type)}
+                    · ${escapeHtml(iface.state)}
+                    ${iface.function ? `· ${escapeHtml(iface.function)}` : ""}
+                    ${iface.device_name ? `· ${escapeHtml(iface.device_name)}` : ""}
+                    ${iface.connection_name ? `<br><span style="color:var(--muted)">Connexion: ${escapeHtml(iface.connection_name)}</span>` : ""}
+                </div>
+            `).join("");
+
+            const configOptions = (configs.ok ? (configs.configurations || []) : [])
+                .map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+
+            body.innerHTML = `
+                <div class="console-section">
+                    <h3>NetworkManager: ${status.nm_running ? 'actif' : 'inactif'} ${status.status ? '· ' + escapeHtml(status.status) : ''}</h3>
+                    ${interfaces || '<div class="empty">Aucune interface.</div>'}
+                </div>
+                <div class="console-section">
+                    <h3>Configurations globales</h3>
+                    <div class="card-actions">
+                        <select id="net-config-select" class="net-config-select">${configOptions}</select>
+                        <button onclick="applyNetworkConfig()">Appliquer</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function applyNetworkConfig() {
+            const sel = $("net-config-select");
+            if (!sel) return;
+            const config = sel.value;
+            if (!confirm(`Appliquer la configuration réseau "${config}" ?`)) return;
+            try {
+                const r = await apiPost("/api/network/config", { configuration: config });
+                toast(`Configuration ${config}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
+                if (r.ok) setTimeout(openNetwork, 1000);
+            } catch (e) {
+                toast("Erreur: " + e.message, false);
+            }
+        }
+
+        function closeNetwork() {
+            $("network-modal").classList.remove("show");
+        }
+
         window.procCmd = procCmd;
         window.systemCmd = systemCmd;
+        window.systemCmdConfirm = systemCmdConfirm;
+        window.openLog = openLog;
+        window.refreshLog = refreshLog;
+        window.closeLog = closeLog;
+        window.openNetwork = openNetwork;
+        window.closeNetwork = closeNetwork;
+        window.applyNetworkConfig = applyNetworkConfig;
         window.openConsole = openConsole;
         window.closeConsole = closeConsole;
         window.couplerCmd = couplerCmd;

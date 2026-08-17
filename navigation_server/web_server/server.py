@@ -328,8 +328,8 @@ class NavigationSystemCollector:
             return {"ok": True, "response": resp.response}
 
     def system_cmd(self, cmd: str) -> dict:
-        """Send a system command (halt/reboot) to the agent."""
-        if cmd not in ("halt", "reboot"):
+        """Send a system command (halt/reboot/navigation_restart) to the agent."""
+        if cmd not in ("halt", "reboot", "navigation_restart"):
             return {"ok": False, "error": f"Unsupported system command: {cmd}"}
         with self._lock:
             self._connect()
@@ -339,6 +339,29 @@ class NavigationSystemCollector:
             if err is None:
                 return {"ok": False, "error": f"System command '{cmd}' failed"}
             return {"ok": True, "err_code": err}
+
+    def get_log(self, process_name: str) -> list:
+        """Fetch system logs for a process via the agent GetSystemLog stream.
+
+        Collects a bounded number of lines (the agent can only handle one log
+        stream at a time). Returns a list of log line strings.
+        """
+        lines = []
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return ["Error: Agent gRPC server unreachable"]
+            try:
+                count = 0
+                for line in self._agent.get_log_msg(process_name):
+                    lines.append(line)
+                    count += 1
+                    if count >= 500:
+                        lines.append("... (truncated at 500 lines)")
+                        break
+            except GrpcAccessException:
+                return ["Error: Cannot fetch logs for " + process_name]
+        return lines
 
     def network_status(self) -> dict:
         with self._lock:
@@ -368,6 +391,32 @@ class NavigationSystemCollector:
                 "nm_running": status.nm_running,
                 "interfaces": interfaces,
             }
+
+    def network_configurations(self) -> dict:
+        """Return the available global network configurations."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            net = self._ensure_network()
+            try:
+                reply = net.get_global_configuration()
+            except GrpcAccessException:
+                return {"ok": False, "error": "Network service unavailable"}
+            return {"ok": True, "configurations": reply.configuration_names()}
+
+    def set_global_configuration(self, config_name: str) -> dict:
+        """Apply a global network configuration."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            net = self._ensure_network()
+            try:
+                net.set_global_configuration(config_name)
+            except GrpcAccessException:
+                return {"ok": False, "error": "Network service unavailable"}
+            return {"ok": True, "configuration": config_name}
 
 
 def _validate_coupler_cmd(cmd: str, state: str) -> tuple:
@@ -417,6 +466,15 @@ class _RequestHandler(BaseHTTPRequestHandler):
             self._serve_json(self.collector.system_status())
         elif path == "/api/network":
             self._serve_json(self.collector.network_status())
+        elif path == "/api/network/configs":
+            self._serve_json(self.collector.network_configurations())
+        elif path.startswith("/api/log/"):
+            process_name = path[len("/api/log/"):]
+            if process_name:
+                self._serve_json({"ok": True, "lines": self.collector.get_log(process_name)})
+            else:
+                self._serve_json({"ok": False, "error": "missing process name"},
+                                 status=HTTPStatus.BAD_REQUEST)
         elif path.startswith("/api/console/"):
             process_name = path[len("/api/console/"):]
             if process_name:
@@ -449,6 +507,13 @@ class _RequestHandler(BaseHTTPRequestHandler):
                                  status=HTTPStatus.BAD_REQUEST)
                 return
             self._serve_json(self.collector.system_cmd(cmd))
+        elif path == "/api/network/config":
+            config_name = body.get("configuration")
+            if not config_name:
+                self._serve_json({"ok": False, "error": "missing 'configuration'"},
+                                 status=HTTPStatus.BAD_REQUEST)
+                return
+            self._serve_json(self.collector.set_global_configuration(config_name))
         elif path == "/api/coupler":
             process = body.get("process")
             coupler = body.get("coupler")
