@@ -101,8 +101,11 @@ class NavigationSystemCollector:
         port = self._agent.get_port(process_name)
         if port == 0:
             return None, None
+        # Determine the TLS mode from the process status: each process can
+        # have its own secure_grpc flag, independent of the agent.
+        secure = self._get_process_secure(process_name)
         server_key = f"{self._address}:{port}"
-        grpc_server = GrpcClient.get_client(server_key, secure=self._secure)
+        grpc_server = GrpcClient.get_client(server_key, secure=secure)
         console = ConsoleClient()
         grpc_server.add_service(console)
         grpc_server.connect()
@@ -110,6 +113,19 @@ class NavigationSystemCollector:
         pair = (grpc_server, console)
         self._consoles[process_name] = pair
         return pair
+
+    def _get_process_secure(self, process_name: str) -> bool:
+        """Determine whether a process uses TLS on its gRPC port.
+
+        Falls back to the global agent secure flag if the process is not
+        found in the latest system status.
+        """
+        system = self._agent.system_cmd("status")
+        if system is not None:
+            for proc in system.get_processes():
+                if proc.name == process_name:
+                    return proc.secure_grpc
+        return self._secure
 
     def console_status(self, process_name: str) -> dict:
         """Return the console view (servers + couplers) of a process."""
@@ -274,6 +290,7 @@ class NavigationSystemCollector:
                 "name": proc.name,
                 "state": proc.state,
                 "grpc_port": proc.grpc_port,
+                "secure_grpc": proc.secure_grpc,
                 "console_present": proc.console_present,
                 "status": proc.status,
                 "error": proc.error,
