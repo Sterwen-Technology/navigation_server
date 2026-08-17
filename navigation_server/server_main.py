@@ -18,7 +18,7 @@ from navigation_server.router_common import (NavigationConfiguration, Navigation
                                              init_options, set_root_package, ConfigurationException, AgentInterface,
                                              ObjectCreationError, GrpcServer, GrpcClient, ObjectFatalError)
 
-MessageServerGlobals.version = "2.8.3"
+MessageServerGlobals.version = "3.0.0"
 default_base_dir = "/"
 _logger = logging.getLogger("ShipDataServer.main")
 
