@@ -67,15 +67,15 @@ class GrpcServer(NavigationServer):
         # from 2.7.0 support of dual stack IPV4-IPV6
         address = f"[::]:{self._port}"
         self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=nb_threads))
-        # 16/8/26 change and by or to have a correct test
-        if not self._secure or not MessageServerGlobals.configuration.secure_communications:
-            _logger.warning(f"Secure communications not selected for {MessageServerGlobals.server_name}")
-            self._grpc_server.add_insecure_port(address)
-        else:
-            _logger.info(f"Secure communications selected for {MessageServerGlobals.server_name}")
+        # 16/8/26 change and by or to have a correct test - 17/8 reverse
+        if self._secure or MessageServerGlobals.configuration.secure_communications:
+            _logger.info(f"SgRPC Server - Secure communications selected for {MessageServerGlobals.server_name}")
             credentials = grpc.ssl_server_credentials([(MessageServerGlobals.configuration.server_key,
-                                                         MessageServerGlobals.configuration.server_cert), ])
+                                                        MessageServerGlobals.configuration.server_cert), ])
             self._grpc_server.add_secure_port(address, credentials)
+        else:
+            _logger.warning(f"gRPC Server - Secure communications not selected for {MessageServerGlobals.server_name}")
+            self._grpc_server.add_insecure_port(address)
 
         GrpcServer.grpc_server_global = self
         self._running = False
