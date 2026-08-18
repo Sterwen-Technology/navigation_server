@@ -219,7 +219,8 @@ class NavigationConfiguration:
         self._server_purpose = None
         NavigationConfiguration._instance = self
         MessageServerGlobals.configuration = self
-        self._secure_grpc = False # This is the fleg from the configuration file
+        self._enable_secure_grpc = False # This is the fleg from the configuration file
+        self._force_secure_grpc = False  # that flag indicates that all gRPC connections must be secured
         self._secure_communications = False # That is the resulting flag after reading all certificates
         self._ca_cert = None
         self._server_key = None
@@ -297,8 +298,9 @@ class NavigationConfiguration:
         MessageServerGlobals.trace_dir = trace_dir
 
         # secure communication section
-        self._secure_grpc = self._configuration.get('secure_grpc', False)
-        if self._secure_grpc:
+        self._enable_secure_grpc = self._configuration.get('enable_secure_grpc', False)
+        self._force_secure_grpc = self._configuration.get('force_secure_grpc', False)
+        if self._enable_secure_grpc:
             _logger.info("Secure GRPC enabled, looking for certificates")
             use_conf_certificates = True
             try:
@@ -355,6 +357,10 @@ class NavigationConfiguration:
 
         else:
             _logger.warning("Secure gRPC communication disabled by configuration")
+
+        if self._force_secure_grpc and not self._secure_communications:
+            _logger.error("Force secure gRPC communication disabled as secure communication disabled by configuration")
+            self._force_secure_grpc = False
 
         if self._configuration.get('connect_agent', True):
             try:
@@ -598,6 +604,10 @@ class NavigationConfiguration:
     @property
     def secure_communications(self) -> bool:
         return self._secure_communications
+
+    @property
+    def force_secure_grpc(self) -> bool:
+        return self._force_secure_grpc
 
     @property
     def ca_certificate(self):
