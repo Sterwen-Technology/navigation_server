@@ -19,12 +19,14 @@ trace_dir: /var/log
 # Set connect_agent to false to skip agent registration (the web server is not
 # a managed process, it only queries the agent).
 connect_agent: false
+enable_secure_grpc: true
+
 features:
     - web_server
 servers:
 - Main:
       class: WebTopServer
       host: 0.0.0.0
-      port: 4545
-      grpc_address: 127.0.0.1
+      port: 8080
+      grpc_address: 192.168.1.28
       grpc_port: 4545

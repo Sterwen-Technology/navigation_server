@@ -32,7 +32,7 @@ from navigation_server.router_common.agent_interface import AgentClient
 from navigation_server.navigation_clients import NetworkClient
 from navigation_server.navigation_clients.console_client import ConsoleClient
 
-_logger = logging.getLogger("ShipDataServer")
+_logger = logging.getLogger("ShipDataServer." + __name__)
 
 # Path to the directory containing the static frontend assets (index.html ...).
 # This allows the package to be installed as a wheel while still serving the

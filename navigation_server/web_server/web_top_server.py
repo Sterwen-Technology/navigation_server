@@ -56,7 +56,7 @@ class WebTopServer(GenericTopServer):
         # web server connects to the agent with the same TLS policy as the
         # rest of the deployment.
         config = MessageServerGlobals.configuration
-        secure = config.secure_communications
+        secure = config.client_secure_communications
 
         self._web_server = NavigationWebServer(
             host=web_host,
