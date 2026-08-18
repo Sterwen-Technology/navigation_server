@@ -138,7 +138,7 @@ class ProcessABC:
 
     def start_confirmation(self, process_msg: SystemProcessMsg):
         self._process_msg = process_msg
-        self.debug_msg_attributes(['name', 'state', 'grpc_port', 'version', 'start_time', 'console_present', 'pid'])
+        self.debug_msg_attributes(['name', 'state', 'grpc_port', 'version', 'start_time', 'console_present', 'pid', 'secure_grpc'])
         self._state = self.RUNNING
         self._pid = process_msg.pid
 
@@ -408,9 +408,11 @@ class AgentServicerImpl(AgentServicer):
             if journal_proc:
                 journal_proc.terminate()
 
+    process_attributes = ['grpc_port', 'version', 'start_time', 'console_present', 'pid', 'secure_grpc', 'hostname',
+                          'settings']
     def fill_process_response(self, process, resp):
         if process.is_controlled:
-            copy_protobuf_data(process, resp, ['grpc_port', 'version', 'start_time', 'console_present'])
+            copy_protobuf_data(process, resp, self.process_attributes)
         resp.state = ProcessState.RUNNING
         resp.name = process.name
         if isinstance(process, SystemdProcess):
@@ -426,7 +428,7 @@ class AgentServicerImpl(AgentServicer):
             # process is running
             resp.err_code = 0
             resp.response = f"process {process.name} is running"
-            process.debug_msg_attributes(['name', 'grpc_port', 'version', 'start_time', 'console_present'])
+            process.debug_msg_attributes(self.process_attributes)
             self.fill_process_response(process, resp.process)
         elif code == 3:
             # process is not running
