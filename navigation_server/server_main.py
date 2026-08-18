@@ -51,7 +51,7 @@ def server_main():
     # dynamically import modules declared in the configuration file
     config.initialize_features(config)
     # check security
-    if config.secure_communications and config.ca_certificate is not None:
+    if config.client_secure_communications:
         GrpcClient.set_ca_certificate(config.ca_certificate)
         _logger.info("Secure communications enabled")
     # create all server or service objects
@@ -75,10 +75,10 @@ def server_main():
         if not config.main_server.is_agent():
             if has_grpc_server and config.get_option('connect_agent', True):
                 unsecure_agent = config.get_option('unsecure_agent', False)
-                if not unsecure_agent and not config.secure_communications:
+                if not unsecure_agent and not config.client_secure_communications:
                     _logger.warning("Secure gRPC is disabled but secure agent is set => trying unsecure agent")
                     unsecure_agent = True
-                elif unsecure_agent and config.secure_communications:
+                elif unsecure_agent and config.client_secure_communications:
                     _logger.warning("Secure gRPC is enabled but unsecure agent is set => trying secure agent")
                     unsecure_agent = False
                 agent = AgentInterface(unsecure_agent).send_confirmation()
