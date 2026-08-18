@@ -51,7 +51,7 @@ def server_main():
     # dynamically import modules declared in the configuration file
     config.initialize_features(config)
     # check security
-    if config.secure_communications and config.ca_certificate is not None:
+    if config.client_secure_communications:
         GrpcClient.set_ca_certificate(config.ca_certificate)
         _logger.info("Secure communications enabled")
     # create all server or service objects
