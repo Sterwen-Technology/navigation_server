@@ -14,7 +14,7 @@ import logging
 import queue
 import threading
 
-from navigation_server.router_common import GrpcAccessException, NavThread
+from navigation_server.router_common import GrpcAccessException, NavThread, MessageServerGlobals
 from navigation_server.generated.grpc_control_pb2 import GrpcCommand, GrpcAck
 from navigation_server.generated.grpc_control_pb2_grpc import NavigationGrpcControlStub
 
@@ -46,12 +46,16 @@ class GrpcClient:
 
     @classmethod
     def get_client(cls, server, use_request_id:bool = True, secure:bool = False):
+        # secure flag is Or'ed with the global force_secure_grpc (V3.0)
+        secure = secure or MessageServerGlobals.configuration.force_secure_grpc
         try:
             client = cls.clients[server]
             if client.secure != secure:
+                _logger.error(f"GrpcClient for {server} sec={client.secure} req-sec={secure}")
                 raise GrpcAccessException("Mismatch between secure and non-secure client")
         except KeyError:
             pass
+        _logger.debug(f"GrpcClient for {server} created with secure={secure}")
         client = GrpcClient(server, use_request_id, secure)
         cls.clients[server] = client
         return client

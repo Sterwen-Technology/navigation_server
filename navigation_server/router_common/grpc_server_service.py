@@ -67,8 +67,10 @@ class GrpcServer(NavigationServer):
         # from 2.7.0 support of dual stack IPV4-IPV6
         address = f"[::]:{self._port}"
         self._grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=nb_threads))
-        # 16/8/26 change and by or to have a correct test - 17/8 reverse
-        if self._secure or MessageServerGlobals.configuration.secure_communications:
+        # 18/8/26 (V3.0) conditions to have secure gRPC communications:
+        #  The certificates have been successfully loaded so credential are available
+        #  The secure flag from the server or of the global flag (force_secure_grpc) must be True
+        if (self._secure or MessageServerGlobals.configuration.force_secure_grpc) and MessageServerGlobals.configuration.secure_communications:
             _logger.info(f"SgRPC Server - Secure communications selected for {MessageServerGlobals.server_name}")
             credentials = grpc.ssl_server_credentials([(MessageServerGlobals.configuration.server_key,
                                                         MessageServerGlobals.configuration.server_cert), ])
