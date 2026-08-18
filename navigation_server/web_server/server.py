@@ -32,7 +32,7 @@ from navigation_server.router_common.agent_interface import AgentClient
 from navigation_server.navigation_clients import NetworkClient
 from navigation_server.navigation_clients.console_client import ConsoleClient
 
-_logger = logging.getLogger("ShipDataServer." + __name__)
+_logger = logging.getLogger("ShipDataServer")
 
 # Path to the directory containing the static frontend assets (index.html ...).
 # This allows the package to be installed as a wheel while still serving the
@@ -117,14 +117,13 @@ class NavigationSystemCollector:
     def _get_process_secure(self, process_name: str) -> bool:
         """Determine whether a process uses TLS on its gRPC port.
 
-        Falls back to the global agent secure flag if the process is not
-        found in the latest system status.
+        Queries the process status directly via the AgentCmd RPC instead of
+        fetching the full system status. Falls back to the global agent secure
+        flag if the process status cannot be retrieved.
         """
-        system = self._agent.system_cmd("status")
-        if system is not None:
-            for proc in system.get_processes():
-                if proc.name == process_name:
-                    return proc.secure_grpc
+        resp = self._agent.process_cmd("status", process_name)
+        if resp is not None:
+            return resp.process_proxy.secure_grpc
         return self._secure
 
     def console_status(self, process_name: str) -> dict:
