@@ -1,0 +1,30 @@
+#-------------------------------------------------------------------------------
+# Name:        web_server.yml
+# Purpose:     Settings file for the standalone Web interface process
+#              The web server is the main (and only) server of the process.
+#              It connects to a navigation agent via gRPC and exposes a web UI.
+#
+# Author:      Vibe Code
+#
+# Created:     17/08/2025
+# Copyright:   (c) Sterwen Technology 2021-2025
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+function: Web interface server
+server_name: navigation_web
+log_level: INFO
+trace_dir: /var/log
+# The web server does not host a local gRPC server; it is a client of the agent.
+# Set connect_agent to false to skip agent registration (the web server is not
+# a managed process, it only queries the agent).
+connect_agent: false
+features:
+    - web_server
+servers:
+- Main:
+      class: WebTopServer
+      host: 0.0.0.0
+      port: 4545
+      grpc_address: 127.0.0.1
+      grpc_port: 4545

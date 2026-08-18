@@ -66,12 +66,14 @@ def server_main():
         return
 
     assert MessageServerGlobals.main_server is not None
-    assert GrpcServer.grpc_server_global is not None
+    has_grpc_server = GrpcServer.grpc_server_global is not None
+    if not has_grpc_server and not config.main_server.is_agent():
+        _logger.info("No local gRPC server configured (e.g. web interface only process)")
     _logger.debug("Starting the main server")
     if config.main_server.start():
         # register the process in agent service if needed
         if not config.main_server.is_agent():
-            if config.get_option('connect_agent', True):
+            if has_grpc_server and config.get_option('connect_agent', True):
                 unsecure_agent = config.get_option('unsecure_agent', False)
                 if not unsecure_agent and not config.secure_communications:
                     _logger.warning("Secure gRPC is disabled but secure agent is set => trying unsecure agent")

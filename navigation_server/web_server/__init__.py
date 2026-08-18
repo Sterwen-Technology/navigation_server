@@ -9,3 +9,4 @@
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 from .server import NavigationWebServer, web_main
+from .web_top_server import WebTopServer
