@@ -221,7 +221,8 @@ class NavigationConfiguration:
         MessageServerGlobals.configuration = self
         self._enable_secure_grpc = False # This is the fleg from the configuration file
         self._force_secure_grpc = False  # that flag indicates that all gRPC connections must be secured
-        self._secure_communications = False # That is the resulting flag after reading all certificates
+        self._server_secure_communications = False # That is the resulting flag after reading all certificates
+        self._client_secure_communications = False
         self._ca_cert = None
         self._server_key = None
         self._server_cert = None
@@ -300,67 +301,84 @@ class NavigationConfiguration:
         # secure communication section
         self._enable_secure_grpc = self._configuration.get('enable_secure_grpc', False)
         self._force_secure_grpc = self._configuration.get('force_secure_grpc', False)
+        certificate_dir = None
         if self._enable_secure_grpc:
             _logger.info("Secure GRPC enabled, looking for certificates")
-            use_conf_certificates = True
+            use_conf_directory = False
             try:
                 key_dir = self._configuration['ssl_key_dir']
-                use_conf_certificates = False
+                use_conf_directory = True
             except KeyError:
                 _logger.info("Missing ssl_key_dir in configuration file => using configuration default")
 
-            if not use_conf_certificates:
+
+            if use_conf_directory:
                 if not os.path.isdir(key_dir):
                     _logger.info(f"Key directory from configuration {key_dir} does not exist")
-                    if os.getenv('NAV_CONF_DIR') is not None:
-                        cert_dir = os.getenv('NAV_CONF_DIR')
-                    else:
-                        cert_dir = os.getenv('HOME')
-                    key_dir = os.path.join(cert_dir, 'certificates')
-                    if not os.path.isdir(key_dir):
-                        _logger.info(f"Default key directory {key_dir} does not exist")
-                        use_conf_certificates = True
+                    use_conf_directory = False
                 else:
-                    self.set_global('ssl_key_dir', key_dir)
+                    certificate_dir = key_dir
 
-            if use_conf_certificates:
-                certificate_dir = os.path.join(settings_path, 'certificates')
-            else:
-                certificate_dir = key_dir
+            if not use_conf_directory:
+                # we look into the defaults
+                if os.getenv('NAV_CONF_DIR') is not None:
+                    cert_dir = os.getenv('NAV_CONF_DIR')
+                else:
+                    cert_dir = os.getenv('HOME')
+                key_dir = os.path.join(cert_dir, 'certificates')
+                if not os.path.isdir(key_dir):
+                    _logger.info(f"Default key directory {key_dir} does not exist => no certificates")
+                else:
+                    certificate_dir = key_dir
 
-            self.set_global('certificate_dir', certificate_dir)
-            _logger.info(f"Configuration directory for secure certificates {certificate_dir}")
-            if os.path.isdir(certificate_dir):
+            if certificate_dir is not None and os.path.isdir(certificate_dir):
+                self.set_global('certificate_dir', certificate_dir)
+                _logger.info(f"Configuration directory for secure certificates {certificate_dir}")
+                # client certificate
                 cert_file = os.path.join(certificate_dir, 'nav_ca_cert.pem')
-                if os.path.isfile(cert_file):
-                    with open(cert_file, 'rb') as f:
-                        self._ca_cert = f.read()
-                else:
-                    _logger.warning(f"Certificate file {cert_file} does not exist")
+                try:
+                    if os.path.isfile(cert_file):
+                        with open(cert_file, 'rb') as f:
+                            self._ca_cert = f.read()
+                        self._client_secure_communications = True
+                    else:
+                        _logger.warning(f"Certificate file {cert_file} does not exist")
+                except IOError as e:
+                    _logger.error(f"Certificate file {cert_file} error:{e}")
+                # server public key
                 server_cert = os.path.join(certificate_dir, 'nav_server_cert.pem')
-                if os.path.isfile(server_cert):
-                    with open(server_cert, 'rb') as f:
-                        self._server_cert = f.read()
-                else:
-                    _logger.warning(f"Server certificate file {server_cert} does not exist")
+                try:
+                    if os.path.isfile(server_cert):
+                        with open(server_cert, 'rb') as f:
+                            self._server_cert = f.read()
+                    else:
+                        _logger.warning(f"Server certificate file {server_cert} does not exist")
+                except IOError as e:
+                    _logger.error(f"Server certificate file {server_cert} error:{e}")
+                # server private key
                 server_key = os.path.join(certificate_dir, 'nav_server_key.pem')
-                if os.path.isfile(server_key):
-                    with open(server_key, 'rb') as f:
-                        self._server_key = f.read()
-                else:
-                    _logger.warning(f"Server key file {server_key} does not exist")
+                try:
+                    if os.path.isfile(server_key):
+                        with open(server_key, 'rb') as f:
+                            self._server_key = f.read()
+                    else:
+                        _logger.warning(f"Server key file {server_key} does not exist")
+                except IOError as e:
+                    _logger.error(f"Server key file {server_key} error:{e}")
                 if self._server_cert and self._server_key:
-                    _logger.info("Secure communications enabled")
-                    self._secure_communications = True
+                    _logger.info("Server secure communications enabled")
+                    self._server_secure_communications = True
                 else:
                     _logger.error("Secure communication disabled due to configuration error")
-
+            else:
+                if certificate_dir is not None:
+                    _logger.warning(f"Certificate directory {certificate_dir} does not exist")
         else:
             _logger.warning("Secure gRPC communication disabled by configuration")
 
-        if self._force_secure_grpc and not self._secure_communications:
-            _logger.error("Force secure gRPC communication disabled as secure communication disabled by configuration")
-            self._force_secure_grpc = False
+        if self._force_secure_grpc:
+            _logger.error(f"Force secure gRPC communication for client:{self._client_secure_communications}; server:{self._server_secure_communications}")
+            self._force_secure_grpc = self._client_secure_communications or self._server_secure_communications
 
         if self._configuration.get('connect_agent', True):
             try:
@@ -602,8 +620,12 @@ class NavigationConfiguration:
                 continue
 
     @property
-    def secure_communications(self) -> bool:
-        return self._secure_communications
+    def server_secure_communications(self) -> bool:
+        return self._server_secure_communications
+
+    @property
+    def client_secure_communications(self) -> bool:
+        return self._client_secure_communications
 
     @property
     def force_secure_grpc(self) -> bool:
