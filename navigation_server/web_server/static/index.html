@@ -179,7 +179,16 @@
             background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
             padding: 6px 10px; border-radius: 6px; font-size: 0.82rem; margin-left: 8px;
         }
-    </style>
+            .proxy-symbol { display: inline-block; width: 1em; text-align: center; }
+        .proxy-symbol::after { content: "◆"; font-size: 0.8em; }
+        .nmea2000-device { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+        .nmea2000-device:last-child { border-bottom: none; }
+        .pgn-stats { font-family: ui-monospace, monospace; font-size: 0.8em; margin-top: 4px; }
+        .pgn-stats .pgn-item { display: inline-block; margin-right: 12px; }
+        .pgn-stats .pgn-item .pgn { color: var(--accent); }
+        .pgn-stats .pgn-item .count { color: var(--muted); }
+        .pgn-def { font-size: 0.85em; color: var(--muted); margin-top: 6px; }
+</style>
 </head>
 <body>
     <header>
@@ -234,6 +243,17 @@
                 <button class="modal-close" onclick="closeNetwork()" title="Fermer">&times;</button>
             </div>
             <div id="network-body"><div class="empty">Chargement…</div></div>
+        </div>
+    </div>
+    </div>
+
+    <div id="nmea2000-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="nmea2000-title">NMEA2000</h2>
+                <button class="modal-close" onclick="closeNmea2000()" title="Fermer">&times;</button>
+            </div>
+            <div id="nmea2000-body"><div class="empty">Chargement…</div></div>
         </div>
     </div>
 
@@ -363,6 +383,9 @@
             const openBtn = p.console_present
                 ? `<button class="open-btn" onclick="openConsole('${escapeHtml(p.name)}')">⤓ Open</button>`
                 : '';
+            const nmea2000Btn = (p.purpose && p.purpose.includes('NMEA2000')) || (p.name && p.name.includes('NMEA2000')) || (p.purpose && p.purpose.includes('STNC_CAN')) || (p.name && p.name.includes('STNC_CAN'))
+                ? `<button class="open-btn" onclick="openNmea2000('${escapeHtml(p.name)}')">⚙ NMEA2000</button>`
+                : '';
             const logBtn = p.is_systemd
                 ? `<button onclick="openLog('${escapeHtml(p.name)}')">📋 Log</button>`
                 : '';
@@ -387,6 +410,7 @@
                         ${stopBtn}
                         ${restartBtn}
                         ${openBtn}
+                        ${nmea2000Btn}
                         ${logBtn}
                     </div>
                 </div>
@@ -680,6 +704,136 @@
             $("network-modal").classList.remove("show");
         }
 
+        // --- NMEA2000 view ----------------------------------------------------
+        let nmea2000Process = null;
+        let nmea2000InDeviceView = false;
+
+        async function openNmea2000(processName) {
+            nmea2000Process = processName;
+            nmea2000InDeviceView = false;
+            $("nmea2000-title").textContent = "NMEA2000 — " + processName;
+            $("nmea2000-body").innerHTML = '<div class="empty">Chargement…</div>';
+            $("nmea2000-modal").classList.add("show");
+            try {
+                const data = await apiGet("/api/nmea2000/" + encodeURIComponent(processName) + "/status");
+                renderNmea2000(data, processName);
+            } catch (e) {
+                $("nmea2000-body").innerHTML = '<div class="empty">Erreur: ' + escapeHtml(e.message) + '</div>';
+            }
+        }
+
+        function renderNmea2000(data, processName) {
+            const body = $("nmea2000-body");
+            if (!data.ok) {
+                body.innerHTML = '<div class="empty">' + escapeHtml(data.error || "Erreur NMEA2000") + '</div>';
+                return;
+            }
+            const devices = data.devices || [];
+            const traceBtnText = data.traces_on ? "■ Stop Trace" : "▶ Start Trace";
+            const traceBtnCmd = data.traces_on ? "stop_trace" : "start_trace";
+            let html = '<div class="console-section"><h3>Contrôleur NMEA2000</h3>';
+            html += '<div class="row"><span class="k">Canal</span><span class="v">' + fmt(data.channel) + '</span></div>';
+            html += '<div class="row"><span class="k">Statut</span><span class="v">' + fmt(data.status) + '</span></div>';
+            html += '<div class="row"><span class="k">Taux entrant</span><span class="v">' + fmt(data.incoming_rate && data.incoming_rate.toFixed(1)) + ' msg/s</span></div>';
+            html += '<div class="row"><span class="k">Taux sortant</span><span class="v">' + fmt(data.outgoing_rate && data.outgoing_rate.toFixed(1)) + ' msg/s</span></div>';
+            html += '<div class="row"><span class="k">Traces</span><span class="v">' + (data.traces_on ? 'activées' : 'inactives') + '</span></div>';
+                        html += `<div class="card-actions"><button onclick="nmea2000TraceCmd('${escapeHtml(processName)}', '${traceBtnCmd}')">${traceBtnText}</button></div>`;
+            html += '</div><div class="console-section"><h3>Appareils (' + devices.length + ')</h3><div class="grid">';
+            if (devices.length === 0) {
+                html += '<div class="empty">Aucun appareil NMEA2000.</div>';
+            } else {
+                for (const dev of devices) {
+                    const proxySymbol = dev.is_proxy ? '<span class="proxy-symbol" title="Proxy"></span>' : '';
+                    html += '<div class="card"><h2><span class="proc-name">Adresse ' + dev.address + '</span> ' + proxySymbol + '</h2>';
+                    html += '<div class="row"><span class="k">Fabricant</span><span class="v">' + fmt(dev.manufacturer_name) + '</span></div>';
+                    html += '<div class="row"><span class="k">Produit</span><span class="v">' + fmt(dev.product_name) + '</span></div>';
+                    html += `<div class="card-actions"><button class="open-btn" onclick="openNmea2000Device('${escapeHtml(processName)}', ${dev.address})">Stats PGN</button></div>`;
+                    html += '</div>';
+                }
+            }
+            html += '</div></div>';
+            body.innerHTML = html;
+        }
+
+        async function openNmea2000Device(processName, deviceAddress) {
+            nmea2000InDeviceView = true;
+            try {
+                const data = await apiGet("/api/nmea2000/" + encodeURIComponent(processName) + "/device/" + deviceAddress);
+                if (data.ok) {
+                    renderNmea2000Device(data, processName, deviceAddress);
+                } else {
+                    toast(data.error || "Erreur", false);
+                }
+            } catch (e) {
+                toast("Erreur: " + e.message, false);
+            }
+        }
+
+        async function renderNmea2000Device(data, processName, deviceAddress) {
+            const title = $("nmea2000-title");
+            title.textContent = "NMEA2000 — " + processName + " — Appareil " + deviceAddress;
+            const body = $("nmea2000-body");
+            let html = '<div class="console-section"><h3>Appareil NMEA2000</h3>';
+            html += '<div class="row"><span class="k">Adresse</span><span class="v">' + data.address + '</span></div>';
+            html += '<div class="row"><span class="k">Proxy</span><span class="v">' + (data.is_proxy ? 'Oui' : 'Non') + '</span></div>';
+            html += '<div class="row"><span class="k">Fabricant</span><span class="v">' + fmt(data.manufacturer_name) + '</span></div>';
+            html += '<div class="row"><span class="k">Produit</span><span class="v">' + fmt(data.product_name) + '</span></div>';
+            html += '<div class="console-section"><h3>Statistiques PGN</h3><div class="pgn-stats">';
+            if (data.pgn_stats && data.pgn_stats.length > 0) {
+                for (const stat of data.pgn_stats) {
+                    const pgnDef = await getPgnDefinitionCached(processName, stat.pgn);
+                    const defText = pgnDef ? ' — ' + escapeHtml(pgnDef) : '';
+                    html += '<span class="pgn-item"><span class="pgn">' + stat.pgn + '</span>: <span class="count">' + stat.count + ' (' + stat.direction + ')</span>' + defText + '</span>';
+                }
+            } else {
+                html += '<span class="muted">Aucune statistique PGN.</span>';
+            }
+            html += '</div></div><div class="card-actions"><button class="open-btn" onclick="backToNmea2000List()">Retour</button></div>';
+            body.innerHTML = html;
+        }
+
+        // Simple cache for PGN definitions
+        const pgnDefCache = new Map();
+        async function getPgnDefinitionCached(processName, pgn) {
+            const cacheKey = processName + ":" + pgn;
+            if (pgnDefCache.has(cacheKey)) {
+                return pgnDefCache.get(cacheKey);
+            }
+            try {
+                const data = await apiGet("/api/nmea2000/" + encodeURIComponent(processName) + "/device/" + pgn + "/pgn");
+                if (data.ok && data.definition) {
+                    pgnDefCache.set(cacheKey, data.definition);
+                    return data.definition;
+                }
+            } catch (e) {
+                // ignore
+            }
+            return null;
+        }
+
+        function backToNmea2000List() {
+            if (nmea2000Process) {
+                openNmea2000(nmea2000Process);
+            }
+        }
+
+        async function nmea2000TraceCmd(processName, cmd) {
+            try {
+                const r = await apiPost("/api/nmea2000/" + encodeURIComponent(processName) + "/trace", { cmd: cmd });
+                toast(cmd + ": " + (r.ok ? "OK" : (r.error || "échec")), r.ok);
+                if (r.ok) setTimeout(function() { openNmea2000(processName); }, 800);
+            } catch (e) {
+                toast("Erreur: " + e.message, false);
+            }
+        }
+
+        function closeNmea2000() {
+            $("nmea2000-modal").classList.remove("show");
+            nmea2000Process = null;
+            nmea2000InDeviceView = false;
+        }
+
+
         window.procCmd = procCmd;
         window.systemCmd = systemCmd;
         window.systemCmdConfirm = systemCmdConfirm;
@@ -689,6 +843,10 @@
         window.closeLog = closeLog;
         window.openNetwork = openNetwork;
         window.closeNetwork = closeNetwork;
+        window.openNmea2000 = openNmea2000;
+        window.closeNmea2000 = closeNmea2000;
+        window.nmea2000TraceCmd = nmea2000TraceCmd;
+        window.openNmea2000Device = openNmea2000Device;
         window.applyNetworkConfig = applyNetworkConfig;
         window.openConsole = openConsole;
         window.closeConsole = closeConsole;

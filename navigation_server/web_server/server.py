@@ -31,6 +31,7 @@ from navigation_server.router_common import GrpcClient, GrpcAccessException
 from navigation_server.router_common.agent_interface import AgentClient
 from navigation_server.navigation_clients import NetworkClient
 from navigation_server.navigation_clients.console_client import ConsoleClient
+from navigation_server.navigation_clients.n2k_can_client import NMEA2000CanClient
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -66,6 +67,7 @@ class NavigationSystemCollector:
         self._server.add_service(self._agent)
         self._network = None
         self._consoles = {}
+        self._nmea2000_clients = {}
         self._lock = threading.Lock()
 
     @property
@@ -112,6 +114,35 @@ class NavigationSystemCollector:
         grpc_server.wait_connect(5.0)
         pair = (grpc_server, console)
         self._consoles[process_name] = pair
+        return pair
+
+    def _get_nmea2000_client(self, process_name: str):
+        """Return a (GrpcClient, NMEA2000CanClient) pair for a process NMEA2000 service.
+
+        The connection is cached per process name so that repeated calls
+        (status refresh, PGN definitions) reuse the same gRPC channel
+        instead of creating a new one each time. The channel is only
+        reconnected if it has dropped to NOT_CONNECTED.
+        """
+        cached = self._nmea2000_clients.get(process_name)
+        if cached is not None:
+            grpc_server, n2k_client = cached
+            if grpc_server.not_connected:
+                grpc_server.connect()
+                grpc_server.wait_connect(5.0)
+            return cached
+        port = self._agent.get_port(process_name)
+        if port == 0:
+            return None, None
+        secure = self._get_process_secure(process_name)
+        server_key = f"{self._address}:{port}"
+        grpc_server = GrpcClient.get_client(server_key, secure=secure)
+        n2k_client = NMEA2000CanClient()
+        grpc_server.add_service(n2k_client)
+        grpc_server.connect()
+        grpc_server.wait_connect(5.0)
+        pair = (grpc_server, n2k_client)
+        self._nmea2000_clients[process_name] = pair
         return pair
 
     def _get_process_secure(self, process_name: str) -> bool:
@@ -416,6 +447,107 @@ class NavigationSystemCollector:
                 return {"ok": False, "error": "Network service unavailable"}
             return {"ok": True, "configuration": config_name}
 
+    def nmea2000_status(self, process_name: str) -> dict:
+        """Return the NMEA2000 controller status and devices for a process."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            grpc_server, n2k_client = self._get_nmea2000_client(process_name)
+            if grpc_server is None:
+                return {"ok": False, "error": f"No NMEA2000 service for process {process_name}"}
+            if grpc_server.not_connected:
+                return {"ok": False, "error": f"Cannot reach NMEA2000 service for {process_name}"}
+            try:
+                status = n2k_client.get_status()
+            except GrpcAccessException:
+                return {"ok": False, "error": "NMEA2000 GetStatus call failed"}
+            devices = []
+            for dev in status.devices:
+                devices.append({
+                    "address": dev.address,
+                    "is_proxy": dev.is_proxy,
+                    "manufacturer_name": dev.manufacturer_name,
+                    "product_name": dev.product_name,
+                })
+            return {
+                "ok": True,
+                "process": process_name,
+                "channel": status.channel,
+                "status": status.status,
+                "incoming_rate": status.incoming_rate,
+                "outgoing_rate": status.outgoing_rate,
+                "traces_on": status.traces_on,
+                "devices": devices,
+            }
+
+    def nmea2000_device(self, process_name: str, device_address: int) -> dict:
+        """Return detailed info for a single NMEA2000 device."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            grpc_server, n2k_client = self._get_nmea2000_client(process_name)
+            if grpc_server is None or grpc_server.not_connected:
+                return {"ok": False, "error": f"Cannot reach NMEA2000 service for {process_name}"}
+            try:
+                dev = n2k_client.get_device(device_address)
+            except GrpcAccessException:
+                return {"ok": False, "error": "NMEA2000 GetDeviceStatus call failed"}
+            # Collect PGN stats from both in and out
+            pgn_stats = []
+            for stat in (dev.stats or []):
+                pgn_stats.append({"pgn": stat.pgn, "count": stat.count, "direction": "in"})
+            for stat in (dev.out_stats or []):
+                pgn_stats.append({"pgn": stat.pgn, "count": stat.count, "direction": "out"})
+            return {
+                "ok": True,
+                "address": dev.address,
+                "is_proxy": dev.is_proxy,
+                "manufacturer_name": dev.manufacturer_name,
+                "product_name": dev.product_name,
+                "pgn_stats": pgn_stats,
+            }
+
+    def nmea2000_pgn_definition(self, process_name: str, pgn: int) -> dict:
+        """Return the PGN definition (description) for a given PGN."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            grpc_server, n2k_client = self._get_nmea2000_client(process_name)
+            if grpc_server is None or grpc_server.not_connected:
+                return {"ok": False, "error": f"Cannot reach NMEA2000 service for {process_name}"}
+            try:
+                definition = n2k_client.get_pgn_definition(pgn)
+            except GrpcAccessException:
+                return {"ok": False, "error": "NMEA2000 GetPgnDefinition call failed"}
+            return {"ok": True, "pgn": pgn, "definition": definition}
+
+    def nmea2000_trace_cmd(self, process_name: str, cmd: str) -> dict:
+        """Send a trace command (start_trace/stop_trace) to the NMEA2000 service."""
+        if cmd not in ("start_trace", "stop_trace"):
+            return {"ok": False, "error": f"Unsupported NMEA2000 command: {cmd}"}
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            grpc_server, n2k_client = self._get_nmea2000_client(process_name)
+            if grpc_server is None or grpc_server.not_connected:
+                return {"ok": False, "error": f"Cannot reach NMEA2000 service for {process_name}"}
+            try:
+                if cmd == "start_trace":
+                    status = n2k_client.start_trace("")
+                else:
+                    status = n2k_client.stop_trace()
+            except GrpcAccessException:
+                return {"ok": False, "error": f"NMEA2000 {cmd} call failed"}
+            return {
+                "ok": True,
+                "traces_on": status.traces_on,
+                "channel": status.channel,
+            }
+
 
 def _validate_coupler_cmd(cmd: str, state: str) -> tuple:
     """Validate that a coupler command is consistent with its current state.
@@ -482,6 +614,33 @@ class _RequestHandler(BaseHTTPRequestHandler):
                                  status=HTTPStatus.BAD_REQUEST)
         elif path == "/health":
             self._serve_json({"ok": True, "time": time.time()})
+        elif path.startswith("/api/nmea2000/"):
+            parts = path[len("/api/nmea2000/"):].split("/")
+            if len(parts) >= 1:
+                process_name = parts[0]
+                if len(parts) == 2 and parts[1] == "status":
+                    self._serve_json(self.collector.nmea2000_status(process_name))
+                elif len(parts) == 4 and parts[1] == "device" and parts[3] == "pgn":
+                    try:
+                        device_address = int(parts[2])
+                        pgn = int(parts[3])
+                        self._serve_json(self.collector.nmea2000_pgn_definition(process_name, pgn))
+                    except ValueError:
+                        self._serve_json({"ok": False, "error": "invalid device address or PGN"},
+                                         status=HTTPStatus.BAD_REQUEST)
+                elif len(parts) == 3 and parts[1] == "device":
+                    try:
+                        device_address = int(parts[2])
+                        self._serve_json(self.collector.nmea2000_device(process_name, device_address))
+                    except ValueError:
+                        self._serve_json({"ok": False, "error": "invalid device address"},
+                                         status=HTTPStatus.BAD_REQUEST)
+                else:
+                    self._serve_json({"ok": False, "error": "invalid NMEA2000 path"},
+                                     status=HTTPStatus.BAD_REQUEST)
+            else:
+                self._serve_json({"ok": False, "error": "missing process name"},
+                                 status=HTTPStatus.BAD_REQUEST)
         else:
             self._serve_static(path.lstrip("/"))
 
@@ -524,6 +683,19 @@ class _RequestHandler(BaseHTTPRequestHandler):
                                  status=HTTPStatus.BAD_REQUEST)
                 return
             self._serve_json(self.collector.coupler_cmd(process, coupler, cmd))
+        elif path.startswith("/api/nmea2000/"):
+            parts = path[len("/api/nmea2000/"):].split("/")
+            if len(parts) >= 2 and parts[1] == "trace":
+                process_name = parts[0]
+                cmd = body.get("cmd")
+                if not cmd:
+                    self._serve_json({"ok": False, "error": "missing 'cmd'"},
+                                     status=HTTPStatus.BAD_REQUEST)
+                    return
+                self._serve_json(self.collector.nmea2000_trace_cmd(process_name, cmd))
+            else:
+                self._serve_json({"ok": False, "error": "invalid NMEA2000 trace path"},
+                                 status=HTTPStatus.BAD_REQUEST)
         else:
             self._serve_json({"ok": False, "error": "not found"},
                              status=HTTPStatus.NOT_FOUND)
