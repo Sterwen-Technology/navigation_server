@@ -60,7 +60,7 @@ def build_server_status_head(server) -> SystemProcessMsg:
     resp.name = MessageServerGlobals.server_name
     resp.version = MessageServerGlobals.version
     resp.grpc_port = GrpcServer.grpc_port()
-    resp.secure_grpc = MessageServerGlobals.configuration.secure_communications
+    resp.secure_grpc = MessageServerGlobals.configuration.server_secure_communications
     resp.start_time = server.start_time_str()
     resp.state = ProcessState.RUNNING
     resp.pid = os.getpid()
@@ -147,6 +147,12 @@ class AgentClient(ServiceClient):
         except GrpcAccessException:
             _logger.error(f"Error accessing server for logs on:{process_name}")
             return
+
+    def get_services(self):
+        msg = AgentCmdMsg()
+        msg.cmd = "SERVICES"
+        try:
+            response = self._server_call(self._stub.Get)
 
 class AgentInterfaceRunner(NavThread):
 

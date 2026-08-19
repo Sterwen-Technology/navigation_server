@@ -232,7 +232,8 @@ def main():
             options.log = int(options.log)
         process_manager.print_log(options.log)
         return
-    process_manager.display_processes()
+    else:
+        process_manager.display_processes()
 
 
     # process_manager.display_processes_list()

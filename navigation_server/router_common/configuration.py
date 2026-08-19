@@ -321,11 +321,19 @@ class NavigationConfiguration:
 
             if not use_conf_directory:
                 # we look into the defaults
+                # Here is the order of priority for the certificate directory
+                # $NAV_CONF_DIR
+                #  the settings path
+                # $HOME
                 if os.getenv('NAV_CONF_DIR') is not None:
                     cert_dir = os.getenv('NAV_CONF_DIR')
                 else:
-                    cert_dir = os.getenv('HOME')
+                    cert_dir = settings_path
                 key_dir = os.path.join(cert_dir, 'certificates')
+                # test what we have
+                if not os.path.isdir(key_dir):
+                    # last resort is $HOME
+                    key_dir = os.path.join(os.getenv('HOME'), 'certificates')
                 if not os.path.isdir(key_dir):
                     _logger.info(f"Default key directory {key_dir} does not exist => no certificates")
                 else:
