@@ -19,11 +19,12 @@ import signal
 from socket import gethostname
 import os.path
 
-from navigation_server.generated.agent_pb2 import NavigationSystemMsg, AgentResponse, LogLines
+from navigation_server.generated.agent_pb2 import NavigationSystemMsg, AgentResponse, LogLines, ServiceImplementor
 from navigation_server.generated.services_server_pb2 import SystemProcessMsg, Server, Connection, ProcessState
 from navigation_server.generated.agent_pb2_grpc import AgentServicer, add_AgentServicer_to_server
 from navigation_server.router_common import (GrpcService, GenericTopServer, resolve_ref, copy_protobuf_data,
-                                                MessageServerGlobals, GrpcServer)
+                                                MessageServerGlobals, GrpcServer, GrpcClient)
+
 try:
     from navigation_server.nav_gpio import STNC_D7_Led, STNC_Gpio_Set
 except (ImportError, ValueError):
@@ -94,6 +95,7 @@ class ProcessABC:
         self._state = self.NOT_STARTED
         self._process_msg = None
         self._pid = 0
+        self._ip_address = None
 
     def __getattr__(self, attr_name):
         if self._process_msg is None:
@@ -132,15 +134,20 @@ class ProcessABC:
     def autostart(self):
         return self._autostart
 
+    @property
+    def ip_address(self):
+        return self._ip_address
+
     def send_sigint(self):
         if self._state == self.RUNNING and self._pid > 0:
             run_cmd(f"kill -{signal.SIGINT} {self._pid}")
 
-    def start_confirmation(self, process_msg: SystemProcessMsg):
+    def start_confirmation(self, process_msg: SystemProcessMsg, context):
         self._process_msg = process_msg
         self.debug_msg_attributes(['name', 'state', 'grpc_port', 'version', 'start_time', 'console_present', 'pid', 'secure_grpc'])
         self._state = self.RUNNING
         self._pid = process_msg.pid
+        self._ip_address = context.peer()
 
 
 class SystemdProcess(ProcessABC):
@@ -237,8 +244,8 @@ class SystemdProcess(ProcessABC):
             _logger.debug("Status for %s loaded %s state %s" % (self._service, loaded, state))
         return code
 
-    def start_confirmation(self, process_msg: SystemProcessMsg):
-        super().start_confirmation(process_msg)
+    def start_confirmation(self, process_msg: SystemProcessMsg, context):
+        super().start_confirmation(process_msg, context)
         if not self._start_event.is_set():
             self._start_event.set()
 
@@ -340,7 +347,7 @@ class AgentServicerImpl(AgentServicer):
             process = self._agent.get_process(request.name)
             if not process.start_in_progress():
                 _logger.info(f"Agent spontaneous registration for {request.name}")
-            process.start_confirmation(request)
+            process.start_confirmation(request, context)
             resp.response = f"process {request.name} started with service {process.service}"
         except KeyError:
             _logger.error(f"Agent Register for unknown process {request.name}")
@@ -407,6 +414,30 @@ class AgentServicerImpl(AgentServicer):
         finally:
             if journal_proc:
                 journal_proc.terminate()
+
+    def GetServices(self, request, context):
+        '''
+        retrieve all services in all processes ansd send them back to the requester
+        '''
+        resp = AgentResponse()
+        resp.id = request.id
+
+        for process in self._agent.get_processes():
+            if process.is_controlled and process.is_running:
+                # we have to ask for the services implemented
+                client = GrpcClient.get_client(f"{process.ip_address}:{process.grpc_port}", True, process.secure_grpc)
+                client.connect()
+                services = client.send_control_channel_command("SERVICES")
+                if services is not None:
+                    for service in services:
+                        serv_impl_pb = ServiceImplementor()
+                        serv_impl_pb.service = service.service_name
+                        self.fill_process_response(process, serv_impl_pb.process)
+                        resp.services_implementation.append(serv_impl_pb)
+
+        resp.err_code = 0
+        resp.response = "SERVICES"
+        return resp
 
     process_attributes = ['grpc_port', 'version', 'start_time', 'console_present', 'pid', 'secure_grpc', 'hostname',
                           'settings']

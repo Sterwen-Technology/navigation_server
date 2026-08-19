@@ -101,6 +101,23 @@ class GrpcClient:
         self._control_stub = None
         self._secure = secure
 
+    def send_control_channel_command(self, command):
+        request = GrpcCommand()
+        request.id = self._req_id
+        request.command = command
+        try:
+            resp = self.server_call(self._control_stub.SendCommand, request, None)
+        except GrpcAccessException:
+            _logger.info(f"GrpcClient connect attempt to {self._server} failed")
+            raise
+        else:
+            _logger.info(f"GrpcClient connect attempt to {self._server} result={resp.response}")
+
+        if command == "SERVICES":
+            if resp.response == "OK":
+                return resp.services
+        return None
+
     def connect(self):
         """
         Connects to the gRPC server and initializes the stubs for the provided services.
@@ -133,15 +150,10 @@ class GrpcClient:
         self._state = self.CONNECTING
         _logger.info(f"Server stub created on {self._server} => connecting. secure={self._secure}")
         # now attempt a first connection
-        request = GrpcCommand()
-        request.id = self._req_id
-        request.command = "TEST"
         try:
-            resp = self.server_call(self._control_stub.SendCommand, request, None)
+            self.send_control_channel_command("TEST")
         except GrpcAccessException:
-            _logger.info(f"GrpcClient connect attempt to {self._server} failed")
-        else:
-            _logger.info(f"GrpcClient connect attempt to {self._server} result={resp.response}")
+            pass
 
     def wait_connect(self, timeout:float):
         """
