@@ -622,8 +622,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
                     self._serve_json(self.collector.nmea2000_status(process_name))
                 elif len(parts) == 4 and parts[1] == "device" and parts[3] == "pgn":
                     try:
-                        device_address = int(parts[2])
-                        pgn = int(parts[3])
+                        pgn = int(parts[2])
                         self._serve_json(self.collector.nmea2000_pgn_definition(process_name, pgn))
                     except ValueError:
                         self._serve_json({"ok": False, "error": "invalid device address or PGN"},
@@ -840,6 +839,7 @@ class NavigationWebServer:
             self._httpd.serve_forever()
         except KeyboardInterrupt:
             _logger.info("Navigation web server stopping (KeyboardInterrupt)")
+            self._httpd.shutdown()
         finally:
             self._httpd.server_close()
 
