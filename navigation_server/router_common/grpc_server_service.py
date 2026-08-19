@@ -21,6 +21,7 @@ from navigation_server.router_common import ConfigurationException, MessageServe
 from .global_variables import resolve_ref
 
 from navigation_server.generated.grpc_control_pb2 import GrpcCommand, GrpcAck
+from navigation_server.generated.services_server_pb2 import Service
 from navigation_server.generated.grpc_control_pb2_grpc import NavigationGrpcControlServicer, add_NavigationGrpcControlServicer_to_server
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
@@ -40,6 +41,12 @@ class NavigationGrpcControlServicerImpl(NavigationGrpcControlServicer):
         response = GrpcAck()
         response.id = request.id
         response.response = "OK"
+        if request.command == "SERVICES":
+            for service in GrpcServer.grpc_server_global.services():
+                service_pb = Service()
+                service_pb.service_name = service[0]
+                service_pb.rpc_service = service[1]
+                response.services.append(service_pb)
         return response
 
 
@@ -138,6 +145,9 @@ class GrpcServer(NavigationServer):
         del self._services[name]
         if len(self._services) == 0:
             self.stop()
+
+    def get_services(self):
+        return self._services.values()
 
 
 class GrpcService:

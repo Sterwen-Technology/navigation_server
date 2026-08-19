@@ -10,6 +10,7 @@
 //-------------------------------------------------------------------------------
 
 syntax = "proto3";
+import "services_server.proto";
 
 // message to send command / request to a gRPC server in the navigation system
 // all servers include the support of this service
@@ -20,9 +21,11 @@ message GrpcCommand {
     string command=2;
 }
 
+
 message GrpcAck {
     uint32 id=1;
     string response=2;
+    repeated Service services=3;
 }
 
 service NavigationGrpcControl {
