@@ -152,7 +152,11 @@ class AgentClient(ServiceClient):
         msg = AgentCmdMsg()
         msg.cmd = "SERVICES"
         try:
-            response = self._server_call(self._stub.Get)
+            response = self._server_call(self._stub.GetServices, msg, None)
+            return response.services_implementation
+        except GrpcAccessException:
+            _logger.error("Error accessing agetn to retrieve services")
+            return None
 
 class AgentInterfaceRunner(NavThread):
 

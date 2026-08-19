@@ -37,12 +37,12 @@ class NavigationGrpcControlServicerImpl(NavigationGrpcControlServicer):
     For the moment only a single method is implemented most to ping and check presence
     """
     def SendCommand(self, request, context):
-        _logger.info(f"SendCommand from {context.peer()}")
+        _logger.info(f"SendCommand from {context.peer()}: {request.command}")
         response = GrpcAck()
         response.id = request.id
         response.response = "OK"
         if request.command == "SERVICES":
-            for service in GrpcServer.grpc_server_global.services():
+            for service in GrpcServer.grpc_server_global.get_services():
                 service_pb = Service()
                 service_pb.service_name = service[0]
                 service_pb.rpc_service = service[1]

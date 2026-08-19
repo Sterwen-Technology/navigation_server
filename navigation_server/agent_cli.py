@@ -52,6 +52,8 @@ def _parser():
                    help="systemd log for the service ctrl<c> to stop")
     p.add_argument("-gc", "--global_conf", action="store", type=str, default=None,
                    help=" Network Global configuration to be set. Requires the -n flag to be present")
+    p.add_argument("-t", "--test",action="store_true", default=False,
+                   help="Perform the test section")
 
     return p
 
@@ -253,8 +255,14 @@ def main():
             network_manager.set_configuration(options.global_conf)
             network_manager.print_interfaces()
 
+    if options.test:
+        # test the services
+        services = agent.get_services()
+        if services is not None:
+            for service_impl in services:
+                print(f"{service_impl.service.service_name}:{service_impl.process.name}")
+
 
 if __name__ == '__main__':
     main()
-
 
