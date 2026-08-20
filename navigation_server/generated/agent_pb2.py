@@ -26,7 +26,7 @@ import navigation_server.generated.services_server_pb2 as services__server__pb2
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x61gent.proto\x1a\x15services_server.proto\"\xb2\x01\n\x13NavigationSystemMsg\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x07 \x01(\t\x12\x12\n\nstart_time\x18\x08 \x01(\t\x12\x10\n\x08hostname\x18\n \x01(\t\x12\x12\n\nip_address\x18\x0b \x01(\t\x12\x10\n\x08settings\x18\x0c \x01(\t\x12$\n\tprocesses\x18\x03 \x03(\x0b\x32\x11.SystemProcessMsg\"6\n\x0b\x41gentCmdMsg\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0b\n\x03\x63md\x18\x02 \x01(\t\x12\x0e\n\x06target\x18\x03 \x01(\t\"\xd8\x01\n\rAgentResponse\x12\n\n\x02id\x18\x01 \x01(\r\x12\x10\n\x08\x65rr_code\x18\x02 \x01(\r\x12\x10\n\x08response\x18\x03 \x01(\t\x12$\n\x06system\x18\x04 \x01(\x0b\x32\x14.NavigationSystemMsg\x12$\n\tprocesses\x18\x05 \x03(\x0b\x32\x11.SystemProcessMsg\x12\"\n\x07process\x18\x06 \x01(\x0b\x32\x11.SystemProcessMsg\x12\x11\n\tgrpc_port\x18\x07 \x01(\r\x12\x14\n\x0cstatus_lines\x18\x08 \x03(\t\"\x18\n\x08LogLines\x12\x0c\n\x04line\x18\x01 \x01(\t2\xca\x01\n\x05\x41gent\x12*\n\x08\x41gentCmd\x12\x0c.AgentCmdMsg\x1a\x0e.AgentResponse\"\x00\x12\x30\n\x0e\x41gentSystemCmd\x12\x0c.AgentCmdMsg\x1a\x0e.AgentResponse\"\x00\x12\x36\n\x0fRegisterProcess\x12\x11.SystemProcessMsg\x1a\x0e.AgentResponse\"\x00\x12+\n\x0cGetSystemLog\x12\x0c.AgentCmdMsg\x1a\t.LogLines\"\x00\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x61gent.proto\x1a\x15services_server.proto\"\xb2\x01\n\x13NavigationSystemMsg\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x07 \x01(\t\x12\x12\n\nstart_time\x18\x08 \x01(\t\x12\x10\n\x08hostname\x18\n \x01(\t\x12\x12\n\nip_address\x18\x0b \x01(\t\x12\x10\n\x08settings\x18\x0c \x01(\t\x12$\n\tprocesses\x18\x03 \x03(\x0b\x32\x11.SystemProcessMsg\"6\n\x0b\x41gentCmdMsg\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0b\n\x03\x63md\x18\x02 \x01(\t\x12\x0e\n\x06target\x18\x03 \x01(\t\"S\n\x12ServiceImplementor\x12\x19\n\x07service\x18\x01 \x01(\x0b\x32\x08.Service\x12\"\n\x07process\x18\x02 \x01(\x0b\x32\x11.SystemProcessMsg\"\xa3\x02\n\rAgentResponse\x12\n\n\x02id\x18\x01 \x01(\r\x12\x10\n\x08\x65rr_code\x18\x02 \x01(\r\x12\x10\n\x08response\x18\x03 \x01(\t\x12$\n\x06system\x18\x04 \x01(\x0b\x32\x14.NavigationSystemMsg\x12$\n\tprocesses\x18\x05 \x03(\x0b\x32\x11.SystemProcessMsg\x12\"\n\x07process\x18\x06 \x01(\x0b\x32\x11.SystemProcessMsg\x12\x11\n\tgrpc_port\x18\x07 \x01(\r\x12\x13\n\x0bsecure_grpc\x18\n \x01(\x08\x12\x14\n\x0cstatus_lines\x18\x08 \x03(\t\x12\x34\n\x17services_implementation\x18\t \x03(\x0b\x32\x13.ServiceImplementor\"\x18\n\x08LogLines\x12\x0c\n\x04line\x18\x01 \x01(\t2\xf9\x01\n\x05\x41gent\x12*\n\x08\x41gentCmd\x12\x0c.AgentCmdMsg\x1a\x0e.AgentResponse\"\x00\x12\x30\n\x0e\x41gentSystemCmd\x12\x0c.AgentCmdMsg\x1a\x0e.AgentResponse\"\x00\x12\x36\n\x0fRegisterProcess\x12\x11.SystemProcessMsg\x1a\x0e.AgentResponse\"\x00\x12+\n\x0cGetSystemLog\x12\x0c.AgentCmdMsg\x1a\t.LogLines\"\x00\x30\x01\x12-\n\x0bGetServices\x12\x0c.AgentCmdMsg\x1a\x0e.AgentResponse\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -37,10 +37,12 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_NAVIGATIONSYSTEMMSG']._serialized_end=217
   _globals['_AGENTCMDMSG']._serialized_start=219
   _globals['_AGENTCMDMSG']._serialized_end=273
-  _globals['_AGENTRESPONSE']._serialized_start=276
-  _globals['_AGENTRESPONSE']._serialized_end=492
-  _globals['_LOGLINES']._serialized_start=494
-  _globals['_LOGLINES']._serialized_end=518
-  _globals['_AGENT']._serialized_start=521
-  _globals['_AGENT']._serialized_end=723
+  _globals['_SERVICEIMPLEMENTOR']._serialized_start=275
+  _globals['_SERVICEIMPLEMENTOR']._serialized_end=358
+  _globals['_AGENTRESPONSE']._serialized_start=361
+  _globals['_AGENTRESPONSE']._serialized_end=652
+  _globals['_LOGLINES']._serialized_start=654
+  _globals['_LOGLINES']._serialized_end=678
+  _globals['_AGENT']._serialized_start=681
+  _globals['_AGENT']._serialized_end=930
 # @@protoc_insertion_point(module_scope)

@@ -37,6 +37,11 @@ message Server {
   repeated Connection connections=7;
 }
 
+message Service {
+  string service_name=1;
+  string rpc_service=2;
+}
+
 message SystemProcessMsg {
   uint32 id=1;
   string name=2;

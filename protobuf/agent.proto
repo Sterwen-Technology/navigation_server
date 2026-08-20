@@ -31,6 +31,25 @@ message AgentCmdMsg {
   string target=3;
 }
 
+// system commands
+// status = returns the system full status
+// halt = returns an error code or 0
+// reboot = returns an error code or 0
+// navigation_restart = returns an error code or 0
+
+// process commands
+//  status = returns process
+//  start = returns process
+//  stop = returns error
+//  restart = return process
+//  interrupt = returns error
+//  get_port = returns grpc_port and secure_grpc
+
+message ServiceImplementor {  // provide the correspondance between a service and an implementor
+  Service service=1;
+  SystemProcessMsg process = 2;
+}
+
 message AgentResponse {
   uint32 id=1;
   uint32 err_code = 2;  // 0 = no error
@@ -40,7 +59,9 @@ message AgentResponse {
   repeated SystemProcessMsg processes=5;  // For multiple processes responses
   SystemProcessMsg process=6;
   uint32 grpc_port = 7;
+  bool secure_grpc=10;
   repeated string status_lines = 8;
+  repeated ServiceImplementor services_implementation=9;  // all services with their implementation
 }
 
 message LogLines {
@@ -48,9 +69,12 @@ message LogLines {
 }
 
 
+
+
 service Agent {
   rpc AgentCmd(AgentCmdMsg) returns (AgentResponse) {}
   rpc AgentSystemCmd(AgentCmdMsg) returns(AgentResponse) {}
   rpc RegisterProcess(SystemProcessMsg) returns(AgentResponse) {}
   rpc GetSystemLog(AgentCmdMsg) returns (stream LogLines) {}
+  rpc GetServices(AgentCmdMsg) returns (AgentResponse) {}
 }
