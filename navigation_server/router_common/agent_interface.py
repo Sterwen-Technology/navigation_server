@@ -20,7 +20,7 @@ from navigation_server.router_common import (GrpcClient, ServiceClient, NavThrea
                                              GrpcAccessException, GrpcServer, ProtobufProxy, pb_enum_string)
 from navigation_server.generated.agent_pb2_grpc import AgentStub
 from navigation_server.generated.agent_pb2 import AgentCmdMsg, AgentResponse, NavigationSystemMsg
-from navigation_server.generated.services_server_pb2 import ProcessState, Connection, Server, SystemProcessMsg
+from navigation_server.generated.services_server_pb2 import ProcessState, Connection, Server, SystemProcessMsg, Service
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -32,6 +32,12 @@ class SystemProcessMsgProxy(ProtobufProxy):
     @property
     def state(self):
         return pb_enum_string(self._msg, 'state', self._msg.state)
+
+    def services_name(self):
+        services = []
+        for service in self._msg.services:
+            services.append(service.service_name)
+        return services
 
 
 class AgentResponseProxy(ProtobufProxy):
@@ -69,6 +75,12 @@ def build_server_status_head(server) -> SystemProcessMsg:
     resp.hostname = gethostname()
     resp.purpose = MessageServerGlobals.configuration.server_purpose
     resp.settings = MessageServerGlobals.configuration.settings_file
+    for service in GrpcServer.get_services_from_class():
+        # _logger.info(f"Agent interface adding service:{service}")
+        service_pb = Service()
+        service_pb.service_name = service[0]
+        service_pb.rpc_service = service[1]
+        resp.services.append(service_pb)
     _logger.debug(f"Server status head: {resp}")
     return resp
 

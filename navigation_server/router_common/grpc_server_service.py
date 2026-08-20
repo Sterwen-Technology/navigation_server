@@ -58,6 +58,10 @@ class GrpcServer(NavigationServer):
         # print(__name__, "get grpc server", GrpcServer.grpc_server_global)
         return GrpcServer.grpc_server_global.grpc_server
 
+    @staticmethod
+    def get_services_from_class():
+        return GrpcServer.grpc_server_global.get_services()
+
     def __init__(self, options):
 
         if self.grpc_server_global is not None:

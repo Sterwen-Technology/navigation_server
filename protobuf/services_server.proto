@@ -48,7 +48,7 @@ message SystemProcessMsg {
   ProcessState state=3;
   uint32 grpc_port = 4;  // port gRPC based communication
   bool secure_grpc = 16;  // true when secure gRPC is enabled
-  bool console_present = 13;  //True when console is present
+  bool console_present = 13;  //True when console is present // deprecated will be deleted
   string status=5;
   uint32 error=6;
   string version=7;
@@ -59,4 +59,5 @@ message SystemProcessMsg {
   string settings = 12;
   bool is_systemd = 15;   // indicates that the process is controlled via systemd
   repeated Server servers=9;
+  repeated Service services=17;
 }

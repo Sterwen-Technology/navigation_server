@@ -468,6 +468,13 @@ class AgentServicerImpl(AgentServicer):
             resp.is_systemd = True
         else:
             resp.is_systemd = False
+        # copy the services
+        try:
+            services = process.services
+            for service in services:
+                resp.services.append(service)
+        except AttributeError:
+            pass
         _logger.debug(f"Process {process.name} console {resp.console_present}")
 
     def status(self, process:SystemdProcess, resp):

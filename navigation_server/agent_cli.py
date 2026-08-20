@@ -134,6 +134,13 @@ class ProcessManager(object):
         except KeyboardInterrupt:
             return
 
+    def display_services(self):
+        for process in self._processes.values():
+            # print(f"{process.name}\t\t{process.state}")
+            if process.state == 'RUNNING':
+                print(f"{process.name} - Services:")
+                for service in process.services:
+                    print(f"\t{service.service_name} / {service.rpc_service}")
 
 
 class NetworkManagerCli(object):
@@ -261,6 +268,9 @@ def main():
         if services is not None:
             for service_impl in services:
                 print(f"{service_impl.service.service_name}:{service_impl.process.name}")
+
+        print("New method")
+        process_manager.display_services()
 
 
 if __name__ == '__main__':
