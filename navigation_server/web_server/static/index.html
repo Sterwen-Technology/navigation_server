@@ -387,31 +387,38 @@
             const servers = (p.servers || []).map(srv => `
                 <div class="server-item">
                     <strong>${escapeHtml(srv.name)}</strong> [${escapeHtml(srv.server_class)}]
-                    ${srv.running ? '· <span style="color:var(--green)">running</span>' : '· <span style="color:var(--red)">stopped</span>'}
-                    ${srv.port ? `· port ${srv.port}` : ""}
-                    ${srv.protocol ? `· ${escapeHtml(srv.protocol)}` : ""}
-                    ${srv.nb_connections ? `· ${srv.nb_connections} conn.` : ""}
+                    ${srv.running ? '\u00b7 <span style="color:var(--green)">running</span>' : '\u00b7 <span style="color:var(--red)">stopped</span>'}
+                    ${srv.port ? `\u00b7 port ${srv.port}` : ""}
+                    ${srv.protocol ? `\u00b7 ${escapeHtml(srv.protocol)}` : ""}
+                    ${srv.nb_connections ? `\u00b7 ${srv.nb_connections} conn.` : ""}
                 </div>
             `).join("");
             // Contextual action buttons based on process state.
             const isRunning = p.state === "RUNNING";
-            const startBtn = `<button ${isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','start')">▶ Start</button>`;
-            const stopBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','stop')">■ Stop</button>`;
-            const restartBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','restart')">⟲ Restart</button>`;
-            const openBtn = p.console_present
-                ? `<button class="open-btn" onclick="openConsole('${escapeHtml(p.name)}')">⤓ Open</button>`
-                : '';
-            const nmea2000Btn = (p.purpose && p.purpose.includes('NMEA2000')) || (p.name && p.name.includes('NMEA2000')) || (p.purpose && p.purpose.includes('STNC_CAN')) || (p.name && p.name.includes('STNC_CAN'))
-                ? `<button class="open-btn" onclick="openNmea2000('${escapeHtml(p.name)}')">⚙ NMEA2000</button>`
-                : '';
+            const startBtn = `<button ${isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','start')">\u25b6 Start</button>`;
+            const stopBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','stop')">\u25a0 Stop</button>`;
+            const restartBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','restart')">\u27f2 Restart</button>`;
             const logBtn = p.is_systemd
-                ? `<button onclick="openLog('${escapeHtml(p.name)}')">📋 Log</button>`
+                ? `<button onclick="openLog('${escapeHtml(p.name)}')">\ud83d\udccb Log</button>`
                 : '';
+            
+            // Build service buttons from the services list
+            const serviceButtons = [];
+            const services = p.services || [];
+            for (const svc of services) {
+                const svcName = svc.service_name || '';
+                if (svcName === 'Console') {
+                    serviceButtons.push(`<button class="open-btn" onclick="openConsole('${escapeHtml(p.name)}')">\u2913 Console</button>`);
+                } else if (svcName === 'NMEA2000') {
+                    serviceButtons.push(`<button class="open-btn" onclick="openNmea2000('${escapeHtml(p.name)}')">\u2699 NMEA2000</button>`);
+                }
+            }
+            
             return `
                 <div class="card">
                     <h2>
                         <span class="proc-name">${escapeHtml(p.name)}</span>
-                        ${p.secure_grpc ? '<span class="secure-badge" title="TLS">🔒</span>' : ''}
+                        ${p.secure_grpc ? '<span class="secure-badge" title="TLS">\ud83d\udd12</span>' : ''}
                         <span class="badge ${p.state}">${p.state}</span>
                     </h2>
                     <div class="row"><span class="k">PID</span><span class="v">${fmt(p.pid)}</span></div>
@@ -427,14 +434,12 @@
                         ${startBtn}
                         ${stopBtn}
                         ${restartBtn}
-                        ${openBtn}
-                        ${nmea2000Btn}
                         ${logBtn}
                     </div>
+                    ${serviceButtons.length > 0 ? `<div class="card-actions">${serviceButtons.join('')}</div>` : ''}
                 </div>
             `;
         }
-
         async function procCmd(target, cmd) {
             try {
                 const r = await apiPost("/api/process", { target, cmd });

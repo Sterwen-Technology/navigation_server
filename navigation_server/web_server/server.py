@@ -315,6 +315,13 @@ class NavigationSystemCollector:
                     "protocol": server.protocol,
                     "connections": connections,
                 })
+            services_list = [
+                {
+                    "service_name": service.service_name,
+                    "rpc_service": service.rpc_service,
+                }
+                for service in proc.services
+            ]
             processes.append({
                 "id": proc.id,
                 "name": proc.name,
@@ -332,6 +339,7 @@ class NavigationSystemCollector:
                 "settings": proc.settings,
                 "is_systemd": proc.is_systemd,
                 "servers": servers,
+                "services": services_list,
             })
         return {
             "id": system.id,
