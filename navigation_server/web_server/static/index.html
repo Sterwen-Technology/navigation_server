@@ -215,7 +215,7 @@
             <span class="sub" id="agent-info">— agent: …</span>
         </h1>
         <div class="actions">
-            <span id="conn-status" class="status-pill disconnected" data-i18n="status.disconnected">disconnected</span>
+            <span id="conn-status" class="status-pill disconnected">disconnected</span>
             <button id="refresh-btn" title="Refresh">⟳ <span id="last-refresh">—</span></button>
             <label style="font-size:0.8rem; color:var(--muted); display:inline-flex; gap:4px; align-items:center;">
                 <input type="checkbox" id="auto-refresh" checked> <span data-i18n="auto_refresh.label">Auto refresh (5s)</span>
@@ -224,7 +224,7 @@
     </header>
     <main>
         <div id="system-summary" class="card" style="margin-bottom:16px;">
-            <div class="empty">Aucune donnée. Cliquez sur ⟳ pour rafraîchir.</div>
+            <div class="empty" data-i18n="main.no_data">No data. Click ↻ to refresh.</div>
         </div>
         <div id="processes-grid" class="grid"></div>
     </main>
@@ -234,9 +234,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="console-title">Console</h2>
-                <button class="modal-close" onclick="closeConsole()" title="Fermer">&times;</button>
+                <button class="modal-close" onclick="closeConsole()" title="Close">&times;</button>
             </div>
-            <div id="console-body"><div class="empty">Chargement…</div></div>
+            <div id="console-body"><div class="empty">t.t("general.loading")</div></div>
         </div>
     </div>
 
@@ -245,9 +245,9 @@
             <div class="modal-header">
                 <h2 id="log-title">Logs</h2>
                 <div>
-                    <button id="log-start-btn" onclick="startLogStream()" title="Démarrer">▶ Start</button>
-                    <button id="log-stop-btn" onclick="stopLogStream()" title="Arrêter" disabled>■ Stop</button>
-                    <button class="modal-close" onclick="closeLog()" title="Fermer">&times;</button>
+                    <button id="log-start-btn" onclick="startLogStream()" title="Start">▶ Start</button>
+                    <button id="log-stop-btn" onclick="stopLogStream()" title="Stop" disabled>■ Stop</button>
+                    <button class="modal-close" onclick="closeLog()" title="Close">&times;</button>
                 </div>
             </div>
             <div id="log-body" class="log-content" data-i18n="console.start_stream">Click Start to start the log stream...</div>
@@ -258,9 +258,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 data-i18n="network.title">Network Configuration</h2>
-                <button class="modal-close" onclick="closeNetwork()" title="Fermer">&times;</button>
+                <button class="modal-close" onclick="closeNetwork()" title="Close">&times;</button>
             </div>
-            <div id="network-body"><div class="empty">Chargement…</div></div>
+            <div id="network-body"><div class="empty">t.t("general.loading")</div></div>
         </div>
     </div>
     </div>
@@ -269,9 +269,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="nmea2000-title" data-i18n="nmea2000.title">NMEA2000</h2>
-                <button class="modal-close" onclick="closeNmea2000()" title="Fermer">&times;</button>
+                <button class="modal-close" onclick="closeNmea2000()" title="Close">&times;</button>
             </div>
-            <div id="nmea2000-body"><div class="empty">Chargement…</div></div>
+            <div id="nmea2000-body"><div class="empty">t.t("general.loading")</div></div>
         </div>
     </div>
 
@@ -349,15 +349,15 @@
 
             if (!data.connected) {
                 pill.className = "status-pill disconnected";
-                pill.textContent = "déconnecté";
+                pill.textContent = t.t("status.disconnected");
                 info.textContent = data.agent_address ? `— agent: ${data.agent_address}` : "— agent: ?";
-                summary.innerHTML = `<div class="empty">${escapeHtml(data.error || "Non connecté")}</div>`;
+                summary.innerHTML = `<div class="empty">${escapeHtml(data.error || t.t("general.not_connected"))}</div>`;
                 grid.innerHTML = "";
                 return;
             }
 
             pill.className = "status-pill connected";
-            pill.textContent = "connecté";
+            pill.textContent = t.t("status.connected");
             info.textContent = `— agent: ${data.agent_address}`;
 
             const s = data.system;
@@ -465,7 +465,7 @@
             const modal = $("console-modal");
             const title = $("console-title");
             title.textContent = `Console — ${processName}`;
-            $("console-body").innerHTML = '<div class="empty">Chargement…</div>';
+            $("console-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
             modal.classList.add("show");
             consoleProcess = processName;
             await refreshConsole();
@@ -562,7 +562,7 @@
         async function couplerCmd(process, coupler, cmd) {
             try {
                 const r = await apiPost("/api/coupler", { process, coupler, cmd });
-                toast(`${cmd} ${coupler}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
+                toast(`${cmd} ${coupler}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
                 if (r.ok) setTimeout(() => openConsole(process), 800);
             } catch (e) {
                 toast(t.t("toast.error", {error: e.message}), false);
@@ -662,7 +662,7 @@
 
         async function openNetwork() {
             $("network-modal").classList.add("show");
-            $("network-body").innerHTML = '<div class="empty">Chargement…</div>';
+            $("network-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
             try {
                 const [status, configs] = await Promise.all([
                     apiGet("/api/network"),
@@ -716,7 +716,7 @@
             if (!confirm(t.t("network.apply_config", {config: config}))) return;
             try {
                 const r = await apiPost("/api/network/config", { configuration: config });
-                toast(`Configuration ${config}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
+                toast(`Configuration ${config}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
                 if (r.ok) setTimeout(openNetwork, 1000);
             } catch (e) {
                 toast(t.t("toast.error", {error: e.message}), false);
@@ -735,7 +735,7 @@
             nmea2000Process = processName;
             nmea2000InDeviceView = false;
             $("nmea2000-title").textContent = "NMEA2000 — " + processName;
-            $("nmea2000-body").innerHTML = '<div class="empty">Chargement…</div>';
+            $("nmea2000-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
             $("nmea2000-modal").classList.add("show");
             try {
                 const data = await apiGet("/api/nmea2000/" + encodeURIComponent(processName) + "/status");
@@ -875,7 +875,7 @@
         async function nmea2000TraceCmd(processName, cmd) {
             try {
                 const r = await apiPost("/api/nmea2000/" + encodeURIComponent(processName) + "/trace", { cmd: cmd });
-                toast(cmd + ": " + (r.ok ? "OK" : (r.error || "échec")), r.ok);
+                toast(cmd + ": " + (r.ok ? "OK" : (r.error || t.t("toast.failure"))), r.ok);
                 if (r.ok) setTimeout(function() { openNmea2000(processName); }, 800);
             } catch (e) {
                 toast(t.t("toast.error", {error: e.message}), false);
@@ -910,6 +910,28 @@
         $("refresh-btn").addEventListener("click", refresh);
         $("auto-refresh").addEventListener("change", toggleAuto);
         refresh();
+
+    
+    // Function to translate all data-i18n elements on the page
+    function translateAllElements() {
+        const elements = document.querySelectorAll('[data-i18n]');
+        elements.forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (key) {
+                el.textContent = t.t(key);
+            }
+        });
+    }
+    
+    // Call translation on page load and language change
+    async function initPageTranslations() {
+        await initWebTranslations();
+        translateAllElements();
+        // Also re-translate when language changes (if needed)
+    }
+    
+    // Initialize on DOM load
+    document.addEventListener('DOMContentLoaded', initPageTranslations);
     </script>
 <script src="translations.js"></script>
 </body>

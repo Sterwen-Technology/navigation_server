@@ -126,22 +126,23 @@ const TRANSLATIONS = {
         
         // General
         'general.loading': 'Loading...',
-        'general.empty': 'Empty',
+        'general.empty': 'None',
+        'general.not_connected': 'Not connected',
         'general.unknown': 'Unknown',
         'general.msg': 'msg',
         'general.per_second': '/s'
     },
     fr: {
         // Connection status
-        'status.connected': 'connecté',
-        'status.disconnected': 'déconnecté',
+        'status.connected': 'connecte',
+        'status.disconnected': 'deconnecte',
         
         // Header
         'header.title': 'Navigation Server',
         'header.agent': 'agent: {address}',
         
         // Buttons (trivial ones stay in English as per requirements)
-        'button.refresh': 'Rafraîchir',
+        'button.refresh': 'Rafraichir',
         'button.start': 'Start',
         'button.stop': 'Stop',
         'button.restart': 'Restart',
@@ -152,18 +153,18 @@ const TRANSLATIONS = {
         'button.back': 'Retour',
         
         // Auto-refresh
-        'auto_refresh.label': 'Rafraîch. auto (5s)',
+        'auto_refresh.label': 'Rafraich. auto (5s)',
         
         // Main page
-        'main.no_data': 'Aucune donnée. Cliquez sur ↻ pour rafraîchir.',
-        'main.no_processes': 'Aucun processus enregistré.',
+        'main.no_data': 'Aucune donnee. Cliquez sur ↻ pour rafraichir.',
+        'main.no_processes': 'Aucun processus enregistre.',
         
         // System summary
-        'system.host': 'Hôte',
+        'system.host': 'Hote',
         'system.ip_address': 'Adresse IP',
-        'system.started': 'Démarré le',
+        'system.started': 'Demarre le',
         'system.configuration': 'Configuration',
-        'system.restart_app': 'Redémarrer App',
+        'system.restart_app': 'Redemarrer App',
         
         // Process states
         'state.RUNNING': 'RUNNING',
@@ -175,10 +176,10 @@ const TRANSLATIONS = {
         'process.pid': 'PID',
         'process.grpc_port': 'Port gRPC',
         'process.version': 'Version',
-        'process.started': 'Démarré',
+        'process.started': 'Demarre',
         'process.status': 'Statut',
         'process.error': 'Erreur',
-        'process.control': 'Contrôle',
+        'process.control': 'Controle',
         'process.systemd': 'systemd',
         
         // Server info
@@ -189,11 +190,11 @@ const TRANSLATIONS = {
         // Coupler info
         'coupler.class': 'Classe',
         'coupler.protocol': 'Protocole',
-        'coupler.device_state': 'État device',
+        'coupler.device_state': 'Etat device',
         'coupler.msg_in_out': 'Msg in/out',
-        'coupler.rate_in_out': 'Débit in/out',
+        'coupler.rate_in_out': 'Debit in/out',
         'coupler.trace': 'Trace',
-        'coupler.activated': 'activée',
+        'coupler.activated': 'activee',
         'coupler.inactive': 'inactive',
         
         // Console
@@ -202,17 +203,17 @@ const TRANSLATIONS = {
         'console.couplers': 'Coupleurs',
         'console.no_servers': 'Aucun serveur.',
         'console.no_couplers': 'Aucun coupleur.',
-        'console.start_stream': 'Cliquez sur Start pour démarrer le flux de logs...',
-        'console.stream_started': '--- Flux démarré ---',
-        'console.stream_stopped': '--- Flux arrêté ---',
+        'console.start_stream': 'Cliquez sur Start pour demarrer le flux de logs...',
+        'console.stream_started': '--- Flux demarre ---',
+        'console.stream_stopped': '--- Flux arrete ---',
         
         // Network
-        'network.title': 'Configuration réseau',
+        'network.title': 'Configuration reseau',
         'network.nm_status': 'NetworkManager',
         'network.nm_active': 'actif',
         'network.nm_inactive': 'inactif',
         'network.global_configs': 'Configurations globales',
-        'network.apply_config': 'Appliquer la configuration réseau "{config}" ?',
+        'network.apply_config': 'Appliquer la configuration reseau "{config}" ?',
         'network.interfaces': 'Interfaces',
         'network.no_interfaces': 'Aucune interface.',
         
@@ -237,15 +238,15 @@ const TRANSLATIONS = {
         'nmea2000.stop_trace': 'Stop Trace',
         
         // System commands
-        'command.halt_confirm': 'Confirmer : arrêter le système ?',
-        'command.reboot_confirm': 'Confirmer : redémarrer le système ?',
-        'command.navigation_restart_confirm': 'Confirmer : redémarrer TOUS les processus (y compris l\'agent) ?',
+        'command.halt_confirm': 'Confirmer : arreter le systeme ?',
+        'command.reboot_confirm': 'Confirmer : redemarrer le systeme ?',
+        'command.navigation_restart_confirm': 'Confirmer : redemarrer TOUS les processus (y compris l\'agent) ?',
         
         // Toast messages
-        'toast.refresh_error': 'Erreur de rafraîchissement : {error}',
+        'toast.refresh_error': 'Erreur de rafraichissement : {error}',
         'toast.error': 'Erreur: {error}',
         'toast.ok': 'OK',
-        'toast.failure': 'échec',
+        'toast.failure': 'echec',
         
         // Log
         'log.title': 'Logs',
@@ -255,6 +256,7 @@ const TRANSLATIONS = {
         // General
         'general.loading': 'Chargement...',
         'general.empty': 'Aucun',
+        'general.not_connected': 'Non connecte',
         'general.unknown': 'Inconnu',
         'general.msg': 'msg',
         'general.per_second': '/s'
@@ -327,7 +329,7 @@ const t = new WebTranslationManager();
 
 // Function to format a value (from the original code)
 function fmt(v) {
-    return v === 0 || v ? escapeHtml(v) : "—";
+    return v === 0 || v ? escapeHtml(v) : "--";
 }
 
 // Function to escape HTML (from the original code)
