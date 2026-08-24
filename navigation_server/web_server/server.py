@@ -620,9 +620,9 @@ class _RequestHandler(BaseHTTPRequestHandler):
             else:
                 self._serve_json({"ok": False, "error": "missing process name"},
                                  status=HTTPStatus.BAD_REQUEST)
-        elif path == "/health":
         elif path == "/api/config":
             self._serve_config()
+        elif path == "/health":
             self._serve_json({"ok": True, "time": time.time()})
         elif path.startswith("/api/nmea2000/"):
             parts = path[len("/api/nmea2000/"):].split("/")
