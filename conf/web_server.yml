@@ -20,6 +20,7 @@ trace_dir: /var/log
 # a managed process, it only queries the agent).
 connect_agent: false
 enable_secure_grpc: true
+client_certificate: nav_ca_cert_stnc800a003.pem
 
 features:
     - web_server

@@ -343,12 +343,14 @@ class NavigationConfiguration:
                 self.set_global('certificate_dir', certificate_dir)
                 _logger.info(f"Configuration directory for secure certificates {certificate_dir}")
                 # client certificate
-                cert_file = os.path.join(certificate_dir, 'nav_ca_cert.pem')
+                client_certificate = self._configuration.get('client_certificate', 'nav_ca_cert.pem')
+                cert_file = os.path.join(certificate_dir, client_certificate)
                 try:
                     if os.path.isfile(cert_file):
                         with open(cert_file, 'rb') as f:
                             self._ca_cert = f.read()
                         self._client_secure_communications = True
+                        _logger.info(f"Client secure communication enabled with certificate{client_certificate}")
                     else:
                         _logger.warning(f"Certificate file {cert_file} does not exist")
                 except IOError as e:
@@ -377,7 +379,7 @@ class NavigationConfiguration:
                     _logger.info("Server secure communications enabled")
                     self._server_secure_communications = True
                 else:
-                    _logger.error("Secure communication disabled due to configuration error")
+                    _logger.warning("Server secure communication disabled due to configuration error")
             else:
                 if certificate_dir is not None:
                     _logger.warning(f"Certificate directory {certificate_dir} does not exist")

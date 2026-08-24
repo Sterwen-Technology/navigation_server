@@ -12,8 +12,8 @@
 #
 # Author:      Vibe Code
 #
-# Created:     17/08/2025
-# Copyright:   (c) Sterwen Technology 2021-2025
+# Created:     17/08/2026
+# Copyright:   (c) Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
