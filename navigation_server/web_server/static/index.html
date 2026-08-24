@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Navigation Server — Interface Web</title>
+    <title>Navigation Server — Web Interface</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -215,10 +215,10 @@
             <span class="sub" id="agent-info">— agent: …</span>
         </h1>
         <div class="actions">
-            <span id="conn-status" class="status-pill disconnected">déconnecté</span>
-            <button id="refresh-btn" title="Rafraîchir">⟳ <span id="last-refresh">—</span></button>
+            <span id="conn-status" class="status-pill disconnected" data-i18n="status.disconnected">disconnected</span>
+            <button id="refresh-btn" title="Refresh">⟳ <span id="last-refresh">—</span></button>
             <label style="font-size:0.8rem; color:var(--muted); display:inline-flex; gap:4px; align-items:center;">
-                <input type="checkbox" id="auto-refresh" checked> Rafraîch. auto (5s)
+                <input type="checkbox" id="auto-refresh" checked> <span data-i18n="auto_refresh.label">Auto refresh (5s)</span>
             </label>
         </div>
     </header>
@@ -250,14 +250,14 @@
                     <button class="modal-close" onclick="closeLog()" title="Fermer">&times;</button>
                 </div>
             </div>
-            <div id="log-body" class="log-content">Cliquez sur Start pour démarrer le flux de logs…</div>
+            <div id="log-body" class="log-content" data-i18n="console.start_stream">Click Start to start the log stream...</div>
         </div>
     </div>
 
     <div id="network-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Configuration réseau</h2>
+                <h2 data-i18n="network.title">Network Configuration</h2>
                 <button class="modal-close" onclick="closeNetwork()" title="Fermer">&times;</button>
             </div>
             <div id="network-body"><div class="empty">Chargement…</div></div>
@@ -268,7 +268,7 @@
     <div id="nmea2000-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="nmea2000-title">NMEA2000</h2>
+                <h2 id="nmea2000-title" data-i18n="nmea2000.title">NMEA2000</h2>
                 <button class="modal-close" onclick="closeNmea2000()" title="Fermer">&times;</button>
             </div>
             <div id="nmea2000-body"><div class="empty">Chargement…</div></div>
@@ -325,7 +325,7 @@
                 render(data);
                 $("last-refresh").textContent = new Date().toLocaleTimeString("fr-FR");
             } catch (e) {
-                toast("Erreur de rafraîchissement : " + e.message, false);
+                toast(t.t("toast.refresh_error", {error: e.message}), false);
             } finally {
                 isRefreshing = false;
                 btn.disabled = false;
@@ -363,21 +363,21 @@
             const s = data.system;
             summary.innerHTML = `
                 <h2>${escapeHtml(s.name)} <span class="sub" style="color:var(--muted);font-weight:400;">v${fmt(s.version)}</span></h2>
-                <div class="row"><span class="k">Hôte</span><span class="v">${fmt(s.hostname)}</span></div>
-                <div class="row"><span class="k">Adresse IP</span><span class="v">${fmt(s.ip_address)}</span></div>
-                <div class="row"><span class="k">Démarré le</span><span class="v">${fmt(s.start_time)}</span></div>
-                <div class="row"><span class="k">Configuration</span><span class="v">${fmt(s.settings)}</span></div>
+                <div class="row"><span class="k" data-i18n="system.host">Host</span><span class="v">${fmt(s.hostname)}</span></div>
+                <div class="row"><span class="k" data-i18n="system.ip_address">IP Address</span><span class="v">${fmt(s.ip_address)}</span></div>
+                <div class="row"><span class="k" data-i18n="system.started">Started</span><span class="v">${fmt(s.start_time)}</span></div>
+                <div class="row"><span class="k" data-i18n="system.configuration">Configuration</span><span class="v">${fmt(s.settings)}</span></div>
                 <div class="card-actions">
                     <button class="danger" onclick="systemCmdConfirm('halt')">⏻ Halt</button>
                     <button class="danger" onclick="systemCmdConfirm('reboot')">⟲ Reboot</button>
-                    <button onclick="systemCmdConfirm('navigation_restart')" title="Redémarrer tous les processus">⟲ Restart App</button>
+                    <button onclick="systemCmdConfirm('navigation_restart')" title="Restart all processes">⟲ Restart App</button>
                     <button class="open-btn" onclick="openNetwork()" style="margin-left: auto;">⚙ Network</button>
                 </div>
             `;
 
             const procs = s.processes || [];
             if (!procs.length) {
-                grid.innerHTML = `<div class="empty">Aucun processus enregistré.</div>`;
+                grid.innerHTML = `<div class="empty" data-i18n="main.no_processes">No processes registered.</div>`;
                 return;
             }
             grid.innerHTML = procs.map(procCard).join("");
@@ -424,11 +424,11 @@
                     <div class="row"><span class="k">PID</span><span class="v">${fmt(p.pid)}</span></div>
                     <div class="row"><span class="k">Port gRPC</span><span class="v">${fmt(p.grpc_port)}</span></div>
                     <div class="row"><span class="k">Version</span><span class="v">${fmt(p.version)}</span></div>
-                    <div class="row"><span class="k">Démarré</span><span class="v">${fmt(p.start_time)}</span></div>
-                    ${p.status ? `<div class="row"><span class="k">Statut</span><span class="v">${fmt(p.status)}</span></div>` : ""}
-                    ${p.error ? `<div class="row"><span class="k">Erreur</span><span class="v" style="color:var(--red)">${fmt(p.error)}</span></div>` : ""}
+                    <div class="row"><span class="k" data-i18n="process.started">Started</span><span class="v">${fmt(p.start_time)}</span></div>
+                    ${p.status ? `<div class="row"><span class="k" data-i18n="process.status">Status</span><span class="v">${fmt(p.status)}</span></div>` : ""}
+                    ${p.error ? `<div class="row"><span class="k" data-i18n="process.error">Error</span><span class="v" style="color:var(--red)">${fmt(p.error)}</span></div>` : ""}
 
-                    ${p.is_systemd ? '<div class="row"><span class="k">Contrôle</span><span class="v">systemd</span></div>' : ""}
+                    ${p.is_systemd ? '<div class="row"><span class="k" data-i18n="process.control">Control</span><span class="v" data-i18n="process.systemd">systemd</span></div>' : ""}
                     ${servers ? `<div class="servers">${servers}</div>` : ""}
                     <div class="card-actions">
                         ${startBtn}
@@ -443,20 +443,20 @@
         async function procCmd(target, cmd) {
             try {
                 const r = await apiPost("/api/process", { target, cmd });
-                toast(`${cmd} ${target}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
+                toast(`${cmd} ${target}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
                 if (r.ok) setTimeout(refresh, 800);
             } catch (e) {
-                toast("Erreur: " + e.message, false);
+                toast(t.t("toast.error", {error: e.message}), false);
             }
         }
 
         async function systemCmd(cmd) {
             try {
                 const r = await apiPost("/api/system", { cmd });
-                toast(`${cmd}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
+                toast(`${cmd}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
                 if (r.ok) setTimeout(refresh, 800);
             } catch (e) {
-                toast("Erreur: " + e.message, false);
+                toast(t.t("toast.error", {error: e.message}), false);
             }
         }
 
@@ -536,12 +536,12 @@
                         </h2>
                         <div class="row"><span class="k">Classe</span><span class="v">${fmt(c.coupler_class)}</span></div>
                         <div class="row"><span class="k">Protocole</span><span class="v">${fmt(c.protocol)}</span></div>
-                        <div class="row"><span class="k">État device</span><span class="v">${fmt(c.dev_state)}</span></div>
-                        <div class="row"><span class="k">Msg in/out</span><span class="v">${fmt(c.msg_in)} / ${fmt(c.msg_out)}</span></div>
-                        <div class="row"><span class="k">Débit in/out</span><span class="v">${fmt(c.input_rate && c.input_rate.toFixed(1))} / ${fmt(c.output_rate && c.output_rate.toFixed(1))} /s</span></div>
+                        <div class="row"><span class="k" data-i18n="coupler.device_state">Device State</span><span class="v">${fmt(c.dev_state)}</span></div>
+                        <div class="row"><span class="k" data-i18n="coupler.msg_in_out">Msg in/out</span><span class="v">${fmt(c.msg_in)} / ${fmt(c.msg_out)}</span></div>
+                        <div class="row"><span class="k" data-i18n="coupler.rate_in_out">Rate in/out</span><span class="v">${fmt(c.input_rate && c.input_rate.toFixed(1))} / ${fmt(c.output_rate && c.output_rate.toFixed(1))} /s</span></div>
                         ${c.error ? `<div class="row"><span class="k">Erreur</span><span class="v" style="color:var(--red)">${fmt(c.error)}</span></div>` : ""}
                         ${c.status ? `<div class="row"><span class="k">Statut</span><span class="v">${fmt(c.status)}</span></div>` : ""}
-                        <div class="row"><span class="k">Trace</span><span class="v" style="color:${c.trace_on ? 'var(--green)' : 'var(--muted)'}">${c.trace_on ? 'activée' : 'inactive'}</span></div>
+                        <div class="row"><span class="k" data-i18n="coupler.trace">Trace</span><span class="v" style="color:${c.trace_on ? 'var(--green)' : 'var(--muted)'}" data-i18n-text="${c.trace_on ? 'coupler.activated' : 'coupler.inactive'}">${c.trace_on ? 'activated' : 'inactive'}</span></div>
                         <div class="card-actions">${startStopBtn}${suspendResumeBtn}${traceBtn}</div>
                     </div>
                 `;
@@ -549,12 +549,12 @@
 
             body.innerHTML = `
                 <div class="console-section">
-                    <h3>Serveurs TCP/UDP (${(d.servers||[]).length})</h3>
-                    ${servers || '<div class="empty">Aucun serveur.</div>'}
+                    <h3 data-i18n="console.servers">TCP/UDP Servers</h3> (${(d.servers||[]).length})
+                    ${servers || '<div class="empty" data-i18n="console.no_servers">No servers.</div>'}
                 </div>
                 <div class="console-section">
-                    <h3>Coupleurs (${(d.couplers||[]).length})</h3>
-                    <div class="grid">${couplers || '<div class="empty">Aucun coupleur.</div>'}</div>
+                    <h3 data-i18n="console.couplers">Couplers</h3> (${(d.couplers||[]).length})
+                    <div class="grid">${couplers || '<div class="empty" data-i18n="console.no_couplers">No couplers.</div>'}</div>
                 </div>
             `;
         }
@@ -565,7 +565,7 @@
                 toast(`${cmd} ${coupler}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
                 if (r.ok) setTimeout(() => openConsole(process), 800);
             } catch (e) {
-                toast("Erreur: " + e.message, false);
+                toast(t.t("toast.error", {error: e.message}), false);
             }
         }
 
@@ -589,15 +589,15 @@
         }
 
         async function systemCmdConfirm(cmd) {
-            const labels = {halt: 'arrêter le système', reboot: 'redémarrer le système',
-                            navigation_restart: 'redémarrer TOUS les processus (y compris l\'agent)'};
+            const labels = {halt: t.t("command.halt_confirm"), reboot: t.t("command.reboot_confirm"),
+                            navigation_restart: t.t("command.navigation_restart_confirm")};
             if (!confirm(`Confirmer : ${labels[cmd] || cmd} ?`)) return;
             try {
                 const r = await apiPost("/api/system", { cmd });
-                toast(`${cmd}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
+                toast(`${cmd}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
                 if (r.ok) setTimeout(refresh, 1500);
             } catch (e) {
-                toast("Erreur: " + e.message, false);
+                toast(t.t("toast.error", {error: e.message}), false);
             }
         }
 
@@ -624,7 +624,7 @@
             $("log-stop-btn").disabled = false;
             logEventSource = new EventSource(`/api/log/stream/${encodeURIComponent(logProcess)}`);
             logEventSource.addEventListener("started", () => {
-                appendLogLine("--- Flux démarré ---");
+                appendLogLine(t.t("console.stream_started"));
             });
             logEventSource.addEventListener("error", (e) => {
                 if (e.data) appendLogLine("ERREUR: " + e.data);
@@ -642,7 +642,7 @@
             }
             $("log-start-btn").disabled = false;
             $("log-stop-btn").disabled = true;
-            appendLogLine("--- Flux arrêté ---");
+            appendLogLine(t.t("console.stream_stopped"));
             try {
                 await apiPost("/api/log/stop", {});
             } catch (e) { /* ignore */ }
@@ -697,10 +697,10 @@
             body.innerHTML = `
                 <div class="console-section">
                     <h3>NetworkManager: ${status.nm_running ? 'actif' : 'inactif'} ${status.status ? '· ' + escapeHtml(status.status) : ''}</h3>
-                    ${interfaces || '<div class="empty">Aucune interface.</div>'}
+                    ${interfaces || '<div class="empty" data-i18n="network.no_interfaces">No interfaces.</div>'}
                 </div>
                 <div class="console-section">
-                    <h3>Configurations globales</h3>
+                    <h3 data-i18n="network.global_configs">Global Configurations</h3>
                     <div class="card-actions">
                         <select id="net-config-select" class="net-config-select">${configOptions}</select>
                         <button onclick="applyNetworkConfig()">Appliquer</button>
@@ -713,13 +713,13 @@
             const sel = $("net-config-select");
             if (!sel) return;
             const config = sel.value;
-            if (!confirm(`Appliquer la configuration réseau "${config}" ?`)) return;
+            if (!confirm(t.t("network.apply_config", {config: config}))) return;
             try {
                 const r = await apiPost("/api/network/config", { configuration: config });
                 toast(`Configuration ${config}: ${r.ok ? "OK" : (r.error || "échec")}`, r.ok);
                 if (r.ok) setTimeout(openNetwork, 1000);
             } catch (e) {
-                toast("Erreur: " + e.message, false);
+                toast(t.t("toast.error", {error: e.message}), false);
             }
         }
 
@@ -774,7 +774,7 @@
                 <h3>Devices (${devices.length})</h3>
                 <div class="nmea2000-devices">`;
             if (devices.length === 0) {
-                html += '<div class="empty">No NMEA2000 devices.</div>';
+                html += '<div class="empty" data-i18n="nmea2000.no_devices">No NMEA2000 devices.</div>';
             } else {
                 for (const dev of devices) {
                     const proxySymbol = dev.is_proxy ? '<span class="proxy-symbol" title="Proxy"></span>' : '';
@@ -801,7 +801,7 @@
                     toast(data.error || "Erreur", false);
                 }
             } catch (e) {
-                toast("Erreur: " + e.message, false);
+                toast(t.t("toast.error", {error: e.message}), false);
             }
         }
 
@@ -878,7 +878,7 @@
                 toast(cmd + ": " + (r.ok ? "OK" : (r.error || "échec")), r.ok);
                 if (r.ok) setTimeout(function() { openNmea2000(processName); }, 800);
             } catch (e) {
-                toast("Erreur: " + e.message, false);
+                toast(t.t("toast.error", {error: e.message}), false);
             }
         }
 
@@ -911,5 +911,6 @@
         $("auto-refresh").addEventListener("change", toggleAuto);
         refresh();
     </script>
+<script src="translations.js"></script>
 </body>
 </html>

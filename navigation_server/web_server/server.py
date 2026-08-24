@@ -621,6 +621,8 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 self._serve_json({"ok": False, "error": "missing process name"},
                                  status=HTTPStatus.BAD_REQUEST)
         elif path == "/health":
+        elif path == "/api/config":
+            self._serve_config()
             self._serve_json({"ok": True, "time": time.time()})
         elif path.startswith("/api/nmea2000/"):
             parts = path[len("/api/nmea2000/"):].split("/")
@@ -797,6 +799,23 @@ class _RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+
+    def _serve_config(self):
+        """Serve the language configuration from the server."""
+        try:
+            from navigation_server.router_common.global_variables import MessageServerGlobals
+            config = {
+                "language": "en",  # Default
+                "version": MessageServerGlobals.version or "3.0.0"
+            }
+            # Try to get the actual language from configuration
+            if MessageServerGlobals.configuration:
+                language = MessageServerGlobals.configuration.get_option('language', "en")
+                config["language"] = language
+            self._serve_json(config)
+        except Exception as e:
+            _logger.error("Error serving config: %s", e)
+            self._serve_json({"language": "en", "version": "3.0.0"})
     def _read_json_body(self):
         length = int(self.headers.get("Content-Length", 0) or 0)
         if length == 0:
