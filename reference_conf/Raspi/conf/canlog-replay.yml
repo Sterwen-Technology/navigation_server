@@ -25,7 +25,6 @@ log_module:
 features:
   - router_core
   - nmea2000
-  - nmea2000_devices
   - can_interface
   - log_replay
 
@@ -42,10 +41,9 @@ servers:
       class: NMEA2KActiveController
       trace: false
       channel: can0
-      mac_source: eno1
+      mac_source: eth0
       max_silent: 60.0
       applications: [LogInjector]
-
 
 couplers:
 

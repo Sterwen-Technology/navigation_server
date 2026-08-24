@@ -1,11 +1,11 @@
 #-------------------------------------------------------------------------------
 # Name:        canlog-replay.yml
-# Purpose:     Settings file to replay raw can log on the can bus
+# Purpose:     Settings file to replay raw can log on the can bus - for Linux server version
 #
 # Author:      Laurent Carré
 #
-# Created:     19/05/2025
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Created:     25/06/2026
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 
@@ -15,11 +15,11 @@ log_level: INFO
 trace_dir: /data/navigation/traces
 debug_configuration: false
 decode_definition_only: false
-connect_agent: true
-secure_grpc: true
+connect_agent: false
+secure_grpc: false
 
 log_module:
-    router_common.agent_interface: DEBUG
+    router_common.agent_interface: ERROR
 
 
 features:
@@ -50,7 +50,7 @@ servers:
 couplers:
 
 - LogReader:
-    logfile: /data/navigation/traces/TRACE-CAN-if-can0-240823-1304.log
+    logfile: /mnt/meaban/Bateau/traces_ref/TRACE-CAN-if-can0-240823-1304.log
     class: TransparentCanLogCoupler
     autostart: true
     direction: read_only

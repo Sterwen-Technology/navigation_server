@@ -48,12 +48,10 @@ class NMEA2KActiveController(NMEA2KController):
         self._create_default_application = opts.get('default_application', bool, True)
         self._address_change_request = None
         self._start_application_lock = threading.Lock()
-        self._context_lock = threading.Lock()
         self._pgn_vector = {}
         self._app_timer = None
         self._timer_vector = []
         self._catch_all = []
-        self._retry_context = []
         set_global_var("NMEA2K_ECU", self)
 
 
@@ -292,11 +290,6 @@ class NMEA2KActiveController(NMEA2KController):
             except SocketCanError as e:
                 # message is lost
                 _logger.error("ActiveController - send_to_bus - Message lost due to:%s" % e)
-
-    def add_retry_context(self, context):
-        self._context_lock.acquire(timeout=2.0)
-        self._retry_context.append(context)
-        self._context_lock.release()
 
     def bus_online_callback(self):
         _logger.info("Active Controller => bus online")

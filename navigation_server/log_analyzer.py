@@ -25,6 +25,7 @@ def _parser():
     p.add_argument('-e','--end', action='store', default=0, type=int, help='End record')
     p.add_argument('--pgn_list', action='store', type=int, default=None, help='PGN list')
     p.add_argument('-a', '--analyse', action='store_true', default=False, help='analyse only the file')
+    p.add_argument('-d', '--decode', action='store_true', default=False, help='decode the file')
     return p
 
 
