@@ -21,6 +21,7 @@ from navigation_server.router_common import ObjectCreationError, MessageServerGl
 from .grpc_server_service import GrpcServer
 from .generic_top_server import GenericTopServer
 from .nav_threading import NavProfilingController, NavThreadingController
+from .translation import translate, t
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -236,7 +237,7 @@ class NavigationConfiguration:
         MessageServerGlobals.global_variables = self
         # print(settings_file)
         if not os.path.exists(settings_file):
-            _logger.info(f"Settings file {settings_file} does not exist from path:{os.getcwd()}")
+            _logger.info(translate("file.not_found", "File not found: {file}", file=settings_file))
             # we merge with the home dir
             settings_file = os.path.join(MessageServerGlobals.home_dir, "conf", settings_file)
         # keep the configuration path
@@ -248,13 +249,13 @@ class NavigationConfiguration:
         try:
             fp = open(settings_file, 'r')
         except (IOError, FileNotFoundError) as e:
-            _logger.error("Settings file %s error %s" % (settings_file, e))
+            _logger.error(translate("error.io_error", "IO error: {error}", error=str(e)))
             _logger.error(f"Current directory is {os.getcwd()}")
             raise
         try:
             self._configuration = yaml.safe_load(fp)
         except yaml.YAMLError as e:
-            _logger.error("Settings file decoding error %s" % str(e))
+            _logger.error(translate("error.yaml_error", "Yaml file decoding error {error}", error=str(e)))
             fp.close()
             raise ConfigurationException("Yaml file decoding error %s" % str(e))
         # check if we debug the configuration analysis
@@ -264,17 +265,23 @@ class NavigationConfiguration:
         try:
             MessageServerGlobals.server_name = self._configuration['server_name']
         except KeyError:
-            _logger.warning("Configuration: Missing the server name global parameter")
+            _logger.warning(translate("error.missing_class", "Missing the server name global parameter"))
             MessageServerGlobals.server_name = "MessageServer(Default)"
-        _logger.info(f"Server name: {MessageServerGlobals.server_name}")
+        _logger.info(translate("info.server_name", "Server name: {name}", name=MessageServerGlobals.server_name))
         # display the server purpose
         try:
             server_purpose = self._configuration['function']
         except KeyError:
             server_purpose = 'Unknown'
             self._configuration['function'] = 'Unknown (missing "function" keyword)'
-        _logger.info(f"Server function {server_purpose}")
+        _logger.info(translate("info.server_function", "Server function {function}", function=server_purpose))
         self._server_purpose = server_purpose
+        
+        # Initialize translation system
+        language = self._configuration.get('language', 'en')
+        from .translation import init_translation
+        init_translation(language)
+        
         try:
             data_directory = self._configuration['data_dir']
         except KeyError:
@@ -285,9 +292,9 @@ class NavigationConfiguration:
                 MessageServerGlobals.data_dir = data_directory
                 _logger.info(f"Data directory:{data_directory}")
             else:
-                _logger.error(f"Not enough permissions for data_directory:{data_directory}")
+                _logger.error(translate("warning.not_enough_permissions", "Not enough permissions for {path}", path=data_directory))
         else:
-            _logger.warning(f"Non existent data directory {data_directory} - some features will not work")
+            _logger.warning(translate("warning.non_existent_dir", "Non existent data directory {path} - some features will not work", path=data_directory))
 
         try:
             trace_dir = self._configuration['trace_dir']

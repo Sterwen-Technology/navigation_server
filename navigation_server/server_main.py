@@ -16,7 +16,8 @@ import sys
 
 from navigation_server.router_common import (NavigationConfiguration, NavigationLogSystem, MessageServerGlobals,
                                              init_options, set_root_package, ConfigurationException, AgentInterface,
-                                             ObjectCreationError, GrpcServer, GrpcClient, ObjectFatalError)
+                                             ObjectCreationError, GrpcServer, GrpcClient, ObjectFatalError,
+                                             translate, t)
 
 MessageServerGlobals.version = "3.0.0"
 default_base_dir = "/"
@@ -44,7 +45,7 @@ def server_main():
     try:
         config = NavigationConfiguration().build_configuration(opts.settings)
     except (FileNotFoundError, IOError, ConfigurationException) as err:
-        _logger.critical("Error on configuration file => STOP")
+        _logger.critical(translate("config.error", "Error on configuration file => STOP"))
         return
     NavigationLogSystem.finalize_log(config)
     _logger.info("Navigation server working directory:%s" % os.getcwd())
@@ -53,22 +54,22 @@ def server_main():
     # check security
     if config.client_secure_communications:
         GrpcClient.set_ca_certificate(config.ca_certificate)
-        _logger.info("Secure communications enabled")
+        _logger.info(translate("config.secure_enabled", "Secure communications enabled"))
     # create all server or service objects
     try:
         config.build_objects()
     except (ConfigurationException, ObjectCreationError, ObjectFatalError):
-        _logger.critical("Error in configuration during build => STOP")
+        _logger.critical(translate("error.configuration_error", "Error in configuration during build => STOP"))
         return
 
     if config.get_option('decode_definition_only', False):
-        _logger.info("Decode only mode -> no active server")
+        _logger.info(translate("general.info", "Decode only mode -> no active server"))
         return
 
     assert MessageServerGlobals.main_server is not None
     has_grpc_server = GrpcServer.grpc_server_global is not None
     if not has_grpc_server and not config.main_server.is_agent():
-        _logger.info("No local gRPC server configured (e.g. web interface only process)")
+        _logger.info(translate("info.no_objects", "No local gRPC server configured (e.g. web interface only process)"))
     _logger.debug("Starting the main server")
     if config.main_server.start():
         # register the process in agent service if needed
@@ -76,10 +77,10 @@ def server_main():
             if has_grpc_server and config.get_option('connect_agent', True):
                 unsecure_agent = config.get_option('unsecure_agent', False)
                 if not unsecure_agent and not config.client_secure_communications:
-                    _logger.warning("Secure gRPC is disabled but secure agent is set => trying unsecure agent")
+                    _logger.warning(translate("warning.secure_warning", "Secure gRPC is disabled but secure agent is set => trying unsecure agent"))
                     unsecure_agent = True
                 elif unsecure_agent and config.client_secure_communications:
-                    _logger.warning("Secure gRPC is enabled but unsecure agent is set => trying secure agent")
+                    _logger.warning(translate("warning.unsecure_warning", "Secure gRPC is enabled but unsecure agent is set => trying secure agent"))
                     unsecure_agent = False
                 agent = AgentInterface(unsecure_agent).send_confirmation()
         if opts.timer is not None:
@@ -87,13 +88,13 @@ def server_main():
             config.main_server.start_analyser(opts.timer)
         # wait for all threads to stop now
         config.main_server.wait()
-        _logger.info("server shall stop now")
+        _logger.info(translate("server.waiting", "server shall stop now"))
         config.main_server.print_threads()
         MessageServerGlobals.profiling_controller.stop_and_output()
         for thread in MessageServerGlobals.thread_controller.running_threads():
-            _logger.warning(f"Wrongfully running thread {thread.name})")
+            _logger.warning(translate("thread.running_thread_warning", "Wrongfully running thread {thread_name}", thread_name=thread.name))
     else:
-        _logger.critical("Main server did not start properly => stop server")
+        _logger.critical(translate("server.not_started", "Main server did not start properly => stop server"))
 
 
 if __name__ == '__main__':

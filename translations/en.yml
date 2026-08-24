@@ -1,0 +1,163 @@
+server:
+  starting: Starting {server_name} version {version} - copyright Sterwen Technology
+    2021-2026
+  stopped: Server stopped
+  error: 'Server error: {error}'
+  initialized: Server initialized
+  not_started: Server did not start properly
+  waiting: Waiting for server termination
+  terminated: Server terminated
+config:
+  loading: Building configuration from settings file {settings_file} in path {settings_path}
+  error: Error on configuration file => STOP
+  invalid: Invalid configuration
+  missing_server: The 'Main' server is missing -> invalid configuration
+  no_console: No console defined
+  secure_enabled: Secure communications enabled
+  secure_disabled: Secure gRPC communication disabled by configuration
+  secure_error: Server secure communication disabled due to configuration error
+  certificate_dir: Configuration directory for secure certificates {certificate_dir}
+  agent_address: 'Agent address: {address}'
+  missing_agent_address: Missing agent address, defaulting to {default}
+log:
+  initializing: Initializing log system
+  redirected: 'Logging redirected into: {log_file}'
+  error_opening: Error opening log file {log_file} {error}
+  invalid_dir: Invalid directory for logging - keeping stderr
+  debug_enabled: Debug mode enabled
+network:
+  connection_established: Connection established to {address}:{port}
+  connection_failed: Connection failed to {address}:{port} - {error}
+  disconnected: Disconnected from {address}
+  timeout: Connection timeout
+  secure_enabled: Secure GRPC enabled, looking for certificates
+  missing_ssl_dir: Missing ssl_key_dir in configuration file => using configuration
+    default
+  key_dir_not_exist: Key directory from configuration {key_dir} does not exist
+  certificate_file_error: 'Certificate file {cert_file} error: {error}'
+  certificate_not_found: Certificate file {cert_file} does not exist
+error:
+  unknown_parameter: Unknown parameter
+  invalid_module_list: Invalid module list in log configuration => ignored
+  missing_class: Missing class to build {object_name} object
+  error_building: 'Error building {object_type} {name}: {error}'
+  object_not_found: 'No object named: {name}'
+  global_reference_error: Global reference {key} non existent
+  hook_not_found: No hook for key {key}
+  module_nonexistent: Module {module_name} non-existent
+  file_not_found: File {file} does not exist
+  io_error: 'IO error: {error}'
+  yaml_error: Yaml file decoding error {error}
+  value_error: 'Value error: {error}'
+  type_error: 'Type error: {error}'
+  configuration_error: 'Configuration error: {error}'
+  fatal_error: 'Fatal error: {error}'
+warning:
+  not_enough_permissions: Not enough permissions for {path}
+  non_existent_dir: Non existent directory {path} - some features will not work
+  secure_warning: Secure gRPC is disabled but secure agent is set => trying unsecure
+    agent
+  unsecure_warning: Secure gRPC is enabled but unsecure agent is set => trying secure
+    agent
+  no_certificates: No certificates found
+  debug_configuration: Debug configuration enabled
+info:
+  server_name: 'Server name: {name}'
+  server_function: Server function {function}
+  data_directory: 'Data directory: {path}'
+  trace_directory: 'Trace directory: {path}'
+  working_directory: 'Navigation server working directory: {path}'
+  version: Navigation Server version {version}
+  features_loaded: Feature {name} loaded
+  feature_error: 'Error importing package {package}: {error}'
+  objects_created: '{object_type} created'
+  no_objects: No {object_type} objects in the settings file
+thread:
+  starting_analyser: Starting thread analyser with interval {interval}
+  stopping: Stopping threads
+  running_thread_warning: Wrongfully running thread {thread_name}
+  wait_lock_released: Wait lock released
+  wait_termination: Wait for server termination
+grpc:
+  server_started: gRPC server started on port {port}
+  server_error: 'gRPC server error: {error}'
+  client_connected: gRPC client connected
+  client_disconnected: gRPC client disconnected
+  stream_started: gRPC stream started
+  stream_terminated: gRPC stream terminated
+  stream_error: 'gRPC stream error: {error}'
+  only_one_server: Only one gRPC server can run in the system
+console:
+  command_received: 'Command received: {command}'
+  unknown_command: 'Unknown command: {command}'
+  services_list: 'Available services: {services}'
+  test_command: Test command executed
+web:
+  server_started: Web server started on {host}:{port}
+  server_stopped: Web server stopped
+  request_received: 'Request received: {method} {path}'
+  static_file_served: 'Static file served: {file}'
+can:
+  interface_started: CAN interface started
+  interface_stopped: CAN interface stopped
+  message_received: 'CAN message received: {message}'
+  message_sent: 'CAN message sent: {message}'
+  error: 'CAN interface error: {error}'
+nmea:
+  message_received: 'NMEA message received: {message}'
+  message_sent: 'NMEA message sent: {message}'
+  invalid_message: 'Invalid NMEA message: {message}'
+  parsing_error: 'NMEA parsing error: {error}'
+data:
+  source_not_specified: '{data_type} source not specified'
+  directory_found: Found {dir_name} directory
+  storage_error: Mangled {data_type} storage {error} in {path} -> please correct
+  source_not_found: '{data_type} source {source} not found'
+  processing: Processing {data_type} data
+agent:
+  connected: Connected to agent at {address}
+  disconnected: Disconnected from agent
+  command_sent: 'Command sent to agent: {command}'
+  confirmation_sent: Confirmation sent to agent
+  error: 'Agent error: {error}'
+general:
+  ok: OK
+  true: 'True'
+  false: 'False'
+  none: None
+  unknown: Unknown
+  error: Error
+  warning: Warning
+  info: Info
+  debug: Debug
+  success: Success
+  failed: Failed
+  enabled: Enabled
+  disabled: Disabled
+  connected: Connected
+  disconnected: Disconnected
+  started: Started
+  stopped: Stopped
+  running: Running
+  ready: Ready
+  not_available: Not available
+time:
+  seconds: '{count} seconds'
+  minutes: '{count} minutes'
+  hours: '{count} hours'
+  days: '{count} days'
+  now: Now
+  ago: '{duration} ago'
+  timestamp: '{timestamp}'
+file:
+  opened: File {file} opened
+  closed: File {file} closed
+  read: Read {bytes} bytes from {file}
+  written: Written {bytes} bytes to {file}
+  not_found: 'File not found: {file}'
+  permission_denied: 'Permission denied: {file}'
+system:
+  memory_usage: 'Memory usage: {usage}%'
+  cpu_usage: 'CPU usage: {usage}%'
+  threads: 'Threads: {count}'
+  uptime: 'Uptime: {duration}'

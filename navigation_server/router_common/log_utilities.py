@@ -13,6 +13,7 @@ import logging
 import os
 import datetime
 from .global_variables import MessageServerGlobals
+from .translation import translate, t
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -58,7 +59,7 @@ class NavigationLogSystem:
         _logger.addHandler(NavigationLogSystem.loghandler)
         _logger.setLevel('INFO')
         NavigationLogSystem.start_string = start_string
-        _logger.info("Initializing log system")
+        _logger.info(translate("log.initializing", "Initializing log system"))
         if options.debug:
             NavigationLogSystem._set_level_on_module("router_common.configuration", "DEBUG")
 
@@ -76,17 +77,18 @@ class NavigationLogSystem:
             if log_dir is not None:
                 log_fullname = os.path.join(log_dir, log_file_name)
             else:
-                _logger.error("Invalid directory for logging - keeping stderr")
+                _logger.error(translate("log.invalid_dir", "Invalid directory for logging - keeping stderr"))
                 return
-            _logger.info("Logging redirected into:%s" % log_fullname)
+            _logger.info(translate("log.redirected", "Logging redirected into: {log_file}", log_file=log_fullname))
             try:
                 fp = open(log_fullname, 'w')
                 NavigationLogSystem.loghandler.setStream(fp)
             except IOError as e:
-                _logger.error("Error opening log file %s %s" % (log_fullname, e))
+                _logger.error(translate("log.error_opening", "Error opening log file {log_file} {error}", log_file=log_fullname, error=str(e)))
                 pass
-        _logger.info(NavigationLogSystem.start_string % (config.get_option('function', 'ERROR'),
-                                                         MessageServerGlobals.version))
+        function_name = config.get_option('function', 'ERROR')
+        _logger.info(translate("server.starting", "Starting {server_name} version {version} - copyright Sterwen Technology 2021-2026",
+                               server_name=function_name, version=MessageServerGlobals.version))
         _logger.setLevel(config.get_option('log_level', 'INFO'))
         NavigationLogSystem.adjust_log_level(config)
 

@@ -1,0 +1,172 @@
+server:
+  starting: "D\xE9marrage de {server_name} version {version} - copyright Sterwen Technology\
+    \ 2021-2026"
+  stopped: "Serveur arr\xEAt\xE9"
+  error: 'Erreur serveur: {error}'
+  initialized: "Serveur initialis\xE9"
+  not_started: "Le serveur n'a pas d\xE9marr\xE9 correctement"
+  waiting: "En attente de l'arr\xEAt du serveur"
+  terminated: "Serveur termin\xE9"
+config:
+  loading: "Construction de la configuration \xE0 partir du fichier {settings_file}\
+    \ dans le chemin {settings_path}"
+  error: "Erreur sur le fichier de configuration => ARR\xCAT"
+  invalid: Configuration invalide
+  missing_server: Le serveur 'Main' est manquant -> configuration invalide
+  no_console: "Aucune console d\xE9finie"
+  secure_enabled: "Communications s\xE9curis\xE9es activ\xE9es"
+  secure_disabled: "Communication gRPC s\xE9curis\xE9e d\xE9sactiv\xE9e par la configuration"
+  secure_error: "Communication serveur s\xE9curis\xE9e d\xE9sactiv\xE9e en raison\
+    \ d'une erreur de configuration"
+  certificate_dir: "R\xE9pertoire de configuration pour les certificats s\xE9curis\xE9\
+    s {certificate_dir}"
+  agent_address: 'Adresse de l''agent: {address}'
+  missing_agent_address: "Adresse de l'agent manquante, utilisation de la valeur par\
+    \ d\xE9faut {default}"
+log:
+  initializing: "Initialisation du syst\xE8me de journalisation"
+  redirected: "Journalisation redirig\xE9e vers: {log_file}"
+  error_opening: Erreur lors de l'ouverture du fichier de journal {log_file} {error}
+  invalid_dir: "R\xE9pertoire invalide pour la journalisation - conservation de stderr"
+  debug_enabled: "Mode d\xE9bogage activ\xE9"
+network:
+  connection_established: "Connexion \xE9tablie avec {address}:{port}"
+  connection_failed: "\xC9chec de la connexion avec {address}:{port} - {error}"
+  disconnected: "D\xE9connect\xE9 de {address}"
+  timeout: "D\xE9lai d'attente de connexion d\xE9pass\xE9"
+  secure_enabled: "gRPC s\xE9curis\xE9 activ\xE9, recherche des certificats"
+  missing_ssl_dir: "ssl_key_dir manquant dans le fichier de configuration => utilisation\
+    \ de la configuration par d\xE9faut"
+  key_dir_not_exist: "Le r\xE9pertoire des cl\xE9s de la configuration {key_dir} n'existe\
+    \ pas"
+  certificate_file_error: 'Erreur du fichier de certificat {cert_file}: {error}'
+  certificate_not_found: Fichier de certificat {cert_file} introuvable
+error:
+  unknown_parameter: "Param\xE8tre inconnu"
+  invalid_module_list: "Liste de modules invalide dans la configuration de journalisation\
+    \ => ignor\xE9"
+  missing_class: Classe manquante pour construire l'objet {object_name}
+  error_building: 'Erreur lors de la construction de {object_type} {name}: {error}'
+  object_not_found: "Aucun objet nomm\xE9: {name}"
+  global_reference_error: "R\xE9f\xE9rence globale {key} inexistante"
+  hook_not_found: "Aucun hook pour la cl\xE9 {key}"
+  module_nonexistent: Module {module_name} inexistant
+  file_not_found: Fichier {file} introuvable
+  io_error: 'Erreur E/S: {error}'
+  yaml_error: "Erreur de d\xE9codage du fichier YAML {error}"
+  value_error: 'Erreur de valeur: {error}'
+  type_error: 'Erreur de type: {error}'
+  configuration_error: 'Erreur de configuration: {error}'
+  fatal_error: 'Erreur fatale: {error}'
+warning:
+  not_enough_permissions: Permissions insuffisantes pour {path}
+  non_existent_dir: "R\xE9pertoire inexistant {path} - certaines fonctionnalit\xE9\
+    s ne fonctionneront pas"
+  secure_warning: "gRPC s\xE9curis\xE9 est d\xE9sactiv\xE9 mais l'agent s\xE9curis\xE9\
+    \ est param\xE9tr\xE9 => tentative avec agent non s\xE9curis\xE9"
+  unsecure_warning: "gRPC s\xE9curis\xE9 est activ\xE9 mais l'agent non s\xE9curis\xE9\
+    \ est param\xE9tr\xE9 => tentative avec agent s\xE9curis\xE9"
+  no_certificates: "Aucun certificat trouv\xE9"
+  debug_configuration: "Configuration de d\xE9bogage activ\xE9e"
+info:
+  server_name: 'Nom du serveur: {name}'
+  server_function: Fonction du serveur {function}
+  data_directory: "R\xE9pertoire de donn\xE9es: {path}"
+  trace_directory: "R\xE9pertoire des traces: {path}"
+  working_directory: "R\xE9pertoire de travail du serveur de navigation: {path}"
+  version: Version du serveur de navigation {version}
+  features_loaded: "Fonctionnalit\xE9 {name} charg\xE9e"
+  feature_error: 'Erreur lors de l''importation du package {package}: {error}'
+  objects_created: "{object_type} cr\xE9\xE9s"
+  no_objects: Aucun objet {object_type} dans le fichier de configuration
+thread:
+  starting_analyser: "D\xE9marrage de l'analyseur de threads avec intervalle {interval}"
+  stopping: "Arr\xEAt des threads"
+  running_thread_warning: "Thread en cours d'ex\xE9cution de mani\xE8re incorrecte\
+    \ {thread_name}"
+  wait_lock_released: "Verrou d'attente lib\xE9r\xE9"
+  wait_termination: En attente de la terminaison du serveur
+grpc:
+  server_started: "Serveur gRPC d\xE9marr\xE9 sur le port {port}"
+  server_error: 'Erreur serveur gRPC: {error}'
+  client_connected: "Client gRPC connect\xE9"
+  client_disconnected: "Client gRPC d\xE9connect\xE9"
+  stream_started: "Flux gRPC d\xE9marr\xE9"
+  stream_terminated: "Flux gRPC termin\xE9"
+  stream_error: 'Erreur de flux gRPC: {error}'
+  only_one_server: "Un seul serveur gRPC peut fonctionner dans le syst\xE8me"
+console:
+  command_received: "Commande re\xE7ue: {command}"
+  unknown_command: 'Commande inconnue: {command}'
+  services_list: 'Services disponibles: {services}'
+  test_command: "Commande de test ex\xE9cut\xE9e"
+web:
+  server_started: "Serveur web d\xE9marr\xE9 sur {host}:{port}"
+  server_stopped: "Serveur web arr\xEAt\xE9"
+  request_received: "Requ\xEAte re\xE7ue: {method} {path}"
+  static_file_served: 'Fichier statique servi: {file}'
+can:
+  interface_started: "Interface CAN d\xE9marr\xE9e"
+  interface_stopped: "Interface CAN arr\xEAt\xE9e"
+  message_received: "Message CAN re\xE7u: {message}"
+  message_sent: "Message CAN envoy\xE9: {message}"
+  error: 'Erreur interface CAN: {error}'
+nmea:
+  message_received: "Message NMEA re\xE7u: {message}"
+  message_sent: "Message NMEA envoy\xE9: {message}"
+  invalid_message: 'Message NMEA invalide: {message}'
+  parsing_error: 'Erreur d''analyse NMEA: {error}'
+data:
+  source_not_specified: "Source {data_type} non sp\xE9cifi\xE9e"
+  directory_found: "R\xE9pertoire {dir_name} trouv\xE9"
+  storage_error: "Stockage {data_type} endommag\xE9 {error} dans {path} -> veuillez\
+    \ corriger"
+  source_not_found: Source {data_type} {source} introuvable
+  processing: "Traitement des donn\xE9es {data_type}"
+agent:
+  connected: "Connect\xE9 \xE0 l'agent \xE0 {address}"
+  disconnected: "D\xE9connect\xE9 de l'agent"
+  command_sent: "Commande envoy\xE9e \xE0 l'agent: {command}"
+  confirmation_sent: "Confirmation envoy\xE9e \xE0 l'agent"
+  error: 'Erreur agent: {error}'
+general:
+  ok: OK
+  true: Vrai
+  false: Faux
+  none: Aucun
+  unknown: Inconnu
+  error: Erreur
+  warning: Avertissement
+  info: Information
+  debug: "D\xE9bogage"
+  success: "Succ\xE8s"
+  failed: "\xC9chec"
+  enabled: "Activ\xE9"
+  disabled: "D\xE9sactiv\xE9"
+  connected: "Connect\xE9"
+  disconnected: "D\xE9connect\xE9"
+  started: "D\xE9marr\xE9"
+  stopped: "Arr\xEAt\xE9"
+  running: En cours
+  ready: "Pr\xEAt"
+  not_available: Non disponible
+time:
+  seconds: '{count} secondes'
+  minutes: '{count} minutes'
+  hours: '{count} heures'
+  days: '{count} jours'
+  now: Maintenant
+  ago: Il y a {duration}
+  timestamp: '{timestamp}'
+file:
+  opened: Fichier {file} ouvert
+  closed: "Fichier {file} ferm\xE9"
+  read: Lecture de {bytes} octets depuis {file}
+  written: "\xC9criture de {bytes} octets vers {file}"
+  not_found: 'Fichier introuvable: {file}'
+  permission_denied: "Permission refus\xE9e: {file}"
+system:
+  memory_usage: "Utilisation m\xE9moire: {usage}%"
+  cpu_usage: 'Utilisation CPU: {usage}%'
+  threads: 'Threads: {count}'
+  uptime: 'Temps de fonctionnement: {duration}'
