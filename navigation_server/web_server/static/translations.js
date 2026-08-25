@@ -4,6 +4,9 @@
 
 const TRANSLATIONS = {
     en: {
+        // Page title
+        'page.title': 'Navigation Server — Web Interface',
+        
         // Connection status
         'status.connected': 'connected',
         'status.disconnected': 'disconnected',
@@ -22,6 +25,20 @@ const TRANSLATIONS = {
         'button.apply': 'Apply',
         'button.close': 'Close',
         'button.back': 'Back',
+        'button.log': 'Log',
+        'button.console': 'Console',
+        'button.nmea2000': 'NMEA2000',
+        'button.network': 'Network',
+        
+        // Button titles
+        'button.title.refresh': 'Refresh',
+        'button.title.close': 'Close',
+        'button.title.start': 'Start',
+        'button.title.stop': 'Stop',
+        'button.title.restart_all': 'Restart all processes',
+        'button.title.restart_app': 'Restart App',
+        'button.title.tls': 'TLS',
+        'button.title.proxy': 'Proxy',
         
         // Auto-refresh
         'auto_refresh.label': 'Auto refresh (5s)',
@@ -57,6 +74,7 @@ const TRANSLATIONS = {
         'server.running': 'running',
         'server.stopped': 'stopped',
         'server.connections': 'conn.',
+        'server.port': 'port',
         
         // Coupler info
         'coupler.class': 'Class',
@@ -68,6 +86,14 @@ const TRANSLATIONS = {
         'coupler.activated': 'activated',
         'coupler.inactive': 'inactive',
         
+        // Coupler commands
+        'coupler.command.stop': 'Stop',
+        'coupler.command.start': 'Start',
+        'coupler.command.suspend': 'Suspend',
+        'coupler.command.resume': 'Resume',
+        'coupler.command.stop_trace': 'Stop trace',
+        'coupler.command.start_trace': 'Start trace',
+        
         // Console
         'console.title': 'Console',
         'console.servers': 'TCP/UDP Servers',
@@ -77,6 +103,7 @@ const TRANSLATIONS = {
         'console.start_stream': 'Click Start to start the log stream...',
         'console.stream_started': '--- Stream started ---',
         'console.stream_stopped': '--- Stream stopped ---',
+        'console.error': 'Console error',
         
         // Network
         'network.title': 'Network Configuration',
@@ -87,6 +114,7 @@ const TRANSLATIONS = {
         'network.apply_config': 'Apply configuration "{config}" ?',
         'network.interfaces': 'Interfaces',
         'network.no_interfaces': 'No interfaces.',
+        'network.apply': 'Apply',
         
         // NMEA2000
         'nmea2000.title': 'NMEA2000',
@@ -107,11 +135,20 @@ const TRANSLATIONS = {
         'nmea2000.outgoing_label': 'Outgoing',
         'nmea2000.start_trace': 'Start Trace',
         'nmea2000.stop_trace': 'Stop Trace',
+        'nmea2000.error': 'NMEA2000 Error',
         
         // System commands
+        'command.halt': 'Halt',
+        'command.reboot': 'Reboot',
+        'command.navigation_restart': 'Restart App',
         'command.halt_confirm': 'Confirm: stop the system?',
         'command.reboot_confirm': 'Confirm: reboot the system?',
         'command.navigation_restart_confirm': 'Confirm: restart ALL processes (including the agent)?',
+        
+        // Confirm dialog labels
+        'confirm.halt': 'stop the system',
+        'confirm.reboot': 'reboot the system',
+        'confirm.navigation_restart': 'restart ALL processes (including the agent)',
         
         // Toast messages
         'toast.refresh_error': 'Refresh error: {error}',
@@ -123,6 +160,7 @@ const TRANSLATIONS = {
         'log.title': 'Logs',
         'log.start': 'Start',
         'log.stop': 'Stop',
+        'log.error': 'Error',
         
         // General
         'general.loading': 'Loading...',
@@ -130,9 +168,14 @@ const TRANSLATIONS = {
         'general.not_connected': 'Not connected',
         'general.unknown': 'Unknown',
         'general.msg': 'msg',
-        'general.per_second': '/s'
+        'general.per_second': '/s',
+        'general.console_error': 'Console error',
+        'general.error': 'Error'
     },
     fr: {
+        // Page title
+        'page.title': 'Navigation Server — Interface Web',
+        
         // Connection status
         'status.connected': 'connecte',
         'status.disconnected': 'deconnecte',
@@ -143,14 +186,28 @@ const TRANSLATIONS = {
         
         // Buttons (trivial ones stay in English as per requirements)
         'button.refresh': 'Rafraichir',
-        'button.start': 'Start',
-        'button.stop': 'Stop',
-        'button.restart': 'Restart',
-        'button.halt': 'Halt',
-        'button.reboot': 'Reboot',
+        'button.start': 'Demarrer',
+        'button.stop': 'Arreter',
+        'button.restart': 'Redemarrer',
+        'button.halt': 'Arreter',
+        'button.reboot': 'Redemarrer',
         'button.apply': 'Appliquer',
         'button.close': 'Fermer',
         'button.back': 'Retour',
+        'button.log': 'Journal',
+        'button.console': 'Console',
+        'button.nmea2000': 'NMEA2000',
+        'button.network': 'Reseau',
+        
+        // Button titles
+        'button.title.refresh': 'Rafraichir',
+        'button.title.close': 'Fermer',
+        'button.title.start': 'Demarrer',
+        'button.title.stop': 'Arreter',
+        'button.title.restart_all': 'Redemarrer tous les processus',
+        'button.title.restart_app': 'Redemarrer App',
+        'button.title.tls': 'TLS',
+        'button.title.proxy': 'Proxy',
         
         // Auto-refresh
         'auto_refresh.label': 'Rafraich. auto (5s)',
@@ -167,10 +224,10 @@ const TRANSLATIONS = {
         'system.restart_app': 'Redemarrer App',
         
         // Process states
-        'state.RUNNING': 'RUNNING',
-        'state.STOPPED': 'STOPPED',
-        'state.NOT_STARTED': 'NOT STARTED',
-        'state.SUSPENDED': 'SUSPENDED',
+        'state.RUNNING': 'EN COURS',
+        'state.STOPPED': 'ARRETE',
+        'state.NOT_STARTED': 'NON DEMARRE',
+        'state.SUSPENDED': 'SUSPENDU',
         
         // Process card
         'process.pid': 'PID',
@@ -183,19 +240,28 @@ const TRANSLATIONS = {
         'process.systemd': 'systemd',
         
         // Server info
-        'server.running': 'running',
-        'server.stopped': 'stopped',
+        'server.running': 'en cours',
+        'server.stopped': 'arrete',
         'server.connections': 'conn.',
+        'server.port': 'port',
         
         // Coupler info
         'coupler.class': 'Classe',
         'coupler.protocol': 'Protocole',
         'coupler.device_state': 'Etat device',
-        'coupler.msg_in_out': 'Msg in/out',
-        'coupler.rate_in_out': 'Debit in/out',
+        'coupler.msg_in_out': 'Msg entree/sortie',
+        'coupler.rate_in_out': 'Debit entree/sortie',
         'coupler.trace': 'Trace',
         'coupler.activated': 'activee',
         'coupler.inactive': 'inactive',
+        
+        // Coupler commands
+        'coupler.command.stop': 'Arreter',
+        'coupler.command.start': 'Demarrer',
+        'coupler.command.suspend': 'Suspendre',
+        'coupler.command.resume': 'Reprendre',
+        'coupler.command.stop_trace': 'Arreter trace',
+        'coupler.command.start_trace': 'Demarrer trace',
         
         // Console
         'console.title': 'Console',
@@ -203,9 +269,10 @@ const TRANSLATIONS = {
         'console.couplers': 'Coupleurs',
         'console.no_servers': 'Aucun serveur.',
         'console.no_couplers': 'Aucun coupleur.',
-        'console.start_stream': 'Cliquez sur Start pour demarrer le flux de logs...',
+        'console.start_stream': 'Cliquez sur Demarrer pour demarrer le flux de logs...',
         'console.stream_started': '--- Flux demarre ---',
         'console.stream_stopped': '--- Flux arrete ---',
+        'console.error': 'Erreur console',
         
         // Network
         'network.title': 'Configuration reseau',
@@ -216,42 +283,53 @@ const TRANSLATIONS = {
         'network.apply_config': 'Appliquer la configuration reseau "{config}" ?',
         'network.interfaces': 'Interfaces',
         'network.no_interfaces': 'Aucune interface.',
+        'network.apply': 'Appliquer',
         
         // NMEA2000
         'nmea2000.title': 'NMEA2000',
-        'nmea2000.controller': 'NMEA2000 Controller',
-        'nmea2000.channel': 'Channel',
-        'nmea2000.status': 'Status',
-        'nmea2000.incoming': 'Incoming',
-        'nmea2000.outgoing': 'Outgoing',
-        'nmea2000.devices': 'Devices',
-        'nmea2000.no_devices': 'No NMEA2000 devices.',
-        'nmea2000.device': 'NMEA2000 Device',
-        'nmea2000.address': 'Address',
+        'nmea2000.controller': 'Controleur NMEA2000',
+        'nmea2000.channel': 'Canal',
+        'nmea2000.status': 'Statut',
+        'nmea2000.incoming': 'Entree',
+        'nmea2000.outgoing': 'Sortie',
+        'nmea2000.devices': 'Appareils',
+        'nmea2000.no_devices': 'Aucun appareil NMEA2000.',
+        'nmea2000.device': 'Appareil NMEA2000',
+        'nmea2000.address': 'Adresse',
         'nmea2000.proxy': 'Proxy',
-        'nmea2000.manufacturer': 'Manufacturer',
-        'nmea2000.product': 'Product',
-        'nmea2000.pgn_stats': 'PGN Statistics',
-        'nmea2000.incoming_label': 'Incoming',
-        'nmea2000.outgoing_label': 'Outgoing',
-        'nmea2000.start_trace': 'Start Trace',
-        'nmea2000.stop_trace': 'Stop Trace',
+        'nmea2000.manufacturer': 'Fabricant',
+        'nmea2000.product': 'Produit',
+        'nmea2000.pgn_stats': 'Statistiques PGN',
+        'nmea2000.incoming_label': 'Entree',
+        'nmea2000.outgoing_label': 'Sortie',
+        'nmea2000.start_trace': 'Demarrer Trace',
+        'nmea2000.stop_trace': 'Arreter Trace',
+        'nmea2000.error': 'Erreur NMEA2000',
         
         // System commands
+        'command.halt': 'Arreter',
+        'command.reboot': 'Redemarrer',
+        'command.navigation_restart': 'Redemarrer App',
         'command.halt_confirm': 'Confirmer : arreter le systeme ?',
         'command.reboot_confirm': 'Confirmer : redemarrer le systeme ?',
         'command.navigation_restart_confirm': 'Confirmer : redemarrer TOUS les processus (y compris l\'agent) ?',
         
+        // Confirm dialog labels
+        'confirm.halt': 'arreter le systeme',
+        'confirm.reboot': 'redemarrer le systeme',
+        'confirm.navigation_restart': 'redemarrer TOUS les processus (y compris l\'agent)',
+        
         // Toast messages
         'toast.refresh_error': 'Erreur de rafraichissement : {error}',
-        'toast.error': 'Erreur: {error}',
+        'toast.error': 'Erreur : {error}',
         'toast.ok': 'OK',
         'toast.failure': 'echec',
         
         // Log
-        'log.title': 'Logs',
-        'log.start': 'Start',
-        'log.stop': 'Stop',
+        'log.title': 'Journaux',
+        'log.start': 'Demarrer',
+        'log.stop': 'Arreter',
+        'log.error': 'Erreur',
         
         // General
         'general.loading': 'Chargement...',
@@ -259,7 +337,9 @@ const TRANSLATIONS = {
         'general.not_connected': 'Non connecte',
         'general.unknown': 'Inconnu',
         'general.msg': 'msg',
-        'general.per_second': '/s'
+        'general.per_second': '/s',
+        'general.console_error': 'Erreur console',
+        'general.error': 'Erreur'
     }
 };
 

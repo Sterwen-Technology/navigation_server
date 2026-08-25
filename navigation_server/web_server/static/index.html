@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Navigation Server — Web Interface</title>
+    <title data-i18n="page.title">Navigation Server</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -245,12 +245,12 @@
             <div class="modal-header">
                 <h2 id="log-title">Logs</h2>
                 <div>
-                    <button id="log-start-btn" onclick="startLogStream()" title="Start">▶ Start</button>
-                    <button id="log-stop-btn" onclick="stopLogStream()" title="Stop" disabled>■ Stop</button>
+                    <button id="log-start-btn" onclick="startLogStream()" title="t.t("coupler.command.start")">t.t("button.start")</button>
+                    <button id="log-stop-btn" onclick="stopLogStream()" title="t.t("coupler.command.stop")" disabled>t.t("button.stop")</button>
                     <button class="modal-close" onclick="closeLog()" title="Close">&times;</button>
                 </div>
             </div>
-            <div id="log-body" class="log-content" data-i18n="console.start_stream">Click Start to start the log stream...</div>
+            <div id="log-body" class="log-content" data-i18n="console.start_stream">Click t.t("coupler.command.start") to start the log stream...</div>
         </div>
     </div>
 
@@ -365,13 +365,13 @@
                 <h2>${escapeHtml(s.name)} <span class="sub" style="color:var(--muted);font-weight:400;">v${fmt(s.version)}</span></h2>
                 <div class="row"><span class="k" data-i18n="system.host">Host</span><span class="v">${fmt(s.hostname)}</span></div>
                 <div class="row"><span class="k" data-i18n="system.ip_address">IP Address</span><span class="v">${fmt(s.ip_address)}</span></div>
-                <div class="row"><span class="k" data-i18n="system.started">Started</span><span class="v">${fmt(s.start_time)}</span></div>
+                <div class="row"><span class="k" data-i18n="system.started">t.t("coupler.command.start")ed</span><span class="v">${fmt(s.start_time)}</span></div>
                 <div class="row"><span class="k" data-i18n="system.configuration">Configuration</span><span class="v">${fmt(s.settings)}</span></div>
                 <div class="card-actions">
-                    <button class="danger" onclick="systemCmdConfirm('halt')">⏻ Halt</button>
-                    <button class="danger" onclick="systemCmdConfirm('reboot')">⟲ Reboot</button>
-                    <button onclick="systemCmdConfirm('navigation_restart')" title="Restart all processes">⟲ Restart App</button>
-                    <button class="open-btn" onclick="openNetwork()" style="margin-left: auto;">⚙ Network</button>
+                    <button class="danger" onclick="systemCmdConfirm('halt')">t.t("command.halt")</button>
+                    <button class="danger" onclick="systemCmdConfirm('reboot')">t.t("command.reboot")</button>
+                    <button onclick="systemCmdConfirm('navigation_restart')" title="Restart all processes">t.t("command.navigation_restart")</button>
+                    <button class="open-btn" onclick="openNetwork()" style="margin-left: auto;">t.t("button.network")</button>
                 </div>
             `;
 
@@ -395,8 +395,8 @@
             `).join("");
             // Contextual action buttons based on process state.
             const isRunning = p.state === "RUNNING";
-            const startBtn = `<button ${isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','start')">\u25b6 Start</button>`;
-            const stopBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','stop')">\u25a0 Stop</button>`;
+            const startBtn = `<button ${isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','start')">\u25b6 t.t("coupler.command.start")</button>`;
+            const stopBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','stop')">\u25a0 t.t("coupler.command.stop")</button>`;
             const restartBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','restart')">\u27f2 Restart</button>`;
             const logBtn = p.is_systemd
                 ? `<button onclick="openLog('${escapeHtml(p.name)}')">\ud83d\udccb Log</button>`
@@ -419,12 +419,12 @@
                     <h2>
                         <span class="proc-name">${escapeHtml(p.name)}</span>
                         ${p.secure_grpc ? '<span class="secure-badge" title="TLS">\ud83d\udd12</span>' : ''}
-                        <span class="badge ${p.state}">${p.state}</span>
+                        <span class="badge ${p.state}" data-i18n="state.${p.state}">${p.state}</span>
                     </h2>
-                    <div class="row"><span class="k">PID</span><span class="v">${fmt(p.pid)}</span></div>
-                    <div class="row"><span class="k">Port gRPC</span><span class="v">${fmt(p.grpc_port)}</span></div>
-                    <div class="row"><span class="k">Version</span><span class="v">${fmt(p.version)}</span></div>
-                    <div class="row"><span class="k" data-i18n="process.started">Started</span><span class="v">${fmt(p.start_time)}</span></div>
+                    <div class="row"><span class="k">t.t("process.pid")</span><span class="v">${fmt(p.pid)}</span></div>
+                    <div class="row"><span class="k">t.t("process.grpc_port")</span><span class="v">${fmt(p.grpc_port)}</span></div>
+                    <div class="row"><span class="k">t.t("process.version")</span><span class="v">${fmt(p.version)}</span></div>
+                    <div class="row"><span class="k" data-i18n="process.started">t.t("coupler.command.start")ed</span><span class="v">${fmt(p.start_time)}</span></div>
                     ${p.status ? `<div class="row"><span class="k" data-i18n="process.status">Status</span><span class="v">${fmt(p.status)}</span></div>` : ""}
                     ${p.error ? `<div class="row"><span class="k" data-i18n="process.error">Error</span><span class="v" style="color:var(--red)">${fmt(p.error)}</span></div>` : ""}
 
@@ -464,7 +464,7 @@
         async function openConsole(processName) {
             const modal = $("console-modal");
             const title = $("console-title");
-            title.textContent = `Console — ${processName}`;
+            title.textContent = `t.t("console.title") + " —" ${processName}`;
             $("console-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
             modal.classList.add("show");
             consoleProcess = processName;
@@ -503,9 +503,9 @@
                     <div class="console-server">
                         <strong>${escapeHtml(srv.name)}</strong> [${escapeHtml(srv.server_class)}]
                         ${srv.running ? '· <span style="color:var(--green)">running</span>' : '· <span style="color:var(--red)">stopped</span>'}
-                        ${srv.port ? `· port ${srv.port}` : ""}
+                        ${srv.port ? `· ${t.t("server.port")} ${srv.port}` : ""}
                         ${srv.protocol ? `· ${escapeHtml(srv.protocol)}` : ""}
-                        ${srv.nb_connections ? `· ${srv.nb_connections} conn.` : ""}
+                        ${srv.nb_connections ? `· ${srv.nb_connections} ${t.t("server.connections")}` : ""}
                         ${conns ? `<div class="servers">${conns}</div>` : ""}
                     </div>
                 `;
@@ -514,35 +514,35 @@
             const couplers = (d.couplers || []).map(c => {
                 const state = c.state;
                 const isRunning = state === "RUNNING";
-                const isSuspended = state === "SUSPENDED";
-                const isActive = isRunning || isSuspended;
-                const startStopBtn = isActive
-                    ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','stop')">■ Stop</button>`
-                    : `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','start')">▶ Start</button>`;
-                const suspendResumeBtn = isRunning
-                    ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','suspend')">⏸ Suspend</button>`
-                    : (isSuspended
-                        ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','resume')">▶ Resume</button>`
-                        : `<button disabled>⏸ Suspend</button>`);
+                const ist.t("coupler.command.suspend")ed = state === "SUSPENDED";
+                const isActive = isRunning || ist.t("coupler.command.suspend")ed;
+                const startt.t("coupler.command.stop")Btn = isActive
+                    ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','stop')">t.t("button.stop")</button>`
+                    : `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','start')">t.t("button.start")</button>`;
+                const suspendt.t("coupler.command.resume")Btn = isRunning
+                    ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','suspend')">⏸ t.t("coupler.command.suspend")</button>`
+                    : (ist.t("coupler.command.suspend")ed
+                        ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','resume')">▶ t.t("coupler.command.resume")</button>`
+                        : `<button disabled>⏸ t.t("coupler.command.suspend")</button>`);
                 const traceOn = c.trace_on === true;
                 const traceBtn = traceOn
-                    ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','stop_trace')">⏹ Stop trace</button>`
-                    : `<button ${!isActive ? 'disabled' : ''} onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','start_trace_raw')">⏵ Start trace</button>`;
+                    ? `<button onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','stop_trace')">⏹ t.t("coupler.command.stop") trace</button>`
+                    : `<button ${!isActive ? 'disabled' : ''} onclick="couplerCmd('${escapeHtml(processName)}','${escapeHtml(c.name)}','start_trace_raw')">⏵ t.t("coupler.command.start") trace</button>`;
                 return `
                     <div class="card coupler-card">
                         <h2>
                             <span class="proc-name">${escapeHtml(c.name)}</span>
-                            <span class="badge ${c.state}">${c.state}</span>
+                            <span class="badge ${c.state}" data-i18n="state.${c.state}">${c.state}</span>
                         </h2>
-                        <div class="row"><span class="k">Classe</span><span class="v">${fmt(c.coupler_class)}</span></div>
-                        <div class="row"><span class="k">Protocole</span><span class="v">${fmt(c.protocol)}</span></div>
+                        <div class="row"><span class="k">t.t("coupler.class")</span><span class="v">${fmt(c.coupler_class)}</span></div>
+                        <div class="row"><span class="k">t.t("coupler.protocol")</span><span class="v">${fmt(c.protocol)}</span></div>
                         <div class="row"><span class="k" data-i18n="coupler.device_state">Device State</span><span class="v">${fmt(c.dev_state)}</span></div>
                         <div class="row"><span class="k" data-i18n="coupler.msg_in_out">Msg in/out</span><span class="v">${fmt(c.msg_in)} / ${fmt(c.msg_out)}</span></div>
                         <div class="row"><span class="k" data-i18n="coupler.rate_in_out">Rate in/out</span><span class="v">${fmt(c.input_rate && c.input_rate.toFixed(1))} / ${fmt(c.output_rate && c.output_rate.toFixed(1))} /s</span></div>
                         ${c.error ? `<div class="row"><span class="k">Erreur</span><span class="v" style="color:var(--red)">${fmt(c.error)}</span></div>` : ""}
                         ${c.status ? `<div class="row"><span class="k">Statut</span><span class="v">${fmt(c.status)}</span></div>` : ""}
-                        <div class="row"><span class="k" data-i18n="coupler.trace">Trace</span><span class="v" style="color:${c.trace_on ? 'var(--green)' : 'var(--muted)'}" data-i18n-text="${c.trace_on ? 'coupler.activated' : 'coupler.inactive'}">${c.trace_on ? 'activated' : 'inactive'}</span></div>
-                        <div class="card-actions">${startStopBtn}${suspendResumeBtn}${traceBtn}</div>
+                        <div class="row"><span class="k" data-i18n="coupler.trace">Trace</span><span class="v" style="color:${c.trace_on ? 'var(--green)' : 'var(--muted)'}" >${c.trace_on ? t.t('coupler.activated') : t.t('coupler.inactive')}</span></div>
+                        <div class="card-actions">${startt.t("coupler.command.stop")Btn}${suspendt.t("coupler.command.resume")Btn}${traceBtn}</div>
                     </div>
                 `;
             }).join("");
@@ -606,7 +606,7 @@
 
         function openLog(processName) {
             logProcess = processName;
-            $("log-title").textContent = `Logs — ${processName}`;
+            $("log-title").textContent = `t.t("log.title") + " —" ${processName}`;
             $("log-body").textContent = "";
             $("log-modal").classList.add("show");
             // Auto-start the stream
@@ -696,14 +696,14 @@
 
             body.innerHTML = `
                 <div class="console-section">
-                    <h3>NetworkManager: ${status.nm_running ? 'actif' : 'inactif'} ${status.status ? '· ' + escapeHtml(status.status) : ''}</h3>
+                    <h3>NetworkManager: ${status.nm_running ? t.t('network.nm_active') : t.t('network.nm_inactive')} ${status.status ? '· ' + escapeHtml(status.status) : ''}</h3>
                     ${interfaces || '<div class="empty" data-i18n="network.no_interfaces">No interfaces.</div>'}
                 </div>
                 <div class="console-section">
                     <h3 data-i18n="network.global_configs">Global Configurations</h3>
                     <div class="card-actions">
                         <select id="net-config-select" class="net-config-select">${configOptions}</select>
-                        <button onclick="applyNetworkConfig()">Appliquer</button>
+                        <button onclick="applyNetworkConfig()">t.t("network.apply")</button>
                     </div>
                 </div>
             `;
@@ -734,7 +734,7 @@
         async function openNmea2000(processName) {
             nmea2000Process = processName;
             nmea2000InDeviceView = false;
-            $("nmea2000-title").textContent = "NMEA2000 — " + processName;
+            $("nmea2000-title").textContent = "t.t("nmea2000.title") + " —" " + processName;
             $("nmea2000-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
             $("nmea2000-modal").classList.add("show");
             try {
@@ -752,7 +752,7 @@
                 return;
             }
             const devices = data.devices || [];
-            const traceBtnText = data.traces_on ? "■ Stop Trace" : "▶ Start Trace";
+            const traceBtnText = data.traces_on ? "t.t("button.stop") Trace" : "t.t("button.start") Trace";
             const traceBtnCmd = data.traces_on ? "stop_trace" : "start_trace";
             const incomingRate = data.incoming_rate ? data.incoming_rate.toFixed(1) : "0";
             const outgoingRate = data.outgoing_rate ? data.outgoing_rate.toFixed(1) : "0";
@@ -807,10 +807,10 @@
 
         async function renderNmea2000Device(data, processName, deviceAddress) {
             const title = $("nmea2000-title");
-            title.textContent = "NMEA2000 — " + processName + " — Device " + deviceAddress;
+            title.textContent = "t.t("nmea2000.title") + " —" " + processName + " — Device " + deviceAddress;
             const body = $("nmea2000-body");
             let html = `<div class="console-section">
-                <h3>NMEA2000 Device</h3>
+                <h3>t.t("nmea2000.device")</h3>
                 <div class="row">
                     <span class="k">Address</span><span class="v">${data.address}</span>
                     <span class="k">Proxy</span><span class="v">${data.is_proxy ? 'Yes' : 'No'}</span>
@@ -928,6 +928,11 @@
         await initWebTranslations();
         translateAllElements();
         // Also re-translate when language changes (if needed)
+    }
+    
+    // Re-translate after dynamic content is loaded
+    function refreshTranslations() {
+        translateAllElements();
     }
     
     // Initialize on DOM load
