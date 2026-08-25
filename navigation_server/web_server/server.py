@@ -55,10 +55,11 @@ class NavigationSystemCollector:
     is serialisable JSON (no protobuf objects leak to the HTTP layer).
     """
 
-    def __init__(self, address: str, port: int, secure: bool = False):
+    def __init__(self, address: str, port: int, secure: bool = False, language: str = "en"):
         self._address = address
         self._port = port
         self._secure = secure
+        self._language = language
         # The security mode (and CA certificate, shared at class level) applies
         # to the agent and to all console connections, since all gRPC servers in
         # a deployment share the same certificate.
@@ -805,13 +806,15 @@ class _RequestHandler(BaseHTTPRequestHandler):
         try:
             from navigation_server.router_common.global_variables import MessageServerGlobals
             config = {
-                "language": "en",  # Default
                 "version": MessageServerGlobals.version or "3.0.0"
             }
             # Try to get the actual language from configuration
             if MessageServerGlobals.configuration:
                 language = MessageServerGlobals.configuration.get_option('language', "en")
                 config["language"] = language
+            else:
+                # Fallback to collector's language
+                config["language"] = self.collector._language
             self._serve_json(config)
         except Exception as e:
             _logger.error("Error serving config: %s", e)
@@ -848,10 +851,11 @@ class NavigationWebServer:
     """HTTP server exposing the navigation_server gRPC services as a web UI."""
 
     def __init__(self, host: str, port: int, grpc_address: str, grpc_port: int,
-                 secure: bool = False):
+                 secure: bool = False, language: str = "en"):
         self._host = host
         self._port = port
-        self._collector = NavigationSystemCollector(grpc_address, grpc_port, secure)
+        self._language = language
+        self._collector = NavigationSystemCollector(grpc_address, grpc_port, secure, language)
         # The request handler is re-instantiated per connection; expose the
         # collector through a subclass so each handler has access to it.
         handler_cls = type("BoundRequestHandler", (_RequestHandler,),

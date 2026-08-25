@@ -57,6 +57,9 @@ class WebTopServer(GenericTopServer):
         # rest of the deployment.
         config = MessageServerGlobals.configuration
         secure = config.client_secure_communications
+        
+        # Get language from configuration
+        language = config.get_option('language', 'en')
 
         self._web_server = NavigationWebServer(
             host=web_host,
@@ -64,6 +67,7 @@ class WebTopServer(GenericTopServer):
             grpc_address=grpc_address,
             grpc_port=grpc_port,
             secure=secure,
+            language=language,
         )
 
     def start(self) -> bool:
