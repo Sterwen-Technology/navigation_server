@@ -207,6 +207,7 @@
         .pgn-desc { flex: 2; color: var(--text); }
         .pgn-count { font-family: ui-monospace, monospace; color: var(--muted); min-width: 40px; text-align: right; }
 </style>
+<script src="translations.js"></script>
 </head>
 <body>
     <header>
@@ -275,7 +276,8 @@
         </div>
     </div>
 
-    <script>
+    
+<script>
         const REFRESH_INTERVAL = 5000;
         let autoTimer = null;
         let isRefreshing = false;
@@ -938,6 +940,6 @@
     // Initialize on DOM load
     document.addEventListener('DOMContentLoaded', initPageTranslations);
     </script>
-<script src="translations.js"></script>
+
 </body>
 </html>
