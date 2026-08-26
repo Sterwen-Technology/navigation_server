@@ -18,15 +18,29 @@ enum EngineState {
   }
 
 message engine_data {
+  // Dynamic data
   uint32 engine_id=1;
   EngineState state=2;
   float total_hours=3;  // in seconds
   float speed=4;        // RPM
   float temperature=5;  // in Kelvin
   float alternator_voltage=8;
-  string last_start_time=6; // ISO format
+  string last_start_time=6; // ISO format UTC
   string last_stop_time=7;
   engine_run current_run=9;  // NULL if no on-going-run
+}
+
+message engine_parameters {
+  // engine static data
+  uint32 engine_id=1;
+  string label=2;
+  string model=3;
+  float max_rpm=4;
+  float voltage_scale=5;
+  float voltage_high_alert=6;
+  float voltage_low_alert=7;
+  float temperature_scale=8;  // In degree Celcius
+  float temperature_high_alert=9;
 }
 
 message engine_response {
@@ -35,6 +49,7 @@ message engine_response {
     engine_data data=2;
     repeated engine_event events=3;
     repeated engine_run runs=5;
+    engine_parameters parameters=6;
 }
 
 message engine_request {
@@ -64,6 +79,7 @@ message engine_run {
 
 service EngineData {
   rpc GetEngineData(engine_request) returns(engine_response) {}
+  rpc GetEngineParameters(engine_request) returns(engine_response) {}
   rpc GetEngineEvents(engine_request) returns (engine_response) {}
   rpc GetEngineRuns(engine_request) returns (engine_response) {}
 }

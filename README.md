@@ -22,7 +22,7 @@ The navigation application is outside the scope of the project, and most of the 
 
 The toolbox also includes utilities for NMEA2000 that are described in detail on the NMEA2000 documentation page, like the **code_generator** that is generating Protobuf and Python code to process NMEA2000 PGN.
 
-A sample GUI application for the control of the various servers is also available [see repository](https://github.com/Sterwen-Technology/navigation_server_gui). It interacts using gRPC with the servers described above. It is based on TkInter.
+The version 3.0 is introducing the Web server for interactive control of the whole application.
 
 
 ## Installation
@@ -74,8 +74,9 @@ All servers can be started from the command line, they don't require specific pe
 
 ### GUI access to the API
 
-A sample GUI has been developed to have a realtime control of the various servers via the public API. It has been built using [guizero](https://lawsie.github.io/guizero/). Honestly that looks quick and dirty and this is really like that.
-Repository for [Navigation server GUI](https://github.com/Sterwen-Technology/navigation_server_gui)
+A Web server is part of the system and can be launched to allow control of the system via any browser.
+
+**Warning: the former Python based GUI is not compatible with the version 3.0.0**
 
 ### Automatic start
 
@@ -108,7 +109,8 @@ To overcome the problem, a specific Python script has been developed (mod_pb2.py
 For any problem encountered, please open an issue in this GitHub repository: [Navigation Server](https://github.com/Sterwen-Technology/navigation_server)
 
 ## Roadmap
-The current stable version is V2.8.3 Documentation is aligned on this version. The version 2.8.2 has introduced some key corrections on the CAN interface management.
+
+The current stable version is V3.0.0 Documentation is aligned on this version. The version 2.8.2 has introduced some key corrections on the CAN interface management.
 Existing application are to be upgraded to 2.8.3 and up.
 
 From the version 2.5.0 the new STNC800 hardware is supported

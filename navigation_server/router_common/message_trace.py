@@ -34,6 +34,11 @@ class NMEAMsgTrace:
         self._name = name
         date_stamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
         filename = "TRACE-%s-%s.log" % (name, date_stamp)
+        if MessageServerGlobals.trace_dir is None:
+            _logger.error("No trace directory configured")
+            self._trace_fd = None
+            return
+
         filepath = os.path.join(MessageServerGlobals.trace_dir, filename)
         _logger.info("Opening trace file %s" % filepath)
         try:
