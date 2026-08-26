@@ -287,10 +287,10 @@
         const $ = (id) => document.getElementById(id);
 
         function toast(msg, ok = true) {
-            const t = $("toast");
-            t.textContent = msg;
-            t.className = "toast show " + (ok ? "ok" : "err");
-            setTimeout(() => t.classList.remove("show"), 3500);
+            const toastEl = $("toast");
+            toastEl.textContent = msg;
+            toastEl.className = "toast show " + (ok ? "ok" : "err");
+            setTimeout(() => toastEl.classList.remove("show"), 3500);
         }
 
         async function apiGet(path) {

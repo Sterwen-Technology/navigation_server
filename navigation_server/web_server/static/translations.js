@@ -341,6 +341,8 @@ class WebTranslationManager {
 
 // Global translation manager instance
 const t = new WebTranslationManager();
+// Export to global scope for access from inline scripts
+window.t = t;
 
 // Function to format a value (from the original code)
 function fmt(v) {
