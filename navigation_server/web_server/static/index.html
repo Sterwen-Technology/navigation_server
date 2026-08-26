@@ -354,6 +354,7 @@
                 info.textContent = data.agent_address ? `— agent: ${data.agent_address}` : "— agent: ?";
                 summary.innerHTML = `<div class="empty">${escapeHtml(data.error || t.t("general.not_connected"))}</div>`;
                 grid.innerHTML = "";
+                t.translateAllElements();
                 return;
             }
 
@@ -379,9 +380,11 @@
             const procs = s.processes || [];
             if (!procs.length) {
                 grid.innerHTML = `<div class="empty" data-i18n="main.no_processes">No processes registered.</div>`;
+                t.translateAllElements();
                 return;
             }
             grid.innerHTML = procs.map(procCard).join("");
+            t.translateAllElements();
         }
 
         function procCard(p) {
@@ -491,6 +494,7 @@
             const body = $("console-body");
             if (!d.ok) {
                 body.innerHTML = `<div class="empty">${escapeHtml(d.error || "Erreur console")}</div>`;
+                t.translateAllElements();
                 return;
             }
             const servers = (d.servers || []).map(srv => {
@@ -679,6 +683,7 @@
             const body = $("network-body");
             if (!status.ok) {
                 body.innerHTML = `<div class="empty">${escapeHtml(status.error || "Erreur")}</div>`;
+                t.translateAllElements();
                 return;
             }
             const interfaces = (status.interfaces || []).map(iface => `
@@ -750,6 +755,7 @@
             const body = $("nmea2000-body");
             if (!data.ok) {
                 body.innerHTML = `<div class="empty">${escapeHtml(data.error || "NMEA2000 Error")}</div>`;
+                t.translateAllElements();
                 return;
             }
             const devices = data.devices || [];
@@ -846,7 +852,8 @@
             }
             html += '<div class="card-actions"><button class="open-btn" onclick="backToNmea2000List()">Back</button></div>';
             body.innerHTML = html;
-        }
+        
+            t.translateAllElements();}
 
         // Simple cache for PGN definitions
         const pgnDefCache = new Map();
