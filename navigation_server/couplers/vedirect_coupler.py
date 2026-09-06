@@ -271,6 +271,34 @@ class Vedirect(threading.Thread):
         return value
 
 
+class VEHEXType:
+    ve_type_definition = {
+        "un8": (False, 1),
+        "un16": (False, 2),
+        "un24": (False, 3),
+        "un32": (False, 4),
+        "sn16": (True, 2),
+        "sn24": (True, 3),
+        "sn32": (True, 4),
+        "string": (False, -1)
+    }
+
+    def __init__(self, ve_type:str):
+        self.ve_type = ve_type
+        try:
+            self._type_def = self.ve_type_definition[ve_type]
+        except KeyError:
+            raise ValueError("Unknown vedirect type %s" % ve_type)
+
+
+class VEDirectHEXParam:
+    '''
+    This class represents a VEDirect HEX parameter
+    and implments encoding and decoding the values
+    '''
+    def __init__(self, register:int, name:str, description:str, v_type, scale: float=1.0):
+
+
 class VEDirectMsg(NavGenericMsg):
 
     def __init__(self, ve_dict: dict):

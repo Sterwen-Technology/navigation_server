@@ -18,6 +18,7 @@ message Argument {
     int64 int_v=5;
     float float_v=6;
     string date_v=7;
+    bool bool_v=8;
   }
 }
 

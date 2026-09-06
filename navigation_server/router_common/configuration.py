@@ -139,13 +139,24 @@ class Feature:
         if self._init_function is not None:
             self._init_function(options)
 
-
-class NavigationServerObject:
+class NavigationObject:
 
     def __init__(self, class_descr):
         for item in class_descr.items():
             self._name = item[0]
             self._param = item[1]
+
+    @property
+    def name(self):
+        return self._name
+
+    def parameters(self) -> Parameters:
+        return Parameters(self._param)
+
+class NavigationServerObject(NavigationObject):
+
+    def __init__(self, class_descr):
+        super().__init__(class_descr)
         self._class = None
         self._class_name = self._param['class']
         self._param['name'] = self._name
@@ -158,10 +169,6 @@ class NavigationServerObject:
 
     def set_class(self, obj_class):
         self._class = obj_class
-
-    @property
-    def name(self):
-        return self._name
 
     @property
     def object(self):

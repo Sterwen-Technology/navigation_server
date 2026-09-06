@@ -49,6 +49,18 @@ services:
     server: gRPCMain
     source: DataSource
 
+engines:
+
+- Main:
+    id: 0
+    model: Volvo D2-40
+    max_rpm: 3000
+    voltage_scale: 16
+    voltage_high_alert: 15
+    voltage_low_alert: 12.6
+    temperature_scale: 120
+    temperature_high_alert: 95
+
 
 
 

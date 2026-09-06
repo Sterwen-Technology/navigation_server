@@ -26,7 +26,7 @@ message engine_data {
   float temperature=5;  // in Kelvin
   float alternator_voltage=8;
   string last_start_time=6; // ISO format UTC
-  string last_stop_time=7;
+  string last_stop_time=7;  // ISO format UTC
   engine_run current_run=9;  // NULL if no on-going-run
 }
 
@@ -35,12 +35,12 @@ message engine_parameters {
   uint32 engine_id=1;
   string label=2;
   string model=3;
-  float max_rpm=4;
-  float voltage_scale=5;
-  float voltage_high_alert=6;
-  float voltage_low_alert=7;
-  float temperature_scale=8;  // In degree Celcius
-  float temperature_high_alert=9;
+  float max_rpm=4;              // Max RPM for speed gauge
+  float voltage_scale=5;        // Maximum voltage in display scale assuming starting at 0
+  float voltage_high_alert=6;   // If alternator voltage is over that value shall indicate an alarm
+  float voltage_low_alert=7;    // if alternator voltage is below that value shall indicate an alarm
+  float temperature_scale=8;    // In degree Celsius. Maximum temperature for display scale (gauge)
+  float temperature_high_alert=9; // Shall show an alarm if the temperature is higher
 }
 
 message engine_response {
@@ -59,7 +59,7 @@ message engine_request {
 
 message engine_event {
   uint32 engine_id=1;
-  string timestamp=2;
+  string timestamp=2;         // ISO format UTC
   float total_hours=3;        // in seconds
   EngineState current_state=4;
   EngineState previous_state=5;
@@ -67,8 +67,8 @@ message engine_event {
 
 message engine_run {
   uint32 engine_id=1;
-  string start_time=2;    // isoformat date
-  string stop_time=3;     // isoformat date NULL if on-going run
+  string start_time=2;    // isoformat UTC date
+  string stop_time=3;     // isoformat UTC date NULL if on-going run
   float total_hours=4;  // in seconds and the end of the run
   float duration=5;         // in seconds
   float average_speed=6;    // RPM

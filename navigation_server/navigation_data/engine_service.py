@@ -17,10 +17,10 @@ import os
 import json
 
 from navigation_server.router_common import MessageServerGlobals, GrpcService, resolve_ref, fill_protobuf_from_dict
-from navigation_server.generated.engine_data_pb2 import engine_data, engine_request, engine_response, engine_event, engine_run
+from navigation_server.generated.engine_data_pb2 import engine_data, engine_request, engine_response, engine_event, engine_run, engine_parameters
 from navigation_server.generated.engine_data_pb2_grpc import EngineDataServicer, add_EngineDataServicer_to_server
 from navigation_server.generated.nmea2000_classes_gen import Pgn127488Class, Pgn127489Class
-
+from navigation_server.router_common.configuration import NavigationObject, Parameters
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 
@@ -62,6 +62,22 @@ class EngineDataServicerImpl(EngineDataServicer):
         except KeyError:
             response.error_message = "NO_ENGINE"
         _logger.debug("GetEngineData OK")
+        return response
+
+    def GetEngineParameters(self, request, context):
+        _logger.debug("GetEngineParameters")
+        engine_id = request.engine_id
+        response = engine_response()
+        response.data.engine_id = engine_id
+        try:
+            parameters = self._engine_service.get_engine_parameters(engine_id)
+            if parameters is None:
+                response.error_message = "NO_ENGINE_PARAMETERS"
+            else:
+                response.parameters.CopyFrom(parameters)
+                response.error_message = "NO_ERROR"
+        except KeyError:
+            response.error_message = "NO_ENGINE"
         return response
 
     def GetEngineEvents(self, request, context):
@@ -137,6 +153,27 @@ class EngineDataService(GrpcService):
                         continue
                     self._engines[engine_id] = engine_object
 
+        # read the parameters in the Yaml configuration file
+        try:
+            for engine_p in MessageServerGlobals.configuration.obj_desc_iter('engines'):
+                engine_p_object = NavigationObject(engine_p)
+                engine_param_pb = engine_parameters()
+                engine_param = engine_p_object.parameters()
+                engine_id = engine_param.get('id', int, 0)
+                engine_param_pb.id = engine_id
+                engine_param_pb.label = engine_p_object.name
+                engine_param_pb.model =engine_param.get("model", str, "DefaultModel")
+                engine_param_pb.max_rpm = engine_param.get("max_rpm", float, 0)
+                engine_param_pb.voltage_scale = engine_param.get("voltage_scale", float, 0)
+                engine_param_pb.voltage_high_alert = engine_param.get("voltage_high_alert", float, 0)
+                engine_param_pb.voltage_low_alert = engine_param.get("voltage_low_alert", float, 0)
+                engine_param_pb.temperature_scale = engine_param.get("temperature_scale", float, 0)
+                engine_param_pb.temperature_high_alert = engine_param.get("temperature_high_alert", float, 0)
+                engine = self.get_engine(engine_id)
+                engine.set_parameters(engine_param_pb)
+        except KeyError:
+            _logger.warning("No engine parameters defined")
+
     def finalize(self):
         super().finalize('Engine', 'EngineData')
         self._servicer = EngineDataServicerImpl(self)
@@ -190,6 +227,14 @@ class EngineDataService(GrpcService):
             _logger.error(f"Engine {response.engine_id} non existent")
             raise
         engine.get_data(response)
+
+    def get_engine_parameters(self, engine_id) -> engine_parameters:
+        try:
+            engine = self._engines[engine_id]
+            return engine.parameters()
+        except KeyError:
+            _logger.error(f"Engine {engine_id} non existent")
+            raise
 
     def get_engine_events(self, engine_id, response):
         try:
@@ -344,6 +389,7 @@ class EngineData:
         self._run_file: str = None
         self._runs = []
         self._current_run = None
+        self._parameters = None
         # self._event_file = os.path.join(root_dir, engine_dir, event_file)
         if engine_dir is None:
             self._state = self.OFF
@@ -431,6 +477,12 @@ class EngineData:
                             self._runs.append(EngineRun(self._id, from_dict=run_r))
                         else:
                             break
+
+    def set_parameters(self, parameters: engine_parameters) -> None:
+        self._parameters = parameters
+
+    def parameters(self) -> engine_parameters:
+        return self._parameters
 
     def check_date(self):
         actual_date = datetime.date.today()

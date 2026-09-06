@@ -11,8 +11,8 @@
 
 import logging
 
-from navigation_server.generated.energy_pb2_grpc import solar_mpptStub
-from navigation_server.generated.energy_pb2 import MPPT_device, request, trend_request
+from navigation_server.generated.energy_pb2_grpc import MPPTServiceStub
+from navigation_server.generated.energy_pb2 import MPPT_device, energy_request
 from navigation_server.router_common import GrpcClient, ServiceClient, pb_enum_string
 
 
@@ -73,25 +73,29 @@ class MPPT_output_proxy:
     def panel_power(self) -> float:
         return self._output.panel_power
 
+    @property
+    def panel_voltage(self) -> float:
+        return self._output.panel_voltage
+
 
 
 class MPPT_Client(ServiceClient):
 
 
     def __init__(self):
-        super().__init__(solar_mpptStub)
+        super().__init__(MPPTServiceStub)
 
     def getDeviceInfo(self) -> MPPT_device_proxy:
         _logger.debug("Client GetDeviceInfo")
-        return self._server_call(self._stub.GetDeviceInfo, request(), MPPT_device_proxy)
+        return self._server_call(self._stub.GetDeviceInfo, energy_request(), MPPT_device_proxy)
 
     def getOutput(self) -> MPPT_output_proxy:
         _logger.debug("Client GetOutput")
-        return self._server_call(self._stub.GetOutput, request(),  MPPT_output_proxy)
+        return self._server_call(self._stub.GetOutput, energy_request(),  MPPT_output_proxy)
 
     def getTrend(self):
         _logger.debug("Client GetTrend")
-        trend = self._server_call(self._stub.GetTrend, trend_request(), None)
+        trend = self._server_call(self._stub.GetTrend, energy_request(), None)
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 

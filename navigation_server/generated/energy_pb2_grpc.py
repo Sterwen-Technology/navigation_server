@@ -26,7 +26,7 @@ if _version_not_supported:
     )
 
 
-class solar_mpptStub(object):
+class MPPTServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -36,27 +36,28 @@ class solar_mpptStub(object):
             channel: A grpc.Channel.
         """
         self.GetDeviceInfo = channel.unary_unary(
-                '/solar_mppt/GetDeviceInfo',
-                request_serializer=energy__pb2.request.SerializeToString,
+                '/MPPTService/GetDeviceInfo',
+                request_serializer=energy__pb2.energy_request.SerializeToString,
                 response_deserializer=energy__pb2.MPPT_device.FromString,
                 _registered_method=True)
         self.GetOutput = channel.unary_unary(
-                '/solar_mppt/GetOutput',
-                request_serializer=energy__pb2.request.SerializeToString,
+                '/MPPTService/GetOutput',
+                request_serializer=energy__pb2.energy_request.SerializeToString,
                 response_deserializer=energy__pb2.solar_output.FromString,
                 _registered_method=True)
         self.GetTrend = channel.unary_unary(
-                '/solar_mppt/GetTrend',
-                request_serializer=energy__pb2.trend_request.SerializeToString,
-                response_deserializer=energy__pb2.trend_response.FromString,
+                '/MPPTService/GetTrend',
+                request_serializer=energy__pb2.energy_request.SerializeToString,
+                response_deserializer=energy__pb2.solar_trend_response.FromString,
                 _registered_method=True)
 
 
-class solar_mpptServicer(object):
+class MPPTServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def GetDeviceInfo(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """returns semi-static information + parameters with the 'parameters' command
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -74,32 +75,32 @@ class solar_mpptServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_solar_mpptServicer_to_server(servicer, server):
+def add_MPPTServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetDeviceInfo': grpc.unary_unary_rpc_method_handler(
                     servicer.GetDeviceInfo,
-                    request_deserializer=energy__pb2.request.FromString,
+                    request_deserializer=energy__pb2.energy_request.FromString,
                     response_serializer=energy__pb2.MPPT_device.SerializeToString,
             ),
             'GetOutput': grpc.unary_unary_rpc_method_handler(
                     servicer.GetOutput,
-                    request_deserializer=energy__pb2.request.FromString,
+                    request_deserializer=energy__pb2.energy_request.FromString,
                     response_serializer=energy__pb2.solar_output.SerializeToString,
             ),
             'GetTrend': grpc.unary_unary_rpc_method_handler(
                     servicer.GetTrend,
-                    request_deserializer=energy__pb2.trend_request.FromString,
-                    response_serializer=energy__pb2.trend_response.SerializeToString,
+                    request_deserializer=energy__pb2.energy_request.FromString,
+                    response_serializer=energy__pb2.solar_trend_response.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'solar_mppt', rpc_method_handlers)
+            'MPPTService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('solar_mppt', rpc_method_handlers)
+    server.add_registered_method_handlers('MPPTService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class solar_mppt(object):
+class MPPTService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
@@ -116,8 +117,8 @@ class solar_mppt(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/solar_mppt/GetDeviceInfo',
-            energy__pb2.request.SerializeToString,
+            '/MPPTService/GetDeviceInfo',
+            energy__pb2.energy_request.SerializeToString,
             energy__pb2.MPPT_device.FromString,
             options,
             channel_credentials,
@@ -143,8 +144,8 @@ class solar_mppt(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/solar_mppt/GetOutput',
-            energy__pb2.request.SerializeToString,
+            '/MPPTService/GetOutput',
+            energy__pb2.energy_request.SerializeToString,
             energy__pb2.solar_output.FromString,
             options,
             channel_credentials,
@@ -170,9 +171,9 @@ class solar_mppt(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/solar_mppt/GetTrend',
-            energy__pb2.trend_request.SerializeToString,
-            energy__pb2.trend_response.FromString,
+            '/MPPTService/GetTrend',
+            energy__pb2.energy_request.SerializeToString,
+            energy__pb2.solar_trend_response.FromString,
             options,
             channel_credentials,
             insecure,
@@ -184,7 +185,7 @@ class solar_mppt(object):
             _registered_method=True)
 
 
-class energy_serviceStub(object):
+class BatteryServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -193,43 +194,75 @@ class energy_serviceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.EnergyCommand = channel.unary_unary(
-                '/energy_service/EnergyCommand',
-                request_serializer=energy__pb2.energy_svr_cmd.SerializeToString,
-                response_deserializer=energy__pb2.energy_svr_resp.FromString,
+        self.GetInformation = channel.unary_unary(
+                '/BatteryService/GetInformation',
+                request_serializer=energy__pb2.energy_request.SerializeToString,
+                response_deserializer=energy__pb2.BatteryBank.FromString,
+                _registered_method=True)
+        self.GetValues = channel.unary_unary(
+                '/BatteryService/GetValues',
+                request_serializer=energy__pb2.energy_request.SerializeToString,
+                response_deserializer=energy__pb2.battery_in_out.FromString,
+                _registered_method=True)
+        self.GetTrend = channel.unary_unary(
+                '/BatteryService/GetTrend',
+                request_serializer=energy__pb2.energy_request.SerializeToString,
+                response_deserializer=energy__pb2.battery_trend_response.FromString,
                 _registered_method=True)
 
 
-class energy_serviceServicer(object):
+class BatteryServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def EnergyCommand(self, request, context):
+    def GetInformation(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetValues(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetTrend(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_energy_serviceServicer_to_server(servicer, server):
+def add_BatteryServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'EnergyCommand': grpc.unary_unary_rpc_method_handler(
-                    servicer.EnergyCommand,
-                    request_deserializer=energy__pb2.energy_svr_cmd.FromString,
-                    response_serializer=energy__pb2.energy_svr_resp.SerializeToString,
+            'GetInformation': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetInformation,
+                    request_deserializer=energy__pb2.energy_request.FromString,
+                    response_serializer=energy__pb2.BatteryBank.SerializeToString,
+            ),
+            'GetValues': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetValues,
+                    request_deserializer=energy__pb2.energy_request.FromString,
+                    response_serializer=energy__pb2.battery_in_out.SerializeToString,
+            ),
+            'GetTrend': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetTrend,
+                    request_deserializer=energy__pb2.energy_request.FromString,
+                    response_serializer=energy__pb2.battery_trend_response.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'energy_service', rpc_method_handlers)
+            'BatteryService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('energy_service', rpc_method_handlers)
+    server.add_registered_method_handlers('BatteryService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class energy_service(object):
+class BatteryService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def EnergyCommand(request,
+    def GetInformation(request,
             target,
             options=(),
             channel_credentials=None,
@@ -242,9 +275,63 @@ class energy_service(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/energy_service/EnergyCommand',
-            energy__pb2.energy_svr_cmd.SerializeToString,
-            energy__pb2.energy_svr_resp.FromString,
+            '/BatteryService/GetInformation',
+            energy__pb2.energy_request.SerializeToString,
+            energy__pb2.BatteryBank.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetValues(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/BatteryService/GetValues',
+            energy__pb2.energy_request.SerializeToString,
+            energy__pb2.battery_in_out.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetTrend(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/BatteryService/GetTrend',
+            energy__pb2.energy_request.SerializeToString,
+            energy__pb2.battery_trend_response.FromString,
             options,
             channel_credentials,
             insecure,
