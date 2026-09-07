@@ -444,26 +444,17 @@ class NavigationSystemCollector:
             return {"ok": True, "configurations": reply.configuration_names()}
 
     def network_connection_definitions(self) -> dict:
-        """Return the available connection definitions."""
+        """Return the available connection names (configuration names)."""
         with self._lock:
             self._connect()
             if self._server.not_connected:
                 return {"ok": False, "error": "Agent gRPC server unreachable"}
             net = self._ensure_network()
             try:
-                reply = net.get_connection_definitions()
+                reply = net.get_global_configuration()
             except GrpcAccessException:
                 return {"ok": False, "error": "Network service unavailable"}
-            connections = []
-            for conn_def in reply.connection_definitions():
-                params = {p.name: p.value for p in conn_def.parameters}
-                connections.append({
-                    "name": conn_def.name,
-                    "type": conn_def.type,
-                    "function": conn_def.function,
-                    "parameters": params,
-                })
-            return {"ok": True, "connections": connections}
+            return {"ok": True, "connections": reply.configuration_names()}
 
     def set_global_configuration(self, config_name: str) -> dict:
         """Apply a global network configuration."""
