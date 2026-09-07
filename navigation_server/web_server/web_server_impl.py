@@ -30,6 +30,7 @@ from urllib.parse import urlparse
 from navigation_server.router_common import GrpcClient, GrpcAccessException
 from navigation_server.router_common.agent_interface import AgentClient
 from navigation_server.navigation_clients import NetworkClient
+from navigation_server.navigation_clients.navigation_data_client import EngineClient
 from navigation_server.navigation_clients.console_client import ConsoleClient
 from navigation_server.navigation_clients.n2k_can_client import NMEA2000CanClient
 
@@ -67,6 +68,7 @@ class NavigationSystemCollector:
         self._agent = AgentClient()
         self._server.add_service(self._agent)
         self._network = None
+        self._engine_client = None
         self._consoles = {}
         self._nmea2000_clients = {}
         self._lock = threading.Lock()
@@ -84,6 +86,12 @@ class NavigationSystemCollector:
             self._network = NetworkClient()
             self._server.add_service(self._network)
         return self._network
+    def _ensure_engine_client(self):
+        if self._engine_client is None:
+            self._engine_client = EngineClient()
+            self._server.add_service(self._engine_client)
+        return self._engine_client
+
 
     def _get_console(self, process_name: str):
         """Return a (GrpcClient, ConsoleClient) pair for a process console.
@@ -456,6 +464,103 @@ class NavigationSystemCollector:
                 return {"ok": False, "error": "Network service unavailable"}
             return {"ok": True, "connections": reply.configuration_names()}
 
+    def engine_list(self) -> dict:
+        """Return the list of available engines."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            engine = self._ensure_engine_client()
+            # For now, we need to get engines from the configuration
+            # We'll use a simple approach: try engine IDs 1-10
+            engines = []
+            for engine_id in range(1, 11):
+                data = engine.get_data(engine_id)
+                if data is not None:
+                    params = engine.get_engine_parameters(engine_id)
+                    engines.append({
+                        "id": engine_id,
+                        "label": params.label if params else f"Engine {engine_id}",
+                        "model": params.model if params else "Unknown",
+                        "state": data.state,
+                        "speed": data.speed,
+                        "temperature": data.temperature,
+                        "alternator_voltage": data.alternator_voltage,
+                        "total_hours": data.total_hours,
+                        "last_start_time": data.last_start_time,
+                        "last_stop_time": data.last_stop_time,
+                        "parameters": {
+                            "max_rpm": params.max_rpm if params else 0,
+                            "voltage_scale": params.voltage_scale if params else 0,
+                            "voltage_high_alert": params.voltage_high_alert if params else 0,
+                            "voltage_low_alert": params.voltage_low_alert if params else 0,
+                            "temperature_scale": params.temperature_scale if params else 0,
+                            "temperature_high_alert": params.temperature_high_alert if params else 0,
+                        } if params else {}
+                    })
+            return {"ok": True, "engines": engines}
+
+    def engine_data(self, engine_id: int) -> dict:
+        """Return detailed data for a specific engine."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            engine = self._ensure_engine_client()
+            data = engine.get_data(engine_id)
+            if data is None:
+                return {"ok": False, "error": f"Engine {engine_id} not found"}
+            params = engine.get_engine_parameters(engine_id)
+            events = engine.get_events(engine_id)
+            runs = engine.get_runs(engine_id)
+            return {
+                "ok": True,
+                "engine_id": engine_id,
+                "label": params.label if params else f"Engine {engine_id}",
+                "model": params.model if params else "Unknown",
+                "state": data.state,
+                "speed": data.speed,
+                "temperature": data.temperature,
+                "alternator_voltage": data.alternator_voltage,
+                "total_hours": data.total_hours,
+                "last_start_time": data.last_start_time,
+                "last_stop_time": data.last_stop_time,
+                "current_run": {
+                    "start_time": data.current_run.start_time if data.current_run else None,
+                    "stop_time": data.current_run.stop_time if data.current_run else None,
+                    "total_hours": data.current_run.total_hours if data.current_run else 0,
+                    "duration": data.current_run.duration if data.current_run else 0,
+                    "average_speed": data.current_run.average_speed if data.current_run else 0,
+                    "max_speed": data.current_run.max_speed if data.current_run else 0,
+                    "max_temperature": data.current_run.max_temperature if data.current_run else 0,
+                    "alternator_voltage": data.current_run.alternator_voltage if data.current_run else 0,
+                } if data.current_run else None,
+                "parameters": {
+                    "max_rpm": params.max_rpm if params else 0,
+                    "voltage_scale": params.voltage_scale if params else 0,
+                    "voltage_high_alert": params.voltage_high_alert if params else 0,
+                    "voltage_low_alert": params.voltage_low_alert if params else 0,
+                    "temperature_scale": params.temperature_scale if params else 0,
+                    "temperature_high_alert": params.temperature_high_alert if params else 0,
+                } if params else {},
+                "events": [{
+                    "timestamp": e.timestamp,
+                    "total_hours": e.total_hours,
+                    "current_state": e.current_state,
+                    "previous_state": e.previous_state,
+                } for e in (events or [])],
+                "runs": [{
+                    "start_time": r.start_time,
+                    "stop_time": r.stop_time,
+                    "total_hours": r.total_hours,
+                    "duration": r.duration,
+                    "average_speed": r.average_speed,
+                    "max_speed": r.max_speed,
+                    "max_temperature": r.max_temperature,
+                    "alternator_voltage": r.alternator_voltage,
+                } for r in (runs or [])]
+            }
+
     def set_global_configuration(self, config_name: str) -> dict:
         """Apply a global network configuration."""
         with self._lock:
@@ -650,6 +755,15 @@ class _RequestHandler(BaseHTTPRequestHandler):
             self._serve_json(self.collector.network_configurations())
         elif path == "/api/network/connections":
             self._serve_json(self.collector.network_connection_definitions())
+        elif path == "/api/engines":
+            self._serve_json(self.collector.engine_list())
+        elif path.startswith("/api/engine/"):
+            engine_id_str = path[len("/api/engine/"):]
+            try:
+                engine_id = int(engine_id_str)
+                self._serve_json(self.collector.engine_data(engine_id))
+            except ValueError:
+                self._serve_json({"ok": False, "error": "invalid engine ID"}, status=HTTPStatus.BAD_REQUEST)
         elif path.startswith("/api/log/stream/"):
             process_name = path[len("/api/log/stream/"):]
             if process_name:

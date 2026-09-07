@@ -61,6 +61,16 @@ class EngineEventProxy(ProtobufProxy):
     def previous_state(self):
         return pb_enum_string(self._msg, 'previous_state', self._msg.previous_state)
 
+
+    def get_engine_parameters(self, engine_instance):
+        request = engine_request()
+        request.engine_id = engine_instance
+        result = self._server_call(self._stub.GetEngineParameters, request, None)
+        if result.error_message == 'NO_ERROR':
+            return result.parameters
+        else:
+            _logger.error(f"EngineData => No engine parameters for instance #{engine_instance}")
+            return None
 class EngineRunProxy(ProtobufProxy):
 
     pass
