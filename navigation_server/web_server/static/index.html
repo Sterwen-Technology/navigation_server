@@ -412,7 +412,7 @@
             for (const svc of services) {
                 const rpcService = svc.rpc_service || '';
                 const svcName = svc.service_name || '';
-                if (rpcService === 'ConsoleService') {
+                if (rpcService === 'NavigationConsole') {
                     serviceButtons.push(`<button class="open-btn" onclick="openConsole('${escapeHtml(p.name)}')">\u2913 Console</button>`);
                 } else if (rpcService === 'Nmea2000ControllerService') {
                     serviceButtons.push(`<button class="open-btn" onclick="openNmea2000('${escapeHtml(p.name)}')">\u2699 NMEA2000</button>`);
