@@ -410,10 +410,11 @@
             const serviceButtons = [];
             const services = p.services || [];
             for (const svc of services) {
+                const rpcService = svc.rpc_service || '';
                 const svcName = svc.service_name || '';
-                if (svcName === 'Console') {
+                if (rpcService === 'ConsoleService') {
                     serviceButtons.push(`<button class="open-btn" onclick="openConsole('${escapeHtml(p.name)}')">\u2913 Console</button>`);
-                } else if (svcName === 'NMEA2000') {
+                } else if (rpcService === 'Nmea2000ControllerService') {
                     serviceButtons.push(`<button class="open-btn" onclick="openNmea2000('${escapeHtml(p.name)}')">\u2699 NMEA2000</button>`);
                 }
             }
