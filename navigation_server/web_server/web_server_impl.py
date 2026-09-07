@@ -443,6 +443,28 @@ class NavigationSystemCollector:
                 return {"ok": False, "error": "Network service unavailable"}
             return {"ok": True, "configurations": reply.configuration_names()}
 
+    def network_connection_definitions(self) -> dict:
+        """Return the available connection definitions."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            net = self._ensure_network()
+            try:
+                reply = net.get_connection_definitions()
+            except GrpcAccessException:
+                return {"ok": False, "error": "Network service unavailable"}
+            connections = []
+            for conn_def in reply.connection_definitions():
+                params = {p.name: p.value for p in conn_def.parameters}
+                connections.append({
+                    "name": conn_def.name,
+                    "type": conn_def.type,
+                    "function": conn_def.function,
+                    "parameters": params,
+                })
+            return {"ok": True, "connections": connections}
+
     def set_global_configuration(self, config_name: str) -> dict:
         """Apply a global network configuration."""
         with self._lock:
@@ -455,6 +477,34 @@ class NavigationSystemCollector:
             except GrpcAccessException:
                 return {"ok": False, "error": "Network service unavailable"}
             return {"ok": True, "configuration": config_name}
+
+    def network_interface_cmd(self, interface_name: str, connection_name: str, cmd: str) -> dict:
+        """Send a command to a network interface (up, down, delete, add connection)."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            net = self._ensure_network()
+            try:
+                if cmd == "add":
+                    # Add a connection to an interface
+                    from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
+                    iface_pb = NetInterfacePb()
+                    iface_pb.name = interface_name
+                    result = net.set_configuration("add", connection_name, iface_pb)
+                else:
+                    # For up, down, delete commands
+                    from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
+                    iface_pb = NetInterfacePb()
+                    iface_pb.name = interface_name
+                    result = net.interface_command(cmd, iface_pb)
+            except GrpcAccessException:
+                return {"ok": False, "error": "Network service unavailable"}
+            return {
+                "ok": True,
+                "status": result.status,
+                "details": result.details,
+            }
 
     def nmea2000_status(self, process_name: str) -> dict:
         """Return the NMEA2000 controller status and devices for a process."""
@@ -607,6 +657,8 @@ class _RequestHandler(BaseHTTPRequestHandler):
             self._serve_json(self.collector.network_status())
         elif path == "/api/network/configs":
             self._serve_json(self.collector.network_configurations())
+        elif path == "/api/network/connections":
+            self._serve_json(self.collector.network_connection_definitions())
         elif path.startswith("/api/log/stream/"):
             process_name = path[len("/api/log/stream/"):]
             if process_name:
@@ -681,6 +733,15 @@ class _RequestHandler(BaseHTTPRequestHandler):
                                  status=HTTPStatus.BAD_REQUEST)
                 return
             self._serve_json(self.collector.set_global_configuration(config_name))
+        elif path == "/api/network/interface":
+            interface_name = body.get("interface")
+            connection_name = body.get("connection")
+            cmd = body.get("cmd")
+            if not interface_name or not cmd:
+                self._serve_json({"ok": False, "error": "missing 'interface' or 'cmd'"},
+                                 status=HTTPStatus.BAD_REQUEST)
+                return
+            self._serve_json(self.collector.network_interface_cmd(interface_name, connection_name, cmd))
         elif path == "/api/log/stop":
             self.collector.stop_log_stream()
             self._serve_json({"ok": True})

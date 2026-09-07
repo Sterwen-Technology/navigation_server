@@ -443,6 +443,7 @@
                     ${serviceButtons.length > 0 ? `<div class="card-actions">${serviceButtons.join('')}</div>` : ''}
                 </div>
             `;
+            t.translateAllElements();
         }
         async function procCmd(target, cmd) {
             try {
@@ -562,6 +563,7 @@
                     <div class="grid">${couplers || '<div class="empty" data-i18n="console.no_couplers">No couplers.</div>'}</div>
                 </div>
             `;
+            t.translateAllElements();
         }
 
         async function couplerCmd(process, coupler, cmd) {
@@ -669,24 +671,33 @@
             $("network-modal").classList.add("show");
             $("network-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
             try {
-                const [status, configs] = await Promise.all([
+                const [status, configs, connections] = await Promise.all([
                     apiGet("/api/network"),
                     apiGet("/api/network/configs"),
+                    apiGet("/api/network/connections"),
                 ]);
-                renderNetwork(status, configs);
+                renderNetwork(status, configs, connections);
             } catch (e) {
                 $("network-body").innerHTML = `<div class="empty">Erreur: ${escapeHtml(e.message)}</div>`;
             }
         }
 
-        function renderNetwork(status, configs) {
+        function renderNetwork(status, configs, connections) {
             const body = $("network-body");
             if (!status.ok) {
                 body.innerHTML = `<div class="empty">${escapeHtml(status.error || "Erreur")}</div>`;
                 t.translateAllElements();
                 return;
             }
-            const interfaces = (status.interfaces || []).map(iface => `
+            const connectionOptions = (connections.ok ? (connections.connections || []) : [])
+                .map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("");
+            
+            const interfaces = (status.interfaces || []).map(iface => {
+                const hasConnection = iface.connection_name && iface.connection_name !== "";
+                const upDisabled = !hasConnection ? 'disabled' : '';
+                const downDisabled = !hasConnection ? 'disabled' : '';
+                const deleteDisabled = !hasConnection ? 'disabled' : '';
+                return `
                 <div class="net-interface">
                     <strong>${escapeHtml(iface.name)}</strong>
                     · ${escapeHtml(iface.type)}
@@ -694,8 +705,18 @@
                     ${iface.function ? `· ${escapeHtml(iface.function)}` : ""}
                     ${iface.device_name ? `· ${escapeHtml(iface.device_name)}` : ""}
                     ${iface.connection_name ? `<br><span style="color:var(--muted)">Connexion: ${escapeHtml(iface.connection_name)}</span>` : ""}
+                    <div class="card-actions">
+                        <button ${upDisabled} onclick="networkInterfaceCmd('${escapeHtml(iface.name)}', '', 'up')" title="Up connection">↑ Up</button>
+                        <button ${downDisabled} onclick="networkInterfaceCmd('${escapeHtml(iface.name)}', '', 'down')" title="Down connection">↓ Down</button>
+                        <button ${deleteDisabled} onclick="networkInterfaceCmd('${escapeHtml(iface.name)}', '', 'del_connection')" title="Delete connection">✕ Delete</button>
+                        <select class="net-config-select" id="conn-select-${escapeHtml(iface.name)}">
+                            <option value="" data-i18n="network.select_connection">Select connection...</option>
+                            ${connectionOptions}
+                        </select>
+                        <button onclick="addConnection('${escapeHtml(iface.name)}')" title="Add connection">➕ Add</button>
+                    </div>
                 </div>
-            `).join("");
+            `;}).join("");
 
             const configOptions = (configs.ok ? (configs.configurations || []) : [])
                 .map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
@@ -713,6 +734,7 @@
                     </div>
                 </div>
             `;
+            t.translateAllElements();
         }
 
         async function applyNetworkConfig() {
@@ -729,6 +751,33 @@
             }
         }
 
+
+        async function networkInterfaceCmd(interfaceName, connectionName, cmd) {
+            if (!confirm(t.t("network.confirm_action", {action: cmd, interface: interfaceName}))) return;
+            try {
+                const r = await apiPost("/api/network/interface", { interface: interfaceName, connection: connectionName, cmd: cmd });
+                toast(`${cmd} ${interfaceName}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
+                if (r.ok) setTimeout(openNetwork, 1000);
+            } catch (e) {
+                toast(t.t("toast.error", {error: e.message}), false);
+            }
+        }
+
+        function addConnection(interfaceName) {
+            const selectEl = $(`conn-select-${interfaceName}`);
+            if (!selectEl) return;
+            const connectionName = selectEl.value;
+            if (!connectionName) {
+                toast(t.t("network.select_connection_first"), false);
+                return;
+            }
+            networkInterfaceCmd(interfaceName, connectionName, 'add');
+        }
+
+        function showAddConnection(interfaceName) {
+            // This function can be used if we want to show a modal for adding connections
+            // For now, we just use the inline select
+        }
         function closeNetwork() {
             $("network-modal").classList.remove("show");
         }
@@ -915,6 +964,10 @@
         window.closeConsole = closeConsole;
         window.couplerCmd = couplerCmd;
 
+
+        window.networkInterfaceCmd = networkInterfaceCmd;
+        window.addConnection = addConnection;
+        window.showAddConnection = showAddConnection;
         $("refresh-btn").addEventListener("click", refresh);
         $("auto-refresh").addEventListener("change", toggleAuto);
         refresh();

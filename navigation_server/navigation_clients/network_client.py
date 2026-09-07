@@ -138,3 +138,9 @@ class NetworkClient(ServiceClient):
         request.cmd = "global"
         return self._server_call(self._stub.get_configuration_base, request, NetworkConfigurationReplyProxy)
 
+    def get_connection_definitions(self):
+        _logger.debug("Call get_connection_definitions")
+        request = NetworkCommand()
+        request.cmd = "connections"
+        return self._server_call(self._stub.get_configuration_base, request, NetworkConfigurationReplyProxy)
+

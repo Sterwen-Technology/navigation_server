@@ -401,6 +401,19 @@ class NetworkServicerImpl(NetworkServiceServicer):
             for config_name in self._service.configuration_names():
                 resp.global_configurations.append(config_name)
             resp.status = "OK"
+        elif request.cmd == 'connections':
+            for conn in self._service.connections():
+                conn_def = NetConnectionDef()
+                conn_def.name = conn.name
+                conn_def.type = device_type_dict[conn.type]
+                conn_def.function = connection_type_dict[conn.function]
+                for key, value in conn.params.items():
+                    param = NetParameter()
+                    param.name = key
+                    param.value = str(value)
+                    conn_def.parameters.append(param)
+                resp.connection_definitions.append(conn_def)
+            resp.status = "OK"
         else:
             resp.status = "Not implemented"
         return resp
@@ -451,6 +464,12 @@ class NetworkService(GrpcService):
 
     def configuration_names(self):
         return self._configurations.keys()
+
+    def connections(self):
+        return self._connections.values()
+
+    def connection_names(self):
+        return self._connections.keys()
 
     def interface_from_type(self, interface_type:str):
         for interface in self._interfaces.values():
