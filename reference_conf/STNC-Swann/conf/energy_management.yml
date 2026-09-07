@@ -47,13 +47,16 @@ couplers:
 
 services:
 
-- EnergyService:
+- MPPT:
     class: MPPTService
     coupler: MPPTVEDirect
     server: gRPCMain
     publisher: NMEAPush
     protocol: nmea0183
     talker: EM
+    instance: 1
+
+
 
 - Console:
     class: Console

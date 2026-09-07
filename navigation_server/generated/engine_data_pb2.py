@@ -24,25 +24,27 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11\x65ngine_data.proto\"\xe5\x01\n\x0b\x65ngine_data\x12\x11\n\tengine_id\x18\x01 \x01(\r\x12\x1b\n\x05state\x18\x02 \x01(\x0e\x32\x0c.EngineState\x12\x13\n\x0btotal_hours\x18\x03 \x01(\x02\x12\r\n\x05speed\x18\x04 \x01(\x02\x12\x13\n\x0btemperature\x18\x05 \x01(\x02\x12\x1a\n\x12\x61lternator_voltage\x18\x08 \x01(\x02\x12\x17\n\x0flast_start_time\x18\x06 \x01(\t\x12\x16\n\x0elast_stop_time\x18\x07 \x01(\t\x12 \n\x0b\x63urrent_run\x18\t \x01(\x0b\x32\x0b.engine_run\"\x8a\x01\n\x0f\x65ngine_response\x12\n\n\x02id\x18\x04 \x01(\r\x12\x15\n\rerror_message\x18\x01 \x01(\t\x12\x1a\n\x04\x64\x61ta\x18\x02 \x01(\x0b\x32\x0c.engine_data\x12\x1d\n\x06\x65vents\x18\x03 \x03(\x0b\x32\r.engine_event\x12\x19\n\x04runs\x18\x05 \x03(\x0b\x32\x0b.engine_run\"/\n\x0e\x65ngine_request\x12\n\n\x02id\x18\x02 \x01(\r\x12\x11\n\tengine_id\x18\x01 \x01(\r\"\x94\x01\n\x0c\x65ngine_event\x12\x11\n\tengine_id\x18\x01 \x01(\r\x12\x11\n\ttimestamp\x18\x02 \x01(\t\x12\x13\n\x0btotal_hours\x18\x03 \x01(\x02\x12#\n\rcurrent_state\x18\x04 \x01(\x0e\x32\x0c.EngineState\x12$\n\x0eprevious_state\x18\x05 \x01(\x0e\x32\x0c.EngineState\"\xcc\x01\n\nengine_run\x12\x11\n\tengine_id\x18\x01 \x01(\r\x12\x12\n\nstart_time\x18\x02 \x01(\t\x12\x11\n\tstop_time\x18\x03 \x01(\t\x12\x13\n\x0btotal_hours\x18\x04 \x01(\x02\x12\x10\n\x08\x64uration\x18\x05 \x01(\x02\x12\x15\n\raverage_speed\x18\x06 \x01(\x02\x12\x11\n\tmax_speed\x18\x07 \x01(\x02\x12\x17\n\x0fmax_temperature\x18\x08 \x01(\x02\x12\x1a\n\x12\x61lternator_voltage\x18\t \x01(\x02*@\n\x0b\x45ngineState\x12\x0e\n\nENGINE_OFF\x10\x00\x12\r\n\tENGINE_ON\x10\x01\x12\x12\n\x0e\x45NGINE_RUNNING\x10\x02\x32\xb0\x01\n\nEngineData\x12\x34\n\rGetEngineData\x12\x0f.engine_request\x1a\x10.engine_response\"\x00\x12\x36\n\x0fGetEngineEvents\x12\x0f.engine_request\x1a\x10.engine_response\"\x00\x12\x34\n\rGetEngineRuns\x12\x0f.engine_request\x1a\x10.engine_response\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11\x65ngine_data.proto\"\xe5\x01\n\x0b\x65ngine_data\x12\x11\n\tengine_id\x18\x01 \x01(\r\x12\x1b\n\x05state\x18\x02 \x01(\x0e\x32\x0c.EngineState\x12\x13\n\x0btotal_hours\x18\x03 \x01(\x02\x12\r\n\x05speed\x18\x04 \x01(\x02\x12\x13\n\x0btemperature\x18\x05 \x01(\x02\x12\x1a\n\x12\x61lternator_voltage\x18\x08 \x01(\x02\x12\x17\n\x0flast_start_time\x18\x06 \x01(\t\x12\x16\n\x0elast_stop_time\x18\x07 \x01(\t\x12 \n\x0b\x63urrent_run\x18\t \x01(\x0b\x32\x0b.engine_run\"\xde\x01\n\x11\x65ngine_parameters\x12\x11\n\tengine_id\x18\x01 \x01(\r\x12\r\n\x05label\x18\x02 \x01(\t\x12\r\n\x05model\x18\x03 \x01(\t\x12\x0f\n\x07max_rpm\x18\x04 \x01(\x02\x12\x15\n\rvoltage_scale\x18\x05 \x01(\x02\x12\x1a\n\x12voltage_high_alert\x18\x06 \x01(\x02\x12\x19\n\x11voltage_low_alert\x18\x07 \x01(\x02\x12\x19\n\x11temperature_scale\x18\x08 \x01(\x02\x12\x1e\n\x16temperature_high_alert\x18\t \x01(\x02\"\xb2\x01\n\x0f\x65ngine_response\x12\n\n\x02id\x18\x04 \x01(\r\x12\x15\n\rerror_message\x18\x01 \x01(\t\x12\x1a\n\x04\x64\x61ta\x18\x02 \x01(\x0b\x32\x0c.engine_data\x12\x1d\n\x06\x65vents\x18\x03 \x03(\x0b\x32\r.engine_event\x12\x19\n\x04runs\x18\x05 \x03(\x0b\x32\x0b.engine_run\x12&\n\nparameters\x18\x06 \x01(\x0b\x32\x12.engine_parameters\"/\n\x0e\x65ngine_request\x12\n\n\x02id\x18\x02 \x01(\r\x12\x11\n\tengine_id\x18\x01 \x01(\r\"\x94\x01\n\x0c\x65ngine_event\x12\x11\n\tengine_id\x18\x01 \x01(\r\x12\x11\n\ttimestamp\x18\x02 \x01(\t\x12\x13\n\x0btotal_hours\x18\x03 \x01(\x02\x12#\n\rcurrent_state\x18\x04 \x01(\x0e\x32\x0c.EngineState\x12$\n\x0eprevious_state\x18\x05 \x01(\x0e\x32\x0c.EngineState\"\xcc\x01\n\nengine_run\x12\x11\n\tengine_id\x18\x01 \x01(\r\x12\x12\n\nstart_time\x18\x02 \x01(\t\x12\x11\n\tstop_time\x18\x03 \x01(\t\x12\x13\n\x0btotal_hours\x18\x04 \x01(\x02\x12\x10\n\x08\x64uration\x18\x05 \x01(\x02\x12\x15\n\raverage_speed\x18\x06 \x01(\x02\x12\x11\n\tmax_speed\x18\x07 \x01(\x02\x12\x17\n\x0fmax_temperature\x18\x08 \x01(\x02\x12\x1a\n\x12\x61lternator_voltage\x18\t \x01(\x02*@\n\x0b\x45ngineState\x12\x0e\n\nENGINE_OFF\x10\x00\x12\r\n\tENGINE_ON\x10\x01\x12\x12\n\x0e\x45NGINE_RUNNING\x10\x02\x32\xec\x01\n\nEngineData\x12\x34\n\rGetEngineData\x12\x0f.engine_request\x1a\x10.engine_response\"\x00\x12:\n\x13GetEngineParameters\x12\x0f.engine_request\x1a\x10.engine_response\"\x00\x12\x36\n\x0fGetEngineEvents\x12\x0f.engine_request\x1a\x10.engine_response\"\x00\x12\x34\n\rGetEngineRuns\x12\x0f.engine_request\x1a\x10.engine_response\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'engine_data_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_ENGINESTATE']._serialized_start=801
-  _globals['_ENGINESTATE']._serialized_end=865
+  _globals['_ENGINESTATE']._serialized_start=1066
+  _globals['_ENGINESTATE']._serialized_end=1130
   _globals['_ENGINE_DATA']._serialized_start=22
   _globals['_ENGINE_DATA']._serialized_end=251
-  _globals['_ENGINE_RESPONSE']._serialized_start=254
-  _globals['_ENGINE_RESPONSE']._serialized_end=392
-  _globals['_ENGINE_REQUEST']._serialized_start=394
-  _globals['_ENGINE_REQUEST']._serialized_end=441
-  _globals['_ENGINE_EVENT']._serialized_start=444
-  _globals['_ENGINE_EVENT']._serialized_end=592
-  _globals['_ENGINE_RUN']._serialized_start=595
-  _globals['_ENGINE_RUN']._serialized_end=799
-  _globals['_ENGINEDATA']._serialized_start=868
-  _globals['_ENGINEDATA']._serialized_end=1044
+  _globals['_ENGINE_PARAMETERS']._serialized_start=254
+  _globals['_ENGINE_PARAMETERS']._serialized_end=476
+  _globals['_ENGINE_RESPONSE']._serialized_start=479
+  _globals['_ENGINE_RESPONSE']._serialized_end=657
+  _globals['_ENGINE_REQUEST']._serialized_start=659
+  _globals['_ENGINE_REQUEST']._serialized_end=706
+  _globals['_ENGINE_EVENT']._serialized_start=709
+  _globals['_ENGINE_EVENT']._serialized_end=857
+  _globals['_ENGINE_RUN']._serialized_start=860
+  _globals['_ENGINE_RUN']._serialized_end=1064
+  _globals['_ENGINEDATA']._serialized_start=1133
+  _globals['_ENGINEDATA']._serialized_end=1369
 # @@protoc_insertion_point(module_scope)

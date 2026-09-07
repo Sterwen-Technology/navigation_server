@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0f\x61rguments.proto\"g\n\x08\x41rgument\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x0f\n\x05str_v\x18\x04 \x01(\tH\x00\x12\x0f\n\x05int_v\x18\x05 \x01(\x03H\x00\x12\x11\n\x07\x66loat_v\x18\x06 \x01(\x02H\x00\x12\x10\n\x06\x64\x61te_v\x18\x07 \x01(\tH\x00\x42\x07\n\x05value\",\n\x0c\x41rgumentList\x12\x1c\n\targuments\x18\x01 \x03(\x0b\x32\t.Argumentb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0f\x61rguments.proto\"y\n\x08\x41rgument\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x0f\n\x05str_v\x18\x04 \x01(\tH\x00\x12\x0f\n\x05int_v\x18\x05 \x01(\x03H\x00\x12\x11\n\x07\x66loat_v\x18\x06 \x01(\x02H\x00\x12\x10\n\x06\x64\x61te_v\x18\x07 \x01(\tH\x00\x12\x10\n\x06\x62ool_v\x18\x08 \x01(\x08H\x00\x42\x07\n\x05value\",\n\x0c\x41rgumentList\x12\x1c\n\targuments\x18\x01 \x03(\x0b\x32\t.Argumentb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,7 +32,7 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'arguments_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_ARGUMENT']._serialized_start=19
-  _globals['_ARGUMENT']._serialized_end=122
-  _globals['_ARGUMENTLIST']._serialized_start=124
-  _globals['_ARGUMENTLIST']._serialized_end=168
+  _globals['_ARGUMENT']._serialized_end=140
+  _globals['_ARGUMENTLIST']._serialized_start=142
+  _globals['_ARGUMENTLIST']._serialized_end=186
 # @@protoc_insertion_point(module_scope)

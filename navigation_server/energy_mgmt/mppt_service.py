@@ -16,10 +16,11 @@ import traceback
 
 from collections import namedtuple, deque
 
-from navigation_server.generated.energy_pb2 import solar_output, request, MPPT_device, trend_response
-from navigation_server.generated.energy_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server
+from navigation_server.generated.energy_pb2 import solar_output, energy_request, MPPT_device, trend_response
+from navigation_server.generated.energy_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server, \
+    MPPTServiceServicer
 from navigation_server.router_common import (GrpcService, MessageServerGlobals, resolve_ref, copy_protobuf_data,
-                                            NavGenericMsg, N2K_MSG)
+                                             NavGenericMsg, N2K_MSG, fill_protobuf_from_dict)
 from navigation_server.router_core import NMEA0183Sentences
 from navigation_server.couplers import mppt_nmea0183
 
@@ -33,6 +34,7 @@ class MPPTData:
     def __init__(self, value_dict):
         self.current = float(value_dict['I']) * 0.001
         self.voltage = float(value_dict['V']) * 0.001
+        self.panel_voltage = float(value_dict['VPV']) * 0.001
         self.panel_power = float(value_dict['PPV'])
         self.product_id = value_dict['PID']
         self.firmware = value_dict['FW']
@@ -44,7 +46,7 @@ class MPPTData:
         self.day_power = float(value_dict['H20']) * 10.0
 
     def output_pb(self, output_pb_v):
-        copy_protobuf_data(self, output_pb_v, ('current', 'voltage', 'panel_power'))
+        copy_protobuf_data(self, output_pb_v, ('current', 'voltage', 'panel_voltage','panel_power'))
 
     def output_info_pb(self, output_pb):
         copy_protobuf_data(self, output_pb, ('product_id', 'firmware', 'serial', 'error', 'state', 'mppt_state',
@@ -52,8 +54,10 @@ class MPPTData:
 
     state_dict = {0: 0, 2: 9, 3: 1, 4: 2, 5: 5, 7: 4, 247: 4}  # correspondence between Victron and NMEA2000 state
 
+
     def gen_pgn_127507(self):
         # 12/05/2026 (2.8.1) - the PGN is currently wrongly encoded do not use it for now
+        # 31/08/2026 (3.0.0) - PGN definition updated
         res = Pgn127507Class()
         res.charger_instance = 1
         res.battery_instance = 1
@@ -76,7 +80,7 @@ class MPPTData:
         return res
 
 
-MPPTBucket = namedtuple('MPPTBucket', ['voltage', 'current', 'power'])
+MPPTBucket = namedtuple('MPPTBucket', ['voltage', 'panel_voltage', 'current', 'power'])
 
 
 class VictronMPPT:
@@ -98,9 +102,19 @@ class VictronMPPT:
         self._service = service
         self._current_data = None
         self._current_data_dict = None
-        self._trend_depth = opts.get('trend_depth', int, 30)
-        self._trend_period = opts.get('trend_period', float, 10.)
+        trend_duration = opts.get('trend_duration', int, 5)
+        self._trend_period = opts.get('trend_interval', float, 10.)
+        self._trend_depth = (trend_duration * 60.)/ self._trend_period
         self._trend_buckets = deque(maxlen=self._trend_depth)
+        self._parameters = {
+            'instance' : opts.get('instance', int, 1),
+            'battery': opts.get('battery', int, 1),
+            'panel_max_power': opts.get('panel_max_power', float, 0.0),
+            'panel_max_voltage': opts.get('panel_max_voltage', float, 0.0),
+            'max_voltage': opts.get('max_voltage', float, 0.0),
+            'trend_duration': trend_duration,
+            'trend_interval': self._trend_period
+        }
         self._start_period = 0.0
         self._mean_v = 0.0
         self._mean_a = 0.0
@@ -175,6 +189,9 @@ class VictronMPPT:
         if self._current_data is not None:
             self._current_data.output_info_pb(device_info)
 
+    def get_device_parameters(self, device_parameters):
+        fill_protobuf_from_dict(device_parameters, self._parameters)
+
     def publish0183(self):
         _logger.debug("MPPT Service publish NMEA0183")
         msg = mppt_nmea0183(self._current_data_dict)
@@ -199,7 +216,7 @@ class VictronMPPT:
 
 
 
-class MPPT_Servicer(solar_mpptServicer):
+class MPPTServicer(MPPTServiceServicer):
     """
 
     """
@@ -210,6 +227,9 @@ class MPPT_Servicer(solar_mpptServicer):
         _logger.debug("GRPC request GetDevice")
         ret_data = MPPT_device()
         self._mppt_device.get_device_info(ret_data)
+        if request.HasField('command'):
+            if request.command == 'parameters':
+                self._mppt_device.get_parameters(ret_data.parameters)
         return ret_data
 
     def GetOutput(self, request, context):
@@ -242,6 +262,6 @@ class MPPTService(GrpcService):
         self._mppt_device = VictronMPPT(opts, self)
 
     def finalize(self):
-        super().finalize('Energy', 'energy_service')
-        add_solar_mpptServicer_to_server(MPPT_Servicer(self._mppt_device), self.grpc_server)
+        super().finalize(self.name, 'MPPTService')
+        add_solar_mpptServicer_to_server(MPPTServicer(self._mppt_device), self.grpc_server)
         self._mppt_device.start()

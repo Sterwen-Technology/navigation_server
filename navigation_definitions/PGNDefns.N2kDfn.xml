@@ -187,6 +187,10 @@
       <Quantity>Intensity</Quantity>
       <Precision>2</Precision>
     </Unit>
+     <Unit Name="amperehour" symbol="Ah">
+         <Quantity>Battery capacity</Quantity>
+         <Precision>1</Precision>
+     </Unit>
     <Unit Name="volt" symbol="V">
       <Quantity>Voltage</Quantity>
       <Precision>2</Precision>
@@ -2128,18 +2132,19 @@
     </PGNDefn>
     <PGNDefn PGN="127506">
       <Name>DC Detailed Status</Name>
-      <ByteLength>9</ByteLength>
+        <Scope>Generate</Scope>
+      <ByteLength>11</ByteLength>
       <Fields>
-        <UIntField Name="SID">
+        <UIntField Name="SID" key="sequence_id">
           <BitOffset>0</BitOffset>
           <BitLength>8</BitLength>
           <FormatAs>SID</FormatAs>
         </UIntField>
-        <InstanceField Name="DC Instance">
+        <InstanceField Name="DC Instance" key="instance">
           <BitOffset>8</BitOffset>
           <BitLength>8</BitLength>
         </InstanceField>
-        <EnumField Name="DC Type">
+        <EnumField Name="DC Type" key="DC_type">
           <BitOffset>16</BitOffset>
           <BitLength>8</BitLength>
           <EnumValues>
@@ -2150,32 +2155,37 @@
             <EnumPair Value="4" Name="WindGenerator" />
           </EnumValues>
         </EnumField>
-        <UIntField Name="State of Charge">
+        <UIntField Name="State of Charge" key="SoC">
           <BitOffset>24</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="State of Health">
+        <UIntField Name="State of Health" key="SoH">
           <BitOffset>32</BitOffset>
           <BitLength>8</BitLength>
         </UIntField>
-        <UIntField Name="Time Remaining">
+        <UIntField Name="Time Remaining" key="time_remaining">
           <BitOffset>40</BitOffset>
           <BitLength>16</BitLength>
           <Unit>second</Unit>
         </UIntField>
-        <DblField Name="Ripple Voltage">
+        <DblField Name="Ripple Voltage" key="ripple_voltage">
           <BitOffset>56</BitOffset>
           <BitLength>16</BitLength>
           <Unit>volt</Unit>
-          <Scale>0.001</Scale>
+          <Scale>0.01</Scale>
         </DblField>
+          <UIntField Name="Remaining capacity" key="remaining_capacity">
+              <BitOffset>72</BitOffset>
+              <BitLength>16</BitLength>
+              <Unit>amperehour</Unit>
+          </UIntField>
       </Fields>
     </PGNDefn>
     <PGNDefn PGN="127507">
       <Name>Charger Status</Name>
       <Scope>Generate</Scope>
       <Comment>Field definition to be corrected and Fast Packet</Comment>
-      <ByteLength>7</ByteLength>
+      <ByteLength>6</ByteLength>
       <Fields>
         <InstanceField Name="Charger Instance" key="charger_instance">
           <BitOffset>0</BitOffset>
@@ -2187,26 +2197,26 @@
         </InstanceField>
         <UIntField Name="Operating State" key="operating_state">
           <BitOffset>16</BitOffset>
-          <BitLength>8</BitLength>
+          <BitLength>4</BitLength>
         </UIntField>
         <UIntField Name="Charge Mode" key="charger_mode">
-          <BitOffset>24</BitOffset>
-          <BitLength>8</BitLength>
+          <BitOffset>20</BitOffset>
+          <BitLength>4</BitLength>
         </UIntField>
         <UIntField Name="Charger Enable/Disable" key="charger_enable">
-          <BitOffset>32</BitOffset>
+          <BitOffset>24</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
         <UIntField Name="Equalization Pending" key="equalization_pending">
-          <BitOffset>34</BitOffset>
+          <BitOffset>26</BitOffset>
           <BitLength>2</BitLength>
         </UIntField>
         <UIntField Name="Reserved">
-          <BitOffset>36</BitOffset>
+          <BitOffset>28</BitOffset>
           <BitLength>4</BitLength>
         </UIntField>
         <UIntField Name="Equalization Time Remaining" key="eq_time_remaining">
-          <BitOffset>40</BitOffset>
+          <BitOffset>32</BitOffset>
           <BitLength>16</BitLength>
           <Unit>second</Unit>
         </UIntField>

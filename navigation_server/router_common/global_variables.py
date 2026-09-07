@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     24/11/2023
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2023
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 # -------------------------------------------------------------------------------
 
@@ -18,23 +18,24 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 class MessageServerGlobals:
 
-    pgn_definitions = None
-    manufacturers = None
-    enums = None
-    units = None
-    version = None
-    configuration = None
-    global_variables = None
-    server_name: str = None
-    data_dir = None
-    trace_dir = None
-    thread_controller = None
-    profiling_controller = None
-    timer_controller = None
-    main_server = None
-    root_package = None
-    home_dir = None
-    agent_address: str = None
+    pgn_definitions = None          # NMEA2000 PGN definitions structure
+    manufacturers = None            # NMEA2000 Manufacturers table (incomplete)
+    enums = None                    # NMEA2000 Enums
+    units = None                    # NMEA2000 Units definition
+    version = None                  # the running software version
+    configuration = None            # Globale configuration object
+    global_variables = None         # Global variables dictionary (equal to configuration)
+    server_name: str = None         # the name of the server (from configuration Yaml file)
+    data_dir = None                 # Data directory
+    trace_dir = None                # Trace directory
+    thread_controller = None        # Navigation thread controller
+    profiling_controller = None     # Navigation profiling controller
+    timer_controller = None         #
+    main_server = None              # The main server in the current process
+    root_package = None             # Root Python package for the application
+    home_dir = None                 # Home directory for the user (can be root)
+    agent_address: str = None       # Agent address including port when relevant
+    agent = None                    # Agent client when connected
 
 
 def set_root_package(root_object):

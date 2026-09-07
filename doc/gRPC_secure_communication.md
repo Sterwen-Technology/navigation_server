@@ -46,14 +46,16 @@ The critical server is the navigation_agent that includes both the AgentService 
 Here are the configuration parameters to activate the secure communication:
 
 a) In all servers configuration files add the following global parameter:
-*secure_grpc: true*
+*enable_secure_grpc: true*
 
 b) in the navigation_agent configuration file (agent-network.yml) add the following parameters:
 
-*secure_grpc: true* (as for all others)
+*enable_secure_grpc: true* (as for all others)
 
 in the gRPC server section:
 *secure: true*
+
+
 
 c) to allow the NetworkService to generate the server certificates automatically, add the following parameter to the navigation_agent configuration file:
 

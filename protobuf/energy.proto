@@ -5,13 +5,13 @@
 // Author:      Laurent Carré
 //
 // Created:     18/02/2022
-// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2022
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 // Licence:     Eclipse Public License 2.0
 //-------------------------------------------------------------------------------
 
 syntax = "proto3";
 
-import "arguments.proto";
+// import "arguments.proto";
 
 // Messages to transmit Victron VE direct messages between the reader and the instrument
 
@@ -45,58 +45,120 @@ enum VE_MPPT {
   Active=2;
 }
 
+// Global messages
+
+message energy_request {
+  uint32 request_id=1;      // request ID
+  string command=2;         // Optional - Additional command
+  uint32 trend_samples=3;   // Optional -  Max number of samples to be returned
+}
+
+message VE_Hex_Parameter {
+  string  name=1;     // short name used as dictionary entry
+  string description=2; // full description as per documentation
+  uint32 register=3;    //
+}
+
+// MPPT - Solar panel specific section
+
 message MPPT_device {
-  string product_id = 1;
-  string firmware = 2;
-  string serial = 3;
+  // Semi static information
+  uint32 id=1;            // device ID - identify the device when more than one are used
+  string product_id = 2;
+  string firmware = 3;
+  string serial = 10;
   VE_Error error =4;
   VE_state state=5;
   VE_MPPT mppt_state =7;
-  float day_max_power = 6; //Watt
-  float day_power = 8; //kilo Watt-heure
-  string msg_timestamp = 9;
+  float day_max_power = 6;  //Watt
+  float day_power = 8;      //kilo Watt-heure
+  string msg_timestamp = 9; // ISO UTC
+  MPPT_parameters parameters = 11;  // Optional
+}
+
+message MPPT_parameters {
+  uint32 instance=6;          // Instance ID of the MPPT device
+  uint32 battery=7;           // Instance ID of the battery bank charged by the MPPT
+  float panel_max_power=1;    // Watt
+  float panel_max_voltage=2;  // Volt
+  float max_voltage=3;        // Volt - on MPPT output
+  float trend_duration=4;     // Duration in minutes of the trand series
+  float trend_interval=5;     // interval in seconds between trend values
 }
 
 message solar_output {
   float current = 1;  // Amp
   float voltage =2;   // Volt
+  float panel_voltage=4;  // Volt
   float panel_power =3;  //Watt
 }
 
-message request {
-  int32 id = 1;
-}
-
-message trend_request {
-  int32 id=1;
-  int32 nb_values=2;
-}
-
-message trend_response {
+message solar_trend_response {
   int32 id=1;
   int32 nb_values=2;
   float interval=3;
   repeated solar_output values=4;
 }
 
-service solar_mppt {
-  rpc GetDeviceInfo(request) returns (MPPT_device) {}
-  rpc GetOutput(request) returns (solar_output) {}
-  rpc GetTrend(trend_request) returns (trend_response) {}
+service MPPTService {
+  // returns semi-static information + parameters with the 'parameters' command
+  rpc GetDeviceInfo(energy_request) returns (MPPT_device) {}
+  rpc GetOutput(energy_request) returns (solar_output) {}
+  rpc GetTrend(energy_request) returns (solar_trend_response) {}
 }
 
-message energy_svr_cmd {
-  string command=1;
-  repeated Argument arguments=2;
+// Battery bank service
+
+message ShuntDevice {
+  string product_id = 2;
+  string firmware = 3;
+  string serial = 10;
+  VE_Error error =4;
+  VE_state state=5;
 }
 
-message energy_svr_resp {
-  int32 err_code=1;
-  string resp_message=2;
-  repeated Argument values=3;
+message BatteryBank {
+  uint32 instance=1;
+  string label=2;
+  string chemistry=11;
+  float nominal_voltage=3;    // Volt
+  float nominal_capacity=4;   // Wh
+  float voltage=5;            // Actual voltage
+  float state_of_charge=6;    // Percent
+  float max_voltage=7;        // Maximum charge voltage => alarm
+  float min_voltage=8;        // Minimum operating voltage => alarm
+  float charge_voltage=9;     // Bulk charge
+  float max_charge_current=10; // A
+  float last_24h_energy=12;   // Wh Positive charge
+  float reporting_interval=13; // In seconds
 }
 
-service energy_service {
-  rpc EnergyCommand(energy_svr_cmd) returns(energy_svr_resp) {}
+message battery_in_out {
+  float voltage = 1;  // Instant voltage
+  float current = 2;  // Instant current positive = charge, negative discharge
+  float energy_variation = 3; // Wh positive = charge
 }
+
+message battery_trend_bucket {
+  string timestamp=1;  // ISO UTC of the reporting period end
+  float voltage=2;     // Voltage at the end of the period
+  float energy_variation=3;      // in Wh positive charge - Variation during the interval
+  float state_of_charge=4;    // Percent at the end of the period
+}
+
+message battery_trend_response {
+  uint32 id=1;
+  uint32 nb_values=2;   // Number of values in the response
+  float interval=3;     // Interval between samples in seconds
+  repeated battery_trend_bucket samples=4;
+}
+
+service BatteryService {
+    rpc GetInformation(energy_request) returns (BatteryBank) {}
+    rpc GetValues(energy_request) returns (battery_in_out) {}
+    rpc GetTrend(energy_request) returns (battery_trend_response) {}
+    }
+
+// DC-DC Charger
+
 

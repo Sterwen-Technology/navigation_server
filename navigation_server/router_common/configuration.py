@@ -139,13 +139,24 @@ class Feature:
         if self._init_function is not None:
             self._init_function(options)
 
-
-class NavigationServerObject:
+class NavigationObject:
 
     def __init__(self, class_descr):
         for item in class_descr.items():
             self._name = item[0]
             self._param = item[1]
+
+    @property
+    def name(self):
+        return self._name
+
+    def parameters(self) -> Parameters:
+        return Parameters(self._param)
+
+class NavigationServerObject(NavigationObject):
+
+    def __init__(self, class_descr):
+        super().__init__(class_descr)
         self._class = None
         self._class_name = self._param['class']
         self._param['name'] = self._name
@@ -158,10 +169,6 @@ class NavigationServerObject:
 
     def set_class(self, obj_class):
         self._class = obj_class
-
-    @property
-    def name(self):
-        return self._name
 
     @property
     def object(self):
@@ -242,6 +249,7 @@ class NavigationConfiguration:
             settings_file = os.path.join(MessageServerGlobals.home_dir, "conf", settings_file)
         # keep the configuration path
         settings_path = os.path.dirname(settings_file)
+        settings_root = os.path.dirname(settings_path)
         self.set_global('settings_path', settings_path)
         _logger.info(
             "Building configuration from settings file %s in path %s" % (settings_file, settings_path)
@@ -299,10 +307,14 @@ class NavigationConfiguration:
         try:
             trace_dir = self._configuration['trace_dir']
         except KeyError:
-            trace_dir = '/var/log'
+            trace_dir = os.path.join(settings_root, 'traces')
+            _logger.info(f"Trace directory not defined in configuration - using {trace_dir}")
         if not os.access(trace_dir, os.R_OK | os.W_OK | os.X_OK):
             _logger.warning(f"Trace directory {trace_dir} not existing => switching to /var/log")
             trace_dir = '/var/log'
+            if not os.access(trace_dir, os.R_OK | os.W_OK | os.X_OK):
+                _logger.error(f"Trace directory {trace_dir} not accessible => traces switched off")
+                trace_dir = None
         MessageServerGlobals.trace_dir = trace_dir
 
         # secure communication section

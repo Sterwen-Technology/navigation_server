@@ -120,6 +120,26 @@ This shall be the **Main** server for a NMEA messages router function.
 
 This is the generic top level **Main** server that is to be used for non-routing function. For instance, it is used for the system agent process and the energy_management process.
 
+#### AgentTopServer class
+
+This shall be the **Main** server for the Agent.
+
+#### WebTopServer class
+
+This shall be the **Main** server for the Web interface server.
+
+This server connect to the agent of the *Navigation Server* system to allow control of the system via a Web interface.
+
+| Name                 | Type    | Default | Signification                                   |
+|----------------------|---------|---------|-------------------------------------------------|
+| port                 | int     | 8080    | listening port of the server                    |
+| use_agent_connection | boolean | false   | Use the existing agent connection               |
+| agent_address        | string  | None    | IP address or URL of the agent to be controlled |
+| agent_port           | int     | 4545    | Port to contact the agent                       |
+| language             | choice  | en      | Language to be used on the interface [en/fr]    |
+
+If the Web server is local to the agent and connects to it, then the use_agent_connection will be true by default. In that case, agent_address and agent_port will be ignored.
+
 #### NMEAServer class
 
 This class implements a TCP server that is transmitting NMEA0183 based (real NMEA0183 or NMEA2000 over pseudo NMEA0183) messages over a raw TCP stream. No additional protocol elements are transmitted.
@@ -822,11 +842,20 @@ The global section includes the definition of the following global parameters:
 | nmea2000_xml           | string                   | ./def/PGNDefns.N2kDfn.xml      | XML file containing NMEA2000 PGN definitions                                                               |
 | trace_dir              | string                   | /var/log                       | Directory where all the traces and logs will be stored                                                     |
 | log_file               | string                   | None                           | Filename for all program traces, if None stderr is used instead                                            |
-| secure_grpc            | boolean                  | False                          | Activate gRPC over TLS initialization                                                                      |
+| enable_secure_grpc     | boolean                  | False                          | Activate gRPC over TLS initialization                                                                      |
+| force_secure_grpc      | boolean                  | False                          | Force secure gRPC for all communication                                                                    |
+| ssl_key_dir            | string                   | NAV_CONF_DIR/certificates      | If a directory is specified then it is used otherwise see below                                            |
+| client_certificate     | string                   | nav_ca_cert.pem                | File name containing the client certificate in ssl_key_dir                                                 |
 | connect_agent          | boolean                  | True                           | Indicates if the process is connecting to the agent. false for standalone tests                            |
 | unsecure_agent         | boolean                  | False                          | Attempt to connect to the agent using unsecured channel                                                    |
 | debug_configuration    | boolean                  | False                          | Allow debug traces during the process configuration phase                                                  |
 | decode_definition_only | boolean                  | False                          | If set true then the process stops once fully configured. To be used to test and debug configuration files |
+
+Rules and priorities to find security certificates directory
+1) Directory defined in ssl_key_dir
+2) $NAV_CONF_DIR/certificates
+3) SETTING_PATH/certificates
+4) $HOME/certificates
 
 There is also a subsection (log_module) allowing adjusting the log level per module for fine grain debugging
 

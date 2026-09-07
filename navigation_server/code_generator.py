@@ -38,6 +38,7 @@ def _parser():
                    default='all', help="generate a specific category (iso/data/all)")
     p.add_argument('-o', '--output', action='store', type=str, default=None, help="output file name without extension")
     p.add_argument('-wd', '--working_dir', action='store', type=str, default=None)
+    p.add_argument('-debug', '--debug', action="store_true", help="enable debug mode")
 
     return p
 
@@ -50,7 +51,7 @@ def code_generator():
     opts = init_options(".", parser_def=_parser)
     set_root_package(code_generator)
     # set log for the configuration phase
-    NavigationLogSystem.create_log("NMEA2000 Code generator version %s - copyright Sterwen Technology 2021-2025" % _version)
+    NavigationLogSystem.create_log("NMEA2000 Code generator version %s - copyright Sterwen Technology 2021-2026" % _version, opts)
     NavigationLogSystem.log_start_string()
     try:
         _logger.setLevel(logging.ERROR)

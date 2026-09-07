@@ -19,9 +19,9 @@ trace_dir: /var/log
 # Set connect_agent to false to skip agent registration (the web server is not
 # a managed process, it only queries the agent).
 connect_agent: false
-enable_secure_grpc: true
+enable_secure_grpc: false
 client_certificate: nav_ca_cert_stnc800a003.pem
-
+language: en
 features:
     - web_server
 servers:
@@ -29,5 +29,5 @@ servers:
       class: WebTopServer
       host: 0.0.0.0
       port: 8080
-      grpc_address: 192.168.1.28
+      agent_address: stnc800a003
       grpc_port: 4545

@@ -40,6 +40,11 @@ class EngineDataStub(object):
                 request_serializer=engine__data__pb2.engine_request.SerializeToString,
                 response_deserializer=engine__data__pb2.engine_response.FromString,
                 _registered_method=True)
+        self.GetEngineParameters = channel.unary_unary(
+                '/EngineData/GetEngineParameters',
+                request_serializer=engine__data__pb2.engine_request.SerializeToString,
+                response_deserializer=engine__data__pb2.engine_response.FromString,
+                _registered_method=True)
         self.GetEngineEvents = channel.unary_unary(
                 '/EngineData/GetEngineEvents',
                 request_serializer=engine__data__pb2.engine_request.SerializeToString,
@@ -56,6 +61,12 @@ class EngineDataServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def GetEngineData(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetEngineParameters(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -78,6 +89,11 @@ def add_EngineDataServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetEngineData': grpc.unary_unary_rpc_method_handler(
                     servicer.GetEngineData,
+                    request_deserializer=engine__data__pb2.engine_request.FromString,
+                    response_serializer=engine__data__pb2.engine_response.SerializeToString,
+            ),
+            'GetEngineParameters': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetEngineParameters,
                     request_deserializer=engine__data__pb2.engine_request.FromString,
                     response_serializer=engine__data__pb2.engine_response.SerializeToString,
             ),
@@ -117,6 +133,33 @@ class EngineData(object):
             request,
             target,
             '/EngineData/GetEngineData',
+            engine__data__pb2.engine_request.SerializeToString,
+            engine__data__pb2.engine_response.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetEngineParameters(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/EngineData/GetEngineParameters',
             engine__data__pb2.engine_request.SerializeToString,
             engine__data__pb2.engine_response.FromString,
             options,

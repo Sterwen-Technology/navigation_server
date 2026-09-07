@@ -8,5 +8,5 @@
 # Copyright:   (c) Sterwen Technology 2021-2025
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
-from .server import NavigationWebServer, web_main
+from .web_server_impl import NavigationWebServer, web_main
 from .web_top_server import WebTopServer
