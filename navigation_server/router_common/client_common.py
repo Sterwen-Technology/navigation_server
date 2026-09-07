@@ -47,7 +47,10 @@ class GrpcClient:
     @classmethod
     def get_client(cls, server, use_request_id:bool = True, secure:bool = False):
         # secure flag is Or'ed with the global force_secure_grpc (V3.0)
-        secure = secure or MessageServerGlobals.configuration.force_secure_grpc
+        if MessageServerGlobals.configuration is not None:
+            # to cover the case when no configuration is defined (agent_cli)
+            secure = secure or MessageServerGlobals.configuration.force_secure_grpc
+
         try:
             client = cls.clients[server]
             if client.secure != secure:

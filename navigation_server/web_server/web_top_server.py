@@ -21,7 +21,7 @@ import logging
 
 from navigation_server.router_common import MessageServerGlobals, GenericTopServer
 from navigation_server.router_common.configuration import Parameters
-from .server import NavigationWebServer
+from .web_server_impl import NavigationWebServer
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -43,14 +43,16 @@ class WebTopServer(GenericTopServer):
 
     def __init__(self, opts: Parameters):
         super().__init__(opts)
-        self._name = 'web_top_server'
+        # self._name = 'web_top_server'
         MessageServerGlobals.main_server = self
         self._web_server = None
 
         web_port = opts.get('port', int, 4545)
-        web_host = opts.get('host', str, "0.0.0.0")
-        grpc_address = opts.get('grpc_address', str, "127.0.0.1")
-        grpc_port = opts.get('grpc_port', int, 4545)
+        # web_host = opts.get('host', str, "0.0.0.0")
+        web_host = "0.0.0.0"
+        grpc_address = opts.get('agent_address', str, "127.0.0.1")
+        grpc_port = opts.get('agent_port_port', int, 4545)
+
 
         # The secure flag is inherited from the global configuration so the
         # web server connects to the agent with the same TLS policy as the

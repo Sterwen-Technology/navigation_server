@@ -1,13 +1,19 @@
 #!/bin/bash
 
 # Vérifie qu'un répertoire est fourni en argument
+# On utilise the contenu de NAVIGATION_HOME par défaut
+if [ -z "${NAVIGATION_HOME+x}" ]; then
+# pas de variable d'environnement
 if [ "$#" -ne 1 ]; then
     echo "Usage: $0 <répertoire>"
     exit 1
+else
+    # Répertoire de départ
+    DIR="$1"
 fi
-
-# Répertoire de départ
-DIR="$1"
+else
+    DIR="$NAVIGATION_HOME/navigation_server"
+fi
 
 # Vérifie que le répertoire existe
 if [ ! -d "$DIR" ]; then

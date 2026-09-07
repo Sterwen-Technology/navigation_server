@@ -29,5 +29,5 @@ servers:
       class: WebTopServer
       host: 0.0.0.0
       port: 8080
-      grpc_address: 172.16.1.1
+      agent_address: stnc800a003
       grpc_port: 4545
