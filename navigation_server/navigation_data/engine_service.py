@@ -175,7 +175,7 @@ class EngineDataService(GrpcService):
             _logger.warning("No engine parameters defined")
 
     def finalize(self):
-        super().finalize('Engine', 'EngineDataService')
+        super().finalize('Engine', 'EngineData')
         self._servicer = EngineDataServicerImpl(self)
         try:
             self._source_function = resolve_ref(self._source)
