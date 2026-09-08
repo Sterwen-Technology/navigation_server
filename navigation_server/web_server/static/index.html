@@ -116,7 +116,7 @@
         .gauge-svg { width: 100%; height: auto; max-width: 200px; }
         .status-display { flex: 1; min-width: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .status-icon { margin-bottom: 10px; }
-        .bar-graph { flex: 1; min-width: 150px; }
+        .bar-graph { flex: 1; min-width: 150px; max-width: 120px; }
         .bar-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
         .bar-container { height: 150px; background: var(--panel-2); border-radius: 4px; overflow: hidden; position: relative; }
         .bar-fill { width: 100%; transition: height 0.3s ease; border-radius: 4px; }
@@ -128,7 +128,11 @@
         .stat-value { color: var(--text); font-family: ui-monospace, monospace; font-size: 0.85rem; }
         .events-section { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
         .runs-list { margin-top: 8px; }
-        .run-header, .run-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; padding: 6px 0; font-size: 0.85rem; }
+        .run-header, .run-row, .event-header, .event-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; padding: 6px 0; font-size: 0.85rem; }
+        .event-header { color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+        .event-row { border-bottom: 1px solid var(--border); }
+        .event-row:last-child { border-bottom: none; }
+        .open-btn.compact { padding: 2px 8px; font-size: 0.75em; }
         .run-header { color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
         .run-row { border-bottom: 1px solid var(--border); }
         .run-row:last-child { border-bottom: none; }
@@ -1052,7 +1056,7 @@
                 <div class="engine-dashboard">
                     <div class="dashboard-row">
                         <div class="gauge-container">
-                            <div class="gauge" data-i18n="[title]engine.speed">
+                            <div class="gauge" title="Engine Speed">
                                 <svg viewBox="0 0 100 100" class="gauge-svg">
                                     <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border)" stroke-width="8" stroke-dasharray="282.7" />
                                     <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="8" 
@@ -1097,9 +1101,14 @@
                         </div>
                     </div>
                     <div class="events-section">
-                        <h3 data-i18n="engine.runs">Runs</h3>
-                        <div id="engine-runs" data-process="${processName}"></div>
-                        <button class="open-btn" onclick="loadEngineRuns('${escapeHtml(processName)}')" data-i18n="engine.load_runs">Load Runs</button>
+                        <h3>
+                            <span data-i18n="engine.runs">Runs</span>
+                            <span style="margin-left: 12px;">
+                                <button class="open-btn compact" onclick="toggleEngineEvents('${escapeHtml(processName)}', 'runs')" data-i18n="engine.runs">Runs</button>
+                                <button class="open-btn compact" onclick="toggleEngineEvents('${escapeHtml(processName)}', 'events')" data-i18n="engine.events">Events</button>
+                            </span>
+                        </h3>
+                        <div id="engine-events" data-process="${processName}" data-mode="runs"></div>
                     </div>
                     <div class="card-actions">
                         <button class="open-btn" onclick="closeEngine()" data-i18n="general.close">Close</button>
@@ -1109,43 +1118,78 @@
             t.translateAllElements();
         }
 
-        async function loadEngineRuns(processName) {
-            try {
-                const data = await apiGet(`/api/engine/0`);
-                if (data.ok && data.runs) {
-                    renderEngineRuns(data.runs, processName);
-                }
-            } catch (e) {
-                toast(t.t("toast.error", {error: e.message}), false);
+        let engineEventsMode = {};
+
+        async function toggleEngineEvents(processName, mode) {
+            engineEventsMode[processName] = mode;
+            const data = await apiGet(`/api/engine/0`);
+            if (data.ok) {
+                renderEngineEvents(data, processName, mode);
             }
         }
 
-        function renderEngineRuns(runs, processName) {
-            const container = $("engine-runs");
-            if (!runs || runs.length === 0) {
-                container.innerHTML = '<div class="empty" data-i18n="engine.no_runs">No runs found.</div>';
+        function renderEngineEvents(data, processName, mode) {
+            const container = $("engine-events");
+            if (!data.ok) {
+                container.innerHTML = `<div class="empty">${escapeHtml(data.error || "Error")}</div>`;
                 t.translateAllElements();
                 return;
             }
-            const runRows = runs.map(run => `
-                <div class="run-row">
-                    <span class="run-date">${new Date(run.start_time).toLocaleString()}</span>
-                    <span class="run-duration">${fmt(run.duration / 3600)} h</span>
-                    <span class="run-avg">${fmt(run.average_speed)} RPM</span>
-                    <span class="run-max">${fmt(run.max_speed)} RPM</span>
-                </div>
-            `).join("");
-            container.innerHTML = `
-                <div class="runs-list">
-                    <div class="run-header">
-                        <span class="run-date" data-i18n="engine.start_time">Start Time</span>
-                        <span class="run-duration" data-i18n="engine.duration">Duration</span>
-                        <span class="run-avg" data-i18n="engine.avg_speed">Avg Speed</span>
-                        <span class="run-max" data-i18n="engine.max_speed">Max Speed</span>
+            let html = '';
+            if (mode === 'runs') {
+                const runs = data.runs || [];
+                if (runs.length === 0) {
+                    container.innerHTML = '<div class="empty" data-i18n="engine.no_runs">No runs found.</div>';
+                    t.translateAllElements();
+                    return;
+                }
+                const runRows = runs.map(run => `
+                    <div class="run-row">
+                        <span class="run-date">${new Date(run.start_time).toLocaleString()}</span>
+                        <span class="run-duration">${fmt(run.duration / 3600)} h</span>
+                        <span class="run-avg">${fmt(run.average_speed)} RPM</span>
+                        <span class="run-max">${fmt(run.max_speed)} RPM</span>
                     </div>
-                    ${runRows}
-                </div>
-            `;
+                `).join("");
+                html = `
+                    <div class="runs-list">
+                        <div class="run-header">
+                            <span class="run-date" data-i18n="engine.start_time">Start Time</span>
+                            <span class="run-duration" data-i18n="engine.duration">Duration</span>
+                            <span class="run-avg" data-i18n="engine.avg_speed">Avg Speed</span>
+                            <span class="run-max" data-i18n="engine.max_speed">Max Speed</span>
+                        </div>
+                        ${runRows}
+                    </div>
+                `;
+            } else {
+                const events = data.events || [];
+                if (events.length === 0) {
+                    container.innerHTML = '<div class="empty" data-i18n="engine.no_events">No events found.</div>';
+                    t.translateAllElements();
+                    return;
+                }
+                const eventRows = events.map(evt => `
+                    <div class="event-row">
+                        <span class="event-time">${new Date(evt.timestamp).toLocaleString()}</span>
+                        <span class="event-hours">${fmt(evt.total_hours)} h</span>
+                        <span class="event-from" data-i18n="engine.from_state">From: ${evt.previous_state}</span>
+                        <span class="event-to" data-i18n="engine.to_state">To: ${evt.current_state}</span>
+                    </div>
+                `).join("");
+                html = `
+                    <div class="events-list">
+                        <div class="event-header">
+                            <span class="event-time" data-i18n="engine.time">Time</span>
+                            <span class="event-hours" data-i18n="engine.total_hours">Total Hours</span>
+                            <span class="event-from" data-i18n="engine.from_state">From</span>
+                            <span class="event-to" data-i18n="engine.to_state">To</span>
+                        </div>
+                        ${eventRows}
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
             t.translateAllElements();
         }
 
@@ -1155,6 +1199,21 @@
             engineProcess = null;
         }
 
+        // Update openEngineData to auto-load runs
+        async function openEngineData(processName) {
+            engineProcess = processName;
+            $("engine-title").textContent = `Engine Dashboard \u2014 ${processName}`;
+            $("engine-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
+            $("engine-modal").classList.add("show");
+            try {
+                const data = await apiGet(`/api/engines`);
+                renderEngineDashboard(data, processName);
+                startEngineRefresh(processName);
+                toggleEngineEvents(processName, 'runs');
+            } catch (e) {
+                $("engine-body").innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
+            }
+        }
 
         window.procCmd = procCmd;
         window.systemCmd = systemCmd;
@@ -1181,7 +1240,7 @@
 
         window.openEngineData = openEngineData;
         window.closeEngine = closeEngine;
-        window.loadEngineRuns = loadEngineRuns;
+        window.toggleEngineEvents = toggleEngineEvents;
         $("refresh-btn").addEventListener("click", refresh);
         $("auto-refresh").addEventListener("change", toggleAuto);
         refresh();
