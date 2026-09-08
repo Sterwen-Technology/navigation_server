@@ -499,10 +499,10 @@ class NavigationSystemCollector:
                                         "label": params.label if params else f"Engine",
                                         "model": params.model if params else "Unknown",
                                         "state": data.state,
-                                        "speed": data._msg.speed,
-                                        "temperature": data._msg.temperature,
-                                        "alternator_voltage": data._msg.alternator_voltage,
-                                        "total_hours": data._msg.total_hours,
+                                        "speed": round(data._msg.speed, 0),
+                                        "temperature": round(data._msg.temperature - 273.15, 0),  # Kelvin to Celsius
+                                        "alternator_voltage": round(data._msg.alternator_voltage, 2),
+                                        "total_hours": round(data._msg.total_hours / 3600.0, 1),  # Seconds to decimal hours
                                         "last_start_time": data.last_start_time,
                                         "last_stop_time": data.last_stop_time,
                                         "process": proc.name,
@@ -564,20 +564,20 @@ class NavigationSystemCollector:
                                     "label": params.label if params else "Engine",
                                     "model": params.model if params else "Unknown",
                                     "state": data.state,
-                                    "speed": data._msg.speed,
-                                    "temperature": data._msg.temperature,
-                                    "alternator_voltage": data._msg.alternator_voltage,
-                                    "total_hours": data._msg.total_hours / 3600.0,  # Convert seconds to hours
+                                    "speed": round(data._msg.speed, 0),
+                                    "temperature": round(data._msg.temperature - 273.15, 0),  # Kelvin to Celsius
+                                    "alternator_voltage": round(data._msg.alternator_voltage, 2),
+                                    "total_hours": round(data._msg.total_hours / 3600.0, 1),  # Seconds to decimal hours
                                     "last_start_time": data.last_start_time,
                                     "last_stop_time": data.last_stop_time,
                                     "current_run": {
                                         "start_time": current_run.start_time if current_run else None,
                                         "stop_time": current_run.stop_time if current_run else None,
-                                        "total_hours": current_run.total_hours if current_run else 0,
-                                        "duration": current_run.duration if current_run else 0,
-                                        "average_speed": current_run.average_speed if current_run else 0,
-                                        "max_speed": current_run.max_speed if current_run else 0,
-                                        "max_temperature": current_run.max_temperature if current_run else 0,
+                                        "total_hours": round(current_run.total_hours / 3600.0, 1) if current_run else 0,
+                                        "duration": round(current_run.duration / 3600.0, 2) if current_run else 0,  # Seconds to hours, 2 decimal
+                                        "average_speed": round(current_run.average_speed, 0) if current_run else 0,
+                                        "max_speed": round(current_run.max_speed, 0) if current_run else 0,
+                                        "max_temperature": round(current_run.max_temperature - 273.15, 0) if current_run else 0,  # Kelvin to Celsius
                                         "alternator_voltage": current_run.alternator_voltage if current_run else 0,
                                     } if current_run else None,
                                     "parameters": {
@@ -590,19 +590,19 @@ class NavigationSystemCollector:
                                     } if params else {},
                                     "events": [{
                                         "timestamp": e.timestamp,
-                                        "total_hours": e.total_hours,
+                                        "total_hours": round(e.total_hours, 1),
                                         "current_state": e.current_state,
                                         "previous_state": e.previous_state,
                                     } for e in (events if events else [])],
                                     "runs": [{
                                         "start_time": r.start_time,
                                         "stop_time": r.stop_time,
-                                        "total_hours": r.total_hours,
-                                        "duration": r.duration,
-                                        "average_speed": r.average_speed,
-                                        "max_speed": r.max_speed,
-                                        "max_temperature": r.max_temperature,
-                                        "alternator_voltage": r.alternator_voltage,
+                                        "total_hours": round(r.total_hours / 3600.0, 1),  # Seconds to hours, 1 decimal
+                                        "duration": round(r.duration / 3600.0, 2),  # Seconds to hours, 2 decimal
+                                        "average_speed": round(r.average_speed, 0),
+                                        "max_speed": round(r.max_speed, 0),
+                                        "max_temperature": round(r.max_temperature - 273.15, 0),  # Kelvin to Celsius
+                                        "alternator_voltage": round(r.alternator_voltage, 2),
                                     } for r in (runs if runs else [])]
                                 }
                     except Exception as e:

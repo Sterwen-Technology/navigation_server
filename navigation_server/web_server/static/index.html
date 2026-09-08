@@ -1002,14 +1002,16 @@
             engineRefreshInterval = setInterval(async () => {
                 try {
                     const data = await apiGet(`/api/engines`);
-                    const engines = data.engines || [];
-                    const engine = engines.find(e => e.process === processName);
-                    if (engine && engine.state === "RUNNING") {
-                        renderEngineDashboard(data, processName);
-                    } else {
-                        if (engineRefreshInterval) {
-                            clearInterval(engineRefreshInterval);
-                            engineRefreshInterval = null;
+                    if (data.ok) {
+                        const engines = data.engines || [];
+                        const engine = engines.find(e => e.process === processName);
+                        if (engine && engine.state === "RUNNING") {
+                            renderEngineDashboard(data, processName);
+                        } else {
+                            if (engineRefreshInterval) {
+                                clearInterval(engineRefreshInterval);
+                                engineRefreshInterval = null;
+                            }
                         }
                     }
                 } catch (e) {
@@ -1061,7 +1063,7 @@
                                     <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border)" stroke-width="8" stroke-dasharray="282.7" />
                                     <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="8" 
                                             stroke-dasharray="${speedPercent * 2.827}" stroke-dashoffset="${(100 - speedPercent) * 2.827}" 
-                                            transform="rotate(-90 50 50)" />
+                                            transform="rotate(-210 50 50)" />
                                     <text x="50" y="65" text-anchor="middle" font-size="14" fill="var(--text)">${fmt(engine.speed)}</text>
                                     <text x="50" y="82" text-anchor="middle" font-size="10" fill="var(--muted)" data-i18n="engine.rpm">RPM</text>
                                 </svg>
