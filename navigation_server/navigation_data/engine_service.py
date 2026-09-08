@@ -155,12 +155,12 @@ class EngineDataService(GrpcService):
 
         # read the parameters in the Yaml configuration file
         try:
-            for engine_p in MessageServerGlobals.configuration.obj_desc_iter('engines'):
+            for engine_p in MessageServerGlobals.configuration.object_descr_iter('engines'):
                 engine_p_object = NavigationObject(engine_p)
                 engine_param_pb = engine_parameters()
                 engine_param = engine_p_object.parameters()
                 engine_id = engine_param.get('id', int, 0)
-                engine_param_pb.id = engine_id
+                engine_param_pb.engine_id = engine_id
                 engine_param_pb.label = engine_p_object.name
                 engine_param_pb.model =engine_param.get("model", str, "DefaultModel")
                 engine_param_pb.max_rpm = engine_param.get("max_rpm", float, 0)
