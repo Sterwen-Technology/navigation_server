@@ -161,6 +161,49 @@
         .toast.err { border-left: 4px solid var(--red); }
         button.open-btn { background: rgba(56,189,248,0.15); color: var(--accent); border-color: var(--accent); }
         button.open-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a; }
+        /* Window System */
+        .window-container {
+            position: fixed; inset: 0; pointer-events: none; z-index: 1000;
+        }
+        .service-window {
+            position: absolute; background: var(--panel); border: 1px solid var(--border);
+            border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            min-width: 300px; min-height: 200px; max-width: 90vw; max-height: 80vh;
+            overflow: hidden; display: flex; flex-direction: column;
+            pointer-events: auto; cursor: default;
+        }
+        .window-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; background: var(--panel-2); border-bottom: 1px solid var(--border);
+            cursor: move; user-select: none;
+        }
+        .window-header h2 { margin: 0; font-size: 0.95rem; color: var(--text); }
+        .window-title-bar {
+            display: flex; align-items: center; gap: 8px; flex: 1;
+        }
+        .window-controls {
+            display: flex; gap: 4px;
+        }
+        .window-btn {
+            background: none; border: none; color: var(--muted);
+            font-size: 0.8rem; cursor: pointer; padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .window-btn:hover { background: var(--border); color: var(--text); }
+        .window-btn.minimize:before { content: "_"; }
+        .window-btn.close:before { content: "\u00d7"; }
+        .window-body {
+            flex: 1; overflow: auto; padding: 16px;
+        }
+        .window-content {
+            max-width: 100%; max-height: 100%;
+        }
+        .window-resize-handle {
+            position: absolute; right: 0; bottom: 0; width: 12px; height: 12px;
+            background: var(--accent); cursor: nwse-resize; z-index: 10;
+            border-radius: 0 0 4px 0;
+        }
+        /* Legacy modal support (backward compatibility) */
         .modal {
             display: none; position: fixed; inset: 0;
             background: rgba(0,0,0,0.6);
@@ -258,6 +301,7 @@
         <div id="processes-grid" class="grid"></div>
     </main>
     <div id="toast" class="toast"></div>
+    <div id="window-container" class="window-container"></div>
 
     <div id="console-modal" class="modal">
         <div class="modal-content">
@@ -304,6 +348,16 @@
         </div>
     </div>
 
+    <div id="engine-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="engine-title">Engine Data</h2>
+                <button class="modal-close" onclick="closeEngine()" title="Close">&times;</button>
+            </div>
+            <div id="engine-body"><div class="empty">t.t("general.loading")</div></div>
+        </div>
+    </div>
+
     <script src="translations.js"></script>
 <script>
         const REFRESH_INTERVAL = 5000;
@@ -313,7 +367,120 @@
         let consoleProcess = null;
         let consoleTimer = null;
 
+        // Window Management System
+        let windowZIndex = 1000;
+        let activeWindows = new Map(); // windowId -> {element, processName, serviceType}
+        let isDragging = null;
+        let dragOffset = {x: 0, y: 0};
+
         const $ = (id) => document.getElementById(id);
+
+        // Window Management Functions
+        function generateWindowId(serviceType, processName) {
+            return `win-${serviceType}-${processName}-${Date.now()}`;
+        }
+
+        function createWindow(serviceType, processName, title, contentId) {
+            const windowId = generateWindowId(serviceType, processName);
+            const bodyEl = $(contentId);
+            
+            const windowEl = document.createElement('div');
+            windowEl.id = windowId;
+            windowEl.className = 'service-window';
+            windowEl.style.left = '100px';
+            windowEl.style.top = '100px';
+            windowEl.style.zIndex = ++windowZIndex;
+            
+            const headerEl = document.createElement('div');
+            headerEl.className = 'window-header';
+            headerEl.innerHTML = `
+                <div class="window-title-bar">
+                    <h2>${escapeHtml(title)}</h2>
+                </div>
+                <div class="window-controls">
+                    <button class="window-btn minimize" onclick="minimizeWindow('${windowId}')" title="Minimize">_</button>
+                    <button class="window-btn close" onclick="closeWindow('${windowId}')" title="Close">\u00d7</button>
+                </div>
+            `;
+            
+            const bodyWrapper = document.createElement('div');
+            bodyWrapper.className = 'window-body';
+            bodyWrapper.appendChild(bodyEl);
+            
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'window-resize-handle';
+            
+            windowEl.appendChild(headerEl);
+            windowEl.appendChild(bodyWrapper);
+            windowEl.appendChild(resizeHandle);
+            
+            const container = $("window-container");
+            container.appendChild(windowEl);
+            
+            activeWindows.set(windowId, {
+                element: windowEl,
+                processName: processName,
+                serviceType: serviceType,
+                contentId: contentId
+            });
+            
+            // Make draggable
+            makeDraggable(windowEl, headerEl);
+            
+            // Bring to front on click
+            windowEl.addEventListener('mousedown', () => {
+                windowEl.style.zIndex = ++windowZIndex;
+            });
+            
+            return windowId;
+        }
+
+        function closeWindow(windowId) {
+            const win = activeWindows.get(windowId);
+            if (win) {
+                win.element.remove();
+                activeWindows.delete(windowId);
+            }
+        }
+
+        function minimizeWindow(windowId) {
+            const win = activeWindows.get(windowId);
+            if (win) {
+                const body = win.element.querySelector('.window-body');
+                if (body.style.display === 'none') {
+                    body.style.display = 'block';
+                } else {
+                    body.style.display = 'none';
+                }
+            }
+        }
+
+        function makeDraggable(element, handle) {
+            handle.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('window-btn') || e.target.tagName === 'BUTTON') {
+                    return; // Don't drag when clicking buttons
+                }
+                isDragging = element;
+                dragOffset.x = e.clientX - element.getBoundingClientRect().left;
+                dragOffset.y = e.clientY - element.getBoundingClientRect().top;
+                element.style.cursor = 'move';
+                e.preventDefault();
+            });
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                isDragging.style.left = (e.clientX - dragOffset.x) + 'px';
+                isDragging.style.top = (e.clientY - dragOffset.y) + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging.style.cursor = '';
+                isDragging = null;
+            }
+        });
 
         function toast(msg, ok = true) {
             const toastEl = $("toast");

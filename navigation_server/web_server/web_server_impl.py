@@ -23,6 +23,7 @@ import os
 import sys
 import threading
 import time
+from abc import ABC, abstractmethod
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
@@ -32,6 +33,7 @@ from navigation_server.router_common.agent_interface import AgentClient
 from navigation_server.navigation_clients import NetworkClient
 from navigation_server.navigation_clients.console_client import ConsoleClient
 from navigation_server.navigation_clients.n2k_can_client import NMEA2000CanClient
+from navigation_server.navigation_clients.navigation_data_client import EngineClient
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -47,134 +49,123 @@ DEFAULT_WEB_PORT = 4545
 DEFAULT_WEB_HOST = "0.0.0.0"
 
 
-class NavigationSystemCollector:
-    """Wraps the gRPC AgentClient and exposes a plain-dict view of the system.
-
-    The collector holds the connection to a single gRPC agent server and lazily
-    instantiates the service clients (Agent, Console, Network). All returned data
-    is serialisable JSON (no protobuf objects leak to the HTTP layer).
+class ProcessBox:
+    """Manages data exchange with a single process and its services.
+    
+    This class handles the gRPC connection to a specific process and provides
+    access to its services. It caches the connection and manages service clients.
     """
-
-    def __init__(self, address: str, port: int, secure: bool = False, language: str = "en"):
-        self._address = address
-        self._port = port
-        self._secure = secure
-        self._language = language
-        # The security mode (and CA certificate, shared at class level) applies
-        # to the agent and to all console connections, since all gRPC servers in
-        # a deployment share the same certificate.
-        self._server = GrpcClient.get_client(f"{address}:{port}", secure=secure)
-        self._agent = AgentClient()
-        self._server.add_service(self._agent)
-        self._network = None
-        self._consoles = {}
-        self._nmea2000_clients = {}
+    
+    def __init__(self, collector, process_name: str):
+        self._collector = collector
+        self._process_name = process_name
+        self._port = None
+        self._secure = None
+        self._grpc_server = None
+        self._services = {}  # service_type -> ServiceWindow instance
         self._lock = threading.Lock()
-
+    
     @property
-    def agent_address(self) -> str:
-        return f"{self._address}:{self._port}"
-
+    def process_name(self) -> str:
+        return self._process_name
+    
     @property
-    def server_state(self) -> int:
-        return self._server.state
-
-    def _ensure_network(self):
-        if self._network is None:
-            self._network = NetworkClient()
-            self._server.add_service(self._network)
-        return self._network
-
-
-    def _get_console(self, process_name: str):
-        """Return a (GrpcClient, ConsoleClient) pair for a process console.
-
-        The connection is cached per process name so that repeated calls
-        (status refresh, coupler commands) reuse the same gRPC channel
-        instead of creating a new one each time. The channel is only
-        reconnected if it has dropped to NOT_CONNECTED.
-        """
-        cached = self._consoles.get(process_name)
-        if cached is not None:
-            grpc_server, console = cached
-            # Reconnect only if the channel has dropped.
-            if grpc_server.not_connected:
-                grpc_server.connect()
-                grpc_server.wait_connect(5.0)
-            return cached
-        port = self._agent.get_port(process_name)
-        if port == 0:
-            return None, None
-        # Determine the TLS mode from the process status: each process can
-        # have its own secure_grpc flag, independent of the agent.
-        secure = self._get_process_secure(process_name)
-        server_key = f"{self._address}:{port}"
-        grpc_server = GrpcClient.get_client(server_key, secure=secure)
-        console = ConsoleClient()
-        grpc_server.add_service(console)
-        grpc_server.connect()
-        grpc_server.wait_connect(5.0)
-        pair = (grpc_server, console)
-        self._consoles[process_name] = pair
-        return pair
-
-    def _get_nmea2000_client(self, process_name: str):
-        """Return a (GrpcClient, NMEA2000CanClient) pair for a process NMEA2000 service.
-
-        The connection is cached per process name so that repeated calls
-        (status refresh, PGN definitions) reuse the same gRPC channel
-        instead of creating a new one each time. The channel is only
-        reconnected if it has dropped to NOT_CONNECTED.
-        """
-        cached = self._nmea2000_clients.get(process_name)
-        if cached is not None:
-            grpc_server, n2k_client = cached
-            if grpc_server.not_connected:
-                grpc_server.connect()
-                grpc_server.wait_connect(5.0)
-            return cached
-        port = self._agent.get_port(process_name)
-        if port == 0:
-            return None, None
-        secure = self._get_process_secure(process_name)
-        server_key = f"{self._address}:{port}"
-        grpc_server = GrpcClient.get_client(server_key, secure=secure)
-        n2k_client = NMEA2000CanClient()
-        grpc_server.add_service(n2k_client)
-        grpc_server.connect()
-        grpc_server.wait_connect(5.0)
-        pair = (grpc_server, n2k_client)
-        self._nmea2000_clients[process_name] = pair
-        return pair
-
-    def _get_process_secure(self, process_name: str) -> bool:
-        """Determine whether a process uses TLS on its gRPC port.
-
-        Queries the process status directly via the AgentCmd RPC instead of
-        fetching the full system status. Falls back to the global agent secure
-        flag if the process status cannot be retrieved.
-        """
-        resp = self._agent.process_cmd("status", process_name)
-        if resp is not None:
-            return resp.process_proxy.secure_grpc
+    def port(self) -> int:
+        if self._port is None:
+            self._port = self._collector._agent.get_port(self._process_name)
+        return self._port
+    
+    @property
+    def secure(self) -> bool:
+        if self._secure is None:
+            self._secure = self._collector._get_process_secure(self._process_name)
         return self._secure
+    
+    def get_grpc_server(self) -> "GrpcClient":
+        """Get or create the gRPC server connection for this process."""
+        if self._grpc_server is None or self._grpc_server.not_connected:
+            with self._lock:
+                if self._grpc_server is None or self._grpc_server.not_connected:
+                    server_key = f"{self._collector._address}:{self.port}"
+                    self._grpc_server = GrpcClient.get_client(server_key, secure=self.secure)
+                    self._grpc_server.connect()
+                    self._grpc_server.wait_connect(5.0)
+        return self._grpc_server
+    
+    def get_service(self, service_type: str, service_class):
+        """Get or create a service window for this process.
+        
+        Args:
+            service_type: The type of service (e.g., 'console', 'nmea2000', 'engine')
+            service_class: The ServiceWindow subclass to instantiate
+            
+        Returns:
+            ServiceWindow instance for the requested service
+        """
+        if service_type not in self._services:
+            with self._lock:
+                if service_type not in self._services:
+                    grpc_server = self.get_grpc_server()
+                    service = service_class(self, grpc_server)
+                    self._services[service_type] = service
+        return self._services[service_type]
 
-    def console_status(self, process_name: str) -> dict:
-        """Return the console view (servers + couplers) of a process."""
-        with self._lock:
-            self._connect()
-            if self._server.not_connected:
-                return {"ok": False, "error": "Agent gRPC server unreachable"}
-            grpc_server, console = self._get_console(process_name)
-            if grpc_server is None:
-                return {"ok": False, "error": f"No console for process {process_name}"}
-            if grpc_server.not_connected:
-                return {"ok": False, "error": f"Cannot reach console for {process_name}"}
-            # server status (SystemProcessMsg with TCP/UDP servers + connections)
-            try:
-                status = console.server_status()
-            except GrpcAccessException:
-                return {"ok": False, "error": "Console ServerStatus call failed"}
+
+class ServiceWindow(ABC):
+    """Abstract base class for service windows.
+    
+    Each service (Console, NMEA2000, Engine, etc.) has its own subclass that
+    implements the specific data retrieval and formatting methods.
+    """
+    
+    def __init__(self, process_box: ProcessBox, grpc_server: GrpcClient):
+        self._process_box = process_box
+        self._grpc_server = grpc_server
+        self._client = None
+        self._initialized = False
+    
+    @property
+    def process_name(self) -> str:
+        return self._process_box.process_name
+    
+    @property
+    def grpc_server(self) -> GrpcClient:
+        return self._grpc_server
+    
+    def _ensure_client(self):
+        """Ensure the gRPC client is initialized."""
+        if not self._initialized:
+            self._initialize_client()
+            self._initialized = True
+    
+    @abstractmethod
+    def _initialize_client(self):
+        """Initialize the gRPC client for this service."""
+        pass
+    
+    @abstractmethod
+    def get_data(self) -> dict:
+        """Get the data for this service as a dictionary.
+        
+        Returns:
+            Dictionary with service data, must include 'ok' key
+        """
+        pass
+
+
+class ConsoleServiceWindow(ServiceWindow):
+    """Service window for Console service."""
+    
+    def _initialize_client(self):
+        from navigation_server.navigation_clients.console_client import ConsoleClient
+        self._client = ConsoleClient()
+        self._grpc_server.add_service(self._client)
+    
+    def get_data(self) -> dict:
+        """Get console status data (servers + couplers)."""
+        self._ensure_client()
+        try:
+            status = self._client.server_status()
             servers = []
             for srv in status.get_sub_servers():
                 connections = [
@@ -197,10 +188,9 @@ class NavigationSystemCollector:
                     "protocol": srv.protocol,
                     "connections": connections,
                 })
-            # couplers
             couplers = []
             try:
-                for c in console.get_couplers():
+                for c in self._client.get_couplers():
                     couplers.append({
                         "name": c.name,
                         "coupler_class": c.coupler_class,
@@ -218,14 +208,235 @@ class NavigationSystemCollector:
                         "trace_on": c.trace_on,
                     })
             except GrpcAccessException:
-                return {"ok": False, "error": "Console GetCouplers call failed"}
+                pass
             return {
                 "ok": True,
-                "process": process_name,
-                "grpc_port": grpc_server.address.rsplit(":", 1)[-1] if ":" in grpc_server.address else 0,
+                "process": self.process_name,
+                "grpc_port": self._grpc_server.address.rsplit(":", 1)[-1] if ":" in self._grpc_server.address else 0,
                 "servers": servers,
                 "couplers": couplers,
             }
+        except GrpcAccessException:
+            return {"ok": False, "error": "Console ServerStatus call failed"}
+    
+    def coupler_cmd(self, coupler_name: str, cmd: str) -> dict:
+        """Send a command to a coupler."""
+        allowed = ("start", "stop", "start_trace_raw", "stop_trace", "suspend", "resume")
+        if cmd not in allowed:
+            return {"ok": False, "error": f"Unsupported coupler command: {cmd}"}
+        self._ensure_client()
+        try:
+            return {"ok": True, "result": self._client.coupler_cmd(coupler_name, cmd)}
+        except GrpcAccessException:
+            return {"ok": False, "error": "Coupler command failed"}
+
+
+class NMEA2000ServiceWindow(ServiceWindow):
+    """Service window for NMEA2000 service."""
+    
+    def _initialize_client(self):
+        from navigation_server.navigation_clients.n2k_can_client import NMEA2000CanClient
+        self._client = NMEA2000CanClient()
+        self._grpc_server.add_service(self._client)
+    
+    def get_data(self) -> dict:
+        """Get NMEA2000 status data."""
+        self._ensure_client()
+        try:
+            status = self._client.get_status()
+            devices = []
+            for dev in status.devices:
+                devices.append({
+                    "address": dev.address,
+                    "is_proxy": dev.is_proxy,
+                    "manufacturer_name": dev.manufacturer_name,
+                    "product_name": dev.product_name,
+                    "unique_number": dev.unique_number,
+                    "device_instance": dev.device_instance,
+                    "device_class": dev.device_class,
+                })
+            pgns = []
+            for pgn in status.pgns:
+                pgns.append({
+                    "pgn": pgn.pgn,
+                    "description": pgn.description,
+                    "count": pgn.count,
+                })
+            return {
+                "ok": True,
+                "process": self.process_name,
+                "channel": status.channel,
+                "status": status.status,
+                "incoming_rate": status.incoming_rate,
+                "outgoing_rate": status.outgoing_rate,
+                "traces_on": status.traces_on,
+                "devices": devices,
+                "pgns": pgns,
+                "pgn_count": status.pgn_count,
+            }
+        except GrpcAccessException:
+            return {"ok": False, "error": "NMEA2000 GetStatus call failed"}
+    
+    def get_device(self, device_address: int) -> dict:
+        """Get detailed info for a single NMEA2000 device."""
+        self._ensure_client()
+        try:
+            dev = self._client.get_device(device_address)
+            pgn_stats = []
+            for stat in (dev.stats or []):
+                pgn_stats.append({"pgn": stat.pgn, "count": stat.count, "direction": "in"})
+            for stat in (dev.out_stats or []):
+                pgn_stats.append({"pgn": stat.pgn, "count": stat.count, "direction": "out"})
+            return {
+                "ok": True,
+                "address": dev.address,
+                "is_proxy": dev.is_proxy,
+                "manufacturer_name": dev.manufacturer_name,
+                "product_name": dev.product_name,
+                "pgn_stats": pgn_stats,
+            }
+        except GrpcAccessException:
+            return {"ok": False, "error": "NMEA2000 GetDeviceStatus call failed"}
+    
+    def get_pgn_definition(self, pgn: int) -> dict:
+        """Return the PGN definition (description) for a given PGN."""
+        self._ensure_client()
+        try:
+            definition = self._client.get_pgn_definition(pgn)
+            return {"ok": True, "pgn": pgn, "definition": definition}
+        except GrpcAccessException:
+            return {"ok": False, "error": "NMEA2000 GetPgnDefinition call failed"}
+    
+    def trace_cmd(self, cmd: str) -> dict:
+        """Send a trace command to the NMEA2000 service."""
+        self._ensure_client()
+        if cmd not in ("start_trace", "stop_trace"):
+            return {"ok": False, "error": f"Unsupported NMEA2000 command: {cmd}"}
+        try:
+            result = self._client.trace_cmd(cmd)
+            return {"ok": True, "result": result}
+        except GrpcAccessException:
+            return {"ok": False, "error": "NMEA2000 trace command failed"}
+    
+    def device_cmd(self, address: int, cmd: str) -> dict:
+        """Send a command to a NMEA2000 device."""
+        self._ensure_client()
+        try:
+            return {"ok": True, "result": self._client.device_cmd(address, cmd)}
+        except GrpcAccessException:
+            return {"ok": False, "error": "Device command failed"}
+
+
+class EngineServiceWindow(ServiceWindow):
+    """Service window for EngineData service."""
+    
+    def _initialize_client(self):
+        from navigation_server.navigation_clients.navigation_data_client import EngineClient
+        self._client = EngineClient()
+        self._grpc_server.add_service(self._client)
+    
+    def get_data(self) -> dict:
+        """Get engine data for engine ID 0 (single engine per process)."""
+        self._ensure_client()
+        try:
+            data = self._client.get_data(0)
+            if data is None:
+                return {"ok": False, "error": "No engine data available"}
+            params = self._client.get_engine_parameters(0)
+            engine_data = {
+                "id": 0,
+                "label": params.label if params else "Engine",
+                "model": params.model if params else "Unknown",
+                "state": data.state,
+                "speed": round(data._msg.speed, 0),
+                "temperature": round(data._msg.temperature - 273.15, 0),  # Kelvin to Celsius
+                "alternator_voltage": round(data._msg.alternator_voltage, 2),
+                "total_hours": round(data._msg.total_hours / 3600.0, 1),  # Seconds to decimal hours
+                "last_start_time": data.last_start_time,
+                "last_stop_time": data.last_stop_time,
+                "process": self.process_name,
+                "parameters": {
+                    "max_rpm": params.max_rpm if params else 0,
+                    "voltage_scale": params.voltage_scale if params else 0,
+                    "voltage_high_alert": params.voltage_high_alert if params else 0,
+                    "voltage_low_alert": params.voltage_low_alert if params else 0,
+                    "temperature_scale": params.temperature_scale if params else 0,
+                    "temperature_high_alert": params.temperature_high_alert if params else 0,
+                } if params else {}
+            }
+            return {"ok": True, "engine": engine_data}
+        except GrpcAccessException:
+            return {"ok": False, "error": "Engine GetData call failed"}
+
+
+class NavigationSystemCollector:
+    """Wraps the gRPC AgentClient and exposes a plain-dict view of the system.
+
+    The collector holds the connection to a single gRPC agent server and lazily
+    instantiates the service clients (Agent, Console, Network). All returned data
+    is serialisable JSON (no protobuf objects leak to the HTTP layer).
+    
+    Uses ProcessBox to manage per-process connections and ServiceWindow subclasses
+    for each service type (Console, NMEA2000, Engine, etc.).
+    """
+
+    def __init__(self, address: str, port: int, secure: bool = False, language: str = "en"):
+        self._address = address
+        self._port = port
+        self._secure = secure
+        self._language = language
+        # The security mode (and CA certificate, shared at class level) applies
+        # to the agent and to all console connections, since all gRPC servers in
+        # a deployment share the same certificate.
+        self._server = GrpcClient.get_client(f"{address}:{port}", secure=secure)
+        self._agent = AgentClient()
+        self._server.add_service(self._agent)
+        self._network = None
+        self._process_boxes = {}  # process_name -> ProcessBox
+        self._lock = threading.Lock()
+        self._service_windows = {}  # (process_name, service_type) -> ServiceWindow
+
+    @property
+    def agent_address(self) -> str:
+        return f"{self._address}:{self._port}"
+
+    @property
+    def server_state(self) -> int:
+        return self._server.state
+
+    def _ensure_network(self):
+        if self._network is None:
+            self._network = NetworkClient()
+            self._server.add_service(self._network)
+        return self._network
+
+
+    def _get_process_box(self, process_name: str) -> "ProcessBox":
+        """Get or create a ProcessBox for a process."""
+        if process_name not in self._process_boxes:
+            self._process_boxes[process_name] = ProcessBox(self, process_name)
+        return self._process_boxes[process_name]
+
+    def _get_service_window(self, process_name: str, service_type: str, service_class):
+        """Get or create a ServiceWindow for a process and service type."""
+        key = (process_name, service_type)
+        if key not in self._service_windows:
+            process_box = self._get_process_box(process_name)
+            grpc_server = process_box.get_grpc_server()
+            self._service_windows[key] = service_class(process_box, grpc_server)
+        return self._service_windows[key]
+
+    def console_status(self, process_name: str) -> dict:
+        """Return the console view (servers + couplers) of a process."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            try:
+                service_window = self._get_service_window(process_name, 'console', ConsoleServiceWindow)
+                return service_window.get_data()
+            except Exception as e:
+                return {"ok": False, "error": f"Console service error: {str(e)}"}
 
     def coupler_cmd(self, process_name: str, coupler_name: str, cmd: str) -> dict:
         """Send a command to a coupler on a process console."""
@@ -236,31 +447,11 @@ class NavigationSystemCollector:
             self._connect()
             if self._server.not_connected:
                 return {"ok": False, "error": "Agent gRPC server unreachable"}
-            grpc_server, console = self._get_console(process_name)
-            if grpc_server is None:
-                return {"ok": False, "error": f"No console for process {process_name}"}
-            if grpc_server.not_connected:
-                return {"ok": False, "error": f"Cannot reach console for {process_name}"}
-            # Fetch the current coupler state to validate the command.
             try:
-                coupler = console.get_coupler(coupler_name)
-            except GrpcAccessException:
-                return {"ok": False, "error": "Console GetCoupler call failed"}
-            state = coupler.state
-            # Check command consistency with the actual coupler state.
-            valid = _validate_coupler_cmd(cmd, state)
-            if not valid[0]:
-                return {"ok": False, "error": f"Cannot '{cmd}' coupler {coupler_name} "
-                                              f"(state={state}): {valid[1]}"}
-            try:
-                if cmd == "start":
-                    # start uses a different console RPC than the other coupler commands
-                    result = console.server_cmd("start_coupler", coupler_name)
-                else:
-                    result = console.send_cmd(coupler_name, cmd)
-            except GrpcAccessException:
-                return {"ok": False, "error": "Console command call failed"}
-            return {"ok": True, "response": result, "state": state}
+                service_window = self._get_service_window(process_name, 'console', ConsoleServiceWindow)
+                return service_window.coupler_cmd(coupler_name, cmd)
+            except Exception as e:
+                return {"ok": False, "error": f"Coupler command error: {str(e)}"}
 
     def _connect(self):
         if self._server.not_connected:
@@ -657,33 +848,11 @@ class NavigationSystemCollector:
             self._connect()
             if self._server.not_connected:
                 return {"ok": False, "error": "Agent gRPC server unreachable"}
-            grpc_server, n2k_client = self._get_nmea2000_client(process_name)
-            if grpc_server is None:
-                return {"ok": False, "error": f"No NMEA2000 service for process {process_name}"}
-            if grpc_server.not_connected:
-                return {"ok": False, "error": f"Cannot reach NMEA2000 service for {process_name}"}
             try:
-                status = n2k_client.get_status()
-            except GrpcAccessException:
-                return {"ok": False, "error": "NMEA2000 GetStatus call failed"}
-            devices = []
-            for dev in status.devices:
-                devices.append({
-                    "address": dev.address,
-                    "is_proxy": dev.is_proxy,
-                    "manufacturer_name": dev.manufacturer_name,
-                    "product_name": dev.product_name,
-                })
-            return {
-                "ok": True,
-                "process": process_name,
-                "channel": status.channel,
-                "status": status.status,
-                "incoming_rate": status.incoming_rate,
-                "outgoing_rate": status.outgoing_rate,
-                "traces_on": status.traces_on,
-                "devices": devices,
-            }
+                service_window = self._get_service_window(process_name, 'nmea2000', NMEA2000ServiceWindow)
+                return service_window.get_data()
+            except Exception as e:
+                return {"ok": False, "error": f"NMEA2000 service error: {str(e)}"}
 
     def nmea2000_device(self, process_name: str, device_address: int) -> dict:
         """Return detailed info for a single NMEA2000 device."""
@@ -691,27 +860,11 @@ class NavigationSystemCollector:
             self._connect()
             if self._server.not_connected:
                 return {"ok": False, "error": "Agent gRPC server unreachable"}
-            grpc_server, n2k_client = self._get_nmea2000_client(process_name)
-            if grpc_server is None or grpc_server.not_connected:
-                return {"ok": False, "error": f"Cannot reach NMEA2000 service for {process_name}"}
             try:
-                dev = n2k_client.get_device(device_address)
-            except GrpcAccessException:
-                return {"ok": False, "error": "NMEA2000 GetDeviceStatus call failed"}
-            # Collect PGN stats from both in and out
-            pgn_stats = []
-            for stat in (dev.stats or []):
-                pgn_stats.append({"pgn": stat.pgn, "count": stat.count, "direction": "in"})
-            for stat in (dev.out_stats or []):
-                pgn_stats.append({"pgn": stat.pgn, "count": stat.count, "direction": "out"})
-            return {
-                "ok": True,
-                "address": dev.address,
-                "is_proxy": dev.is_proxy,
-                "manufacturer_name": dev.manufacturer_name,
-                "product_name": dev.product_name,
-                "pgn_stats": pgn_stats,
-            }
+                service_window = self._get_service_window(process_name, 'nmea2000', NMEA2000ServiceWindow)
+                return service_window.get_device(device_address)
+            except Exception as e:
+                return {"ok": False, "error": f"NMEA2000 device error: {str(e)}"}
 
     def nmea2000_pgn_definition(self, process_name: str, pgn: int) -> dict:
         """Return the PGN definition (description) for a given PGN."""
@@ -719,14 +872,11 @@ class NavigationSystemCollector:
             self._connect()
             if self._server.not_connected:
                 return {"ok": False, "error": "Agent gRPC server unreachable"}
-            grpc_server, n2k_client = self._get_nmea2000_client(process_name)
-            if grpc_server is None or grpc_server.not_connected:
-                return {"ok": False, "error": f"Cannot reach NMEA2000 service for {process_name}"}
             try:
-                definition = n2k_client.get_pgn_definition(pgn)
-            except GrpcAccessException:
-                return {"ok": False, "error": "NMEA2000 GetPgnDefinition call failed"}
-            return {"ok": True, "pgn": pgn, "definition": definition}
+                service_window = self._get_service_window(process_name, 'nmea2000', NMEA2000ServiceWindow)
+                return service_window.get_pgn_definition(pgn)
+            except Exception as e:
+                return {"ok": False, "error": f"NMEA2000 PGN definition error: {str(e)}"}
 
     def nmea2000_trace_cmd(self, process_name: str, cmd: str) -> dict:
         """Send a trace command (start_trace/stop_trace) to the NMEA2000 service."""
@@ -736,21 +886,11 @@ class NavigationSystemCollector:
             self._connect()
             if self._server.not_connected:
                 return {"ok": False, "error": "Agent gRPC server unreachable"}
-            grpc_server, n2k_client = self._get_nmea2000_client(process_name)
-            if grpc_server is None or grpc_server.not_connected:
-                return {"ok": False, "error": f"Cannot reach NMEA2000 service for {process_name}"}
             try:
-                if cmd == "start_trace":
-                    status = n2k_client.start_trace("")
-                else:
-                    status = n2k_client.stop_trace()
-            except GrpcAccessException:
-                return {"ok": False, "error": f"NMEA2000 {cmd} call failed"}
-            return {
-                "ok": True,
-                "traces_on": status.traces_on,
-                "channel": status.channel,
-            }
+                service_window = self._get_service_window(process_name, 'nmea2000', NMEA2000ServiceWindow)
+                return service_window.trace_cmd(cmd)
+            except Exception as e:
+                return {"ok": False, "error": f"NMEA2000 trace error: {str(e)}"}
 
 
 def _validate_coupler_cmd(cmd: str, state: str) -> tuple:

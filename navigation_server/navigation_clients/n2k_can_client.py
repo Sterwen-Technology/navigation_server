@@ -83,6 +83,14 @@ class NMEA2000CanClient(ServiceClient):
         req.cmd = trace_name
         return self._server_call(self._stub.StartTrace, req, NMEA2000CanControllerProxy)
 
+    def trace_cmd(self, cmd: str):
+        """Send a trace command (start_trace/stop_trace)."""
+        if cmd == "start_trace":
+            return self.start_trace("")
+        elif cmd == "stop_trace":
+            return self.stop_trace()
+        else:
+            raise ValueError(f"Unsupported trace command: {cmd}")
 
 
 
