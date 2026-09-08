@@ -486,9 +486,9 @@ class NavigationSystemCollector:
                         if grpc_server.not_connected:
                             grpc_server.connect()
                             grpc_server.wait_connect(5.0)
-                        if grpc_server.state != 0:  # 0 = READY
+                        if grpc_server.connected:  # 0 = READY
                             client = EngineClient()
-                            client.connect_to_server(grpc_server)
+                            client.attach_server(grpc_server)
                             # Try engine IDs 1-10
                             for engine_id in range(1, 11):
                                 try:
@@ -550,15 +550,15 @@ class NavigationSystemCollector:
                         if grpc_server.not_connected:
                             grpc_server.connect()
                             grpc_server.wait_connect(5.0)
-                        if grpc_server.state != 0:
+                        if grpc_server.connected:
                             client = EngineClient()
-                            client.connect_to_server(grpc_server)
+                            client.attach_server(grpc_server)
                             data = client.get_data(engine_id)
                             if data is not None:
                                 params = client.get_engine_parameters(engine_id)
                                 events = client.get_events(engine_id)
                                 runs = client.get_runs(engine_id)
-                                current_run = data.current_run._msg if data.current_run else None
+                                current_run = data.current_run if data.current_run else None
                                 return {
                                     "ok": True,
                                     "engine_id": engine_id,
