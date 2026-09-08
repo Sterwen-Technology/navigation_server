@@ -1082,6 +1082,7 @@
                 return;
             }
             const params = engine.parameters || {};
+            $("engine-title").textContent = `${escapeHtml(engine.label)} ${escapeHtml(engine.model)}`;
             const speedPercent = Math.min((engine.speed / params.max_rpm) * 100, 100);
             const voltagePercent = Math.min((engine.alternator_voltage / params.voltage_scale) * 100, 100);
             const tempPercent = Math.min((engine.temperature / params.temperature_scale) * 100, 100);
@@ -1094,14 +1095,14 @@
                     <div class="dashboard-row">
                         <div class="gauge-container">
                             <div class="gauge">
-                                <div class="gauge-title" data-i18n="engine.speed">Speed</div>
+                                <div class="gauge-title">Speed</div>
                                 <svg viewBox="0 0 100 100" class="gauge-svg">
                                     <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border)" stroke-width="8" stroke-dasharray="282.7" />
                                     <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="8" 
                                             stroke-dasharray="${speedPercent * 2.827}" stroke-dashoffset="${(100 - speedPercent) * 2.827}" 
                                             transform="rotate(-210 50 50)" />
                                     <text x="50" y="65" text-anchor="middle" font-size="14" fill="var(--text)">${fmt(engine.speed)}</text>
-                                    <text x="50" y="82" text-anchor="middle" font-size="10" fill="var(--muted)" data-i18n="engine.rpm">RPM</text>
+                                    <text x="50" y="82" text-anchor="middle" font-size="10" fill="var(--muted)">RPM</text>
                                 </svg>
                             </div>
                         </div>
@@ -1144,11 +1145,8 @@
                     </div>
                     <div class="events-section">
                         <h3>
-                            <span data-i18n="engine.runs">Runs</span>
-                            <span style="margin-left: 12px;">
-                                <button class="open-btn compact" onclick="toggleEngineEvents('${escapeHtml(processName)}', 'runs')" data-i18n="engine.runs">Runs</button>
-                                <button class="open-btn compact" onclick="toggleEngineEvents('${escapeHtml(processName)}', 'events')" data-i18n="engine.events">Events</button>
-                            </span>
+                            <span data-i18n="engine.history">History</span>
+                            <button class="open-btn compact" onclick="toggleEngineEventsMode('${escapeHtml(processName)}')" id="engine-toggle-btn" data-i18n="engine.show_runs">Show Runs</button>
                         </h3>
                         <div id="engine-events" data-process="${processName}" data-mode="runs"></div>
                     </div>
@@ -1162,11 +1160,18 @@
 
         let engineEventsMode = {};
 
-        async function toggleEngineEvents(processName, mode) {
-            engineEventsMode[processName] = mode;
+        let engineEventsMode = {};
+
+        async function toggleEngineEventsMode(processName) {
+            const currentMode = engineEventsMode[processName] || 'runs';
+            const newMode = currentMode === 'runs' ? 'events' : 'runs';
+            engineEventsMode[processName] = newMode;
+            const btn = $("engine-toggle-btn");
+            btn.textContent = newMode === 'runs' ? t.t("engine.show_events") : t.t("engine.show_runs");
+            btn.setAttribute('data-i18n', newMode === 'runs' ? 'engine.show_events' : 'engine.show_runs');
             const data = await apiGet(`/api/engine/0`);
             if (data.ok) {
-                renderEngineEvents(data, processName, mode);
+                renderEngineEvents(data, processName, newMode);
             }
         }
 
@@ -1252,7 +1257,7 @@
                 const data = await apiGet(`/api/engines`);
                 renderEngineDashboard(data, processName);
                 startEngineRefresh(processName);
-                toggleEngineEvents(processName, 'runs');
+                toggleEngineEventsMode(processName);
             } catch (e) {
                 $("engine-body").innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
             }
@@ -1283,7 +1288,7 @@
 
         window.openEngineData = openEngineData;
         window.closeEngine = closeEngine;
-        window.toggleEngineEvents = toggleEngineEvents;
+        window.toggleEngineEventsMode = toggleEngineEventsMode;
         $("refresh-btn").addEventListener("click", refresh);
         $("auto-refresh").addEventListener("change", toggleAuto);
         refresh();
