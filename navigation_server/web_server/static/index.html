@@ -113,8 +113,7 @@
         .dashboard-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
         .gauge-container { flex: 1; min-width: 200px; }
         .gauge { text-align: center; }
-        .gauge-title { font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; }
-        .gauge-svg { width: 100%; height: auto; max-width: 200px; }
+                .gauge-svg { width: 100%; height: auto; max-width: 200px; }
         .status-display { flex: 1; min-width: 180px; max-width: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .status-icon { margin-bottom: 10px; }
         .stats-box { flex: 1; min-width: 180px; max-width: 220px; background: var(--panel-2); border-radius: 8px; padding: 12px; }
@@ -1095,7 +1094,6 @@
                     <div class="dashboard-row">
                         <div class="gauge-container">
                             <div class="gauge">
-                                <div class="gauge-title">Speed</div>
                                 <svg viewBox="0 0 100 100" class="gauge-svg">
                                     <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border)" stroke-width="8" stroke-dasharray="282.7" />
                                     <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="8" 
@@ -1192,7 +1190,8 @@
                 const runRows = runs.map(run => `
                     <div class="run-row">
                         <span class="run-date">${new Date(run.start_time).toLocaleString()}</span>
-                        <span class="run-duration">${fmt(run.duration / 3600)} h</span>
+                        <span class="run-date">${run.stop_time ? new Date(run.stop_time).toLocaleString() : "N/A"}</span>
+                    <span class="run-duration">${fmt(run.duration / 60)}</span>
                         <span class="run-avg">${fmt(run.average_speed)} RPM</span>
                         <span class="run-max">${fmt(run.max_speed)} RPM</span>
                     </div>
