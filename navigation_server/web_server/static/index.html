@@ -416,6 +416,8 @@
                     serviceButtons.push(`<button class="open-btn" onclick="openConsole('${escapeHtml(p.name)}')">\u2913 Console</button>`);
                 } else if (rpcService === 'Nmea2000ControllerService') {
                     serviceButtons.push(`<button class="open-btn" onclick="openNmea2000('${escapeHtml(p.name)}')">\u2699 NMEA2000</button>`);
+                } else if (rpcService === 'EngineData') {
+                    serviceButtons.push(`<button class="open-btn" onclick="openEngineData('${escapeHtml(p.name)}')">\u26a1 Engine</button>`);
                 }
             }
             
@@ -940,6 +942,109 @@
             }
         }
 
+
+        // --- Engine Data view ----------------------------------------------------
+        let engineProcess = null;
+
+        async function openEngineData(processName) {
+            engineProcess = processName;
+            $("engine-title").textContent = `Engine Data — ${processName}`;
+            $("engine-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
+            $("engine-modal").classList.add("show");
+            try {
+                const data = await apiGet(`/api/engines`);
+                renderEngineData(data, processName);
+            } catch (e) {
+                $("engine-body").innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        function renderEngineData(data, processName) {
+            const body = $("engine-body");
+            if (!data.ok) {
+                body.innerHTML = `<div class="empty">${escapeHtml(data.error || "Error")}</div>`;
+                t.translateAllElements();
+                return;
+            }
+            const engines = data.engines || [];
+            if (engines.length === 0) {
+                body.innerHTML = '<div class="empty" data-i18n="engine.no_engines">No engines found.</div>';
+                t.translateAllElements();
+                return;
+            }
+            const engineCards = engines.map(eng => `
+                <div class="card">
+                    <h2>
+                        <span class="proc-name">${escapeHtml(eng.label)}</span>
+                        <span class="badge ${eng.state}">${eng.state}</span>
+                    </h2>
+                    <div class="row"><span class="k" data-i18n="engine.model">Model</span><span class="v">${escapeHtml(eng.model)}</span></div>
+                    <div class="row"><span class="k" data-i18n="engine.speed">Speed</span><span class="v">${fmt(eng.speed)} RPM</span></div>
+                    <div class="row"><span class="k" data-i18n="engine.temperature">Temperature</span><span class="v">${fmt(eng.temperature)} °C</span></div>
+                    <div class="row"><span class="k" data-i18n="engine.voltage">Alternator Voltage</span><span class="v">${fmt(eng.alternator_voltage)} V</span></div>
+                    <div class="row"><span class="k" data-i18n="engine.total_hours">Total Hours</span><span class="v">${fmt(eng.total_hours)}</span></div>
+                    <div class="row"><span class="k" data-i18n="engine.last_start">Last Start</span><span class="v">${fmt(eng.last_start_time)}</span></div>
+                    <div class="row"><span class="k" data-i18n="engine.last_stop">Last Stop</span><span class="v">${fmt(eng.last_stop_time)}</span></div>
+                    <div class="card-actions">
+                        <button class="open-btn" onclick="openEngineDetail(${eng.id}, '${escapeHtml(processName)}')" data-i18n="engine.details">Details</button>
+                    </div>
+                </div>
+            `).join("");
+            body.innerHTML = `
+                <div class="console-section">
+                    <h3 data-i18n="engine.engines">Engines (${engines.length})</h3>
+                    <div class="grid">${engineCards}</div>
+                </div>
+            `;
+            t.translateAllElements();
+        }
+
+        async function openEngineDetail(engineId, processName) {
+            try {
+                const data = await apiGet(`/api/engine/${engineId}`);
+                renderEngineDetail(data, processName);
+            } catch (e) {
+                toast(t.t("toast.error", {error: e.message}), false);
+            }
+        }
+
+        function renderEngineDetail(data, processName) {
+            if (!data.ok) {
+                toast(data.error || t.t("toast.error"), false);
+                return;
+            }
+            const body = $("engine-body");
+            const params = data.parameters || {};
+            body.innerHTML = `
+                <div class="console-section">
+                    <h3>${escapeHtml(data.label)}</h3>
+                    <div class="row"><span class="k" data-i18n="engine.model">Model</span><span class="v">${escapeHtml(data.model)}</span></div>
+                    <div class="row"><span class="k" data-i18n="engine.state">State</span><span class="v">${escapeHtml(data.state)}</span></div>
+                    <div class="row"><span class="k" data-i18n="engine.speed">Speed</span><span class="v">${fmt(data.speed)} RPM</span></div>
+                    <div class="row"><span class="k" data-i18n="engine.temperature">Temperature</span><span class="v">${fmt(data.temperature)} °C</span></div>
+                    <div class="row"><span class="k" data-i18n="engine.voltage">Alternator Voltage</span><span class="v">${fmt(data.alternator_voltage)} V</span></div>
+                    <div class="row"><span class="k" data-i18n="engine.total_hours">Total Hours</span><span class="v">${fmt(data.total_hours)}</span></div>
+                    <div class="console-section">
+                        <h3 data-i18n="engine.display_parameters">Display Parameters</h3>
+                        <div class="row"><span class="k" data-i18n="engine.max_rpm">Max RPM</span><span class="v">${fmt(params.max_rpm)}</span></div>
+                        <div class="row"><span class="k" data-i18n="engine.voltage_scale">Voltage Scale</span><span class="v">${fmt(params.voltage_scale)} V</span></div>
+                        <div class="row"><span class="k" data-i18n="engine.voltage_high_alert">Voltage High Alert</span><span class="v">${fmt(params.voltage_high_alert)} V</span></div>
+                        <div class="row"><span class="k" data-i18n="engine.voltage_low_alert">Voltage Low Alert</span><span class="v">${fmt(params.voltage_low_alert)} V</span></div>
+                        <div class="row"><span class="k" data-i18n="engine.temperature_scale">Temperature Scale</span><span class="v">${fmt(params.temperature_scale)} °C</span></div>
+                        <div class="row"><span class="k" data-i18n="engine.temperature_high_alert">Temperature High Alert</span><span class="v">${fmt(params.temperature_high_alert)} °C</span></div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="open-btn" onclick="openEngineData('${escapeHtml(processName)}')" data-i18n="general.back">Back to Engines</button>
+                    </div>
+                </div>
+            `;
+            t.translateAllElements();
+        }
+
+        function closeEngine() {
+            $("engine-modal").classList.remove("show");
+            engineProcess = null;
+        }
         function closeNmea2000() {
             $("nmea2000-modal").classList.remove("show");
             nmea2000Process = null;
@@ -969,6 +1074,10 @@
         window.networkInterfaceCmd = networkInterfaceCmd;
         window.addConnection = addConnection;
         window.showAddConnection = showAddConnection;
+
+        window.openEngineData = openEngineData;
+        window.closeEngine = closeEngine;
+        window.openEngineDetail = openEngineDetail;
         $("refresh-btn").addEventListener("click", refresh);
         $("auto-refresh").addEventListener("change", toggleAuto);
         refresh();
@@ -995,5 +1104,15 @@
     // Initialize on DOM load
     document.addEventListener('DOMContentLoaded', initPageTranslations);
     </script>
+
+    <div id="engine-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="engine-title" data-i18n="engine.title">Engine Data</h2>
+                <button class="modal-close" onclick="closeEngine()" title="Close">&times;</button>
+            </div>
+            <div id="engine-body"><div class="empty">t.t("general.loading")</div></div>
+        </div>
+    </div>
 </body>
 </html>
