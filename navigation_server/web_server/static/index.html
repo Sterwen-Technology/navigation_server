@@ -110,13 +110,13 @@
         .row .v { font-family: ui-monospace, "SFMono-Regular", monospace; }
         /* Engine Dashboard Styles */
         .engine-dashboard { max-width: 1000px; }
-        .dashboard-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+        .dashboard-row { display: flex; gap: 30px; flex-wrap: wrap; margin-bottom: 20px; }
         .gauge-container { flex: 1; min-width: 200px; }
         .gauge { text-align: center; }
                 .gauge-svg { width: 100%; height: auto; max-width: 200px; }
         .status-display { flex: 1; min-width: 180px; max-width: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .status-icon { margin-bottom: 10px; }
-        .stats-box { flex: 1; min-width: 180px; max-width: 220px; background: var(--panel-2); border-radius: 8px; padding: 12px; }
+        .stats-box { flex: 1; min-width: 200px; max-width: 280px; background: var(--panel-2); border-radius: 8px; padding: 12px; }
         .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
         .stat-row:last-child { border-bottom: none; }
         .bar-graph { flex: 1; min-width: 60px; max-width: 80px; }
@@ -126,7 +126,7 @@
         .bar-value { font-size: 0.8rem; text-align: center; margin-top: 4px; font-family: ui-monospace, monospace; }
         .stat-row:last-child { border-bottom: none; }
         .stat-label { color: var(--muted); font-size: 0.85rem; }
-        .stat-value { color: var(--text); font-family: ui-monospace, monospace; font-size: 0.85rem; }
+        .stat-value { color: var(--text); font-family: ui-monospace, monospace; font-size: 0.85rem; white-space: nowrap; }
         .events-section { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
         .runs-list { margin-top: 8px; }
         .run-header, .run-row, .event-header, .event-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; padding: 6px 0; font-size: 0.85rem; }
@@ -1015,13 +1015,14 @@
 
         async function openEngineData(processName) {
             engineProcess = processName;
-            $("engine-title").textContent = `Engine Dashboard — ${processName}`;
+            $("engine-title").textContent = "";
             $("engine-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
             $("engine-modal").classList.add("show");
             try {
                 const data = await apiGet(`/api/engines`);
                 renderEngineDashboard(data, processName);
                 startEngineRefresh(processName);
+                toggleEngineEventsMode(processName);
             } catch (e) {
                 $("engine-body").innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
             }
@@ -1317,7 +1318,7 @@
     <div id="engine-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="engine-title" data-i18n="engine.title">Engine Data</h2>
+                <h2 id="engine-title">Engine Data</h2>
                 <button class="modal-close" onclick="closeEngine()" title="Close">&times;</button>
             </div>
             <div id="engine-body"><div class="empty">t.t("general.loading")</div></div>
