@@ -489,6 +489,7 @@ class NavigationSystemCollector:
                         if grpc_server.connected:  # 0 = READY
                             client = EngineClient()
                             client.attach_server(grpc_server)
+                            client.create_stub(grpc_server._channel)
                             # Try engine IDs 1-10
                             for engine_id in range(1, 11):
                                 try:
@@ -553,6 +554,7 @@ class NavigationSystemCollector:
                         if grpc_server.connected:
                             client = EngineClient()
                             client.attach_server(grpc_server)
+                            client.create_stub(grpc_server._channel)
                             data = client.get_data(engine_id)
                             if data is not None:
                                 params = client.get_engine_parameters(engine_id)
@@ -610,53 +612,6 @@ class NavigationSystemCollector:
                         _logger.warning(f"Error getting engine data from {proc.name}: {e}")
                         continue
             return {"ok": False, "error": f"Engine {engine_id} not found or no process with EngineData service"}
-            return {
-                "ok": True,
-                "engine_id": engine_id,
-                "label": params.label if params else f"Engine {engine_id}",
-                "model": params.model if params else "Unknown",
-                "state": data.state,
-                "speed": data.speed,
-                "temperature": data.temperature,
-                "alternator_voltage": data.alternator_voltage,
-                "total_hours": data.total_hours,
-                "last_start_time": data.last_start_time,
-                "last_stop_time": data.last_stop_time,
-                "current_run": {
-                    "start_time": data.current_run.start_time if data.current_run else None,
-                    "stop_time": data.current_run.stop_time if data.current_run else None,
-                    "total_hours": data.current_run.total_hours if data.current_run else 0,
-                    "duration": data.current_run.duration if data.current_run else 0,
-                    "average_speed": data.current_run.average_speed if data.current_run else 0,
-                    "max_speed": data.current_run.max_speed if data.current_run else 0,
-                    "max_temperature": data.current_run.max_temperature if data.current_run else 0,
-                    "alternator_voltage": data.current_run.alternator_voltage if data.current_run else 0,
-                } if data.current_run else None,
-                "parameters": {
-                    "max_rpm": params.max_rpm if params else 0,
-                    "voltage_scale": params.voltage_scale if params else 0,
-                    "voltage_high_alert": params.voltage_high_alert if params else 0,
-                    "voltage_low_alert": params.voltage_low_alert if params else 0,
-                    "temperature_scale": params.temperature_scale if params else 0,
-                    "temperature_high_alert": params.temperature_high_alert if params else 0,
-                } if params else {},
-                "events": [{
-                    "timestamp": e.timestamp,
-                    "total_hours": e.total_hours,
-                    "current_state": e.current_state,
-                    "previous_state": e.previous_state,
-                } for e in (events or [])],
-                "runs": [{
-                    "start_time": r.start_time,
-                    "stop_time": r.stop_time,
-                    "total_hours": r.total_hours,
-                    "duration": r.duration,
-                    "average_speed": r.average_speed,
-                    "max_speed": r.max_speed,
-                    "max_temperature": r.max_temperature,
-                    "alternator_voltage": r.alternator_voltage,
-                } for r in (runs or [])]
-            }
 
     def set_global_configuration(self, config_name: str) -> dict:
         """Apply a global network configuration."""
