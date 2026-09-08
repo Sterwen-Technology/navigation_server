@@ -560,14 +560,14 @@ class NavigationSystemCollector:
                                 current_run = data.current_run if data.current_run else None
                                 return {
                                     "ok": True,
-                                    "engine_id": engine_id,
-                                    "label": params.label if params else f"Engine {engine_id}",
+                                    "engine_id": 0,
+                                    "label": params.label if params else "Engine",
                                     "model": params.model if params else "Unknown",
                                     "state": data.state,
                                     "speed": data._msg.speed,
                                     "temperature": data._msg.temperature,
                                     "alternator_voltage": data._msg.alternator_voltage,
-                                    "total_hours": data._msg.total_hours,
+                                    "total_hours": data._msg.total_hours / 3600.0,  # Convert seconds to hours
                                     "last_start_time": data.last_start_time,
                                     "last_stop_time": data.last_stop_time,
                                     "current_run": {

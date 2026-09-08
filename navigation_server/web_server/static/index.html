@@ -108,6 +108,30 @@
         .row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 0.82rem; }
         .row .k { color: var(--muted); }
         .row .v { font-family: ui-monospace, "SFMono-Regular", monospace; }
+        /* Engine Dashboard Styles */
+        .engine-dashboard { max-width: 1000px; }
+        .dashboard-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+        .gauge-container { flex: 1; min-width: 200px; }
+        .gauge { text-align: center; }
+        .gauge-svg { width: 100%; height: auto; max-width: 200px; }
+        .status-display { flex: 1; min-width: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .status-icon { margin-bottom: 10px; }
+        .bar-graph { flex: 1; min-width: 150px; }
+        .bar-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+        .bar-container { height: 150px; background: var(--panel-2); border-radius: 4px; overflow: hidden; position: relative; }
+        .bar-fill { width: 100%; transition: height 0.3s ease; border-radius: 4px; }
+        .bar-value { font-size: 0.8rem; text-align: center; margin-top: 4px; font-family: ui-monospace, monospace; }
+        .stats-box { flex: 1; min-width: 200px; background: var(--panel-2); border-radius: 8px; padding: 12px; }
+        .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: var(--muted); font-size: 0.85rem; }
+        .stat-value { color: var(--text); font-family: ui-monospace, monospace; font-size: 0.85rem; }
+        .events-section { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
+        .runs-list { margin-top: 8px; }
+        .run-header, .run-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; padding: 6px 0; font-size: 0.85rem; }
+        .run-header { color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+        .run-row { border-bottom: 1px solid var(--border); }
+        .run-row:last-child { border-bottom: none; }
         .servers { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
         .server-item { font-size: 0.78rem; padding: 4px 0; color: var(--muted); }
         .server-item strong { color: var(--text); }
@@ -943,23 +967,56 @@
         }
 
 
-        // --- Engine Data view ----------------------------------------------------
+        // --- Engine Dashboard ----------------------------------------------------
         let engineProcess = null;
+        let engineRefreshInterval = null;
 
         async function openEngineData(processName) {
             engineProcess = processName;
-            $("engine-title").textContent = `Engine Data — ${processName}`;
+            $("engine-title").textContent = `Engine Dashboard — ${processName}`;
             $("engine-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
             $("engine-modal").classList.add("show");
             try {
                 const data = await apiGet(`/api/engines`);
-                renderEngineData(data, processName);
+                renderEngineDashboard(data, processName);
+                startEngineRefresh(processName);
             } catch (e) {
                 $("engine-body").innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
             }
         }
 
-        function renderEngineData(data, processName) {
+        function startEngineRefresh(processName) {
+            if (engineRefreshInterval) {
+                clearInterval(engineRefreshInterval);
+                engineRefreshInterval = null;
+            }
+            engineRefreshInterval = setInterval(async () => {
+                try {
+                    const data = await apiGet(`/api/engines`);
+                    const engines = data.engines || [];
+                    const engine = engines.find(e => e.process === processName);
+                    if (engine && engine.state === "RUNNING") {
+                        renderEngineDashboard(data, processName);
+                    } else {
+                        if (engineRefreshInterval) {
+                            clearInterval(engineRefreshInterval);
+                            engineRefreshInterval = null;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Engine refresh error:", e);
+                }
+            }, 1000);
+        }
+
+        function stopEngineRefresh() {
+            if (engineRefreshInterval) {
+                clearInterval(engineRefreshInterval);
+                engineRefreshInterval = null;
+            }
+        }
+
+        function renderEngineDashboard(data, processName) {
             const body = $("engine-body");
             if (!data.ok) {
                 body.innerHTML = `<div class="empty">${escapeHtml(data.error || "Error")}</div>`;
@@ -972,83 +1029,125 @@
                 t.translateAllElements();
                 return;
             }
-            const engineCards = engines.map(eng => `
-                <div class="card">
-                    <h2>
-                        <span class="proc-name">${escapeHtml(eng.label)}</span>
-                        <span class="badge ${eng.state}">${eng.state}</span>
-                    </h2>
-                    <div class="row"><span class="k" data-i18n="engine.model">Model</span><span class="v">${escapeHtml(eng.model)}</span></div>
-                    <div class="row"><span class="k" data-i18n="engine.speed">Speed</span><span class="v">${fmt(eng.speed)} RPM</span></div>
-                    <div class="row"><span class="k" data-i18n="engine.temperature">Temperature</span><span class="v">${fmt(eng.temperature)} °C</span></div>
-                    <div class="row"><span class="k" data-i18n="engine.voltage">Alternator Voltage</span><span class="v">${fmt(eng.alternator_voltage)} V</span></div>
-                    <div class="row"><span class="k" data-i18n="engine.total_hours">Total Hours</span><span class="v">${fmt(eng.total_hours)}</span></div>
-                    <div class="row"><span class="k" data-i18n="engine.last_start">Last Start</span><span class="v">${fmt(eng.last_start_time)}</span></div>
-                    <div class="row"><span class="k" data-i18n="engine.last_stop">Last Stop</span><span class="v">${fmt(eng.last_stop_time)}</span></div>
-                    <div class="card-actions">
-                        <button class="open-btn" onclick="openEngineDetail(${eng.id}, '${escapeHtml(processName)}')" data-i18n="engine.details">Details</button>
-                    </div>
-                </div>
-            `).join("");
+            const engine = engines.find(e => e.process === processName);
+            if (!engine) {
+                body.innerHTML = '<div class="empty" data-i18n="engine.no_engines">No engines found.</div>';
+                t.translateAllElements();
+                return;
+            }
+            const params = engine.parameters || {};
+            const speedPercent = Math.min((engine.speed / params.max_rpm) * 100, 100);
+            const voltagePercent = Math.min((engine.alternator_voltage / params.voltage_scale) * 100, 100);
+            const tempPercent = Math.min((engine.temperature / params.temperature_scale) * 100, 100);
+            const voltageColor = engine.alternator_voltage >= params.voltage_high_alert || engine.alternator_voltage <= params.voltage_low_alert ? "var(--red)" : "var(--green)";
+            const tempColor = engine.temperature >= params.temperature_high_alert ? "var(--red)" : "var(--green)";
+            const stateSymbol = engine.state === "RUNNING" ? "▶️" : engine.state === "STOPPED" ? "■" : "◆";
+            const lastTime = engine.last_start_time ? new Date(engine.last_start_time).toLocaleString() : (engine.last_stop_time ? new Date(engine.last_stop_time).toLocaleString() : "N/A");
             body.innerHTML = `
-                <div class="console-section">
-                    <h3 data-i18n="engine.engines">Engines (${engines.length})</h3>
-                    <div class="grid">${engineCards}</div>
+                <div class="engine-dashboard">
+                    <div class="dashboard-row">
+                        <div class="gauge-container">
+                            <div class="gauge" data-i18n="[title]engine.speed">
+                                <svg viewBox="0 0 100 100" class="gauge-svg">
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border)" stroke-width="8" stroke-dasharray="282.7" />
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="8" 
+                                            stroke-dasharray="${speedPercent * 2.827}" stroke-dashoffset="${(100 - speedPercent) * 2.827}" 
+                                            transform="rotate(-90 50 50)" />
+                                    <text x="50" y="65" text-anchor="middle" font-size="14" fill="var(--text)">${fmt(engine.speed)}</text>
+                                    <text x="50" y="82" text-anchor="middle" font-size="10" fill="var(--muted)" data-i18n="engine.rpm">RPM</text>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="status-display">
+                            <div class="status-icon" style="font-size: 3rem;">${stateSymbol}</div>
+                            <div class="status-text">
+                                <span class="badge ${engine.state}" data-i18n="engine.state_${engine.state.toLowerCase()}">${engine.state}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-row">
+                        <div class="bar-graph">
+                            <div class="bar-label" data-i18n="engine.voltage">Voltage</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="height: ${voltagePercent}%; background: ${voltageColor};"></div>
+                            </div>
+                            <div class="bar-value">${fmt(engine.alternator_voltage)} V</div>
+                        </div>
+                        <div class="bar-graph">
+                            <div class="bar-label" data-i18n="engine.temperature">Temperature</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="height: ${tempPercent}%; background: ${tempColor};"></div>
+                            </div>
+                            <div class="bar-value">${fmt(engine.temperature)} °C</div>
+                        </div>
+                        <div class="stats-box">
+                            <div class="stat-row">
+                                <span class="stat-label" data-i18n="engine.total_hours">Total Hours</span>
+                                <span class="stat-value">${fmt(engine.total_hours)} h</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label" data-i18n="engine.last_time">Last Time</span>
+                                <span class="stat-value">${lastTime}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="events-section">
+                        <h3 data-i18n="engine.runs">Runs</h3>
+                        <div id="engine-runs" data-process="${processName}"></div>
+                        <button class="open-btn" onclick="loadEngineRuns('${escapeHtml(processName)}')" data-i18n="engine.load_runs">Load Runs</button>
+                    </div>
+                    <div class="card-actions">
+                        <button class="open-btn" onclick="closeEngine()" data-i18n="general.close">Close</button>
+                    </div>
                 </div>
             `;
             t.translateAllElements();
         }
 
-        async function openEngineDetail(engineId, processName) {
+        async function loadEngineRuns(processName) {
             try {
-                const data = await apiGet(`/api/engine/${engineId}`);
-                renderEngineDetail(data, processName);
+                const data = await apiGet(`/api/engine/0`);
+                if (data.ok && data.runs) {
+                    renderEngineRuns(data.runs, processName);
+                }
             } catch (e) {
                 toast(t.t("toast.error", {error: e.message}), false);
             }
         }
 
-        function renderEngineDetail(data, processName) {
-            if (!data.ok) {
-                toast(data.error || t.t("toast.error"), false);
+        function renderEngineRuns(runs, processName) {
+            const container = $("engine-runs");
+            if (!runs || runs.length === 0) {
+                container.innerHTML = '<div class="empty" data-i18n="engine.no_runs">No runs found.</div>';
+                t.translateAllElements();
                 return;
             }
-            const body = $("engine-body");
-            const params = data.parameters || {};
-            body.innerHTML = `
-                <div class="console-section">
-                    <h3>${escapeHtml(data.label)}</h3>
-                    <div class="row"><span class="k" data-i18n="engine.model">Model</span><span class="v">${escapeHtml(data.model)}</span></div>
-                    <div class="row"><span class="k" data-i18n="engine.state">State</span><span class="v">${escapeHtml(data.state)}</span></div>
-                    <div class="row"><span class="k" data-i18n="engine.speed">Speed</span><span class="v">${fmt(data.speed)} RPM</span></div>
-                    <div class="row"><span class="k" data-i18n="engine.temperature">Temperature</span><span class="v">${fmt(data.temperature)} °C</span></div>
-                    <div class="row"><span class="k" data-i18n="engine.voltage">Alternator Voltage</span><span class="v">${fmt(data.alternator_voltage)} V</span></div>
-                    <div class="row"><span class="k" data-i18n="engine.total_hours">Total Hours</span><span class="v">${fmt(data.total_hours)}</span></div>
-                    <div class="console-section">
-                        <h3 data-i18n="engine.display_parameters">Display Parameters</h3>
-                        <div class="row"><span class="k" data-i18n="engine.max_rpm">Max RPM</span><span class="v">${fmt(params.max_rpm)}</span></div>
-                        <div class="row"><span class="k" data-i18n="engine.voltage_scale">Voltage Scale</span><span class="v">${fmt(params.voltage_scale)} V</span></div>
-                        <div class="row"><span class="k" data-i18n="engine.voltage_high_alert">Voltage High Alert</span><span class="v">${fmt(params.voltage_high_alert)} V</span></div>
-                        <div class="row"><span class="k" data-i18n="engine.voltage_low_alert">Voltage Low Alert</span><span class="v">${fmt(params.voltage_low_alert)} V</span></div>
-                        <div class="row"><span class="k" data-i18n="engine.temperature_scale">Temperature Scale</span><span class="v">${fmt(params.temperature_scale)} °C</span></div>
-                        <div class="row"><span class="k" data-i18n="engine.temperature_high_alert">Temperature High Alert</span><span class="v">${fmt(params.temperature_high_alert)} °C</span></div>
+            const runRows = runs.map(run => `
+                <div class="run-row">
+                    <span class="run-date">${new Date(run.start_time).toLocaleString()}</span>
+                    <span class="run-duration">${fmt(run.duration / 3600)} h</span>
+                    <span class="run-avg">${fmt(run.average_speed)} RPM</span>
+                    <span class="run-max">${fmt(run.max_speed)} RPM</span>
+                </div>
+            `).join("");
+            container.innerHTML = `
+                <div class="runs-list">
+                    <div class="run-header">
+                        <span class="run-date" data-i18n="engine.start_time">Start Time</span>
+                        <span class="run-duration" data-i18n="engine.duration">Duration</span>
+                        <span class="run-avg" data-i18n="engine.avg_speed">Avg Speed</span>
+                        <span class="run-max" data-i18n="engine.max_speed">Max Speed</span>
                     </div>
-                    <div class="card-actions">
-                        <button class="open-btn" onclick="openEngineData('${escapeHtml(processName)}')" data-i18n="general.back">Back to Engines</button>
-                    </div>
+                    ${runRows}
                 </div>
             `;
             t.translateAllElements();
         }
 
         function closeEngine() {
+            stopEngineRefresh();
             $("engine-modal").classList.remove("show");
             engineProcess = null;
-        }
-        function closeNmea2000() {
-            $("nmea2000-modal").classList.remove("show");
-            nmea2000Process = null;
-            nmea2000InDeviceView = false;
         }
 
 
@@ -1077,7 +1176,7 @@
 
         window.openEngineData = openEngineData;
         window.closeEngine = closeEngine;
-        window.openEngineDetail = openEngineDetail;
+        window.loadEngineRuns = loadEngineRuns;
         $("refresh-btn").addEventListener("click", refresh);
         $("auto-refresh").addEventListener("change", toggleAuto);
         refresh();
