@@ -489,35 +489,34 @@ class NavigationSystemCollector:
                         if grpc_server.connected:
                             client = EngineClient()
                             grpc_server.add_service(client)
-                            # Try engine IDs 1-10
-                            for engine_id in range(1, 11):
-                                try:
-                                    data = client.get_data(engine_id)
-                                    if data is not None:
-                                        params = client.get_engine_parameters(engine_id)
-                                        engines.append({
-                                            "id": engine_id,
-                                            "label": params.label if params else f"Engine {engine_id}",
-                                            "model": params.model if params else "Unknown",
-                                            "state": data.state,
-                                            "speed": data._msg.speed,
-                                            "temperature": data._msg.temperature,
-                                            "alternator_voltage": data._msg.alternator_voltage,
-                                            "total_hours": data._msg.total_hours,
-                                            "last_start_time": data.last_start_time,
-                                            "last_stop_time": data.last_stop_time,
-                                            "process": proc.name,
-                                            "parameters": {
-                                                "max_rpm": params.max_rpm if params else 0,
-                                                "voltage_scale": params.voltage_scale if params else 0,
-                                                "voltage_high_alert": params.voltage_high_alert if params else 0,
-                                                "voltage_low_alert": params.voltage_low_alert if params else 0,
-                                                "temperature_scale": params.temperature_scale if params else 0,
-                                                "temperature_high_alert": params.temperature_high_alert if params else 0,
-                                            } if params else {}
-                                        })
-                                except Exception:
-                                    pass
+                            # Use engine ID 0 only (single engine per process)
+                            try:
+                                data = client.get_data(0)
+                                if data is not None:
+                                    params = client.get_engine_parameters(0)
+                                    engines.append({
+                                        "id": 0,
+                                        "label": params.label if params else f"Engine",
+                                        "model": params.model if params else "Unknown",
+                                        "state": data.state,
+                                        "speed": data._msg.speed,
+                                        "temperature": data._msg.temperature,
+                                        "alternator_voltage": data._msg.alternator_voltage,
+                                        "total_hours": data._msg.total_hours,
+                                        "last_start_time": data.last_start_time,
+                                        "last_stop_time": data.last_stop_time,
+                                        "process": proc.name,
+                                        "parameters": {
+                                            "max_rpm": params.max_rpm if params else 0,
+                                            "voltage_scale": params.voltage_scale if params else 0,
+                                            "voltage_high_alert": params.voltage_high_alert if params else 0,
+                                            "voltage_low_alert": params.voltage_low_alert if params else 0,
+                                            "temperature_scale": params.temperature_scale if params else 0,
+                                            "temperature_high_alert": params.temperature_high_alert if params else 0,
+                                        } if params else {}
+                                    })
+                            except Exception:
+                                pass
                     except Exception as e:
                         _logger.warning(f"Error connecting to engine service on {proc.name}: {e}")
             return {"ok": True, "engines": engines}
@@ -553,11 +552,11 @@ class NavigationSystemCollector:
                         if grpc_server.connected:
                             client = EngineClient()
                             grpc_server.add_service(client)
-                            data = client.get_data(engine_id)
+                            data = client.get_data(0)
                             if data is not None:
-                                params = client.get_engine_parameters(engine_id)
-                                events = client.get_events(engine_id)
-                                runs = client.get_runs(engine_id)
+                                params = client.get_engine_parameters(0)
+                                events = client.get_events(0)
+                                runs = client.get_runs(0)
                                 current_run = data.current_run if data.current_run else None
                                 return {
                                     "ok": True,
