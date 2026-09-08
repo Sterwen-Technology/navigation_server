@@ -1030,34 +1030,33 @@
 
         function startEngineRefresh(processName) {
             if (engineRefreshInterval) {
-                clearInterval(engineRefreshInterval);
+                clearTimeout(engineRefreshInterval);
                 engineRefreshInterval = null;
             }
-            engineRefreshInterval = setInterval(async () => {
+            async function doRefresh() {
+                let data = null;
+                let engine = null;
                 try {
-                    const data = await apiGet(`/api/engines`);
-                    if (data.ok) {
+                    data = await apiGet(`/api/engines`);
+                    if (data && data.ok) {
                         const engines = data.engines || [];
-                        const engine = engines.find(e => e.process === processName);
+                        engine = engines.find(e => e.process === processName);
                         if (engine) {
                             renderEngineDashboard(data, processName);
-                            if (engine.state !== "RUNNING") {
-                                if (engineRefreshInterval) {
-                                    clearInterval(engineRefreshInterval);
-                                    engineRefreshInterval = null;
-                                }
-                            }
                         }
                     }
                 } catch (e) {
                     console.error("Engine refresh error:", e);
                 }
-            }, 1000);
+                const delay = (engine && engine.state === "RUNNING") ? 1000 : REFRESH_INTERVAL;
+                engineRefreshInterval = setTimeout(doRefresh, delay);
+            }
+            doRefresh();
         }
 
         function stopEngineRefresh() {
             if (engineRefreshInterval) {
-                clearInterval(engineRefreshInterval);
+                clearTimeout(engineRefreshInterval);
                 engineRefreshInterval = null;
             }
         }
@@ -1244,22 +1243,6 @@
             stopEngineRefresh();
             $("engine-modal").classList.remove("show");
             engineProcess = null;
-        }
-
-        // Update openEngineData to auto-load runs
-        async function openEngineData(processName) {
-            engineProcess = processName;
-            $("engine-title").textContent = `Engine Dashboard \u2014 ${processName}`;
-            $("engine-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
-            $("engine-modal").classList.add("show");
-            try {
-                const data = await apiGet(`/api/engines`);
-                renderEngineDashboard(data, processName);
-                startEngineRefresh(processName);
-                toggleEngineEventsMode(processName);
-            } catch (e) {
-                $("engine-body").innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
-            }
         }
 
         window.procCmd = procCmd;
