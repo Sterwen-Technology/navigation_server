@@ -488,7 +488,7 @@ class NavigationSystemCollector:
                             grpc_server.connect()
                             grpc_server.wait_connect(5.0)
                         if grpc_server.state != 0:  # 0 = READY
-                            stub = EngineDataStub(grpc_server.grpc_channel)
+                            stub = EngineDataStub(grpc_server._channel)
                             from navigation_server.generated.engine_data_pb2 import engine_request
                             # Try engine IDs 1-10
                             for engine_id in range(1, 11):
@@ -555,7 +555,7 @@ class NavigationSystemCollector:
                             grpc_server.connect()
                             grpc_server.wait_connect(5.0)
                         if grpc_server.state != 0:
-                            stub = EngineDataStub(grpc_server.grpc_channel)
+                            stub = EngineDataStub(grpc_server._channel)
                             request = engine_request()
                             request.engine_id = engine_id
                             response = stub.GetEngineData(request)
