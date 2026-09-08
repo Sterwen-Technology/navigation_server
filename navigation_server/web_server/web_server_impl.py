@@ -474,7 +474,6 @@ class NavigationSystemCollector:
                     for svc in proc.services
                 )
                 if has_engine_service:
-                    # Connect to this specific process
                     port = proc.grpc_port
                     if port == 0:
                         continue
@@ -482,42 +481,40 @@ class NavigationSystemCollector:
                     server_key = f"{self._address}:{port}"
                     try:
                         from navigation_server.router_common import GrpcClient
-                        from navigation_server.generated.engine_data_pb2_grpc import EngineDataStub
+                        from navigation_server.navigation_clients.navigation_data_client import EngineClient
                         grpc_server = GrpcClient.get_client(server_key, secure=secure)
                         if grpc_server.not_connected:
                             grpc_server.connect()
                             grpc_server.wait_connect(5.0)
                         if grpc_server.state != 0:  # 0 = READY
-                            stub = EngineDataStub(grpc_server._channel)
-                            from navigation_server.generated.engine_data_pb2 import engine_request
+                            client = EngineClient()
+                            client.connect_to_server(grpc_server)
                             # Try engine IDs 1-10
                             for engine_id in range(1, 11):
-                                request = engine_request()
-                                request.engine_id = engine_id
                                 try:
-                                    response = stub.GetEngineData(request)
-                                    if response.error_message == "NO_ERROR":
-                                        params = stub.GetEngineParameters(request)
+                                    data = client.get_data(engine_id)
+                                    if data is not None:
+                                        params = client.get_engine_parameters(engine_id)
                                         engines.append({
                                             "id": engine_id,
-                                            "label": params.parameters.label if params.parameters else f"Engine {engine_id}",
-                                            "model": params.parameters.model if params.parameters else "Unknown",
-                                            "state": response.data.state,
-                                            "speed": response.data.speed,
-                                            "temperature": response.data.temperature,
-                                            "alternator_voltage": response.data.alternator_voltage,
-                                            "total_hours": response.data.total_hours,
-                                            "last_start_time": response.data.last_start_time,
-                                            "last_stop_time": response.data.last_stop_time,
+                                            "label": params.label if params else f"Engine {engine_id}",
+                                            "model": params.model if params else "Unknown",
+                                            "state": data.state,
+                                            "speed": data._msg.speed,
+                                            "temperature": data._msg.temperature,
+                                            "alternator_voltage": data._msg.alternator_voltage,
+                                            "total_hours": data._msg.total_hours,
+                                            "last_start_time": data.last_start_time,
+                                            "last_stop_time": data.last_stop_time,
                                             "process": proc.name,
                                             "parameters": {
-                                                "max_rpm": params.parameters.max_rpm if params.parameters else 0,
-                                                "voltage_scale": params.parameters.voltage_scale if params.parameters else 0,
-                                                "voltage_high_alert": params.parameters.voltage_high_alert if params.parameters else 0,
-                                                "voltage_low_alert": params.parameters.voltage_low_alert if params.parameters else 0,
-                                                "temperature_scale": params.parameters.temperature_scale if params.parameters else 0,
-                                                "temperature_high_alert": params.parameters.temperature_high_alert if params.parameters else 0,
-                                            } if params.parameters else {}
+                                                "max_rpm": params.max_rpm if params else 0,
+                                                "voltage_scale": params.voltage_scale if params else 0,
+                                                "voltage_high_alert": params.voltage_high_alert if params else 0,
+                                                "voltage_low_alert": params.voltage_low_alert if params else 0,
+                                                "temperature_scale": params.temperature_scale if params else 0,
+                                                "temperature_high_alert": params.temperature_high_alert if params else 0,
+                                            } if params else {}
                                         })
                                 except Exception:
                                     pass
@@ -548,57 +545,56 @@ class NavigationSystemCollector:
                     server_key = f"{self._address}:{port}"
                     try:
                         from navigation_server.router_common import GrpcClient
-                        from navigation_server.generated.engine_data_pb2_grpc import EngineDataStub
-                        from navigation_server.generated.engine_data_pb2 import engine_request
+                        from navigation_server.navigation_clients.navigation_data_client import EngineClient
                         grpc_server = GrpcClient.get_client(server_key, secure=secure)
                         if grpc_server.not_connected:
                             grpc_server.connect()
                             grpc_server.wait_connect(5.0)
                         if grpc_server.state != 0:
-                            stub = EngineDataStub(grpc_server._channel)
-                            request = engine_request()
-                            request.engine_id = engine_id
-                            response = stub.GetEngineData(request)
-                            if response.error_message == "NO_ERROR":
-                                params = stub.GetEngineParameters(request)
-                                events = stub.GetEngineEvents(request)
-                                runs = stub.GetEngineRuns(request)
+                            client = EngineClient()
+                            client.connect_to_server(grpc_server)
+                            data = client.get_data(engine_id)
+                            if data is not None:
+                                params = client.get_engine_parameters(engine_id)
+                                events = client.get_events(engine_id)
+                                runs = client.get_runs(engine_id)
+                                current_run = data.current_run._msg if data.current_run else None
                                 return {
                                     "ok": True,
                                     "engine_id": engine_id,
-                                    "label": params.parameters.label if params.parameters else f"Engine {engine_id}",
-                                    "model": params.parameters.model if params.parameters else "Unknown",
-                                    "state": response.data.state,
-                                    "speed": response.data.speed,
-                                    "temperature": response.data.temperature,
-                                    "alternator_voltage": response.data.alternator_voltage,
-                                    "total_hours": response.data.total_hours,
-                                    "last_start_time": response.data.last_start_time,
-                                    "last_stop_time": response.data.last_stop_time,
+                                    "label": params.label if params else f"Engine {engine_id}",
+                                    "model": params.model if params else "Unknown",
+                                    "state": data.state,
+                                    "speed": data._msg.speed,
+                                    "temperature": data._msg.temperature,
+                                    "alternator_voltage": data._msg.alternator_voltage,
+                                    "total_hours": data._msg.total_hours,
+                                    "last_start_time": data.last_start_time,
+                                    "last_stop_time": data.last_stop_time,
                                     "current_run": {
-                                        "start_time": response.data.current_run.start_time if response.data.current_run else None,
-                                        "stop_time": response.data.current_run.stop_time if response.data.current_run else None,
-                                        "total_hours": response.data.current_run.total_hours if response.data.current_run else 0,
-                                        "duration": response.data.current_run.duration if response.data.current_run else 0,
-                                        "average_speed": response.data.current_run.average_speed if response.data.current_run else 0,
-                                        "max_speed": response.data.current_run.max_speed if response.data.current_run else 0,
-                                        "max_temperature": response.data.current_run.max_temperature if response.data.current_run else 0,
-                                        "alternator_voltage": response.data.current_run.alternator_voltage if response.data.current_run else 0,
-                                    } if response.data.current_run else None,
+                                        "start_time": current_run.start_time if current_run else None,
+                                        "stop_time": current_run.stop_time if current_run else None,
+                                        "total_hours": current_run.total_hours if current_run else 0,
+                                        "duration": current_run.duration if current_run else 0,
+                                        "average_speed": current_run.average_speed if current_run else 0,
+                                        "max_speed": current_run.max_speed if current_run else 0,
+                                        "max_temperature": current_run.max_temperature if current_run else 0,
+                                        "alternator_voltage": current_run.alternator_voltage if current_run else 0,
+                                    } if current_run else None,
                                     "parameters": {
-                                        "max_rpm": params.parameters.max_rpm if params.parameters else 0,
-                                        "voltage_scale": params.parameters.voltage_scale if params.parameters else 0,
-                                        "voltage_high_alert": params.parameters.voltage_high_alert if params.parameters else 0,
-                                        "voltage_low_alert": params.parameters.voltage_low_alert if params.parameters else 0,
-                                        "temperature_scale": params.parameters.temperature_scale if params.parameters else 0,
-                                        "temperature_high_alert": params.parameters.temperature_high_alert if params.parameters else 0,
-                                    } if params.parameters else {},
+                                        "max_rpm": params.max_rpm if params else 0,
+                                        "voltage_scale": params.voltage_scale if params else 0,
+                                        "voltage_high_alert": params.voltage_high_alert if params else 0,
+                                        "voltage_low_alert": params.voltage_low_alert if params else 0,
+                                        "temperature_scale": params.temperature_scale if params else 0,
+                                        "temperature_high_alert": params.temperature_high_alert if params else 0,
+                                    } if params else {},
                                     "events": [{
                                         "timestamp": e.timestamp,
                                         "total_hours": e.total_hours,
                                         "current_state": e.current_state,
                                         "previous_state": e.previous_state,
-                                    } for e in (events.events if events else [])],
+                                    } for e in (events if events else [])],
                                     "runs": [{
                                         "start_time": r.start_time,
                                         "stop_time": r.stop_time,
@@ -608,7 +604,7 @@ class NavigationSystemCollector:
                                         "max_speed": r.max_speed,
                                         "max_temperature": r.max_temperature,
                                         "alternator_voltage": r.alternator_voltage,
-                                    } for r in (runs.runs if runs else [])]
+                                    } for r in (runs if runs else [])]
                                 }
                     except Exception as e:
                         _logger.warning(f"Error getting engine data from {proc.name}: {e}")
