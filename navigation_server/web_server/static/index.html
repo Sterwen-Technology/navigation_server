@@ -808,6 +808,11 @@
         function closeNetwork() {
             $("network-modal").classList.remove("show");
         }
+        function closeNmea2000() {
+            $("nmea2000-modal").classList.remove("show");
+            nmea2000Process = null;
+            nmea2000InDeviceView = false;
+        }
 
         // --- NMEA2000 view ----------------------------------------------------
         let nmea2000Process = null;
