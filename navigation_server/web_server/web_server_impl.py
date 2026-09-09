@@ -20,6 +20,7 @@ import argparse
 import json
 import logging
 import os
+import queue
 import sys
 import threading
 import time
@@ -30,10 +31,12 @@ from urllib.parse import urlparse
 
 from navigation_server.router_common import GrpcClient, GrpcAccessException
 from navigation_server.router_common.agent_interface import AgentClient
+from navigation_server.router_common.global_variables import MessageServerGlobals
 from navigation_server.navigation_clients import NetworkClient
 from navigation_server.navigation_clients.console_client import ConsoleClient
 from navigation_server.navigation_clients.n2k_can_client import NMEA2000CanClient
 from navigation_server.navigation_clients.navigation_data_client import EngineClient
+from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -73,13 +76,13 @@ class ProcessBox:
     @property
     def port(self) -> int:
         if self._port is None:
-            self._port = self._collector._agent.get_port(self._process_name)
+            self._port = self._collector.get_process_port(self._process_name)
         return self._port
     
     @property
     def secure(self) -> bool:
         if self._secure is None:
-            self._secure = self._collector._get_process_secure(self._process_name)
+            self._secure = self._collector.get_process_secure(self._process_name)
         return self._secure
     
     def get_grpc_server(self) -> "GrpcClient":
@@ -87,7 +90,7 @@ class ProcessBox:
         if self._grpc_server is None or self._grpc_server.not_connected:
             with self._lock:
                 if self._grpc_server is None or self._grpc_server.not_connected:
-                    server_key = f"{self._collector._address}:{self.port}"
+                    server_key = f"{self._collector.agent_host}:{self.port}"
                     self._grpc_server = GrpcClient.get_client(server_key, secure=self.secure)
                     self._grpc_server.connect()
                     self._grpc_server.wait_connect(5.0)
@@ -112,6 +115,23 @@ class ProcessBox:
                     service = service_class(self, grpc_server)
                     self._services[service_type] = service
         return self._services[service_type]
+
+    @property
+    def services(self):
+        """The list of Service descriptors implemented by this process.
+
+        Populated once when the process gRPC server is first connected via the
+        control-channel SERVICES command, so callers can check which services a
+        process exposes without re-querying the agent.
+        """
+        if self._services_definition is None:
+            # Force connection, which retrieves the services definition.
+            self.get_grpc_server()
+        return self._services_definition or []
+
+    def has_service(self, rpc_service: str) -> bool:
+        """Return True if this process implements the given gRPC service."""
+        return any(svc.rpc_service == rpc_service for svc in self.services)
 
 
 class ServiceWindow(ABC):
@@ -160,7 +180,6 @@ class ConsoleServiceWindow(ServiceWindow):
     """Service window for Console service."""
     
     def _initialize_client(self):
-        from navigation_server.navigation_clients.console_client import ConsoleClient
         self._client = ConsoleClient()
         self._grpc_server.add_service(self._client)
     
@@ -238,7 +257,6 @@ class NMEA2000ServiceWindow(ServiceWindow):
     """Service window for NMEA2000 service."""
     
     def _initialize_client(self):
-        from navigation_server.navigation_clients.n2k_can_client import NMEA2000CanClient
         self._client = NMEA2000CanClient()
         self._grpc_server.add_service(self._client)
     
@@ -331,25 +349,87 @@ class NMEA2000ServiceWindow(ServiceWindow):
 
 
 class EngineServiceWindow(ServiceWindow):
-    """Service window for EngineData service."""
+    """Service window for the EngineData service.
+
+    The window caches the list of engine parameters (static engine definitions)
+    retrieved once when the client is initialized, then serves both the engine
+    list and the detailed engine data for each engine instance from that list.
+    """
     
     def _initialize_client(self):
-        from navigation_server.navigation_clients.navigation_data_client import EngineClient
         self._client = EngineClient()
         self._grpc_server.add_service(self._client)
-        # now retrieve all engines
-        self._engines = self._client.get_engines()  # returns a list(engine_parameters)
-    
-    def get_data(self) -> dict:
-        """Get engine data for engine ID 0 (single engine per process)."""
+        # List of engine_parameters (static engine definitions) for this process.
+        self._engines = self._client.get_engines()
+
+    @staticmethod
+    def _parameters_dict(params) -> dict:
+        if params is None:
+            return {}
+        return {
+            "max_rpm": params.max_rpm,
+            "voltage_scale": params.voltage_scale,
+            "voltage_high_alert": params.voltage_high_alert,
+            "voltage_low_alert": params.voltage_low_alert,
+            "temperature_scale": params.temperature_scale,
+            "temperature_high_alert": params.temperature_high_alert,
+        }
+
+    def _engine_summary(self, engine_id: int, params, data) -> dict:
+        """Build the summary dict for one engine (used by engine_list)."""
+        return {
+            "id": engine_id,
+            "label": params.label if params else "Engine",
+            "model": params.model if params else "Unknown",
+            "state": data.state,
+            "speed": round(data._msg.speed, 0),
+            "temperature": round(data._msg.temperature - 273.15, 0),  # Kelvin to Celsius
+            "alternator_voltage": round(data._msg.alternator_voltage, 2),
+            "total_hours": round(data._msg.total_hours / 3600.0, 1),  # Seconds to decimal hours
+            "last_start_time": data.last_start_time,
+            "last_stop_time": data.last_stop_time,
+            "process": self.process_name,
+            "parameters": self._parameters_dict(params),
+        }
+
+    def get_engine_list(self) -> list:
+        """Return the list of engine summaries for this process.
+
+        Iterates over the cached engine parameters and fetches the live data for
+        each engine instance. Engines whose data cannot be retrieved are skipped.
+        """
+        self._ensure_client()
+        engines = []
+        for params in (self._engines or []):
+            engine_id = params.engine_id
+            try:
+                data = self._client.get_data(engine_id)
+            except GrpcAccessException:
+                _logger.warning(f"Engine data call failed for {self.process_name} engine #{engine_id}")
+                continue
+            if data is None:
+                continue
+            engines.append(self._engine_summary(engine_id, params, data))
+        return engines
+
+    def get_engine_data(self, engine_id: int) -> dict:
+        """Return detailed data (runtime + events + runs) for one engine instance."""
         self._ensure_client()
         try:
-            data = self._client.get_data(0)
+            data = self._client.get_data(engine_id)
             if data is None:
-                return {"ok": False, "error": "No engine data available"}
-            params = self._engines[0]
-            engine_data = {
-                "id": 0,
+                return {"ok": False, "error": f"No engine data for instance #{engine_id}"}
+            params = None
+            for p in (self._engines or []):
+                if p.engine_id == engine_id:
+                    params = p
+                    break
+            events = self._client.get_events(engine_id)
+            runs = self._client.get_runs(engine_id)
+            current_run = data.current_run if data.current_run else None
+            return {
+                "ok": True,
+                "engine_id": engine_id,
                 "label": params.label if params else "Engine",
                 "model": params.model if params else "Unknown",
                 "state": data.state,
@@ -359,19 +439,43 @@ class EngineServiceWindow(ServiceWindow):
                 "total_hours": round(data._msg.total_hours / 3600.0, 1),  # Seconds to decimal hours
                 "last_start_time": data.last_start_time,
                 "last_stop_time": data.last_stop_time,
-                "process": self.process_name,
-                "parameters": {
-                    "max_rpm": params.max_rpm if params else 0,
-                    "voltage_scale": params.voltage_scale if params else 0,
-                    "voltage_high_alert": params.voltage_high_alert if params else 0,
-                    "voltage_low_alert": params.voltage_low_alert if params else 0,
-                    "temperature_scale": params.temperature_scale if params else 0,
-                    "temperature_high_alert": params.temperature_high_alert if params else 0,
-                } if params else {}
+                "current_run": {
+                    "start_time": current_run.start_time if current_run else None,
+                    "stop_time": current_run.stop_time if current_run else None,
+                    "total_hours": round(current_run.total_hours / 3600.0, 1) if current_run else 0,
+                    "duration": round(current_run.duration / 3600.0, 2) if current_run else 0,  # Seconds to hours, 2 decimal
+                    "average_speed": round(current_run.average_speed, 0) if current_run else 0,
+                    "max_speed": round(current_run.max_speed, 0) if current_run else 0,
+                    "max_temperature": round(current_run.max_temperature - 273.15, 0) if current_run else 0,  # Kelvin to Celsius
+                    "alternator_voltage": current_run.alternator_voltage if current_run else 0,
+                } if current_run else None,
+                "parameters": self._parameters_dict(params),
+                "events": [{
+                    "timestamp": e.timestamp,
+                    "total_hours": round(e.total_hours, 1),
+                    "current_state": e.current_state,
+                    "previous_state": e.previous_state,
+                } for e in (events if events else [])],
+                "runs": [{
+                    "start_time": r.start_time,
+                    "stop_time": r.stop_time,
+                    "total_hours": round(r.total_hours / 3600.0, 1),  # Seconds to hours, 1 decimal
+                    "duration": round(r.duration / 3600.0, 2),  # Seconds to hours, 2 decimal
+                    "average_speed": round(r.average_speed, 0),
+                    "max_speed": round(r.max_speed, 0),
+                    "max_temperature": round(r.max_temperature - 273.15, 0),  # Kelvin to Celsius
+                    "alternator_voltage": round(r.alternator_voltage, 2),
+                } for r in (runs if runs else [])],
             }
-            return {"ok": True, "engine": engine_data}
         except GrpcAccessException:
-            return {"ok": False, "error": "Engine GetData call failed"}
+            return {"ok": False, "error": "Engine data call failed"}
+
+    def get_data(self) -> dict:
+        """ServiceWindow contract: return the engine list for this process."""
+        try:
+            return {"ok": True, "engines": self.get_engine_list()}
+        except GrpcAccessException:
+            return {"ok": False, "error": "Engine service unavailable"}
 
 
 class NavigationSystemCollector:
@@ -399,15 +503,54 @@ class NavigationSystemCollector:
         self._network = None
         self._process_boxes = {}  # process_name -> ProcessBox
         self._lock = threading.Lock()
-        self._service_windows = {}  # (process_name, service_type) -> ServiceWindow
 
     @property
     def agent_address(self) -> str:
         return f"{self._address}:{self._port}"
 
     @property
+    def agent_host(self) -> str:
+        """Host address of the agent gRPC server (without port)."""
+        return self._address
+
+    @property
+    def secure(self) -> bool:
+        """Whether the agent connection uses secure gRPC."""
+        return self._secure
+
+    @property
+    def language(self) -> str:
+        """Configured UI language."""
+        return self._language
+
+    @property
     def server_state(self) -> int:
         return self._server.state
+
+    def _process_descriptor(self, process_name: str):
+        """Return the SystemProcessMsgProxy for a process, or None.
+
+        Looks up the process in the current agent status. Used by the formal
+        per-process accessors below so callers never reach into the agent or
+        the process boxes' private state.
+        """
+        system = self._agent.system_cmd("status")
+        if system is None:
+            return None
+        for proc in system.get_processes():
+            if proc.name == process_name:
+                return proc
+        return None
+
+    def get_process_port(self, process_name: str) -> int:
+        """Return the gRPC port declared by a process (0 if unknown)."""
+        proc = self._process_descriptor(process_name)
+        return proc.grpc_port if proc is not None else 0
+
+    def get_process_secure(self, process_name: str) -> bool:
+        """Return whether a process expects secure gRPC."""
+        proc = self._process_descriptor(process_name)
+        return bool(proc.secure_grpc) if proc is not None else False
 
     def _ensure_network(self):
         if self._network is None:
@@ -423,13 +566,13 @@ class NavigationSystemCollector:
         return self._process_boxes[process_name]
 
     def _get_service_window(self, process_name: str, service_type: str, service_class):
-        """Get or create a ServiceWindow for a process and service type."""
-        key = (process_name, service_type)
-        if key not in self._service_windows:
-            process_box = self._get_process_box(process_name)
-            grpc_server = process_box.get_grpc_server()
-            self._service_windows[key] = service_class(process_box, grpc_server)
-        return self._service_windows[key]
+        """Get or create a ServiceWindow for a process and service type.
+
+        The ServiceWindow cache is owned by the ProcessBox, which is the single
+        authority for a process's service windows.
+        """
+        process_box = self._get_process_box(process_name)
+        return process_box.get_service(service_type, service_class)
 
     def console_status(self, process_name: str) -> dict:
         """Return the console view (servers + couplers) of a process."""
@@ -653,157 +796,59 @@ class NavigationSystemCollector:
                 return {"ok": False, "error": "Network service unavailable"}
             return {"ok": True, "connections": reply.configuration_names()}
 
+    def _engine_processes(self):
+        """Yield process names exposing the EngineData service.
+
+        Process membership and service list come from the agent status, which is
+        the authoritative registry of registered processes. The per-process
+        EngineServiceWindow (built on demand) then caches the engine list.
+        """
+        system = self._agent.system_cmd("status")
+        if system is None:
+            return
+        for proc in system.get_processes():
+            if any(svc.rpc_service == "EngineData" for svc in proc.services):
+                yield proc.name
+
     def engine_list(self) -> dict:
-        """Return the list of available engines from processes with EngineData service."""
+        """Return the list of available engines across processes with EngineData.
+
+        Each process with an EngineData service is served by an
+        EngineServiceWindow that caches its engine parameters; the window's
+        get_engine_list() produces the summaries (with live runtime data).
+        """
         with self._lock:
             self._connect()
             if self._server.not_connected:
                 return {"ok": False, "error": "Agent gRPC server unreachable"}
-            system = self._agent.system_cmd("status")
-            if system is None:
-                return {"ok": False, "error": "Cannot get system status"}
-            
             engines = []
-            for proc in system.get_processes():
-                has_engine_service = any(
-                    svc.rpc_service == "EngineData"
-                    for svc in proc.services
-                )
-                if has_engine_service:
-                    port = proc.grpc_port
-                    if port == 0:
-                        continue
-                    secure = proc.secure_grpc
-                    server_key = f"{self._address}:{port}"
-                    try:
-                        from navigation_server.router_common import GrpcClient
-                        from navigation_server.navigation_clients.navigation_data_client import EngineClient
-                        grpc_server = GrpcClient.get_client(server_key, secure=secure)
-                        if grpc_server.not_connected:
-                            grpc_server.connect()
-                            grpc_server.wait_connect(5.0)
-                        if grpc_server.connected:
-                            client = EngineClient()
-                            grpc_server.add_service(client)
-                            # Use engine ID 0 only (single engine per process)
-                            try:
-                                data = client.get_data(0)
-                                if data is not None:
-                                    params = client.get_engine_parameters(0)
-                                    engines.append({
-                                        "id": 0,
-                                        "label": params.label if params else f"Engine",
-                                        "model": params.model if params else "Unknown",
-                                        "state": data.state,
-                                        "speed": round(data._msg.speed, 0),
-                                        "temperature": round(data._msg.temperature - 273.15, 0),  # Kelvin to Celsius
-                                        "alternator_voltage": round(data._msg.alternator_voltage, 2),
-                                        "total_hours": round(data._msg.total_hours / 3600.0, 1),  # Seconds to decimal hours
-                                        "last_start_time": data.last_start_time,
-                                        "last_stop_time": data.last_stop_time,
-                                        "process": proc.name,
-                                        "parameters": {
-                                            "max_rpm": params.max_rpm if params else 0,
-                                            "voltage_scale": params.voltage_scale if params else 0,
-                                            "voltage_high_alert": params.voltage_high_alert if params else 0,
-                                            "voltage_low_alert": params.voltage_low_alert if params else 0,
-                                            "temperature_scale": params.temperature_scale if params else 0,
-                                            "temperature_high_alert": params.temperature_high_alert if params else 0,
-                                        } if params else {}
-                                    })
-                            except Exception:
-                                pass
-                    except Exception as e:
-                        _logger.warning(f"Error connecting to engine service on {proc.name}: {e}")
+            for process_name in self._engine_processes():
+                try:
+                    window = self._get_service_window(process_name, 'engine', EngineServiceWindow)
+                    engines.extend(window.get_engine_list())
+                except Exception as e:
+                    _logger.warning(f"Error retrieving engine list from {process_name}: {e}")
             return {"ok": True, "engines": engines}
 
     def engine_data(self, engine_id: int) -> dict:
-        """Return detailed data for a specific engine."""
+        """Return detailed data for a specific engine instance.
+
+        Iterates processes with an EngineData service and returns the first one
+        able to serve the requested engine instance via its EngineServiceWindow.
+        """
         with self._lock:
             self._connect()
             if self._server.not_connected:
                 return {"ok": False, "error": "Agent gRPC server unreachable"}
-            system = self._agent.system_cmd("status")
-            if system is None:
-                return {"ok": False, "error": "Cannot get system status"}
-            
-            for proc in system.get_processes():
-                has_engine_service = any(
-                    svc.rpc_service == "EngineData"
-                    for svc in proc.services
-                )
-                if has_engine_service:
-                    port = proc.grpc_port
-                    if port == 0:
-                        continue
-                    secure = proc.secure_grpc
-                    server_key = f"{self._address}:{port}"
-                    try:
-                        from navigation_server.router_common import GrpcClient
-                        from navigation_server.navigation_clients.navigation_data_client import EngineClient
-                        grpc_server = GrpcClient.get_client(server_key, secure=secure)
-                        if grpc_server.not_connected:
-                            grpc_server.connect()
-                            grpc_server.wait_connect(5.0)
-                        if grpc_server.connected:
-                            client = EngineClient()
-                            grpc_server.add_service(client)
-                            data = client.get_data(0)
-                            if data is not None:
-                                params = client.get_engine_parameters(0)
-                                events = client.get_events(0)
-                                runs = client.get_runs(0)
-                                current_run = data.current_run if data.current_run else None
-                                return {
-                                    "ok": True,
-                                    "engine_id": 0,
-                                    "label": params.label if params else "Engine",
-                                    "model": params.model if params else "Unknown",
-                                    "state": data.state,
-                                    "speed": round(data._msg.speed, 0),
-                                    "temperature": round(data._msg.temperature - 273.15, 0),  # Kelvin to Celsius
-                                    "alternator_voltage": round(data._msg.alternator_voltage, 2),
-                                    "total_hours": round(data._msg.total_hours / 3600.0, 1),  # Seconds to decimal hours
-                                    "last_start_time": data.last_start_time,
-                                    "last_stop_time": data.last_stop_time,
-                                    "current_run": {
-                                        "start_time": current_run.start_time if current_run else None,
-                                        "stop_time": current_run.stop_time if current_run else None,
-                                        "total_hours": round(current_run.total_hours / 3600.0, 1) if current_run else 0,
-                                        "duration": round(current_run.duration / 3600.0, 2) if current_run else 0,  # Seconds to hours, 2 decimal
-                                        "average_speed": round(current_run.average_speed, 0) if current_run else 0,
-                                        "max_speed": round(current_run.max_speed, 0) if current_run else 0,
-                                        "max_temperature": round(current_run.max_temperature - 273.15, 0) if current_run else 0,  # Kelvin to Celsius
-                                        "alternator_voltage": current_run.alternator_voltage if current_run else 0,
-                                    } if current_run else None,
-                                    "parameters": {
-                                        "max_rpm": params.max_rpm if params else 0,
-                                        "voltage_scale": params.voltage_scale if params else 0,
-                                        "voltage_high_alert": params.voltage_high_alert if params else 0,
-                                        "voltage_low_alert": params.voltage_low_alert if params else 0,
-                                        "temperature_scale": params.temperature_scale if params else 0,
-                                        "temperature_high_alert": params.temperature_high_alert if params else 0,
-                                    } if params else {},
-                                    "events": [{
-                                        "timestamp": e.timestamp,
-                                        "total_hours": round(e.total_hours, 1),
-                                        "current_state": e.current_state,
-                                        "previous_state": e.previous_state,
-                                    } for e in (events if events else [])],
-                                    "runs": [{
-                                        "start_time": r.start_time,
-                                        "stop_time": r.stop_time,
-                                        "total_hours": round(r.total_hours / 3600.0, 1),  # Seconds to hours, 1 decimal
-                                        "duration": round(r.duration / 3600.0, 2),  # Seconds to hours, 2 decimal
-                                        "average_speed": round(r.average_speed, 0),
-                                        "max_speed": round(r.max_speed, 0),
-                                        "max_temperature": round(r.max_temperature - 273.15, 0),  # Kelvin to Celsius
-                                        "alternator_voltage": round(r.alternator_voltage, 2),
-                                    } for r in (runs if runs else [])]
-                                }
-                    except Exception as e:
-                        _logger.warning(f"Error getting engine data from {proc.name}: {e}")
-                        continue
+            for process_name in self._engine_processes():
+                try:
+                    window = self._get_service_window(process_name, 'engine', EngineServiceWindow)
+                    result = window.get_engine_data(engine_id)
+                    if result.get("ok"):
+                        return result
+                except Exception as e:
+                    _logger.warning(f"Error getting engine data from {process_name}: {e}")
+                    continue
             return {"ok": False, "error": f"Engine {engine_id} not found or no process with EngineData service"}
 
     def set_global_configuration(self, config_name: str) -> dict:
@@ -829,13 +874,11 @@ class NavigationSystemCollector:
             try:
                 if cmd == "add":
                     # Add a connection to an interface
-                    from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
                     iface_pb = NetInterfacePb()
                     iface_pb.name = interface_name
                     result = net.set_configuration("add", connection_name, iface_pb)
                 else:
                     # For up, down, delete commands
-                    from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
                     iface_pb = NetInterfacePb()
                     iface_pb.name = interface_name
                     result = net.interface_command(cmd, iface_pb)
@@ -1093,7 +1136,6 @@ class _RequestHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.end_headers()
 
-        import queue
         line_queue = queue.Queue(maxsize=200)
         client_disconnected = [False]
 
@@ -1164,7 +1206,6 @@ class _RequestHandler(BaseHTTPRequestHandler):
     def _serve_config(self):
         """Serve the language configuration from the server."""
         try:
-            from navigation_server.router_common.global_variables import MessageServerGlobals
             config = {
                 "version": MessageServerGlobals.version or "3.0.0"
             }
@@ -1174,7 +1215,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 config["language"] = language
             else:
                 # Fallback to collector's language
-                config["language"] = self.collector._language
+                config["language"] = self.collector.language
             self._serve_json(config)
         except Exception as e:
             _logger.error("Error serving config: %s", e)
@@ -1225,7 +1266,7 @@ class NavigationWebServer:
     def serve_forever(self):
         _logger.info(f"Navigation web server listening on http://{self._host}:{self._port}")
         _logger.info(f"Connecting to gRPC agent at {self._collector.agent_address} "
-                     f"(secure={self._collector._secure})")
+                     f"(secure={self._collector.secure})")
         try:
             self._httpd.serve_forever()
         except KeyboardInterrupt:
