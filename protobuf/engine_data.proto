@@ -43,6 +43,11 @@ message engine_parameters {
   float temperature_high_alert=9; // Shall show an alarm if the temperature is higher
 }
 
+message engine_list {
+  repeated engine_parameters engines=1;
+  string error_message=2;
+}
+
 message engine_response {
     uint32 id=4;
     string error_message=1;
@@ -78,6 +83,7 @@ message engine_run {
 }
 
 service EngineData {
+  rpc GetEngines (engine_request) returns(engine_list) {}
   rpc GetEngineData(engine_request) returns(engine_response) {}
   rpc GetEngineParameters(engine_request) returns(engine_response) {}
   rpc GetEngineEvents(engine_request) returns (engine_response) {}

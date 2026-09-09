@@ -17,7 +17,7 @@ import os
 import json
 
 from navigation_server.router_common import MessageServerGlobals, GrpcService, resolve_ref, fill_protobuf_from_dict
-from navigation_server.generated.engine_data_pb2 import engine_data, engine_request, engine_response, engine_event, engine_run, engine_parameters
+from navigation_server.generated.engine_data_pb2 import engine_data, engine_request, engine_response, engine_event, engine_run, engine_parameters, engine_list
 from navigation_server.generated.engine_data_pb2_grpc import EngineDataServicer, add_EngineDataServicer_to_server
 from navigation_server.generated.nmea2000_classes_gen import Pgn127488Class, Pgn127489Class
 from navigation_server.router_common.configuration import NavigationObject, Parameters
@@ -103,6 +103,16 @@ class EngineDataServicerImpl(EngineDataServicer):
         except KeyError:
             response.error_message = "NO_ENGINE"
         _logger.debug("GetEngineRuns OK")
+        return response
+
+    def GetEngines(self, request, context):
+        _logger.debug("GetEngines")
+        response = engine_list()
+        for engine in self._engine_service.get_engines():
+            parameters = engine.get_engine_parameters()
+            if parameters is not None:
+                response.engines.append(parameters)
+        response.error_message = "OK"
         return response
 
 
@@ -195,6 +205,9 @@ class EngineDataService(GrpcService):
             engine = EngineData(engine_id, self._root_dir)
             self._engines[engine_id] = engine
             return engine
+
+    def get_engines(self):
+        return self._engines.values()
 
     def check_off_engines(self):
         nb_engines = len(self._engines)

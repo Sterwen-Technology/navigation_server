@@ -17,15 +17,18 @@ import "services_server.proto";
 // that is a first version and vert simplified one
 
 message GrpcCommand {
-    uint32 id=1;
-    string command=2;
+    uint32 id = 1;
+    string command = 2;
+    // supported commands
+    // 'SERVICES' => return the list of supported services by the server
+    // 'SETTINGS' => returns the content of the settings file
 }
-
 
 message GrpcAck {
     uint32 id=1;
     string response=2;
     repeated Service services=3;
+    string settings=4;      // full content in a single string including line separators
 }
 
 service NavigationGrpcControl {

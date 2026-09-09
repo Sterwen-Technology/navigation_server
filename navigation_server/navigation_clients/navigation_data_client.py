@@ -121,6 +121,15 @@ class EngineClient(ServiceClient):
             _logger.error(f"EngineData => No engine instance #{engine_instance}")
             return None
 
+    def get_engines(self):
+        request = engine_request()
+        request.engine_id = 0
+        result = self._server_call(self._stub.GetEngines, request, None)
+        if result.error_message == 'OK':
+            return result.engines
+        else:
+            return None
+
 
 
 

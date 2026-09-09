@@ -26,7 +26,7 @@ import navigation_server.generated.services_server_pb2 as services__server__pb2
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12grpc_control.proto\x1a\x15services_server.proto\"*\n\x0bGrpcCommand\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0f\n\x07\x63ommand\x18\x02 \x01(\t\"C\n\x07GrpcAck\x12\n\n\x02id\x18\x01 \x01(\r\x12\x10\n\x08response\x18\x02 \x01(\t\x12\x1a\n\x08services\x18\x03 \x03(\x0b\x32\x08.Service2@\n\x15NavigationGrpcControl\x12\'\n\x0bSendCommand\x12\x0c.GrpcCommand\x1a\x08.GrpcAck\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12grpc_control.proto\x1a\x15services_server.proto\"*\n\x0bGrpcCommand\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0f\n\x07\x63ommand\x18\x02 \x01(\t\"U\n\x07GrpcAck\x12\n\n\x02id\x18\x01 \x01(\r\x12\x10\n\x08response\x18\x02 \x01(\t\x12\x1a\n\x08services\x18\x03 \x03(\x0b\x32\x08.Service\x12\x10\n\x08settings\x18\x04 \x01(\t2@\n\x15NavigationGrpcControl\x12\'\n\x0bSendCommand\x12\x0c.GrpcCommand\x1a\x08.GrpcAck\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,7 +36,7 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GRPCCOMMAND']._serialized_start=45
   _globals['_GRPCCOMMAND']._serialized_end=87
   _globals['_GRPCACK']._serialized_start=89
-  _globals['_GRPCACK']._serialized_end=156
-  _globals['_NAVIGATIONGRPCCONTROL']._serialized_start=158
-  _globals['_NAVIGATIONGRPCCONTROL']._serialized_end=222
+  _globals['_GRPCACK']._serialized_end=174
+  _globals['_NAVIGATIONGRPCCONTROL']._serialized_start=176
+  _globals['_NAVIGATIONGRPCCONTROL']._serialized_end=240
 # @@protoc_insertion_point(module_scope)

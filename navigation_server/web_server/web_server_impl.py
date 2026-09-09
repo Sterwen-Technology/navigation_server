@@ -63,6 +63,7 @@ class ProcessBox:
         self._secure = None
         self._grpc_server = None
         self._services = {}  # service_type -> ServiceWindow instance
+        self._services_definition = None  # Will contain the list of Service (from protobuf)
         self._lock = threading.Lock()
     
     @property
@@ -90,6 +91,8 @@ class ProcessBox:
                     self._grpc_server = GrpcClient.get_client(server_key, secure=self.secure)
                     self._grpc_server.connect()
                     self._grpc_server.wait_connect(5.0)
+                    # now retrieve all services from the server (process)
+                    self._services_definition = self._grpc_server.send_control_channel_command("SERVICES")
         return self._grpc_server
     
     def get_service(self, service_type: str, service_class):
@@ -334,6 +337,8 @@ class EngineServiceWindow(ServiceWindow):
         from navigation_server.navigation_clients.navigation_data_client import EngineClient
         self._client = EngineClient()
         self._grpc_server.add_service(self._client)
+        # now retrieve all engines
+        self._engines = self._client.get_engines()  # returns a list(engine_parameters)
     
     def get_data(self) -> dict:
         """Get engine data for engine ID 0 (single engine per process)."""
@@ -342,7 +347,7 @@ class EngineServiceWindow(ServiceWindow):
             data = self._client.get_data(0)
             if data is None:
                 return {"ok": False, "error": "No engine data available"}
-            params = self._client.get_engine_parameters(0)
+            params = self._engines[0]
             engine_data = {
                 "id": 0,
                 "label": params.label if params else "Engine",
