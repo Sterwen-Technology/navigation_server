@@ -303,16 +303,6 @@
     <div id="toast" class="toast"></div>
     <div id="window-container" class="window-container"></div>
 
-    <div id="console-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="console-title">Console</h2>
-                <button class="modal-close" onclick="closeConsole()" title="Close">&times;</button>
-            </div>
-            <div id="console-body"><div class="empty">t.t("general.loading")</div></div>
-        </div>
-    </div>
-
     <div id="log-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -333,28 +323,7 @@
                 <h2 data-i18n="network.title">Network Configuration</h2>
                 <button class="modal-close" onclick="closeNetwork()" title="Close">&times;</button>
             </div>
-            <div id="network-body"><div class="empty">t.t("general.loading")</div></div>
-        </div>
-    </div>
-    </div>
-
-    <div id="nmea2000-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="nmea2000-title" data-i18n="nmea2000.title">NMEA2000</h2>
-                <button class="modal-close" onclick="closeNmea2000()" title="Close">&times;</button>
-            </div>
-            <div id="nmea2000-body"><div class="empty">t.t("general.loading")</div></div>
-        </div>
-    </div>
-
-    <div id="engine-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="engine-title">Engine Data</h2>
-                <button class="modal-close" onclick="closeEngine()" title="Close">&times;</button>
-            </div>
-            <div id="engine-body"><div class="empty">t.t("general.loading")</div></div>
+            <div id="network-body"><div class="empty" data-i18n="general.loading">Loading...</div></div>
         </div>
     </div>
 
@@ -364,95 +333,129 @@
         let autoTimer = null;
         let isRefreshing = false;
         let autoEnabled = true;
-        let consoleProcess = null;
-        let consoleTimer = null;
 
         // Window Management System
         let windowZIndex = 1000;
-        let activeWindows = new Map(); // windowId -> {element, processName, serviceType}
+        let activeWindows = new Map(); // windowKey -> {element, body, header, processName, serviceType, cleanup}
         let isDragging = null;
         let dragOffset = {x: 0, y: 0};
+        let nextWindowPos = {x: 80, y: 80};
 
         const $ = (id) => document.getElementById(id);
 
-        // Window Management Functions
-        function generateWindowId(serviceType, processName) {
-            return `win-${serviceType}-${processName}-${Date.now()}`;
+        function windowKey(serviceType, processName) {
+            return `${serviceType}:${processName}`;
         }
 
-        function createWindow(serviceType, processName, title, contentId) {
-            const windowId = generateWindowId(serviceType, processName);
-            const bodyEl = $(contentId);
-            
+        // Window Management Functions
+        // If a single-instance window for (serviceType, processName) is already
+        // open, bring it to the front and return its record; otherwise null.
+        function focusWindow(serviceType, processName) {
+            const key = windowKey(serviceType, processName);
+            const win = activeWindows.get(key);
+            if (win) {
+                win.element.style.zIndex = ++windowZIndex;
+                return win;
+            }
+            return null;
+        }
+
+        // Creates an independent, draggable service window. Only one window per
+        // (serviceType, processName) exists at a time: calling createWindow again
+        // for an open service reuses that window. `onClose` (optional) is invoked
+        // when the window closes so callers stop refresh timers.
+        function createWindow(serviceType, processName, title, onClose) {
+            const existing = focusWindow(serviceType, processName);
+            if (existing) {
+                existing.headerTitle.textContent = title;
+                return existing;
+            }
+
+            const key = windowKey(serviceType, processName);
             const windowEl = document.createElement('div');
-            windowEl.id = windowId;
             windowEl.className = 'service-window';
-            windowEl.style.left = '100px';
-            windowEl.style.top = '100px';
+            const pos = nextWindowPos;
+            windowEl.style.left = pos.x + 'px';
+            windowEl.style.top = pos.y + 'px';
+            windowEl.style.width = '520px';
             windowEl.style.zIndex = ++windowZIndex;
-            
+            pos.x = (pos.x + 28) % (window.innerWidth - 560);
+            pos.y = (pos.y + 28) % (window.innerHeight - 260);
+
             const headerEl = document.createElement('div');
             headerEl.className = 'window-header';
             headerEl.innerHTML = `
                 <div class="window-title-bar">
-                    <h2>${escapeHtml(title)}</h2>
+                    <h2></h2>
                 </div>
                 <div class="window-controls">
-                    <button class="window-btn minimize" onclick="minimizeWindow('${windowId}')" title="Minimize">_</button>
-                    <button class="window-btn close" onclick="closeWindow('${windowId}')" title="Close">\u00d7</button>
+                    <button class="window-btn minimize" title="Minimize">_</button>
+                    <button class="window-btn close" title="Close">\u00d7</button>
                 </div>
             `;
-            
-            const bodyWrapper = document.createElement('div');
-            bodyWrapper.className = 'window-body';
-            bodyWrapper.appendChild(bodyEl);
-            
+            const headerTitle = headerEl.querySelector('h2');
+            headerTitle.textContent = title;
+
+            const bodyEl = document.createElement('div');
+            bodyEl.className = 'window-body';
+
             const resizeHandle = document.createElement('div');
             resizeHandle.className = 'window-resize-handle';
-            
+
             windowEl.appendChild(headerEl);
-            windowEl.appendChild(bodyWrapper);
+            windowEl.appendChild(bodyEl);
             windowEl.appendChild(resizeHandle);
-            
-            const container = $("window-container");
-            container.appendChild(windowEl);
-            
-            activeWindows.set(windowId, {
+            $("window-container").appendChild(windowEl);
+
+            const record = {
                 element: windowEl,
+                body: bodyEl,
+                header: headerEl,
+                headerTitle: headerTitle,
                 processName: processName,
                 serviceType: serviceType,
-                contentId: contentId
+                cleanup: null,
+                _onClose: onClose || null
+            };
+
+            headerEl.querySelector('.window-btn.minimize').addEventListener('click', (e) => {
+                e.stopPropagation();
+                minimizeWindow(key);
             });
-            
-            // Make draggable
-            makeDraggable(windowEl, headerEl);
-            
-            // Bring to front on click
+            headerEl.querySelector('.window-btn.close').addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeWindow(key);
+            });
+
             windowEl.addEventListener('mousedown', () => {
                 windowEl.style.zIndex = ++windowZIndex;
             });
-            
-            return windowId;
+
+            makeDraggable(windowEl, headerEl);
+            makeResizable(windowEl, resizeHandle);
+
+            activeWindows.set(key, record);
+            return record;
         }
 
-        function closeWindow(windowId) {
-            const win = activeWindows.get(windowId);
-            if (win) {
-                win.element.remove();
-                activeWindows.delete(windowId);
+        function closeWindow(key) {
+            const win = activeWindows.get(key);
+            if (!win) return;
+            if (win._onClose) {
+                try { win._onClose(win); } catch (e) { console.error('window cleanup error', e); }
             }
+            if (win.cleanup) {
+                try { win.cleanup(); } catch (e) { console.error('window cleanup error', e); }
+            }
+            win.element.remove();
+            activeWindows.delete(key);
         }
 
-        function minimizeWindow(windowId) {
-            const win = activeWindows.get(windowId);
-            if (win) {
-                const body = win.element.querySelector('.window-body');
-                if (body.style.display === 'none') {
-                    body.style.display = 'block';
-                } else {
-                    body.style.display = 'none';
-                }
-            }
+        function minimizeWindow(key) {
+            const win = activeWindows.get(key);
+            if (!win) return;
+            const body = win.body;
+            body.style.display = body.style.display === 'none' ? '' : 'none';
         }
 
         function makeDraggable(element, handle) {
@@ -465,6 +468,31 @@
                 dragOffset.y = e.clientY - element.getBoundingClientRect().top;
                 element.style.cursor = 'move';
                 e.preventDefault();
+            });
+        }
+
+        function makeResizable(element, handle) {
+            let resizing = null;
+            let start = {x: 0, y: 0, w: 0, h: 0};
+            const onMove = (e) => {
+                if (!resizing) return;
+                resizing.style.width = Math.max(300, start.w + (e.clientX - start.x)) + 'px';
+                resizing.style.height = Math.max(200, start.h + (e.clientY - start.y)) + 'px';
+            };
+            const onUp = () => {
+                if (!resizing) return;
+                resizing = null;
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            };
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                resizing = element;
+                const rect = element.getBoundingClientRect();
+                start = {x: e.clientX, y: e.clientY, w: rect.width, h: rect.height};
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
             });
         }
 
@@ -666,32 +694,30 @@
 
         // --- Console view ----------------------------------------------------
         async function openConsole(processName) {
-            const modal = $("console-modal");
-            const title = $("console-title");
-            title.textContent = `Console — ${processName}`;
-            $("console-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
-            modal.classList.add("show");
-            consoleProcess = processName;
-            await refreshConsole();
+            const win = createWindow('console', processName, `Console — ${processName}`, (w) => {
+                if (w.timer) { clearTimeout(w.timer); w.timer = null; }
+            });
+            win.processName = processName;
+            win.body.innerHTML = `<div class="empty">${t.t("general.loading")}</div>`;
+            await refreshConsole(win);
         }
 
-        async function refreshConsole() {
-            if (!consoleProcess) return;
-            const processName = consoleProcess;
+        async function refreshConsole(win) {
+            if (!win || activeWindows.get(windowKey('console', win.processName)) !== win) return;
+            const processName = win.processName;
             try {
                 const d = await apiGet(`/api/console/${encodeURIComponent(processName)}`);
-                if (consoleProcess === processName) {
-                    renderConsole(d, processName);
-                    consoleTimer = setTimeout(refreshConsole, REFRESH_INTERVAL);
+                if (activeWindows.get(windowKey('console', processName)) === win) {
+                    renderConsole(d, processName, win.body);
+                    win.timer = setTimeout(() => refreshConsole(win), REFRESH_INTERVAL);
                 }
             } catch (e) {
-                $("console-body").innerHTML = `<div class="empty">Erreur: ${escapeHtml(e.message)}</div>`;
-                consoleTimer = setTimeout(refreshConsole, REFRESH_INTERVAL);
+                win.body.innerHTML = `<div class="empty">Erreur: ${escapeHtml(e.message)}</div>`;
+                win.timer = setTimeout(() => refreshConsole(win), REFRESH_INTERVAL);
             }
         }
 
-        function renderConsole(d, processName) {
-            const body = $("console-body");
+        function renderConsole(d, processName, body) {
             if (!d.ok) {
                 body.innerHTML = `<div class="empty">${escapeHtml(d.error || "Erreur console")}</div>`;
                 t.translateAllElements();
@@ -769,19 +795,17 @@
             try {
                 const r = await apiPost("/api/coupler", { process, coupler, cmd });
                 toast(`${cmd} ${coupler}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
-                if (r.ok) setTimeout(() => openConsole(process), 800);
+                if (r.ok) {
+                    const win = focusWindow('console', process);
+                    if (win) setTimeout(() => refreshConsole(win), 800);
+                }
             } catch (e) {
                 toast(t.t("toast.error", {error: e.message}), false);
             }
         }
 
-        function closeConsole() {
-            $("console-modal").classList.remove("show");
-            consoleProcess = null;
-            if (consoleTimer) {
-                clearTimeout(consoleTimer);
-                consoleTimer = null;
-            }
+        function closeConsole(processName) {
+            closeWindow(windowKey('console', processName));
         }
 
         function toggleAuto() {
@@ -868,7 +892,7 @@
 
         async function openNetwork() {
             $("network-modal").classList.add("show");
-            $("network-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
+            $("network-body").innerHTML = `<div class="empty">${t.t("general.loading")}</div>`;
             try {
                 const [status, configs, connections] = await Promise.all([
                     apiGet("/api/network"),
@@ -980,64 +1004,53 @@
         function closeNetwork() {
             $("network-modal").classList.remove("show");
         }
-        function closeNmea2000() {
-            $("nmea2000-modal").classList.remove("show");
-            nmea2000Process = null;
-            nmea2000InDeviceView = false;
-        }
-
         // --- NMEA2000 view ----------------------------------------------------
-        let nmea2000Process = null;
-        let nmea2000InDeviceView = false;
+        // Single NMEA2000 window per process. The device (PGN stats) view is an
+        // in-place navigation within the same window; while in device view the
+        // list auto-refresh is paused and resumes when returning to the list.
+        function stopNmea2000Refresh(win) {
+            if (win && win.refreshTimer) {
+                clearTimeout(win.refreshTimer);
+                win.refreshTimer = null;
+            }
+        }
 
-        let nmea2000RefreshInterval = null;
-        
-        function startNmea2000Refresh(processName) {
-            if (nmea2000RefreshInterval) {
-                clearInterval(nmea2000RefreshInterval);
-                nmea2000RefreshInterval = null;
-            }
-            nmea2000RefreshInterval = setInterval(async () => {
-                try {
-                    const data = await apiGet("/api/nmea2000/" + encodeURIComponent(processName) + "/status");
-                    renderNmea2000(data, processName);
-                } catch (e) {
-                    console.error("NMEA2000 refresh error:", e);
-                }
-            }, REFRESH_INTERVAL);
-        }
-        
-        function stopNmea2000Refresh() {
-            if (nmea2000RefreshInterval) {
-                clearInterval(nmea2000RefreshInterval);
-                nmea2000RefreshInterval = null;
-            }
-        }
-        
         async function openNmea2000(processName) {
-            nmea2000Process = processName;
-            nmea2000InDeviceView = false;
-            $("nmea2000-title").textContent = "NMEA2000 — " + processName;
-            $("nmea2000-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
-            $("nmea2000-modal").classList.add("show");
+            const win = createWindow('nmea2000', processName, "NMEA2000 — " + processName, (w) => {
+                stopNmea2000Refresh(w);
+            });
+            win.processName = processName;
+            win.inDeviceView = false;
+            win.headerTitle.textContent = "NMEA2000 — " + processName;
+            win.body.innerHTML = `<div class="empty">${t.t("general.loading")}</div>`;
+            await refreshNmea2000(win);
+        }
+
+        async function refreshNmea2000(win) {
+            if (!win || activeWindows.get(windowKey('nmea2000', win.processName)) !== win) return;
+            if (win.inDeviceView) {
+                win.refreshTimer = setTimeout(() => refreshNmea2000(win), REFRESH_INTERVAL);
+                return;
+            }
+            const processName = win.processName;
             try {
                 const data = await apiGet("/api/nmea2000/" + encodeURIComponent(processName) + "/status");
-                renderNmea2000(data, processName);
-                startNmea2000Refresh(processName);
+                if (activeWindows.get(windowKey('nmea2000', processName)) === win && !win.inDeviceView) {
+                    renderNmea2000(data, processName, win);
+                    win.refreshTimer = setTimeout(() => refreshNmea2000(win), REFRESH_INTERVAL);
+                }
             } catch (e) {
-                $("nmea2000-body").innerHTML = '<div class="empty">Erreur: ' + escapeHtml(e.message) + '</div>';
+                console.error("NMEA2000 refresh error:", e);
+                win.refreshTimer = setTimeout(() => refreshNmea2000(win), REFRESH_INTERVAL);
             }
         }
-        
-        function closeNmea2000() {
-            stopNmea2000Refresh();
-            $("nmea2000-modal").classList.remove("show");
-            nmea2000Process = null;
-            nmea2000InDeviceView = false;
+
+        function closeNmea2000(processName) {
+            closeWindow(windowKey('nmea2000', processName));
         }
 
-        function renderNmea2000(data, processName) {
-            const body = $("nmea2000-body");
+        function renderNmea2000(data, processName, win) {
+            const body = win.body;
             if (!data.ok) {
                 body.innerHTML = `<div class="empty">${escapeHtml(data.error || "NMEA2000 Error")}</div>`;
                 t.translateAllElements();
@@ -1084,11 +1097,15 @@
         }
 
         async function openNmea2000Device(processName, deviceAddress) {
-            nmea2000InDeviceView = true;
+            const win = focusWindow('nmea2000', processName);
+            if (!win) return;
+            win.inDeviceView = true;
+            win.headerTitle.textContent = "NMEA2000 — " + processName + " — Device " + deviceAddress;
+            win.body.innerHTML = `<div class="empty">${t.t("general.loading")}</div>`;
             try {
                 const data = await apiGet("/api/nmea2000/" + encodeURIComponent(processName) + "/device/" + deviceAddress);
                 if (data.ok) {
-                    renderNmea2000Device(data, processName, deviceAddress);
+                    renderNmea2000Device(data, processName, deviceAddress, win);
                 } else {
                     toast(data.error || "Erreur", false);
                 }
@@ -1097,10 +1114,10 @@
             }
         }
 
-        async function renderNmea2000Device(data, processName, deviceAddress) {
-            const title = $("nmea2000-title");
+        async function renderNmea2000Device(data, processName, deviceAddress, win) {
+            const title = win.headerTitle;
             title.textContent = "NMEA2000 — " + processName + " — Device " + deviceAddress;
-            const body = $("nmea2000-body");
+            const body = win.body;
             let html = `<div class="console-section">
                 <h3>NMEA2000 Device</h3>
                 <div class="row">
@@ -1135,9 +1152,9 @@
                 }
                 html += '</div>';
             }
-            html += '<div class="card-actions"><button class="open-btn" onclick="backToNmea2000List()">Back</button></div>';
+            html += `<div class="card-actions"><button class="open-btn" onclick="backToNmea2000List('${escapeHtml(processName)}')">Back</button></div>`;
             body.innerHTML = html;
-        
+
             t.translateAllElements();}
 
         // Simple cache for PGN definitions
@@ -1159,17 +1176,22 @@
             return null;
         }
 
-        function backToNmea2000List() {
-            if (nmea2000Process) {
-                openNmea2000(nmea2000Process);
-            }
+        function backToNmea2000List(processName) {
+            const win = focusWindow('nmea2000', processName);
+            if (!win) return;
+            win.inDeviceView = false;
+            win.headerTitle.textContent = "NMEA2000 — " + processName;
+            refreshNmea2000(win);
         }
 
         async function nmea2000TraceCmd(processName, cmd) {
             try {
                 const r = await apiPost("/api/nmea2000/" + encodeURIComponent(processName) + "/trace", { cmd: cmd });
                 toast(cmd + ": " + (r.ok ? "OK" : (r.error || t.t("toast.failure"))), r.ok);
-                if (r.ok) setTimeout(function() { openNmea2000(processName); }, 800);
+                if (r.ok) {
+                    const win = focusWindow('nmea2000', processName);
+                    if (win && !win.inDeviceView) setTimeout(() => refreshNmea2000(win), 800);
+                }
             } catch (e) {
                 toast(t.t("toast.error", {error: e.message}), false);
             }
@@ -1177,30 +1199,41 @@
 
 
         // --- Engine Dashboard ----------------------------------------------------
-        let engineProcess = null;
-        let engineRefreshInterval = null;
-
-        async function openEngineData(processName) {
-            engineProcess = processName;
-            $("engine-title").textContent = "";
-            $("engine-body").innerHTML = '<div class="empty">t.t("general.loading")</div>';
-            $("engine-modal").classList.add("show");
-            try {
-                const data = await apiGet(`/api/engines`);
-                renderEngineDashboard(data, processName);
-                startEngineRefresh(processName);
-                toggleEngineEventsMode(processName);
-            } catch (e) {
-                $("engine-body").innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
+        // Single Engine window per process; refresh interval and the
+        // runs/events mode are kept on the window record.
+        function stopEngineRefresh(win) {
+            if (win && win.refreshTimer) {
+                clearTimeout(win.refreshTimer);
+                win.refreshTimer = null;
             }
         }
 
-        function startEngineRefresh(processName) {
-            if (engineRefreshInterval) {
-                clearTimeout(engineRefreshInterval);
-                engineRefreshInterval = null;
+        async function openEngineData(processName) {
+            const win = createWindow('engine', processName, t.t("engine.title") || "Engine Data", (w) => {
+                stopEngineRefresh(w);
+            });
+            win.processName = processName;
+            win.eventsMode = 'runs';
+            win.headerTitle.textContent = "";
+            win.body.innerHTML = `<div class="empty">${t.t("general.loading")}</div>`;
+            try {
+                const data = await apiGet(`/api/engines`);
+                renderEngineDashboard(data, processName, win);
+                startEngineRefresh(win);
+                toggleEngineEventsMode(processName);
+            } catch (e) {
+                win.body.innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
             }
+        }
+
+        function startEngineRefresh(win) {
+            if (win.refreshTimer) {
+                clearTimeout(win.refreshTimer);
+                win.refreshTimer = null;
+            }
+            const processName = win.processName;
             async function doRefresh() {
+                if (activeWindows.get(windowKey('engine', processName)) !== win) return;
                 let data = null;
                 let engine = null;
                 try {
@@ -1209,27 +1242,20 @@
                         const engines = data.engines || [];
                         engine = engines.find(e => e.process === processName);
                         if (engine) {
-                            renderEngineDashboard(data, processName);
+                            renderEngineDashboard(data, processName, win);
                         }
                     }
                 } catch (e) {
                     console.error("Engine refresh error:", e);
                 }
                 const delay = (engine && engine.state === "RUNNING") ? 1000 : REFRESH_INTERVAL;
-                engineRefreshInterval = setTimeout(doRefresh, delay);
+                win.refreshTimer = setTimeout(doRefresh, delay);
             }
             doRefresh();
         }
 
-        function stopEngineRefresh() {
-            if (engineRefreshInterval) {
-                clearTimeout(engineRefreshInterval);
-                engineRefreshInterval = null;
-            }
-        }
-
-        function renderEngineDashboard(data, processName) {
-            const body = $("engine-body");
+        function renderEngineDashboard(data, processName, win) {
+            const body = win.body;
             if (!data.ok) {
                 body.innerHTML = `<div class="empty">${escapeHtml(data.error || "Error")}</div>`;
                 t.translateAllElements();
@@ -1248,7 +1274,7 @@
                 return;
             }
             const params = engine.parameters || {};
-            $("engine-title").textContent = `${escapeHtml(engine.label)} ${escapeHtml(engine.model)}`;
+            win.headerTitle.textContent = `${escapeHtml(engine.label)} ${escapeHtml(engine.model)}`;
             const speedPercent = Math.min((engine.speed / params.max_rpm) * 100, 100);
             const voltagePercent = Math.min((engine.alternator_voltage / params.voltage_scale) * 100, 100);
             const tempPercent = Math.min((engine.temperature / params.temperature_scale) * 100, 100);
@@ -1311,28 +1337,29 @@
                     <div class="events-section">
                         <h3>
                             <span data-i18n="engine.history">History</span>
-                            <button class="open-btn compact" onclick="toggleEngineEventsMode('${escapeHtml(processName)}')" id="engine-toggle-btn" data-i18n="engine.show_runs">Show Runs</button>
+                            <button class="open-btn compact" onclick="toggleEngineEventsMode('${escapeHtml(processName)}')" id="engine-toggle-btn-${escapeHtml(processName)}" data-i18n="engine.show_runs">Show Runs</button>
                         </h3>
-                        <div id="engine-events" data-process="${processName}" data-mode="runs"></div>
+                        <div id="engine-events-${escapeHtml(processName)}" data-process="${processName}" data-mode="runs"></div>
                     </div>
                     <div class="card-actions">
-                        <button class="open-btn" onclick="closeEngine()" data-i18n="general.close">Close</button>
+                        <button class="open-btn" onclick="closeEngine('${escapeHtml(processName)}')" data-i18n="general.close">Close</button>
                     </div>
                 </div>
             `;
             t.translateAllElements();
         }
 
-        let engineEventsMode = {};
-
-
         async function toggleEngineEventsMode(processName) {
-            const currentMode = engineEventsMode[processName] || 'runs';
+            const win = focusWindow('engine', processName);
+            if (!win) return;
+            const currentMode = win.eventsMode || 'runs';
             const newMode = currentMode === 'runs' ? 'events' : 'runs';
-            engineEventsMode[processName] = newMode;
-            const btn = $("engine-toggle-btn");
-            btn.textContent = newMode === 'runs' ? t.t("engine.show_events") : t.t("engine.show_runs");
-            btn.setAttribute('data-i18n', newMode === 'runs' ? 'engine.show_events' : 'engine.show_runs');
+            win.eventsMode = newMode;
+            const btn = $(`engine-toggle-btn-${processName}`);
+            if (btn) {
+                btn.textContent = newMode === 'runs' ? t.t("engine.show_events") : t.t("engine.show_runs");
+                btn.setAttribute('data-i18n', newMode === 'runs' ? 'engine.show_events' : 'engine.show_runs');
+            }
             const data = await apiGet(`/api/engine/0`);
             if (data.ok) {
                 renderEngineEvents(data, processName, newMode);
@@ -1340,7 +1367,7 @@
         }
 
         function renderEngineEvents(data, processName, mode) {
-            const container = $("engine-events");
+            const container = $(`engine-events-${processName}`);
             if (!data.ok) {
                 container.innerHTML = `<div class="empty">${escapeHtml(data.error || "Error")}</div>`;
                 t.translateAllElements();
@@ -1406,10 +1433,8 @@
             t.translateAllElements();
         }
 
-        function closeEngine() {
-            stopEngineRefresh();
-            $("engine-modal").classList.remove("show");
-            engineProcess = null;
+        function closeEngine(processName) {
+            closeWindow(windowKey('engine', processName));
         }
 
         window.procCmd = procCmd;
@@ -1425,6 +1450,7 @@
         window.closeNmea2000 = closeNmea2000;
         window.nmea2000TraceCmd = nmea2000TraceCmd;
         window.openNmea2000Device = openNmea2000Device;
+        window.backToNmea2000List = backToNmea2000List;
         window.applyNetworkConfig = applyNetworkConfig;
         window.openConsole = openConsole;
         window.closeConsole = closeConsole;
@@ -1465,14 +1491,5 @@
     document.addEventListener('DOMContentLoaded', initPageTranslations);
     </script>
 
-    <div id="engine-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="engine-title">Engine Data</h2>
-                <button class="modal-close" onclick="closeEngine()" title="Close">&times;</button>
-            </div>
-            <div id="engine-body"><div class="empty">t.t("general.loading")</div></div>
-        </div>
-    </div>
 </body>
 </html>
