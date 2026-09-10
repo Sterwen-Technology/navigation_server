@@ -64,6 +64,8 @@ def _parser():
                    help="Add or update a web user (prompts for password). Requires -wuf")
     p.add_argument("-dwu", "--del_web_user", action="store", type=str, default=None,
                    help="Delete a web user. Requires -wuf")
+    p.add_argument("-cwu", "--change_web_user", action="store", type=str, default=None,
+                   help="Change the password of an existing web user. Requires -wuf")
     p.add_argument("-lwu", "--list_web_users", action="store_true", default=False,
                    help="List web users. Requires -wuf")
 
@@ -186,7 +188,7 @@ class NetworkManagerCli(object):
 
 
 def _manage_web_users(options):
-    """Add, delete or list web users in a credentials file.
+    """Add, change, delete or list web users in a credentials file.
 
     This is a pure local-file operation backed by :class:`UserStore`. The
     password is read from the terminal via :func:`getpass.getpass` so it never
@@ -226,6 +228,27 @@ def _manage_web_users(options):
             print(e)
             return False
         print(f"Web user '{options.add_web_user}' saved to {web_user_file}")
+    if options.change_web_user is not None:
+        acted = True
+        username = options.change_web_user
+        if not store.has_user(username):
+            _logger.error(f"Web user '{username}' not found")
+            return False
+        pwd = getpass.getpass(f"New password for {username}: ")
+        if not pwd:
+            _logger.error("Empty password, password not changed")
+            return False
+        pwd2 = getpass.getpass("Confirm new password: ")
+        if pwd != pwd2:
+            _logger.error("Passwords do not match, password not changed")
+            return False
+        store.set(username, pwd)
+        try:
+            store.save()
+        except FileNotFoundError as e:
+            print(e)
+            return False
+        print(f"Password for web user '{username}' updated in {web_user_file}")
     if options.del_web_user is not None:
         acted = True
         if store.delete(options.del_web_user):
@@ -235,7 +258,7 @@ def _manage_web_users(options):
             _logger.error(f"Web user '{options.del_web_user}' not found")
             return False
     if not acted:
-        _logger.error("No web user action specified (-awu / -dwu / -lwu)")
+        _logger.error("No web user action specified (-awu / -cwu / -dwu / -lwu)")
         return False
     return True
 
@@ -255,7 +278,7 @@ def main():
         _logger.setLevel(logging.WARNING)
 
     # Web user management is a local-file operation that needs no agent.
-    if options.web_user_file is not None or options.add_web_user is not None or options.del_web_user is not None or options.list_web_users:
+    if options.web_user_file is not None or options.add_web_user is not None or options.change_web_user is not None or options.del_web_user is not None or options.list_web_users:
         _manage_web_users(options)
         return
 
