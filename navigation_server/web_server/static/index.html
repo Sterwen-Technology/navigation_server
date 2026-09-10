@@ -111,11 +111,18 @@
         /* Engine Dashboard Styles */
         .engine-dashboard { max-width: 1000px; }
         .dashboard-row { display: flex; gap: 30px; flex-wrap: wrap; margin-bottom: 20px; }
-        .gauge-container { flex: 1; min-width: 200px; }
+        .gauge-container { flex: 1; min-width: 200px; display: flex; justify-content: center; }
         .gauge { text-align: center; }
-                .gauge-svg { width: 100%; height: auto; max-width: 200px; }
+        .gauge-svg { width: 100%; height: auto; max-width: 200px; }
         .status-display { flex: 1; min-width: 180px; max-width: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .status-icon { margin-bottom: 10px; }
+        /* Engine events mode sliding toggle */
+        .events-toggle { position: relative; display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+        .events-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .events-toggle label { padding: 4px 14px; font-size: 0.78rem; cursor: pointer; color: var(--muted); user-select: none; transition: color 0.15s; }
+        .events-toggle input:checked + label { color: var(--text); }
+        .events-toggle .events-toggle-thumb { position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 4px); border-radius: 999px; background: var(--accent); opacity: 0.25; transition: transform 0.2s ease; pointer-events: none; }
+        .events-toggle.mode-events .events-toggle-thumb { transform: translateX(100%); }
         .stats-box { flex: 1; min-width: 200px; max-width: 280px; background: var(--panel-2); border-radius: 8px; padding: 12px; }
         .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
         .stat-row:last-child { border-bottom: none; }
@@ -389,8 +396,8 @@
                     <h2></h2>
                 </div>
                 <div class="window-controls">
-                    <button class="window-btn minimize" title="Minimize">_</button>
-                    <button class="window-btn close" title="Close">\u00d7</button>
+                    <button class="window-btn minimize" title="Minimize"></button>
+                    <button class="window-btn close" title="Close"></button>
                 </div>
             `;
             const headerTitle = headerEl.querySelector('h2');
@@ -1220,7 +1227,7 @@
                 const data = await apiGet(`/api/engines`);
                 renderEngineDashboard(data, processName, win);
                 startEngineRefresh(win);
-                toggleEngineEventsMode(processName);
+                await setEngineEventsMode(processName, 'runs');
             } catch (e) {
                 win.body.innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
             }
@@ -1242,13 +1249,23 @@
                         const engines = data.engines || [];
                         engine = engines.find(e => e.process === processName);
                         if (engine) {
+                            // Preserve the events section across the dashboard refresh so
+                            // it is not wiped/flashed on every refresh tick.
+                            const evContainer = $(`engine-events-${processName}`);
+                            const savedEventsHtml = evContainer ? evContainer.innerHTML : null;
+                            const savedMode = win.eventsMode || 'runs';
                             renderEngineDashboard(data, processName, win);
+                            win.eventsMode = savedMode;
+                            if (savedEventsHtml !== null) {
+                                const restored = $(`engine-events-${processName}`);
+                                if (restored) restored.innerHTML = savedEventsHtml;
+                            }
                         }
                     }
                 } catch (e) {
                     console.error("Engine refresh error:", e);
                 }
-                const delay = (engine && engine.state === "RUNNING") ? 1000 : REFRESH_INTERVAL;
+                const delay = (engine && engine.state === "ENGINE_RUNNING") ? 1000 : REFRESH_INTERVAL;
                 win.refreshTimer = setTimeout(doRefresh, delay);
             }
             doRefresh();
@@ -1275,25 +1292,33 @@
             }
             const params = engine.parameters || {};
             win.headerTitle.textContent = `${escapeHtml(engine.label)} ${escapeHtml(engine.model)}`;
-            const speedPercent = Math.min((engine.speed / params.max_rpm) * 100, 100);
-            const voltagePercent = Math.min((engine.alternator_voltage / params.voltage_scale) * 100, 100);
-            const tempPercent = Math.min((engine.temperature / params.temperature_scale) * 100, 100);
-            const voltageColor = engine.alternator_voltage >= params.voltage_high_alert || engine.alternator_voltage <= params.voltage_low_alert ? "var(--red)" : "var(--green)";
-            const tempColor = engine.temperature >= params.temperature_high_alert ? "var(--red)" : "var(--green)";
-            const stateSymbol = engine.state === "RUNNING" ? "▶️" : engine.state === "STOPPED" ? "■" : "◆";
-            const lastTime = engine.last_start_time ? new Date(engine.last_start_time).toLocaleString() : (engine.last_stop_time ? new Date(engine.last_stop_time).toLocaleString() : "N/A");
+            const isRunning = engine.state === "ENGINE_RUNNING";
+            const isOff = engine.state === "ENGINE_OFF";
+            const speedPercent = isOff ? 0 : Math.min((engine.speed / (params.max_rpm || 1)) * 100, 100);
+            const voltagePercent = isOff ? 0 : Math.min((engine.alternator_voltage / (params.voltage_scale || 1)) * 100, 100);
+            const tempPercent = isOff ? 0 : Math.min((engine.temperature / (params.temperature_scale || 1)) * 100, 100);
+            const voltageColor = isOff ? "var(--muted)" : (engine.alternator_voltage >= params.voltage_high_alert || engine.alternator_voltage <= params.voltage_low_alert ? "var(--red)" : "var(--green)");
+            const tempColor = isOff ? "var(--muted)" : (engine.temperature >= params.temperature_high_alert ? "var(--red)" : "var(--green)");
+            const stateSymbol = isRunning ? "▶️" : isOff ? "■" : "◆";
+            const val = (v) => isOff ? "--" : fmt(v);
+            // Tachometer: 270-degree arc from 7 o'clock (RPM=0) to 5 o'clock (100%),
+            // with the bottom 90-degree gap neutralised in a distinct color. The green
+            // arc represents the actual speed.
+            const R = 45, C = 2 * Math.PI * R;        // circumference
+            const ARC = C * (270 / 360);             // active 270deg arc length
+            const GAP = C - ARC;                     // neutralised bottom gap
+            const FILL = ARC * (speedPercent / 100);// green fill portion of the arc
             body.innerHTML = `
                 <div class="engine-dashboard">
                     <div class="dashboard-row">
                         <div class="gauge-container">
                             <div class="gauge">
                                 <svg viewBox="0 0 100 100" class="gauge-svg">
-                                    <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border)" stroke-width="8" stroke-dasharray="282.7" />
-                                    <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="8" 
-                                            stroke-dasharray="${speedPercent * 2.827}" stroke-dashoffset="${(100 - speedPercent) * 2.827}" 
-                                            transform="rotate(-210 50 50)" />
-                                    <text x="50" y="65" text-anchor="middle" font-size="14" fill="var(--text)">${fmt(engine.speed)}</text>
-                                    <text x="50" y="82" text-anchor="middle" font-size="10" fill="var(--muted)">RPM</text>
+                                    <circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--panel-2)" stroke-width="8" stroke-dasharray="${GAP} ${ARC}" transform="rotate(45 50 50)" />
+                                    <circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--border)" stroke-width="8" stroke-dasharray="${ARC} ${GAP}" transform="rotate(135 50 50)" />
+                                    <circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--green)" stroke-width="8" stroke-dasharray="${FILL} ${C}" transform="rotate(135 50 50)" />
+                                    <text x="50" y="62" text-anchor="middle" font-size="15" fill="var(--text)">${val(engine.speed)}</text>
+                                    <text x="50" y="78" text-anchor="middle" font-size="10" fill="var(--muted)">RPM</text>
                                 </svg>
                             </div>
                         </div>
@@ -1310,14 +1335,14 @@
                             <div class="bar-container">
                                 <div class="bar-fill" style="height: ${voltagePercent}%; background: ${voltageColor};"></div>
                             </div>
-                            <div class="bar-value">${fmt(engine.alternator_voltage)} V</div>
+                            <div class="bar-value">${val(engine.alternator_voltage)} V</div>
                         </div>
                         <div class="bar-graph">
                             <div class="bar-label" data-i18n="engine.temperature">Temperature</div>
                             <div class="bar-container">
                                 <div class="bar-fill" style="height: ${tempPercent}%; background: ${tempColor};"></div>
                             </div>
-                            <div class="bar-value">${fmt(engine.temperature)} °C</div>
+                            <div class="bar-value">${val(engine.temperature)} °C</div>
                         </div>
                         <div class="stats-box">
                             <div class="stat-row">
@@ -1335,11 +1360,17 @@
                         </div>
                     </div>
                     <div class="events-section">
-                        <h3>
+                        <h3 style="display:flex; align-items:center; gap:12px;">
                             <span data-i18n="engine.history">History</span>
-                            <button class="open-btn compact" onclick="toggleEngineEventsMode('${escapeHtml(processName)}')" id="engine-toggle-btn-${escapeHtml(processName)}" data-i18n="engine.show_runs">Show Runs</button>
+                            <div class="events-toggle ${win.eventsMode === 'events' ? 'mode-events' : ''}" id="engine-toggle-${escapeHtml(processName)}">
+                                <span class="events-toggle-thumb"></span>
+                                <input type="radio" name="events-mode-${escapeHtml(processName)}" id="events-runs-${escapeHtml(processName)}" ${win.eventsMode === 'runs' ? 'checked' : ''}>
+                                <label for="events-runs-${escapeHtml(processName)}" data-i18n="engine.show_runs">Runs</label>
+                                <input type="radio" name="events-mode-${escapeHtml(processName)}" id="events-events-${escapeHtml(processName)}" ${win.eventsMode === 'events' ? 'checked' : ''}>
+                                <label for="events-events-${escapeHtml(processName)}" data-i18n="engine.show_events">Events</label>
+                            </div>
                         </h3>
-                        <div id="engine-events-${escapeHtml(processName)}" data-process="${processName}" data-mode="runs"></div>
+                        <div id="engine-events-${escapeHtml(processName)}" data-process="${processName}" data-mode="${win.eventsMode || 'runs'}"><div class="empty" data-i18n="general.loading">Loading...</div></div>
                     </div>
                     <div class="card-actions">
                         <button class="open-btn" onclick="closeEngine('${escapeHtml(processName)}')" data-i18n="general.close">Close</button>
@@ -1347,27 +1378,33 @@
                 </div>
             `;
             t.translateAllElements();
+            const rRuns = $(`events-runs-${processName}`);
+            const rEvents = $(`events-events-${processName}`);
+            if (rRuns) rRuns.addEventListener('change', () => setEngineEventsMode(processName, 'runs'));
+            if (rEvents) rEvents.addEventListener('change', () => setEngineEventsMode(processName, 'events'));
         }
 
-        async function toggleEngineEventsMode(processName) {
+        async function setEngineEventsMode(processName, mode) {
             const win = focusWindow('engine', processName);
             if (!win) return;
-            const currentMode = win.eventsMode || 'runs';
-            const newMode = currentMode === 'runs' ? 'events' : 'runs';
-            win.eventsMode = newMode;
-            const btn = $(`engine-toggle-btn-${processName}`);
-            if (btn) {
-                btn.textContent = newMode === 'runs' ? t.t("engine.show_events") : t.t("engine.show_runs");
-                btn.setAttribute('data-i18n', newMode === 'runs' ? 'engine.show_events' : 'engine.show_runs');
+            win.eventsMode = mode;
+            const toggleEl = $(`engine-toggle-${processName}`);
+            if (toggleEl) toggleEl.classList.toggle('mode-events', mode === 'events');
+            const container = $(`engine-events-${processName}`);
+            if (container) {
+                container.setAttribute('data-mode', mode);
+                container.innerHTML = `<div class="empty" data-i18n="general.loading">Loading...</div>`;
+                t.translateAllElements();
             }
             const data = await apiGet(`/api/engine/0`);
             if (data.ok) {
-                renderEngineEvents(data, processName, newMode);
+                renderEngineEvents(data, processName, mode);
             }
         }
 
         function renderEngineEvents(data, processName, mode) {
             const container = $(`engine-events-${processName}`);
+            if (!container) return;
             if (!data.ok) {
                 container.innerHTML = `<div class="empty">${escapeHtml(data.error || "Error")}</div>`;
                 t.translateAllElements();
@@ -1463,7 +1500,7 @@
 
         window.openEngineData = openEngineData;
         window.closeEngine = closeEngine;
-        window.toggleEngineEventsMode = toggleEngineEventsMode;
+        window.setEngineEventsMode = setEngineEventsMode;
         $("refresh-btn").addEventListener("click", refresh);
         $("auto-refresh").addEventListener("change", toggleAuto);
         refresh();
