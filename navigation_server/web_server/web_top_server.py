@@ -21,7 +21,7 @@ import logging
 
 from navigation_server.router_common import MessageServerGlobals, GenericTopServer
 from navigation_server.router_common.configuration import Parameters
-from .web_server_impl import NavigationWebServer
+from .web_server_impl import NavigationWebServer, Authenticator
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -63,6 +63,16 @@ class WebTopServer(GenericTopServer):
         # Get language from configuration
         language = config.get_option('language', 'en')
 
+        # Optional web API authentication. The 'auth' section of the web server
+        # YAML block (a dict) is retrieved as a raw dict via getv: the credentials
+        # file it points to lives on the device, never in the repository.
+        auth_config = opts.getv('auth')
+        authenticator = Authenticator.from_config(auth_config if isinstance(auth_config, dict) else None)
+        if authenticator.enabled:
+            _logger.info("Web API authentication enabled")
+        else:
+            _logger.info("Web API authentication disabled")
+
         self._web_server = NavigationWebServer(
             host=web_host,
             port=web_port,
@@ -70,6 +80,7 @@ class WebTopServer(GenericTopServer):
             grpc_port=grpc_port,
             secure=secure,
             language=language,
+            auth=authenticator,
         )
 
     def start(self) -> bool:

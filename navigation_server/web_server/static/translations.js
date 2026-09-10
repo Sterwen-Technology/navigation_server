@@ -131,6 +131,16 @@ const TRANSLATIONS = {
         'general.unknown': 'Unknown',
         'general.msg': 'msg',
         'general.per_second': '/s',
+        'general.close': 'Close',
+
+        // Authentication
+        'auth.title': 'Sign in',
+        'auth.username': 'Username',
+        'auth.password': 'Password',
+        'auth.signin': 'Sign in',
+        'auth.invalid': 'Invalid username or password',
+        'auth.error': 'Authentication error',
+        'auth.session_expired': 'Session expired, please sign in again',
         
         // Engine
         'engine.title': 'Engine Data',
@@ -286,6 +296,16 @@ const TRANSLATIONS = {
         'general.unknown': 'Inconnu',
         'general.msg': 'msg',
         'general.per_second': '/s',
+        'general.close': 'Fermer',
+
+        // Authentication
+        'auth.title': 'Connexion',
+        'auth.username': 'Utilisateur',
+        'auth.password': 'Mot de passe',
+        'auth.signin': 'Se connecter',
+        'auth.invalid': 'Utilisateur ou mot de passe invalide',
+        'auth.error': 'Erreur d\'authentification',
+        'auth.session_expired': 'Session expiree, veuillez vous reconnecter',
         
         // Engine
         'engine.title': 'Donnees moteur',
