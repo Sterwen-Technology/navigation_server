@@ -421,6 +421,22 @@ class EngineServiceWindow(ServiceWindow):
             events = self._client.get_events(engine_id)
             runs = self._client.get_runs(engine_id)
             current_run = data.current_run if data.current_run else None
+            runs_list = []
+            for r in (runs if runs else []):
+                _logger.debug(
+                    f"Engine {self.process_name} run #{r.start_time} "
+                    f"raw protobuf duration={r._msg.duration} start={r.start_time} stop={r.stop_time}"
+                )
+                runs_list.append({
+                    "start_time": r.start_time,
+                    "stop_time": r.stop_time,
+                    "total_hours": round(r.total_hours / 3600.0, 1),  # Seconds to hours, 1 decimal
+                    "duration": round(r.duration / 3600.0, 2),  # Seconds to hours, 2 decimal
+                    "average_speed": round(r.average_speed, 0),
+                    "max_speed": round(r.max_speed, 0),
+                    "max_temperature": round(r.max_temperature - 273.15, 0),  # Kelvin to Celsius
+                    "alternator_voltage": round(r.alternator_voltage, 2),
+                })
             return {
                 "ok": True,
                 "engine_id": engine_id,
@@ -450,16 +466,7 @@ class EngineServiceWindow(ServiceWindow):
                     "current_state": e.current_state,
                     "previous_state": e.previous_state,
                 } for e in (events if events else [])],
-                "runs": [{
-                    "start_time": r.start_time,
-                    "stop_time": r.stop_time,
-                    "total_hours": round(r.total_hours / 3600.0, 1),  # Seconds to hours, 1 decimal
-                    "duration": round(r.duration / 3600.0, 2),  # Seconds to hours, 2 decimal
-                    "average_speed": round(r.average_speed, 0),
-                    "max_speed": round(r.max_speed, 0),
-                    "max_temperature": round(r.max_temperature - 273.15, 0),  # Kelvin to Celsius
-                    "alternator_voltage": round(r.alternator_voltage, 2),
-                } for r in (runs if runs else [])],
+                "runs": runs_list,
             }
         except GrpcAccessException:
             return {"ok": False, "error": "Engine data call failed"}
