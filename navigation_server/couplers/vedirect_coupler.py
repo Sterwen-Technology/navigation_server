@@ -297,6 +297,7 @@ class VEDirectHEXParam:
     and implments encoding and decoding the values
     '''
     def __init__(self, register:int, name:str, description:str, v_type, scale: float=1.0):
+        pass
 
 
 class VEDirectMsg(NavGenericMsg):
