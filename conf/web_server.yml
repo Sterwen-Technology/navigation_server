@@ -22,6 +22,15 @@ connect_agent: false
 enable_secure_grpc: false
 client_certificate: nav_ca_cert_stnc800a003.pem
 language: en
+# Optional web API authentication. When enabled, every /api/* route except
+# /api/login requires a valid session cookie. Credentials are stored ONLY in
+# the device-local credentials_file (never in this repository); use agent_cli
+# (-wuf <file> -awu <user>) to create users. Omit the whole 'auth' block or
+# set enabled to false to disable authentication (the default).
+# auth:
+#     enabled: true
+#     credentials_file: /etc/navigation_server/web_users
+#     session_timeout: 3600
 features:
     - web_server
 servers:

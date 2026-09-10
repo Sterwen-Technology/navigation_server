@@ -13,11 +13,13 @@ import sys
 import os
 import logging
 import time
+import getpass
 from argparse import ArgumentParser
 from curses.ascii import isdigit
 
 from navigation_server.router_common import GrpcClient, AgentClient, GrpcAccessException
 from navigation_server.navigation_clients import NetworkClient
+from navigation_server.web_server.web_server_impl import UserStore
 
 _logger = logging.getLogger("ShipDataServer")
 
@@ -54,6 +56,16 @@ def _parser():
                    help=" Network Global configuration to be set. Requires the -n flag to be present")
     p.add_argument("-t", "--test",action="store_true", default=False,
                    help="Perform the test section")
+    # Web user management. The credentials file is a device-local file
+    # referenced by the web server YAML; no password is stored in source.
+    p.add_argument("-wuf", "--web_user_file", action="store", type=str, default=None,
+                   help="Path to the web users credentials file (for user management)")
+    p.add_argument("-awu", "--add_web_user", action="store", type=str, default=None,
+                   help="Add or update a web user (prompts for password). Requires -wuf")
+    p.add_argument("-dwu", "--del_web_user", action="store", type=str, default=None,
+                   help="Delete a web user. Requires -wuf")
+    p.add_argument("-lwu", "--list_web_users", action="store_true", default=False,
+                   help="List web users. Requires -wuf")
 
     return p
 
@@ -173,6 +185,54 @@ class NetworkManagerCli(object):
         self._status = self._client.network_status('update')
 
 
+def _manage_web_users(options):
+    """Add, delete or list web users in a credentials file.
+
+    This is a pure local-file operation backed by :class:`UserStore`. The
+    password is read from the terminal via :func:`getpass.getpass` so it never
+    appears on the command line.
+    """
+    if options.web_user_file is None:
+        _logger.error("--web_user_file is required for web user management")
+        return False
+    store = UserStore(options.web_user_file)
+    acted = False
+    if options.list_web_users:
+        acted = True
+        users = store.list_users()
+        if not users:
+            print("No web users defined")
+        else:
+            print("Web users:")
+            for u in users:
+                print(f"\t{u}")
+    if options.add_web_user is not None:
+        acted = True
+        pwd = getpass.getpass(f"Password for {options.add_web_user}: ")
+        if not pwd:
+            _logger.error("Empty password, user not added")
+            return False
+        pwd2 = getpass.getpass("Confirm password: ")
+        if pwd != pwd2:
+            _logger.error("Passwords do not match, user not added")
+            return False
+        store.set(options.add_web_user, pwd)
+        store.save()
+        print(f"Web user '{options.add_web_user}' saved to {options.web_user_file}")
+    if options.del_web_user is not None:
+        acted = True
+        if store.delete(options.del_web_user):
+            store.save()
+            print(f"Web user '{options.del_web_user}' deleted from {options.web_user_file}")
+        else:
+            _logger.error(f"Web user '{options.del_web_user}' not found")
+            return False
+    if not acted:
+        _logger.error("No web user action specified (-awu / -dwu / -lwu)")
+        return False
+    return True
+
+
 def main():
     options = Options(parser)
     # logger setup => stream handler for now
@@ -186,6 +246,11 @@ def main():
         _logger.setLevel(logging.INFO)
     else:
         _logger.setLevel(logging.WARNING)
+
+    # Web user management is a local-file operation that needs no agent.
+    if options.web_user_file is not None:
+        _manage_web_users(options)
+        return
 
     # Now we try to connect to the server
     secure_grpc = False

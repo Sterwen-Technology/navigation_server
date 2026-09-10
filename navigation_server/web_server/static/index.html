@@ -236,6 +236,24 @@
             font-size: 1.5rem; cursor: pointer; padding: 0 8px;
         }
         .modal-close:hover { color: var(--text); }
+        .login-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 12px; max-width: 360px; margin: 80px auto 0;
+            padding: 24px;
+        }
+        .login-card h2 { margin: 0 0 16px 0; color: var(--accent); font-size: 1.1rem; }
+        .login-card label {
+            display: block; font-size: 0.8rem; color: var(--muted);
+            margin: 10px 0 4px;
+        }
+        .login-card input {
+            width: 100%; padding: 8px 10px; border-radius: 6px;
+            border: 1px solid var(--border); background: var(--bg);
+            color: var(--text); font-size: 0.9rem; box-sizing: border-box;
+        }
+        .login-card input:focus { outline: none; border-color: var(--accent); }
+        .login-card button { width: 100%; margin-top: 16px; }
+        .login-error { color: var(--red); font-size: 0.82rem; min-height: 1.2em; margin-top: 8px; }
         .console-section { margin-bottom: 24px; }
         .console-section h3 {
             font-size: 0.95rem; color: var(--muted); margin: 0 0 12px 0;
@@ -334,6 +352,21 @@
                 <button class="modal-close" onclick="closeNetwork()" title="Close">&times;</button>
             </div>
             <div id="network-body"><div class="empty" data-i18n="general.loading">Loading...</div></div>
+        </div>
+    </div>
+
+    <!-- Login overlay: shown only when the backend reports auth required (401) -->
+    <div id="login-overlay" class="modal">
+        <div class="login-card">
+            <h2 data-i18n="auth.title">Sign in</h2>
+            <form id="login-form" autocomplete="on">
+                <label for="login-username" data-i18n="auth.username">Username</label>
+                <input id="login-username" name="username" type="text" required autocomplete="username" autofocus>
+                <label for="login-password" data-i18n="auth.password">Password</label>
+                <input id="login-password" name="password" type="password" required autocomplete="current-password">
+                <div id="login-error" class="login-error"></div>
+                <button type="submit" id="login-submit" data-i18n="auth.signin">Sign in</button>
+            </form>
         </div>
     </div>
 
@@ -527,18 +560,73 @@
             setTimeout(() => toastEl.classList.remove("show"), 3500);
         }
 
+        // Authentication: when the backend returns 401 we show the login
+        // overlay, await a successful login, then replay the original request.
+        // Cookies travel automatically with same-origin fetch(), so once the
+        // session cookie is set no token handling is needed on the client.
+        let loginResolver = null; // resolves once a login attempt succeeds
+
+        function showLoginOverlay() {
+            $("login-overlay").classList.add("show");
+            const u = $("login-username");
+            if (u) u.focus();
+        }
+
+        function hideLoginOverlay() {
+            $("login-overlay").classList.remove("show");
+            const err = $("login-error");
+            if (err) err.textContent = "";
+            if (loginResolver) {
+                loginResolver();
+                loginResolver = null;
+            }
+        }
+
+        function awaitLogin() {
+            return new Promise((resolve) => { loginResolver = resolve; });
+        }
+
+        async function performLogin(username, password) {
+            const r = await fetch("/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password }),
+            });
+            const data = await r.json().catch(() => ({}));
+            return r.ok && data.ok;
+        }
+
+        // Intercepts 401: shows the login overlay, waits for a successful
+        // login, then resolves so the caller can retry the request.
+        async function handleAuthFailure() {
+            showLoginOverlay();
+            await awaitLogin();
+        }
+
         async function apiGet(path) {
-            const r = await fetch(path, { cache: "no-store" });
+            let r = await fetch(path, { cache: "no-store" });
+            if (r.status === 401) {
+                await handleAuthFailure();
+                r = await fetch(path, { cache: "no-store" });
+            }
             if (!r.ok) throw new Error(`HTTP ${r.status}`);
             return r.json();
         }
 
         async function apiPost(path, body) {
-            const r = await fetch(path, {
+            let r = await fetch(path, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             });
+            if (r.status === 401) {
+                await handleAuthFailure();
+                r = await fetch(path, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                });
+            }
             return r.json();
         }
 
@@ -1425,7 +1513,7 @@
                     <div class="run-row">
                         <span class="run-date">${new Date(run.start_time).toLocaleString()}</span>
                         <span class="run-date">${run.stop_time ? new Date(run.stop_time).toLocaleString() : "N/A"}</span>
-                    <span class="run-duration">${fmt(run.duration / 60)}</span>
+                    <span class="run-duration">${fmt(Math.round(run.duration / 60))}</span>
                         <span class="run-avg">${fmt(run.average_speed)} RPM</span>
                         <span class="run-max">${fmt(run.max_speed)} RPM</span>
                     </div>
@@ -1506,6 +1594,27 @@
         window.setEngineEventsMode = setEngineEventsMode;
         $("refresh-btn").addEventListener("click", refresh);
         $("auto-refresh").addEventListener("change", toggleAuto);
+        $("login-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const err = $("login-error");
+            err.textContent = "";
+            const u = $("login-username").value;
+            const p = $("login-password").value;
+            const btn = $("login-submit");
+            btn.disabled = true;
+            try {
+                const ok = await performLogin(u, p);
+                if (ok) {
+                    hideLoginOverlay();
+                } else {
+                    err.textContent = t.t("auth.invalid");
+                }
+            } catch (ex) {
+                err.textContent = t.t("auth.error");
+            } finally {
+                btn.disabled = false;
+            }
+        });
         refresh();
 
     
