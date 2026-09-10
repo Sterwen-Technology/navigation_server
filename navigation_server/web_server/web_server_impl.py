@@ -40,6 +40,7 @@ from navigation_server.navigation_clients import NetworkClient
 from navigation_server.navigation_clients.console_client import ConsoleClient
 from navigation_server.navigation_clients.n2k_can_client import NMEA2000CanClient
 from navigation_server.navigation_clients.navigation_data_client import EngineClient
+from navigation_server.navigation_clients.energy_client import MPPT_Client
 from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -696,6 +697,103 @@ class EngineServiceWindow(ServiceWindow):
             return {"ok": False, "error": "Engine service unavailable"}
 
 
+class MPPTServiceWindow(ServiceWindow):
+    """Service window for the MPPT (solar charge controller) service.
+
+    The window exposes three facets of an MPPT device:
+      * device info (semi-static: product id, firmware, serial, state, error,
+        mppt_state, day_max_power, day_power) and its MPPT_parameters,
+      * live output (panel_voltage, voltage, current, panel_power),
+      * trailing power trend (repeated solar_output samples).
+
+    All graphics ranges (bargraph maxima, trend window) are driven by the
+    MPPT_parameters returned by the device, so the frontend scales itself to
+    the configured panel_max_power / panel_max_voltage / max_voltage.
+    """
+
+    def _initialize_client(self):
+        self._client = MPPT_Client()
+        self._grpc_server.add_service(self._client)
+
+    @staticmethod
+    def _parameters_dict(params) -> dict:
+        if params is None:
+            return {}
+        return {
+            "instance": params.instance,
+            "battery": params.battery,
+            "panel_max_power": round(params.panel_max_power, 1),
+            "panel_max_voltage": round(params.panel_max_voltage, 1),
+            "max_voltage": round(params.max_voltage, 1),
+            "trend_duration": round(params.trend_duration, 1),
+            "trend_interval": round(params.trend_interval, 1),
+        }
+
+    def get_data(self) -> dict:
+        """Return device info + parameters + live output for this MPPT process.
+
+        A single 'parameters' command is sent to GetDeviceInfo so the server
+        returns the MPPT_parameters block alongside the semi-static device
+        fields. GetOutput is queried independently for the live readings.
+        """
+        self._ensure_client()
+        try:
+            device = self._client.getDeviceInfo()
+            output = self._client.getOutput()
+            return {
+                "ok": True,
+                "process": self.process_name,
+                "id": device._device.id,
+                "product_id": device.product_id,
+                "firmware": device.firmware,
+                "serial": device.serial,
+                "error": device.error,
+                "state": device.state,
+                "mppt_state": device.mppt_state,
+                "day_max_power": round(device.day_max_power, 1),
+                "day_power": round(device.day_yield, 3),
+                "msg_timestamp": device._device.msg_timestamp,
+                "parameters": self._parameters_dict(device._device.parameters),
+                "output": {
+                    "panel_voltage": round(output.panel_voltage, 2),
+                    "voltage": round(output.voltage, 2),
+                    "current": round(output.current, 2),
+                    "panel_power": round(output.panel_power, 1),
+                },
+            }
+        except GrpcAccessException:
+            return {"ok": False, "error": "MPPT service call failed"}
+
+    def get_trend(self) -> dict:
+        """Return the trailing solar output trend (panel power over time).
+
+        The trend window (duration and sampling interval) is governed by the
+        MPPT_parameters returned with the device info; the server decides how
+        many samples to return.
+        """
+        self._ensure_client()
+        try:
+            trend = self._client.getTrend()
+            values = []
+            for v in (trend.values if trend else []):
+                values.append({
+                    "panel_voltage": round(v.panel_voltage, 2),
+                    "voltage": round(v.voltage, 2),
+                    "current": round(v.current, 2),
+                    "panel_power": round(v.panel_power, 1),
+                })
+            return {
+                "ok": True,
+                "process": self.process_name,
+                "id": trend.id if trend else 0,
+                "nb_values": trend.nb_values if trend else 0,
+                "interval": round(trend.interval, 1) if trend else 0,
+                "values": values,
+            }
+        except GrpcAccessException:
+            return {"ok": False, "error": "MPPT trend call failed"}
+
+
 class NavigationSystemCollector:
     """Wraps the gRPC AgentClient and exposes a plain-dict view of the system.
 
@@ -1158,6 +1256,39 @@ class NavigationSystemCollector:
             except Exception as e:
                 return {"ok": False, "error": f"NMEA2000 trace error: {str(e)}"}
 
+    def _mppt_processes(self):
+        """Yield process names exposing the MPPTService service."""
+        system = self._agent.system_cmd("status")
+        if system is None:
+            return
+        for proc in system.get_processes():
+            if any(svc.rpc_service == "MPPTService" for svc in proc.services):
+                yield proc.name
+
+    def mppt_status(self, process_name: str) -> dict:
+        """Return the MPPT device info, parameters and live output for a process."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            try:
+                service_window = self._get_service_window(process_name, 'mppt', MPPTServiceWindow)
+                return service_window.get_data()
+            except Exception as e:
+                return {"ok": False, "error": f"MPPT service error: {str(e)}"}
+
+    def mppt_trend(self, process_name: str) -> dict:
+        """Return the trailing solar output trend for an MPPT process."""
+        with self._lock:
+            self._connect()
+            if self._server.not_connected:
+                return {"ok": False, "error": "Agent gRPC server unreachable"}
+            try:
+                service_window = self._get_service_window(process_name, 'mppt', MPPTServiceWindow)
+                return service_window.get_trend()
+            except Exception as e:
+                return {"ok": False, "error": f"MPPT trend error: {str(e)}"}
+
 
 def _validate_coupler_cmd(cmd: str, state: str) -> tuple:
     """Validate that a coupler command is consistent with its current state.
@@ -1237,6 +1368,15 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 self._serve_json(self.collector.console_status(process_name))
             else:
                 self._serve_json({"ok": False, "error": "missing process name"},
+                                 status=HTTPStatus.BAD_REQUEST)
+        elif path.startswith("/api/mppt/"):
+            parts = path[len("/api/mppt/"):].split("/")
+            if len(parts) == 1 and parts[0]:
+                self._serve_json(self.collector.mppt_status(parts[0]))
+            elif len(parts) == 2 and parts[0] and parts[1] == "trend":
+                self._serve_json(self.collector.mppt_trend(parts[0]))
+            else:
+                self._serve_json({"ok": False, "error": "invalid MPPT path"},
                                  status=HTTPStatus.BAD_REQUEST)
         elif path == "/api/config":
             self._serve_config()
