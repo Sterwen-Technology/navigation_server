@@ -645,7 +645,7 @@ class EngineServiceWindow(ServiceWindow):
                     "start_time": r.start_time,
                     "stop_time": r.stop_time,
                     "total_hours": round(r.total_hours / 3600.0, 1),  # Seconds to hours, 1 decimal
-                    "duration": round(r.duration / 3600.0, 2),  # Seconds to hours, 2 decimal
+                    "duration": r.duration ,  # No conversion here => front end
                     "average_speed": round(r.average_speed, 0),
                     "max_speed": round(r.max_speed, 0),
                     "max_temperature": round(r.max_temperature - 273.15, 0),  # Kelvin to Celsius
@@ -667,7 +667,7 @@ class EngineServiceWindow(ServiceWindow):
                     "start_time": current_run.start_time if current_run else None,
                     "stop_time": current_run.stop_time if current_run else None,
                     "total_hours": round(current_run.total_hours / 3600.0, 1) if current_run else 0,
-                    "duration": round(current_run.duration / 3600.0, 2) if current_run else 0,  # Seconds to hours, 2 decimal
+                    "duration": current_run.duration if current_run else 0,  # Seconds to minutes, 2 decimal
                     "average_speed": round(current_run.average_speed, 0) if current_run else 0,
                     "max_speed": round(current_run.max_speed, 0) if current_run else 0,
                     "max_temperature": round(current_run.max_temperature - 273.15, 0) if current_run else 0,  # Kelvin to Celsius
@@ -676,7 +676,7 @@ class EngineServiceWindow(ServiceWindow):
                 "parameters": self._parameters_dict(params),
                 "events": [{
                     "timestamp": e.timestamp,
-                    "total_hours": round(e.total_hours, 1),
+                    "total_hours": round(e.total_hours / 3600.0 , 1),
                     "current_state": e.current_state,
                     "previous_state": e.previous_state,
                 } for e in (events if events else [])],
