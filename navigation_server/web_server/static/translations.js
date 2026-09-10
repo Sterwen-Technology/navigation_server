@@ -130,7 +130,33 @@ const TRANSLATIONS = {
         'general.not_connected': 'Not connected',
         'general.unknown': 'Unknown',
         'general.msg': 'msg',
-        'general.per_second': '/s'
+        'general.per_second': '/s',
+        
+        // Engine
+        'engine.title': 'Engine Data',
+        'engine.voltage': 'Voltage',
+        'engine.temperature': 'Temperature',
+        'engine.total_hours': 'Total Hours',
+        'engine.last_start': 'Last Start',
+        'engine.last_stop': 'Last Stop',
+        'engine.history': 'History',
+        'engine.show_runs': 'Show Runs',
+        'engine.show_events': 'Show Events',
+        'engine.no_engines': 'No engines found.',
+        'engine.no_runs': 'No runs found.',
+        'engine.no_events': 'No events found.',
+        'engine.start_time': 'Start Time',
+        'engine.stop_time': 'Stop Time',
+        'engine.duration_min': 'Duration (min)',
+        'engine.avg_speed': 'Avg Speed',
+        'engine.max_speed': 'Max Speed',
+        'engine.time': 'Time',
+        'engine.from_state': 'From',
+        'engine.to_state': 'To',
+        'engine.state_engine_off': 'Off',
+        'engine.state_engine_on': 'On',
+        'engine.state_engine_running': 'Running',
+        'engine.state_stopped': 'Stopped'
     },
     fr: {
         // Connection status
@@ -259,7 +285,33 @@ const TRANSLATIONS = {
         'general.not_connected': 'Non connecte',
         'general.unknown': 'Inconnu',
         'general.msg': 'msg',
-        'general.per_second': '/s'
+        'general.per_second': '/s',
+        
+        // Engine
+        'engine.title': 'Donnees moteur',
+        'engine.voltage': 'Tension',
+        'engine.temperature': 'Temperature',
+        'engine.total_hours': 'Heures totales',
+        'engine.last_start': 'Dernier demarrage',
+        'engine.last_stop': 'Dernier arret',
+        'engine.history': 'Historique',
+        'engine.show_runs': 'Afficher les runs',
+        'engine.show_events': 'Afficher les evenements',
+        'engine.no_engines': 'Aucun moteur trouve.',
+        'engine.no_runs': 'Aucun run trouve.',
+        'engine.no_events': 'Aucun evenement trouve.',
+        'engine.start_time': 'Debut',
+        'engine.stop_time': 'Fin',
+        'engine.duration_min': 'Duree (min)',
+        'engine.avg_speed': 'Vitesse moy',
+        'engine.max_speed': 'Vitesse max',
+        'engine.time': 'Heure',
+        'engine.from_state': 'De',
+        'engine.to_state': 'Vers',
+        'engine.state_engine_off': 'Arrete',
+        'engine.state_engine_on': 'Allume',
+        'engine.state_engine_running': 'En marche',
+        'engine.state_stopped': 'Stoppé'
     }
 };
 
