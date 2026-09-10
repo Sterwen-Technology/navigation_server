@@ -275,16 +275,6 @@ class NMEA2000ServiceWindow(ServiceWindow):
                     "is_proxy": dev.is_proxy,
                     "manufacturer_name": dev.manufacturer_name,
                     "product_name": dev.product_name,
-                    "unique_number": dev.unique_number,
-                    "device_instance": dev.device_instance,
-                    "device_class": dev.device_class,
-                })
-            pgns = []
-            for pgn in status.pgns:
-                pgns.append({
-                    "pgn": pgn.pgn,
-                    "description": pgn.description,
-                    "count": pgn.count,
                 })
             return {
                 "ok": True,
@@ -295,8 +285,6 @@ class NMEA2000ServiceWindow(ServiceWindow):
                 "outgoing_rate": status.outgoing_rate,
                 "traces_on": status.traces_on,
                 "devices": devices,
-                "pgns": pgns,
-                "pgn_count": status.pgn_count,
             }
         except GrpcAccessException:
             return {"ok": False, "error": "NMEA2000 GetStatus call failed"}
@@ -363,6 +351,9 @@ class EngineServiceWindow(ServiceWindow):
         self._client = EngineClient()
         self._grpc_server.add_service(self._client)
         # List of engine_parameters (static engine definitions) for this process.
+        # Default to None before the call so that, if get_engines() raises, the
+        # window is left in a safe (empty) state rather than missing the attribute.
+        self._engines = None
         self._engines = self._client.get_engines()
 
     @staticmethod
