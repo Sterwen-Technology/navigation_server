@@ -31,14 +31,14 @@ class EngineProxy(ProtobufProxy):
 
     @property
     def last_start_time(self):
-        if self._engine.HasField('last_start_time'):
+        if self._msg.HasField('last_start_time'):
             return self._msg.last_start_time
         else:
             return "Unknown"
 
     @property
     def last_stop_time(self):
-        if self._engine.HasField('last_stop_time'):
+        if self._msg.HasField('last_stop_time'):
             return self._msg.last_stop_time
         else:
             return "Unknown"

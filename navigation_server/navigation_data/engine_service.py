@@ -109,7 +109,7 @@ class EngineDataServicerImpl(EngineDataServicer):
         _logger.debug("GetEngines")
         response = engine_list()
         for engine in self._engine_service.get_engines():
-            parameters = engine.get_engine_parameters()
+            parameters = engine.parameters()
             if parameters is not None:
                 response.engines.append(parameters)
         response.error_message = "OK"
