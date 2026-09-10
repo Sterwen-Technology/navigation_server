@@ -137,7 +137,9 @@
         .events-section { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
         .runs-list { margin-top: 8px; }
         .engine-events-list { max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; padding: 0 8px; }
-        .run-header, .run-row, .event-header, .event-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; padding: 6px 0; font-size: 0.85rem; }
+        .run-header, .run-row, .event-header, .event-row { display: grid; gap: 12px; padding: 6px 0; font-size: 0.85rem; }
+        .run-header, .run-row { grid-template-columns: 2fr 2fr 1fr 1fr 1fr; }
+        .event-header, .event-row { grid-template-columns: 2fr 1fr 1fr 1fr; }
         .event-header { color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
         .event-row { border-bottom: 1px solid var(--border); }
         .event-row:last-child { border-bottom: none; }
@@ -1451,8 +1453,8 @@
                     <div class="event-row">
                         <span class="event-time">${new Date(evt.timestamp).toLocaleString()}</span>
                         <span class="event-hours">${fmt(evt.total_hours)} h</span>
-                        <span class="event-from" data-i18n="engine.from_state">From: ${evt.previous_state}</span>
-                        <span class="event-to" data-i18n="engine.to_state">To: ${evt.current_state}</span>
+                        <span class="event-from">${fmt(evt.previous_state)}</span>
+                        <span class="event-to">${fmt(evt.current_state)}</span>
                     </div>
                 `).join("");
                 html = `
