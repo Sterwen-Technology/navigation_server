@@ -26,8 +26,8 @@ The version 3.0 is introducing the Web server for interactive control of the who
 
 
 ## Installation
-The project is entirely written in Python 3 and has been tested with Python 3.7-3.12. It is intended to run on Linux-based systems. It has been tested on Debian, Yocto and Ubuntu.
-*Note: from version 2.1.1 on Python version 3.12 is preferred*
+The project is entirely written in Python 3 and has been tested with Python 3.12.3 It is intended to run on Linux-based systems. It has been tested on Debian, Yocto and Ubuntu.
+*Note: from version 2.1.1 on Python version 3.12 is preferred and no testing is made with former versions*
 Installation on Windows 10 or 11 is working with some limitations on TCP sockets and no support on Direct CAN connection.
 
 Installation files are available here (tar and wheel): [Sterwen Technology download page](https://sterwen-technology.eu/softwares/)
@@ -57,6 +57,7 @@ The proposed architecture is described here:[Global system recommended architect
  - CAN Direct interfaces with NMEA2000 controller features and the capability to add NMEA2000 virtual devices:
    - PICAN2 HAT on RPi3 or RPi4
    - SolidRun NXP-based gateways: Industrial N6 and N8 Compact with CAN interface
+   - Innomaker USB2CAN module
  - Victron VE Direct devices (requires a dedicated process to be configured)
  - Ublox GNSS Module on STNC800 systems. See specific documentation: [STNC internal GNSS documentation](doc/stnc-gnss.md)
 
@@ -74,7 +75,7 @@ All servers can be started from the command line, they don't require specific pe
 
 ### GUI access to the API
 
-A Web server is part of the system and can be launched to allow control of the system via any browser.
+A Web server is part of the system and can be launched to allow control of the system via any browser. An optional authentication mechanism can also be installed.
 
 **Warning: the former Python based GUI is not compatible with the version 3.0.0**
 

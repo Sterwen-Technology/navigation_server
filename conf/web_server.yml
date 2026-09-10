@@ -40,3 +40,9 @@ servers:
       port: 8080
       agent_address: stnc800a003
       grpc_port: 4545
+      auth:
+            enabled: true
+            credentials_file: /home/laurent/certificates/web_users
+            session_timeout: 3600
+
+

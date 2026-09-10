@@ -12,6 +12,12 @@ The agent local server "navigation_server" is configured the same way as any oth
 The agent local server can be accessed via the CLI using the following commands: `agent_cli`. For all the available commands `agent_cli --help`
 The agent local server is accessing both services via the gRPC interface, so it works locally or remotely.
 
+The *agent_cli* can also be used to manage the credentials for the Web interface users (see `agent_cli --help`) :
+- creating a user
+- changing the password
+- deleting a user
+- listing the users
+
 ## AgentService (GrpcService)
 
 The AgentService is a gRPC accessible service implementing an interface towards the local system for remote control including:

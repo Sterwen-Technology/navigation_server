@@ -3,6 +3,8 @@
     * [Servers](#servers)
       * [NavigationMainServer class](#navigationmainserver-class)
       * [GenericTopServer class](#generictopserver-class)
+      * [AgentTopServer class](#agenttopserver-class)
+      * [WebTopServer class](#webtopserver-class)
       * [NMEAServer class](#nmeaserver-class)
       * [NMEASenderServer class](#nmeasenderserver-class)
       * [NMEAUDPServer class](#nmeaudpserver-class)
@@ -21,7 +23,7 @@
       * [InternalGps (Coupler)](#internalgps-coupler)
       * [VEDirectCoupler(Coupler)](#vedirectcouplercoupler)
       * [DirectCANCoupler(Coupler)](#directcancouplercoupler)
-      * [GrpcNmeaCoupler(Coupler)](#grpcnmeacouplercoupler)
+      * [GrpcNmeaCoupler(Coupler) -*DEPRECATED for NMEA2000*](#grpcnmeacouplercoupler--deprecated-for-nmea2000)
       * [N2KGrpcCoupler (Coupler)](#n2kgrpccoupler-coupler)
       * [N2KGrpcSendCoupler (Coupler)](#n2kgrpcsendcoupler-coupler)
     * [Services](#services)
@@ -43,9 +45,12 @@
       * [PrintPublisher](#printpublisher)
       * [Injector (Publisher)](#injector-publisher)
     * [N2KSourceDispatcher (Publisher)](#n2ksourcedispatcher-publisher)
+      * [N2KForwarderToServer (Publisher)](#n2kforwardertoserver-publisher)
     * [NMEA2000 Applications](#nmea2000-applications)
       * [NMEA2000Application](#nmea2000application)
       * [GrpcInputApplication(GrpcDataService, NMEA2000Application)](#grpcinputapplicationgrpcdataservice-nmea2000application)
+      * [SystemClockDevice(NMEA2000Application)](#systemclockdevicenmea2000application)
+      * [NMEA2000SenderDevice(NMEA2000Application)](#nmea2000senderdevicenmea2000application)
     * [Filters](#filters)
     * [Filter classes](#filter-classes)
       * [NMEAFilter](#nmeafilter)
@@ -130,15 +135,26 @@ This shall be the **Main** server for the Web interface server.
 
 This server connect to the agent of the *Navigation Server* system to allow control of the system via a Web interface.
 
-| Name                 | Type    | Default | Signification                                   |
-|----------------------|---------|---------|-------------------------------------------------|
-| port                 | int     | 8080    | listening port of the server                    |
-| use_agent_connection | boolean | false   | Use the existing agent connection               |
-| agent_address        | string  | None    | IP address or URL of the agent to be controlled |
-| agent_port           | int     | 4545    | Port to contact the agent                       |
-| language             | choice  | en      | Language to be used on the interface [en/fr]    |
+| Name                 | Type    | Default | Signification                                     |
+|----------------------|---------|---------|---------------------------------------------------|
+| port                 | int     | 8080    | listening port of the server                      |
+| use_agent_connection | boolean | false   | Use the existing agent connection                 |
+| agent_address        | string  | None    | IP address or URL of the agent to be controlled   |
+| agent_port           | int     | 4545    | Port to contact the agent                         |
+| language             | choice  | en      | Language to be used on the interface [en/fr]      |
+| auth                 | dict    | None    | Parameter set for user authentication (see below) |
+
+Authentication parameters (sub set below auth)
+
+| Name             | Type    | Default | Signification                                   |
+|------------------|---------|---------|-------------------------------------------------|
+| enabled          | boolean | false   | enable user authentication on the Web interface |
+| credentials_file | string  | None    | File containing Web user creadentials           |
+| session_timeout  | int     | 3600    | Session time out in seconds                     |
 
 If the Web server is local to the agent and connects to it, then the use_agent_connection will be true by default. In that case, agent_address and agent_port will be ignored.
+
+Web user can be added using the *agent_cli* utility script (see [Agent documentation](agent-network.md))
 
 #### NMEAServer class
 

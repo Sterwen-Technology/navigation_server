@@ -193,6 +193,9 @@ class Authenticator:
         credentials_file = auth_config.get("credentials_file")
         if not enabled or not credentials_file:
             return cls(enabled=False, store=_NullUserStore())
+        if not os.path.isfile(credentials_file):
+            _logger.error("Web authentication without credentials file: %s", credentials_file)
+            return cls(enabled=False, store=_NullUserStore())
         timeout = int(auth_config.get("session_timeout", DEFAULT_SESSION_TIMEOUT))
         return cls(UserStore(credentials_file), session_timeout=timeout, enabled=enabled)
 

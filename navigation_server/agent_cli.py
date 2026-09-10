@@ -193,9 +193,12 @@ def _manage_web_users(options):
     appears on the command line.
     """
     if options.web_user_file is None:
-        _logger.error("--web_user_file is required for web user management")
-        return False
-    store = UserStore(options.web_user_file)
+        # try the default
+        web_user_file = os.path.join(os.getenv("HOME"), "certificates/web_users")
+    else:
+        web_user_file = options.web_user_file
+    print(f"Web user file: {web_user_file}")
+    store = UserStore(web_user_file)
     acted = False
     if options.list_web_users:
         acted = True
@@ -217,8 +220,12 @@ def _manage_web_users(options):
             _logger.error("Passwords do not match, user not added")
             return False
         store.set(options.add_web_user, pwd)
-        store.save()
-        print(f"Web user '{options.add_web_user}' saved to {options.web_user_file}")
+        try:
+            store.save()
+        except FileNotFoundError as e:
+            print(e)
+            return False
+        print(f"Web user '{options.add_web_user}' saved to {web_user_file}")
     if options.del_web_user is not None:
         acted = True
         if store.delete(options.del_web_user):
@@ -248,7 +255,7 @@ def main():
         _logger.setLevel(logging.WARNING)
 
     # Web user management is a local-file operation that needs no agent.
-    if options.web_user_file is not None:
+    if options.web_user_file is not None or options.add_web_user is not None or options.del_web_user is not None or options.list_web_users:
         _manage_web_users(options)
         return
 
