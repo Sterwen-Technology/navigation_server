@@ -109,9 +109,12 @@ class ProcessBox:
             ServiceWindow instance for the requested service
         """
         if service_type not in self._services:
+            # Resolve the gRPC server outside the service lock: get_grpc_server()
+            # holds its own lock, so nesting it under self._lock would deadlock
+            # (threading.Lock is not reentrant).
+            grpc_server = self.get_grpc_server()
             with self._lock:
                 if service_type not in self._services:
-                    grpc_server = self.get_grpc_server()
                     service = service_class(self, grpc_server)
                     self._services[service_type] = service
         return self._services[service_type]
