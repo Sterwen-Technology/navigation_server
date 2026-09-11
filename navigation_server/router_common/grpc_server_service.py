@@ -44,6 +44,7 @@ class NavigationGrpcControlServicerImpl(NavigationGrpcControlServicer):
         if request.command == "SERVICES":
             for service in GrpcServer.grpc_server_global.get_services():
                 service_pb = Service()
+                _logger.debug("Returning service (%s:%s)" % service)
                 service_pb.service_name = service[0]
                 service_pb.rpc_service = service[1]
                 response.services.append(service_pb)
@@ -143,6 +144,7 @@ class GrpcServer(NavigationServer):
         return self._running
 
     def add_rpc_service(self, name: str, service_name:str, rpc_service: str):
+        _logger.debug("Adding RPC Service %s to %s" % (service_name, name))
         self._services[name] = (service_name, rpc_service)
 
     def remove_rpc_service(self, name):

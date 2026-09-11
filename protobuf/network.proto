@@ -97,5 +97,7 @@ service NetworkService {
   rpc interface_command(NetworkCommand) returns (NetworkReply) {}
   // get parameters from the configuration defined in the agent file (partial implementation in 2.6.1)
   rpc get_configuration_base(NetworkCommand) returns (NetworkConfigurationReply) {}
+  // force generation of a new certificate configuration file
+  rpc generate_ssl_configuration(NetworkCommand) returns (NetworkReply) {}
 }
 

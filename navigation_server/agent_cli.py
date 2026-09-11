@@ -56,6 +56,9 @@ def _parser():
                    help=" Network Global configuration to be set. Requires the -n flag to be present")
     p.add_argument("-t", "--test",action="store_true", default=False,
                    help="Perform the test section")
+    # specific function to reach the agent to genererate a new crdential configuration file
+    p.add_argument('-gs', '--gen_ssl', action="store_true", default=False,
+                   help= "Generate a new certificate configuration file - done by the agent in the 'ssl_key_dir'")
     # Web user management. The credentials file is a device-local file
     # referenced by the web server YAML; no password is stored in source.
     p.add_argument("-wuf", "--web_user_file", action="store", type=str, default=None,
@@ -356,6 +359,13 @@ def main():
         if options.global_conf is not None:
             network_manager.set_configuration(options.global_conf)
             network_manager.print_interfaces()
+
+    if options.gen_ssl:
+        print("Generating SSL configuration file via the agent")
+        network_client = NetworkClient()
+        navigation_agent_server.add_service(network_client)
+        result = network_client.generate_ssl_configuration()
+        print(result.status)
 
     if options.test:
         # test the services

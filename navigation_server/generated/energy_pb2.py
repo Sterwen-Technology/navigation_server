@@ -24,41 +24,43 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x65nergy.proto\"L\n\x0e\x65nergy_request\x12\x12\n\nrequest_id\x18\x01 \x01(\r\x12\x0f\n\x07\x63ommand\x18\x02 \x01(\t\x12\x15\n\rtrend_samples\x18\x03 \x01(\r\"\x88\x02\n\x0bMPPT_device\x12\n\n\x02id\x18\x01 \x01(\r\x12\x12\n\nproduct_id\x18\x02 \x01(\t\x12\x10\n\x08\x66irmware\x18\x03 \x01(\t\x12\x0e\n\x06serial\x18\n \x01(\t\x12\x18\n\x05\x65rror\x18\x04 \x01(\x0e\x32\t.VE_Error\x12\x18\n\x05state\x18\x05 \x01(\x0e\x32\t.VE_state\x12\x1c\n\nmppt_state\x18\x07 \x01(\x0e\x32\x08.VE_MPPT\x12\x15\n\rday_max_power\x18\x06 \x01(\x02\x12\x11\n\tday_power\x18\x08 \x01(\x02\x12\x15\n\rmsg_timestamp\x18\t \x01(\t\x12$\n\nparameters\x18\x0b \x01(\x0b\x32\x10.MPPT_parameters\"\xad\x01\n\x0fMPPT_parameters\x12\x10\n\x08instance\x18\x06 \x01(\r\x12\x0f\n\x07\x62\x61ttery\x18\x07 \x01(\r\x12\x17\n\x0fpanel_max_power\x18\x01 \x01(\x02\x12\x19\n\x11panel_max_voltage\x18\x02 \x01(\x02\x12\x13\n\x0bmax_voltage\x18\x03 \x01(\x02\x12\x16\n\x0etrend_duration\x18\x04 \x01(\x02\x12\x16\n\x0etrend_interval\x18\x05 \x01(\x02\"\\\n\x0csolar_output\x12\x0f\n\x07\x63urrent\x18\x01 \x01(\x02\x12\x0f\n\x07voltage\x18\x02 \x01(\x02\x12\x15\n\rpanel_voltage\x18\x04 \x01(\x02\x12\x13\n\x0bpanel_power\x18\x03 \x01(\x02\"f\n\x14solar_trend_response\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x11\n\tnb_values\x18\x02 \x01(\x05\x12\x10\n\x08interval\x18\x03 \x01(\x02\x12\x1d\n\x06values\x18\x04 \x03(\x0b\x32\r.solar_output\"w\n\x0bShuntDevice\x12\x12\n\nproduct_id\x18\x02 \x01(\t\x12\x10\n\x08\x66irmware\x18\x03 \x01(\t\x12\x0e\n\x06serial\x18\n \x01(\t\x12\x18\n\x05\x65rror\x18\x04 \x01(\x0e\x32\t.VE_Error\x12\x18\n\x05state\x18\x05 \x01(\x0e\x32\t.VE_state\"\xb1\x02\n\x0b\x42\x61tteryBank\x12\x10\n\x08instance\x18\x01 \x01(\r\x12\r\n\x05label\x18\x02 \x01(\t\x12\x11\n\tchemistry\x18\x0b \x01(\t\x12\x17\n\x0fnominal_voltage\x18\x03 \x01(\x02\x12\x18\n\x10nominal_capacity\x18\x04 \x01(\x02\x12\x0f\n\x07voltage\x18\x05 \x01(\x02\x12\x17\n\x0fstate_of_charge\x18\x06 \x01(\x02\x12\x13\n\x0bmax_voltage\x18\x07 \x01(\x02\x12\x13\n\x0bmin_voltage\x18\x08 \x01(\x02\x12\x16\n\x0e\x63harge_voltage\x18\t \x01(\x02\x12\x1a\n\x12max_charge_current\x18\n \x01(\x02\x12\x17\n\x0flast_24h_energy\x18\x0c \x01(\x02\x12\x1a\n\x12reporting_interval\x18\r \x01(\x02\"L\n\x0e\x62\x61ttery_in_out\x12\x0f\n\x07voltage\x18\x01 \x01(\x02\x12\x0f\n\x07\x63urrent\x18\x02 \x01(\x02\x12\x18\n\x10\x65nergy_variation\x18\x03 \x01(\x02\"m\n\x14\x62\x61ttery_trend_bucket\x12\x11\n\ttimestamp\x18\x01 \x01(\t\x12\x0f\n\x07voltage\x18\x02 \x01(\x02\x12\x18\n\x10\x65nergy_variation\x18\x03 \x01(\x02\x12\x17\n\x0fstate_of_charge\x18\x04 \x01(\x02\"q\n\x16\x62\x61ttery_trend_response\x12\n\n\x02id\x18\x01 \x01(\r\x12\x11\n\tnb_values\x18\x02 \x01(\r\x12\x10\n\x08interval\x18\x03 \x01(\x02\x12&\n\x07samples\x18\x04 \x03(\x0b\x32\x15.battery_trend_bucket*\xa6\x01\n\x08VE_Error\x12\x0c\n\x08no_error\x10\x00\x12\x1c\n\x18\x42\x61ttery_voltage_too_high\x10\x02\x12\x1c\n\x18\x42ulk_time_limit_exceeded\x10\x14\x12\x18\n\x14\x43urrent_sensor_issue\x10\x15\x12\x1a\n\x16Input_voltage_too_high\x10!\x12\x1a\n\x16Input_current_too_high\x10\"*\xc4\x01\n\x08VE_state\x12\x07\n\x03Off\x10\x00\x12\r\n\tLow_power\x10\x01\x12\t\n\x05\x46\x61ult\x10\x02\x12\x08\n\x04\x42ulk\x10\x03\x12\x0e\n\nAbsorption\x10\x04\x12\t\n\x05\x46loat\x10\x05\x12\x0b\n\x07Storage\x10\x06\x12\x0c\n\x08\x45qualize\x10\x07\x12\x10\n\x0bStarting_up\x10\xf5\x01\x12\x18\n\x13Repeated_absorption\x10\xf6\x01\x12\x12\n\rAuto_equalize\x10\xf7\x01\x12\x15\n\x10\x45xternal_control\x10\xfc\x01*0\n\x07VE_MPPT\x12\x0c\n\x08MPPT_Off\x10\x00\x12\x0b\n\x07Limited\x10\x01\x12\n\n\x06\x41\x63tive\x10\x02\x32\xa4\x01\n\x0bMPPTService\x12\x30\n\rGetDeviceInfo\x12\x0f.energy_request\x1a\x0c.MPPT_device\"\x00\x12-\n\tGetOutput\x12\x0f.energy_request\x1a\r.solar_output\"\x00\x12\x34\n\x08GetTrend\x12\x0f.energy_request\x1a\x15.solar_trend_response\"\x00\x32\xac\x01\n\x0e\x42\x61tteryService\x12\x31\n\x0eGetInformation\x12\x0f.energy_request\x1a\x0c.BatteryBank\"\x00\x12/\n\tGetValues\x12\x0f.energy_request\x1a\x0f.battery_in_out\"\x00\x12\x36\n\x08GetTrend\x12\x0f.energy_request\x1a\x17.battery_trend_response\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x65nergy.proto\"D\n\x0e\x65nergy_request\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0f\n\x07\x63ommand\x18\x02 \x01(\t\x12\x15\n\rtrend_samples\x18\x03 \x01(\r\"G\n\x10VE_Hex_Parameter\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\x12\x10\n\x08register\x18\x03 \x01(\r\"\xb4\x02\n\x0bMPPT_device\x12\n\n\x02id\x18\x01 \x01(\r\x12\x14\n\x0c\x64\x65vice_label\x18\x0c \x01(\t\x12\x14\n\x0c\x64\x65vice_model\x18\r \x01(\t\x12\x12\n\nproduct_id\x18\x02 \x01(\t\x12\x10\n\x08\x66irmware\x18\x03 \x01(\t\x12\x0e\n\x06serial\x18\n \x01(\t\x12\x18\n\x05\x65rror\x18\x04 \x01(\x0e\x32\t.VE_Error\x12\x18\n\x05state\x18\x05 \x01(\x0e\x32\t.VE_state\x12\x1c\n\nmppt_state\x18\x07 \x01(\x0e\x32\x08.VE_MPPT\x12\x15\n\rday_max_power\x18\x06 \x01(\x02\x12\x11\n\tday_power\x18\x08 \x01(\x02\x12\x15\n\rmsg_timestamp\x18\t \x01(\t\x12$\n\nparameters\x18\x0b \x01(\x0b\x32\x10.MPPT_parameters\"\xad\x01\n\x0fMPPT_parameters\x12\x10\n\x08instance\x18\x06 \x01(\r\x12\x0f\n\x07\x62\x61ttery\x18\x07 \x01(\r\x12\x17\n\x0fpanel_max_power\x18\x01 \x01(\x02\x12\x19\n\x11panel_max_voltage\x18\x02 \x01(\x02\x12\x13\n\x0bmax_voltage\x18\x03 \x01(\x02\x12\x16\n\x0etrend_duration\x18\x04 \x01(\x02\x12\x16\n\x0etrend_interval\x18\x05 \x01(\x02\"\\\n\x0csolar_output\x12\x0f\n\x07\x63urrent\x18\x01 \x01(\x02\x12\x0f\n\x07voltage\x18\x02 \x01(\x02\x12\x15\n\rpanel_voltage\x18\x04 \x01(\x02\x12\x13\n\x0bpanel_power\x18\x03 \x01(\x02\"f\n\x14solar_trend_response\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x11\n\tnb_values\x18\x02 \x01(\x05\x12\x10\n\x08interval\x18\x03 \x01(\x02\x12\x1d\n\x06values\x18\x04 \x03(\x0b\x32\r.solar_output\"w\n\x0bShuntDevice\x12\x12\n\nproduct_id\x18\x02 \x01(\t\x12\x10\n\x08\x66irmware\x18\x03 \x01(\t\x12\x0e\n\x06serial\x18\n \x01(\t\x12\x18\n\x05\x65rror\x18\x04 \x01(\x0e\x32\t.VE_Error\x12\x18\n\x05state\x18\x05 \x01(\x0e\x32\t.VE_state\"\xb1\x02\n\x0b\x42\x61tteryBank\x12\x10\n\x08instance\x18\x01 \x01(\r\x12\r\n\x05label\x18\x02 \x01(\t\x12\x11\n\tchemistry\x18\x0b \x01(\t\x12\x17\n\x0fnominal_voltage\x18\x03 \x01(\x02\x12\x18\n\x10nominal_capacity\x18\x04 \x01(\x02\x12\x0f\n\x07voltage\x18\x05 \x01(\x02\x12\x17\n\x0fstate_of_charge\x18\x06 \x01(\x02\x12\x13\n\x0bmax_voltage\x18\x07 \x01(\x02\x12\x13\n\x0bmin_voltage\x18\x08 \x01(\x02\x12\x16\n\x0e\x63harge_voltage\x18\t \x01(\x02\x12\x1a\n\x12max_charge_current\x18\n \x01(\x02\x12\x17\n\x0flast_24h_energy\x18\x0c \x01(\x02\x12\x1a\n\x12reporting_interval\x18\r \x01(\x02\"L\n\x0e\x62\x61ttery_in_out\x12\x0f\n\x07voltage\x18\x01 \x01(\x02\x12\x0f\n\x07\x63urrent\x18\x02 \x01(\x02\x12\x18\n\x10\x65nergy_variation\x18\x03 \x01(\x02\"m\n\x14\x62\x61ttery_trend_bucket\x12\x11\n\ttimestamp\x18\x01 \x01(\t\x12\x0f\n\x07voltage\x18\x02 \x01(\x02\x12\x18\n\x10\x65nergy_variation\x18\x03 \x01(\x02\x12\x17\n\x0fstate_of_charge\x18\x04 \x01(\x02\"q\n\x16\x62\x61ttery_trend_response\x12\n\n\x02id\x18\x01 \x01(\r\x12\x11\n\tnb_values\x18\x02 \x01(\r\x12\x10\n\x08interval\x18\x03 \x01(\x02\x12&\n\x07samples\x18\x04 \x03(\x0b\x32\x15.battery_trend_bucket*\xa6\x01\n\x08VE_Error\x12\x0c\n\x08no_error\x10\x00\x12\x1c\n\x18\x42\x61ttery_voltage_too_high\x10\x02\x12\x1c\n\x18\x42ulk_time_limit_exceeded\x10\x14\x12\x18\n\x14\x43urrent_sensor_issue\x10\x15\x12\x1a\n\x16Input_voltage_too_high\x10!\x12\x1a\n\x16Input_current_too_high\x10\"*\xc4\x01\n\x08VE_state\x12\x07\n\x03Off\x10\x00\x12\r\n\tLow_power\x10\x01\x12\t\n\x05\x46\x61ult\x10\x02\x12\x08\n\x04\x42ulk\x10\x03\x12\x0e\n\nAbsorption\x10\x04\x12\t\n\x05\x46loat\x10\x05\x12\x0b\n\x07Storage\x10\x06\x12\x0c\n\x08\x45qualize\x10\x07\x12\x10\n\x0bStarting_up\x10\xf5\x01\x12\x18\n\x13Repeated_absorption\x10\xf6\x01\x12\x12\n\rAuto_equalize\x10\xf7\x01\x12\x15\n\x10\x45xternal_control\x10\xfc\x01*0\n\x07VE_MPPT\x12\x0c\n\x08MPPT_Off\x10\x00\x12\x0b\n\x07Limited\x10\x01\x12\n\n\x06\x41\x63tive\x10\x02\x32\xa4\x01\n\x0bMPPTService\x12\x30\n\rGetDeviceInfo\x12\x0f.energy_request\x1a\x0c.MPPT_device\"\x00\x12-\n\tGetOutput\x12\x0f.energy_request\x1a\r.solar_output\"\x00\x12\x34\n\x08GetTrend\x12\x0f.energy_request\x1a\x15.solar_trend_response\"\x00\x32\xac\x01\n\x0e\x42\x61tteryService\x12\x31\n\x0eGetInformation\x12\x0f.energy_request\x1a\x0c.BatteryBank\"\x00\x12/\n\tGetValues\x12\x0f.energy_request\x1a\x0f.battery_in_out\"\x00\x12\x36\n\x08GetTrend\x12\x0f.energy_request\x1a\x17.battery_trend_response\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'energy_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_VE_ERROR']._serialized_start=1469
-  _globals['_VE_ERROR']._serialized_end=1635
-  _globals['_VE_STATE']._serialized_start=1638
-  _globals['_VE_STATE']._serialized_end=1834
-  _globals['_VE_MPPT']._serialized_start=1836
-  _globals['_VE_MPPT']._serialized_end=1884
+  _globals['_VE_ERROR']._serialized_start=1578
+  _globals['_VE_ERROR']._serialized_end=1744
+  _globals['_VE_STATE']._serialized_start=1747
+  _globals['_VE_STATE']._serialized_end=1943
+  _globals['_VE_MPPT']._serialized_start=1945
+  _globals['_VE_MPPT']._serialized_end=1993
   _globals['_ENERGY_REQUEST']._serialized_start=16
-  _globals['_ENERGY_REQUEST']._serialized_end=92
-  _globals['_MPPT_DEVICE']._serialized_start=95
-  _globals['_MPPT_DEVICE']._serialized_end=359
-  _globals['_MPPT_PARAMETERS']._serialized_start=362
-  _globals['_MPPT_PARAMETERS']._serialized_end=535
-  _globals['_SOLAR_OUTPUT']._serialized_start=537
-  _globals['_SOLAR_OUTPUT']._serialized_end=629
-  _globals['_SOLAR_TREND_RESPONSE']._serialized_start=631
-  _globals['_SOLAR_TREND_RESPONSE']._serialized_end=733
-  _globals['_SHUNTDEVICE']._serialized_start=735
-  _globals['_SHUNTDEVICE']._serialized_end=854
-  _globals['_BATTERYBANK']._serialized_start=857
-  _globals['_BATTERYBANK']._serialized_end=1162
-  _globals['_BATTERY_IN_OUT']._serialized_start=1164
-  _globals['_BATTERY_IN_OUT']._serialized_end=1240
-  _globals['_BATTERY_TREND_BUCKET']._serialized_start=1242
-  _globals['_BATTERY_TREND_BUCKET']._serialized_end=1351
-  _globals['_BATTERY_TREND_RESPONSE']._serialized_start=1353
-  _globals['_BATTERY_TREND_RESPONSE']._serialized_end=1466
-  _globals['_MPPTSERVICE']._serialized_start=1887
-  _globals['_MPPTSERVICE']._serialized_end=2051
-  _globals['_BATTERYSERVICE']._serialized_start=2054
-  _globals['_BATTERYSERVICE']._serialized_end=2226
+  _globals['_ENERGY_REQUEST']._serialized_end=84
+  _globals['_VE_HEX_PARAMETER']._serialized_start=86
+  _globals['_VE_HEX_PARAMETER']._serialized_end=157
+  _globals['_MPPT_DEVICE']._serialized_start=160
+  _globals['_MPPT_DEVICE']._serialized_end=468
+  _globals['_MPPT_PARAMETERS']._serialized_start=471
+  _globals['_MPPT_PARAMETERS']._serialized_end=644
+  _globals['_SOLAR_OUTPUT']._serialized_start=646
+  _globals['_SOLAR_OUTPUT']._serialized_end=738
+  _globals['_SOLAR_TREND_RESPONSE']._serialized_start=740
+  _globals['_SOLAR_TREND_RESPONSE']._serialized_end=842
+  _globals['_SHUNTDEVICE']._serialized_start=844
+  _globals['_SHUNTDEVICE']._serialized_end=963
+  _globals['_BATTERYBANK']._serialized_start=966
+  _globals['_BATTERYBANK']._serialized_end=1271
+  _globals['_BATTERY_IN_OUT']._serialized_start=1273
+  _globals['_BATTERY_IN_OUT']._serialized_end=1349
+  _globals['_BATTERY_TREND_BUCKET']._serialized_start=1351
+  _globals['_BATTERY_TREND_BUCKET']._serialized_end=1460
+  _globals['_BATTERY_TREND_RESPONSE']._serialized_start=1462
+  _globals['_BATTERY_TREND_RESPONSE']._serialized_end=1575
+  _globals['_MPPTSERVICE']._serialized_start=1996
+  _globals['_MPPTSERVICE']._serialized_end=2160
+  _globals['_BATTERYSERVICE']._serialized_start=2163
+  _globals['_BATTERYSERVICE']._serialized_end=2335
 # @@protoc_insertion_point(module_scope)

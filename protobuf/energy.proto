@@ -48,7 +48,7 @@ enum VE_MPPT {
 // Global messages
 
 message energy_request {
-  uint32 request_id=1;      // request ID
+  uint32 id=1;      // request ID
   string command=2;         // Optional - Additional command
   uint32 trend_samples=3;   // Optional -  Max number of samples to be returned
 }
@@ -64,6 +64,8 @@ message VE_Hex_Parameter {
 message MPPT_device {
   // Semi static information
   uint32 id=1;            // device ID - identify the device when more than one are used
+  string device_label=12;
+  string  device_model=13;
   string product_id = 2;
   string firmware = 3;
   string serial = 10;

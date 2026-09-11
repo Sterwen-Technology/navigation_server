@@ -11,10 +11,16 @@
 #
 #
 function: Energy management server
+server_name: Energy
 log_level: INFO
-trace_dir: /mnt/meaban/Bateau/tests
+trace_dir: /data/navigation/traces
+data_dir: /data/navigation/data
+enable_secure_grpc: false
+force_secure_grpc: false
 log_module:
-    energy_mgmt.mppt_service: INFO
+    energy_mgmt.mppt_service: DEBUG
+    nmea2000.nmea2k_publisher: INFO
+    router_common.grpc_server_service: DEBUG
 
 features:
     - router_core
@@ -36,21 +42,29 @@ couplers:
 
 - MPPTVEDirect:
     class: VEDirectCoupler
-    device: /dev/ttyUSB0
-    interface: simulation
+    device: /dev/ttyUSB4
+    alt_device: /dev/ttyUSB8
+    interface: serial
     logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
     protocol: non_nmea
     max_attempt: 1
+    # device parameters
+    device_label: MPPT1
+    device_model: Victron MPPT Blue Solar 70-15
+    panel_max_power: 180
+    panel_max_voltage: 40
+    max_voltage: 15
 
 services:
 
-- Agent:
+- EnergyService:
     class: MPPTService
     coupler: MPPTVEDirect
     server: gRPCMain
     publisher: NMEAPush
-    protocol: nmea0183
-    talker: EM
+    protocol: nmea2000
+    
+    # talker: EM
 
 - Console:
     class: Console
@@ -60,19 +74,18 @@ publishers:
 
 - NMEAPrint:
       class: N2KTracePublisher
-      active: true
+      active: false
       flexible_decode: false
       output: PRINT
       couplers: [MPPTVEDirect]
 
 - NMEAPush:
-    class: GrpcPublisher
+    class: N2KForwarderToServer
     active: true
-    decode_nmea2000: false
-    service: Agent
-    nmea0183: pass_thru
+    service: EnergyService
     address: 127.0.0.1
-    port: 4502
+    port: 4512
+    device: MPPT
 
 
 

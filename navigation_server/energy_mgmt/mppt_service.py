@@ -16,8 +16,8 @@ import traceback
 
 from collections import namedtuple, deque
 
-from navigation_server.generated.energy_pb2 import solar_output, energy_request, MPPT_device, trend_response
-from navigation_server.generated.energy_pb2_grpc import solar_mpptServicer, add_solar_mpptServicer_to_server, \
+from navigation_server.generated.energy_pb2 import solar_output, energy_request, MPPT_device, solar_trend_response
+from navigation_server.generated.energy_pb2_grpc import MPPTServiceServicer, add_MPPTServiceServicer_to_server, \
     MPPTServiceServicer
 from navigation_server.router_common import (GrpcService, MessageServerGlobals, resolve_ref, copy_protobuf_data,
                                              NavGenericMsg, N2K_MSG, fill_protobuf_from_dict)
@@ -104,8 +104,10 @@ class VictronMPPT:
         self._current_data_dict = None
         trend_duration = opts.get('trend_duration', int, 5)
         self._trend_period = opts.get('trend_interval', float, 10.)
-        self._trend_depth = (trend_duration * 60.)/ self._trend_period
+        self._trend_depth = int((trend_duration * 60.)/ self._trend_period)
         self._trend_buckets = deque(maxlen=self._trend_depth)
+        self._device_label = opts.get('device_label', str, self._name)
+        self._device_model = opts.get('device_model', str, 'Unknown')
         self._parameters = {
             'instance' : opts.get('instance', int, 1),
             'battery': opts.get('battery', int, 1),
@@ -119,6 +121,7 @@ class VictronMPPT:
         self._mean_v = 0.0
         self._mean_a = 0.0
         self._mean_p = 0.0
+        self._mean_pv = 0.0
         self._nb_sample = 0
 
     def stop_service(self):
@@ -167,16 +170,18 @@ class VictronMPPT:
         # now let's compute the trend
         self._mean_v += self._current_data.voltage
         self._mean_a += self._current_data.current
+        self._mean_pv += self._current_data.panel_voltage
         self._mean_p += self._current_data.panel_power
         self._nb_sample += 1
         clock = time.monotonic()
         if clock - self._start_period >= self._trend_period and self._nb_sample > 0:
             self._trend_buckets.append(MPPTBucket(self._mean_v/self._nb_sample, self._mean_a/self._nb_sample,
-                                                  self._mean_p/self._nb_sample))
+                                                  self._mean_pv/self._nb_sample,self._mean_p/self._nb_sample))
             self._start_period = clock
             self._mean_v = 0.0
             self._mean_a = 0.0
             self._mean_p = 0.0
+            self._mean_pv = 0.0
             self._nb_sample = 0
         if self._publish_function is not None:
             self._publish_function()
@@ -188,6 +193,8 @@ class VictronMPPT:
     def get_device_info(self, device_info):
         if self._current_data is not None:
             self._current_data.output_info_pb(device_info)
+        device_info.device_label = self._device_label
+        device_info.device_model = self._device_model
 
     def get_device_parameters(self, device_parameters):
         fill_protobuf_from_dict(device_parameters, self._parameters)
@@ -227,7 +234,7 @@ class MPPTServicer(MPPTServiceServicer):
         _logger.debug("GRPC request GetDevice")
         ret_data = MPPT_device()
         self._mppt_device.get_device_info(ret_data)
-        if request.HasField('command'):
+        if request.command:
             if request.command == 'parameters':
                 self._mppt_device.get_parameters(ret_data.parameters)
         return ret_data
@@ -241,7 +248,7 @@ class MPPTServicer(MPPTServiceServicer):
 
     def GetTrend(self, request, context):
         _logger.debug("GRPC request GetTrend")
-        ret_values = trend_response()
+        ret_values = solar_trend_response()
         ret_values.id = request.id
         ret_values.nb_values = 0
         ret_values.interval = self._mppt_device.trend_interval
@@ -262,6 +269,6 @@ class MPPTService(GrpcService):
         self._mppt_device = VictronMPPT(opts, self)
 
     def finalize(self):
-        super().finalize(self.name, 'MPPTService')
-        add_solar_mpptServicer_to_server(MPPTServicer(self._mppt_device), self.grpc_server)
+        super().finalize('MPPT', 'MPPTService')
+        add_MPPTServiceServicer_to_server(MPPTServicer(self._mppt_device), self.grpc_server)
         self._mppt_device.start()

@@ -418,6 +418,16 @@ class NetworkServicerImpl(NetworkServiceServicer):
             resp.status = "Not implemented"
         return resp
 
+    def generate_ssl_configuration(self, request, context):
+        resp = NetworkReply()
+        resp.id = self._id
+        self._id += 1
+        if self._service.generate_ssl_configuration():
+            resp.status = "OK"
+        else:
+            resp.status = "ERROR"
+        return resp
+
     def fill_network_status(self, resp):
         for iface in self._service.interfaces():
             interface = NetInterface()

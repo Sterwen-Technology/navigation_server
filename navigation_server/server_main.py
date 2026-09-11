@@ -19,7 +19,7 @@ from navigation_server.router_common import (NavigationConfiguration, Navigation
                                              ObjectCreationError, GrpcServer, GrpcClient, ObjectFatalError,
                                              translate, t)
 
-MessageServerGlobals.version = "3.0.0"
+MessageServerGlobals.version = "3.0.1"
 default_base_dir = "/"
 _logger = logging.getLogger("ShipDataServer.main")
 

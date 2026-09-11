@@ -189,7 +189,7 @@ class NavigationServerObject(NavigationObject):
                 self._object = getattr(self._class, factory)(Parameters(self._param))
             return self._object
         except (TypeError, ObjectCreationError, ValueError) as e:
-            _logger.error("Error building object %s class %s: %s" % (self._name, self._class_name, e))
+            _logger.error("Error building object %s class %s: %s" % (self._name, self._class_name, e), exc_info=True)
             raise ObjectCreationError("Error building object %s class %s: %s" % (self._name, self._class_name, e))
 
     def __str__(self):

@@ -144,3 +144,8 @@ class NetworkClient(ServiceClient):
         request.cmd = "connections"
         return self._server_call(self._stub.get_configuration_base, request, NetworkConfigurationReplyProxy)
 
+    def generate_ssl_configuration(self):
+        _logger.debug("Call generate_ssl_configuration")
+        request = NetworkCommand()
+        return self._server_call(self._stub.generate_ssl_configuration, request, NetworkReplyProxy)
+
