@@ -150,6 +150,7 @@
         .mppt-info { font-size: 0.82rem; }
         .mppt-info .row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid var(--border); }
         .mppt-info .k { color: var(--muted); }
+        .mppt-com-lost { color: #ef4444; font-weight: 600; font-size: 0.8rem; padding: 4px 6px; margin-bottom: 6px; border: 1px solid #ef4444; border-radius: 4px; background: rgba(239,68,68,0.08); text-align: center; }
         .mppt-bars { display: flex; gap: 12px; align-items: flex-end; }
         .mppt-bar { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 4px; }
         .mppt-bar-track { width: 100%; height: 120px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; position: relative; display: flex; align-items: flex-end; overflow: hidden; }
@@ -1611,13 +1612,20 @@
             try {
                 const data = await apiGet(`/api/mppt/${encodeURIComponent(processName)}`);
                 renderMpptDashboard(data, processName, win);
-                // Fetch the trend separately so the dashboard renders first.
-                try {
-                    const trend = await apiGet(`/api/mppt/${encodeURIComponent(processName)}/trend`);
-                    renderMpptTrend(trend, win);
-                } catch (te) {
+                // When communication with the device is lost, the readings are
+                // frozen: do not fetch the trend, show a no-trend notice instead.
+                if (data.ok && data.communication_ok === false) {
                     const c = win.body.querySelector('.mppt-trend-canvas');
-                    if (c) c.innerHTML = `<div class="empty">${escapeHtml(te.message)}</div>`;
+                    if (c) c.innerHTML = `<div class="empty">${t.t("mppt.no_trend") || "No trend (communication lost)"}</div>`;
+                } else {
+                    // Fetch the trend separately so the dashboard renders first.
+                    try {
+                        const trend = await apiGet(`/api/mppt/${encodeURIComponent(processName)}/trend`);
+                        renderMpptTrend(trend, win);
+                    } catch (te) {
+                        const c = win.body.querySelector('.mppt-trend-canvas');
+                        if (c) c.innerHTML = `<div class="empty">${escapeHtml(te.message)}</div>`;
+                    }
                 }
             } catch (e) {
                 win.body.innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
@@ -1636,7 +1644,15 @@
         }
 
         // A vertical bargraph (0 at the bottom). value/clamp against max.
+        // A null value (communication lost) renders an empty bar and '--'.
         function mpptBar(label, value, max, unit) {
+            if (value === null || value === undefined) {
+                return `<div class="mppt-bar">
+                    <div class="mppt-bar-track"></div>
+                    <div class="mppt-bar-label">${label}</div>
+                    <div class="mppt-bar-value">-- ${unit}</div>
+                </div>`;
+            }
             const v = Number(value) || 0;
             const m = Number(max) || 0;
             const pct = m > 0 ? Math.max(0, Math.min(100, (v / m) * 100)) : 0;
@@ -1668,18 +1684,18 @@
             // device label, then the model, then the product id.
             const devTitle = data.device_label || data.device_model || data.product_id || processName;
             win.headerTitle.textContent = `${t.t("mppt.title") || "MPPT"} \u2014 ${escapeHtml(devTitle)}`;
+            const comLost = data.communication_ok === false;
             const info = `
                 <div class="mppt-info">
+                    ${comLost ? `<div class="mppt-com-lost" data-i18n="mppt.com_lost">Communication lost</div>` : ""}
                     ${data.device_label ? `<div class="row"><span class="k" data-i18n="mppt.device_label">Label</span><span class="v">${escapeHtml(data.device_label)}</span></div>` : ""}
                     ${data.device_model ? `<div class="row"><span class="k" data-i18n="mppt.device_model">Model</span><span class="v">${escapeHtml(data.device_model)}</span></div>` : ""}
-                    <div class="row"><span class="k" data-i18n="mppt.product">Product</span><span class="v">${fmt(data.product_id)}</span></div>
-                    <div class="row"><span class="k" data-i18n="mppt.firmware">Firmware</span><span class="v">${fmt(data.firmware)}</span></div>
-                    <div class="row"><span class="k" data-i18n="mppt.serial">Serial</span><span class="v">${fmt(data.serial)}</span></div>
                     <div class="row"><span class="k" data-i18n="mppt.error">Error</span><span class="v">${fmt(data.error)}</span></div>
                     <div class="row"><span class="k" data-i18n="mppt.state">State</span><span class="v">${fmt(data.state)}</span></div>
                     <div class="row"><span class="k" data-i18n="mppt.mppt_state">MPPT</span><span class="v">${fmt(data.mppt_state)}</span></div>
                     <div class="row"><span class="k" data-i18n="mppt.day_max_power">Day max power</span><span class="v">${fmt(data.day_max_power)} W</span></div>
                     <div class="row"><span class="k" data-i18n="mppt.day_power">Day energy</span><span class="v">${fmt(data.day_power)} kWh</span></div>
+                    <div class="row"><button class="open-btn compact" id="mppt-details-${escapeHtml(processName)}" data-i18n="mppt.details">Details</button></div>
                 </div>
             `;
             const bars = `
@@ -1697,8 +1713,26 @@
                         <div class="mppt-trend-title" data-i18n="mppt.trend">Power trend</div>
                         <div class="mppt-trend-canvas"><div class="empty">${t.t("general.loading")}</div></div>
                     </div>
+                    <div id="mppt-details-modal-${escapeHtml(processName)}" class="modal">
+                        <div class="modal-content" style="max-width:420px">
+                            <div class="modal-header">
+                                <h2 data-i18n="mppt.details">Device details</h2>
+                                <button class="modal-close" onclick="closeMpptDetails('${escapeHtml(processName)}')" title="Close">&times;</button>
+                            </div>
+                            <div class="mppt-info">
+                                <div class="row"><span class="k" data-i18n="mppt.product">Product</span><span class="v">${fmt(data.product_id)}</span></div>
+                                <div class="row"><span class="k" data-i18n="mppt.firmware">Firmware</span><span class="v">${fmt(data.firmware)}</span></div>
+                                <div class="row"><span class="k" data-i18n="mppt.serial">Serial</span><span class="v">${fmt(data.serial)}</span></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
+            const detailsBtn = body.querySelector('#mppt-details-' + CSS.escape(processName));
+            if (detailsBtn) detailsBtn.addEventListener('click', () => {
+                const m = body.querySelector('#mppt-details-modal-' + CSS.escape(processName));
+                if (m) m.classList.add('show');
+            });
             t.translateAllElements();
         }
 
@@ -1740,6 +1774,12 @@
             closeWindow(windowKey('mppt', processName));
         }
 
+        function closeMpptDetails(processName) {
+            const win = activeWindows.get(windowKey('mppt', processName));
+            const m = win && win.body.querySelector('#mppt-details-modal-' + CSS.escape(processName));
+            if (m) m.classList.remove('show');
+        }
+
         window.procCmd = procCmd;
         window.systemCmd = systemCmd;
         window.systemCmdConfirm = systemCmdConfirm;
@@ -1769,6 +1809,7 @@
         window.setEngineEventsMode = setEngineEventsMode;
         window.openMppt = openMppt;
         window.closeMppt = closeMppt;
+        window.closeMpptDetails = closeMpptDetails;
         $("refresh-btn").addEventListener("click", refresh);
         $("auto-refresh").addEventListener("change", toggleAuto);
         $("login-form").addEventListener("submit", async (e) => {

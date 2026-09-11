@@ -740,10 +740,26 @@ class MPPTServiceWindow(ServiceWindow):
         try:
             device = self._client.getDeviceInfo()
             output = self._client.getOutput()
+            communication_ok = getattr(device._device, 'communication_ok', True)
+            if communication_ok:
+                out = {
+                    "panel_voltage": round(output.panel_voltage, 2),
+                    "voltage": round(output.voltage, 2),
+                    "current": round(output.current, 2),
+                    "panel_power": round(output.panel_power, 1),
+                }
+            else:
+                out = {
+                    "panel_voltage": None,
+                    "voltage": None,
+                    "current": None,
+                    "panel_power": None,
+                }
             return {
                 "ok": True,
                 "process": self.process_name,
                 "id": device._device.id,
+                "communication_ok": communication_ok,
                 "device_label": device._device.device_label,
                 "device_model": device._device.device_model,
                 "product_id": device.product_id,
@@ -756,12 +772,7 @@ class MPPTServiceWindow(ServiceWindow):
                 "day_power": round(device.day_yield, 3),
                 "msg_timestamp": device._device.msg_timestamp,
                 "parameters": self._parameters_dict(device._device.parameters),
-                "output": {
-                    "panel_voltage": round(output.panel_voltage, 2),
-                    "voltage": round(output.voltage, 2),
-                    "current": round(output.current, 2),
-                    "panel_power": round(output.panel_power, 1),
-                },
+                "output": out,
             }
         except GrpcAccessException:
             return {"ok": False, "error": "MPPT service call failed"}
