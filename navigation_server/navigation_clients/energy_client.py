@@ -13,14 +13,14 @@ import logging
 
 from navigation_server.generated.energy_pb2_grpc import MPPTServiceStub
 from navigation_server.generated.energy_pb2 import MPPT_device, energy_request
-from navigation_server.router_common import GrpcClient, ServiceClient, pb_enum_string
+from navigation_server.router_common import GrpcClient, ServiceClient, pb_enum_string, ProtobufProxy
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
-class MPPT_device_proxy:
-
+class MPPT_device_proxy (ProtobufProxy):
     def __init__(self, device: MPPT_device):
+        super().__init__(device)
         self._device = device
 
     @property
@@ -56,9 +56,10 @@ class MPPT_device_proxy:
         return self._device.day_power
 
 
-class MPPT_output_proxy:
+class MPPT_output_proxy(ProtobufProxy):
 
     def __init__(self, output):
+        super().__init__(output)
         self._output = output
 
     @property

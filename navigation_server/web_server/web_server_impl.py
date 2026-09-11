@@ -740,7 +740,7 @@ class MPPTServiceWindow(ServiceWindow):
         try:
             device = self._client.getDeviceInfo()
             output = self._client.getOutput()
-            communication_ok = getattr(device._device, 'communication_ok', True)
+            communication_ok = device.communication_ok
             if communication_ok:
                 out = {
                     "panel_voltage": round(output.panel_voltage, 2),

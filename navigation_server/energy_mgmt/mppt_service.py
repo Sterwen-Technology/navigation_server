@@ -193,7 +193,7 @@ class VictronMPPT:
             self._current_data.output_pb(output_values_pb)
 
     def get_device_info(self, device_info):
-        if time.monotonic() - self._last_msg_ts > 20. :
+        if time.monotonic() - self._last_msg_ts < 20. :
             device_info.communication_ok = True
             if self._current_data is not None:
                 self._current_data.output_info_pb(device_info)
