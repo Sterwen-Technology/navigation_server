@@ -166,7 +166,25 @@ const TRANSLATIONS = {
         'engine.state_engine_off': 'Off',
         'engine.state_engine_on': 'On',
         'engine.state_engine_running': 'Running',
-        'engine.state_stopped': 'Stopped'
+        'engine.state_stopped': 'Stopped',
+
+        // MPPT (solar charge controller)
+        'mppt.title': 'MPPT',
+        'mppt.product': 'Product',
+        'mppt.firmware': 'Firmware',
+        'mppt.serial': 'Serial',
+        'mppt.error': 'Error',
+        'mppt.state': 'State',
+        'mppt.mppt_state': 'MPPT',
+        'mppt.day_max_power': 'Day max power',
+        'mppt.day_power': 'Day energy',
+        'mppt.panel_voltage': 'Panel V',
+        'mppt.voltage': 'Voltage',
+        'mppt.current': 'Current',
+        'mppt.panel_power': 'Panel P',
+        'mppt.trend': 'Power trend',
+        'mppt.trend_power': 'Panel power (W)',
+        'mppt.no_trend': 'No trend data'
     },
     fr: {
         // Connection status
@@ -331,7 +349,25 @@ const TRANSLATIONS = {
         'engine.state_engine_off': 'Arrete',
         'engine.state_engine_on': 'Allume',
         'engine.state_engine_running': 'En marche',
-        'engine.state_stopped': 'Stoppé'
+        'engine.state_stopped': 'Stoppé',
+
+        // MPPT (solar charge controller)
+        'mppt.title': 'MPPT',
+        'mppt.product': 'Produit',
+        'mppt.firmware': 'Firmware',
+        'mppt.serial': 'Serie',
+        'mppt.error': 'Erreur',
+        'mppt.state': 'Etat',
+        'mppt.mppt_state': 'MPPT',
+        'mppt.day_max_power': 'Puissance max jour',
+        'mppt.day_power': 'Energie jour',
+        'mppt.panel_voltage': 'V panneau',
+        'mppt.voltage': 'Tension',
+        'mppt.current': 'Courant',
+        'mppt.panel_power': 'P panneau',
+        'mppt.trend': 'Tendance puissance',
+        'mppt.trend_power': 'Puissance panneau (W)',
+        'mppt.no_trend': 'Pas de tendance'
     }
 };
 
