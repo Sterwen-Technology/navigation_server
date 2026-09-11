@@ -744,6 +744,8 @@ class MPPTServiceWindow(ServiceWindow):
                 "ok": True,
                 "process": self.process_name,
                 "id": device._device.id,
+                "device_label": device._device.device_label,
+                "device_model": device._device.device_model,
                 "product_id": device.product_id,
                 "firmware": device.firmware,
                 "serial": device.serial,
