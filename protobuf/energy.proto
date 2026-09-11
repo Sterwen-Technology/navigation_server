@@ -64,6 +64,7 @@ message VE_Hex_Parameter {
 message MPPT_device {
   // Semi static information
   uint32 id=1;            // device ID - identify the device when more than one are used
+  bool communication_ok=14;  // True if the communication is working with the MPPT device
   string device_label=12;
   string  device_model=13;
   string product_id = 2;

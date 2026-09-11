@@ -118,6 +118,7 @@ class VictronMPPT:
             'trend_interval': self._trend_period
         }
         self._start_period = 0.0
+        self._last_msg_ts = time.monotonic()
         self._mean_v = 0.0
         self._mean_a = 0.0
         self._mean_p = 0.0
@@ -174,6 +175,7 @@ class VictronMPPT:
         self._mean_p += self._current_data.panel_power
         self._nb_sample += 1
         clock = time.monotonic()
+        self._last_msg_ts = clock
         if clock - self._start_period >= self._trend_period and self._nb_sample > 0:
             self._trend_buckets.append(MPPTBucket(self._mean_v/self._nb_sample, self._mean_a/self._nb_sample,
                                                   self._mean_pv/self._nb_sample,self._mean_p/self._nb_sample))
@@ -191,8 +193,12 @@ class VictronMPPT:
             self._current_data.output_pb(output_values_pb)
 
     def get_device_info(self, device_info):
-        if self._current_data is not None:
-            self._current_data.output_info_pb(device_info)
+        if time.monotonic() - self._last_msg_ts > 20. :
+            device_info.communication_ok = True
+            if self._current_data is not None:
+                self._current_data.output_info_pb(device_info)
+        else:
+            device_info.communication_ok = False
         device_info.device_label = self._device_label
         device_info.device_model = self._device_model
 
