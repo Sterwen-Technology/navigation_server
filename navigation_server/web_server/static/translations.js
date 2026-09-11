@@ -171,6 +171,8 @@ const TRANSLATIONS = {
         // MPPT (solar charge controller)
         'mppt.title': 'MPPT',
         'mppt.product': 'Product',
+        'mppt.device_label': 'Label',
+        'mppt.device_model': 'Model',
         'mppt.firmware': 'Firmware',
         'mppt.serial': 'Serial',
         'mppt.error': 'Error',
@@ -354,6 +356,8 @@ const TRANSLATIONS = {
         // MPPT (solar charge controller)
         'mppt.title': 'MPPT',
         'mppt.product': 'Produit',
+        'mppt.device_label': 'Libelle',
+        'mppt.device_model': 'Modele',
         'mppt.firmware': 'Firmware',
         'mppt.serial': 'Serie',
         'mppt.error': 'Erreur',

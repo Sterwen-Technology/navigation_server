@@ -11,11 +11,9 @@
 
 import logging
 
-import grpc
-
 from navigation_server.generated.energy_pb2_grpc import MPPTServiceStub
 from navigation_server.generated.energy_pb2 import MPPT_device, energy_request
-from navigation_server.router_common import GrpcClient, ServiceClient, GrpcAccessException, pb_enum_string
+from navigation_server.router_common import GrpcClient, ServiceClient, pb_enum_string
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
