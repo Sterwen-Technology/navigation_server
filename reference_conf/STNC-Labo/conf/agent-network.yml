@@ -91,6 +91,11 @@ processes:
       service: energy
       autostart: false
 
+  - WebServer:
+      class: SystemdProcess
+      service: navigation_web_server
+      autostart: true
+
 
 
 

@@ -12,6 +12,7 @@ cp "$SOURCE_DIR"/navigation_data.service /lib/systemd/system
 cp "$SOURCE_DIR"/gnss.service /lib/systemd/system
 cp "$SOURCE_DIR"/can.service /lib/systemd/system
 cp "$SOURCE_DIR"/gnss_config.service /lib/systemd/system
+cp "$SOURCE_DIR"/navigation_web_server.service /lib/systemd/system
 
 systemctl daemon-reload
 

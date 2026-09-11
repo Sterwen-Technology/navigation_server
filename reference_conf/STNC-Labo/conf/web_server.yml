@@ -1,0 +1,52 @@
+#-------------------------------------------------------------------------------
+# Name:        web_server.yml
+# Purpose:     Settings file for the standalone Web interface process
+#              The web server is the main (and only) server of the process.
+#              It connects to a navigation agent via gRPC and exposes a web UI.
+#
+# Author:      Vibe Code
+#
+# Created:     10/09/2026
+# Copyright:   (c) Sterwen Technology 2021-2026
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+function: Web interface server
+server_name: WebServer
+log_level: INFO
+trace_dir: /var/log
+# The web server does not host a local gRPC server; it is a client of the agent.
+# Set connect_agent to false to skip agent registration (the web server is not
+# a managed process, it only queries the agent).
+connect_agent: true
+enable_secure_grpc: false
+client_certificate: nav_ca_cert_stnc800a003.pem
+language: en
+# Optional web API authentication. When enabled, every /api/* route except
+# /api/login requires a valid session cookie. Credentials are stored ONLY in
+# the device-local credentials_file (never in this repository); use agent_cli
+# (-wuf <file> -awu <user>) to create users. Omit the whole 'auth' block or
+# set enabled to false to disable authentication (the default).
+# auth:
+#     enabled: true
+#     credentials_file: /etc/navigation_server/web_users
+#     session_timeout: 3600
+features:
+    - web_server
+servers:
+- Main:
+      class: WebTopServer
+      host: 0.0.0.0
+      port: 8080
+      use_agent_connection: true
+      # agent_address: stnc800a003
+      # grpc_port: 4545
+      auth:
+            enabled: false
+            credentials_file: /home/laurent/certificates/web_users
+            session_timeout: 3600
+
+
+- GrpcService:
+        class: GrpcServer
+        port: 4509

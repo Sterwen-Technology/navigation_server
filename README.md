@@ -77,7 +77,7 @@ All servers can be started from the command line, they don't require specific pe
 
 A Web server is part of the system and can be launched to allow control of the system via any browser. An optional authentication mechanism can also be installed.
 
-**Warning: the former Python based GUI is not compatible with the version 3.0.0**
+**Warning: the former Python based GUI is not compatible with the version 3.0.0 and upper**
 
 ### Automatic start
 
@@ -111,7 +111,7 @@ For any problem encountered, please open an issue in this GitHub repository: [Na
 
 ## Roadmap
 
-The current stable version is V3.0.0 Documentation is aligned on this version. The version 2.8.2 has introduced some key corrections on the CAN interface management.
+The current stable version is V3.0.1 Documentation is aligned on this version. The version 2.8.2 has introduced some key corrections on the CAN interface management.
 Existing application are to be upgraded to 2.8.3 and up.
 
 From the version 2.5.0 the new STNC800 hardware is supported
