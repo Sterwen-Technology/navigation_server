@@ -92,6 +92,7 @@ class VictronMPPT:
             _logger.error("The MPPT device must be linked with a coupler")
             raise ValueError
         self._coupler = None
+        self._coupler_timeout = opts.get('coupler_timeout', float, 20.0) # max number of seconds without messages from the coupler
         self._publisher_name = opts.get('publisher', str, None)
         if self._publisher_name is not None:
             self._protocol = opts.get_choice('protocol', ('nmea0183', 'nmea2000'), 'nmea0183')
@@ -119,6 +120,7 @@ class VictronMPPT:
         }
         self._start_period = 0.0
         self._last_msg_ts = time.monotonic()
+        self._communication_ok = False
         self._mean_v = 0.0
         self._mean_a = 0.0
         self._mean_p = 0.0
@@ -168,13 +170,25 @@ class VictronMPPT:
         _logger.debug("VEDirect message:%s" % msg.msg)
         self._current_data_dict = msg.msg  # that is the dictionary  with all current values
         self._current_data = MPPTData(msg.msg)
+        clock = time.monotonic()
+        if not self._communication_ok:
+            # communication is back so we need to reset all calculation
+            self._mean_v = 0.0
+            self._mean_a = 0.0
+            self._mean_p = 0.0
+            self._mean_pv = 0.0
+            self._nb_sample = 0
+            self._trend_buckets.clear()
+            self._start_period = clock
+            self._communication_ok = True
+
         # now let's compute the trend
         self._mean_v += self._current_data.voltage
         self._mean_a += self._current_data.current
         self._mean_pv += self._current_data.panel_voltage
         self._mean_p += self._current_data.panel_power
         self._nb_sample += 1
-        clock = time.monotonic()
+
         self._last_msg_ts = clock
         if clock - self._start_period >= self._trend_period and self._nb_sample > 0:
             self._trend_buckets.append(MPPTBucket(self._mean_v/self._nb_sample, self._mean_a/self._nb_sample,
@@ -193,12 +207,13 @@ class VictronMPPT:
             self._current_data.output_pb(output_values_pb)
 
     def get_device_info(self, device_info):
-        if time.monotonic() - self._last_msg_ts < 20. :
+        if time.monotonic() - self._last_msg_ts < self._coupler_timeout :
             device_info.communication_ok = True
             if self._current_data is not None:
                 self._current_data.output_info_pb(device_info)
         else:
             device_info.communication_ok = False
+            self._communication_ok = False
         device_info.device_label = self._device_label
         device_info.device_model = self._device_model
 

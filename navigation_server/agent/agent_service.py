@@ -401,9 +401,10 @@ class AgentServicerImpl(AgentServicer):
         if not isinstance(process, SystemdProcess):
             _logger.error(f"Agent GetSystemLog process {request.target} incorrect type {type(process)}")
             return
-        if not process.is_running:
-            _logger.error(f"Agent GetSystemLog process {request.target} not running")
-            return
+        # Change in 3.0.2 => log can be retrieved even if the process in not running
+        # if not process.is_running:
+            # _logger.error(f"Agent GetSystemLog process {request.target} not running")
+            # return
         # Start journalctl subprocess to read logs
         _logger.info(f"Agent GetSystemLog reading logs for {process.service}")
         cmd = ['journalctl', '-u', process.service, '-f', '-o', 'cat']
