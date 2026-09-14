@@ -733,7 +733,10 @@
                 t.translateAllElements();
                 return;
             }
-            grid.innerHTML = procs.map(procCard).join("");
+            // Show running processes first, preserving the received order within each group.
+            const ordered = procs.slice().sort((a, b) =>
+                (b.state === "RUNNING" ? 1 : 0) - (a.state === "RUNNING" ? 1 : 0));
+            grid.innerHTML = ordered.map(procCard).join("");
             t.translateAllElements();
         }
 
