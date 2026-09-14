@@ -23,7 +23,8 @@ from navigation_server.generated.agent_pb2 import NavigationSystemMsg, AgentResp
 from navigation_server.generated.services_server_pb2 import SystemProcessMsg, Server, Connection, ProcessState
 from navigation_server.generated.agent_pb2_grpc import AgentServicer, add_AgentServicer_to_server
 from navigation_server.router_common import (GrpcService, GenericTopServer, resolve_ref, copy_protobuf_data,
-                                             MessageServerGlobals, GrpcServer, GrpcClient, GrpcAccessException)
+                                             MessageServerGlobals, GrpcServer, GrpcClient, GrpcAccessException,
+                                             get_global_var)
 
 try:
     from navigation_server.nav_gpio import STNC_D7_Led, STNC_Gpio_Set
@@ -550,6 +551,14 @@ class AgentServicerImpl(AgentServicer):
         resp.system.start_time = MessageServerGlobals.main_server.start_time_str()
         # some information are independent of the main server
         resp.system.hostname = gethostname()
+        # let's retrieve the IP address
+
+        connection = get_global_var('main_connection')
+        if connection is not None:
+            address = connection.ipv4_address
+            if address:
+                resp.system.ip_address = address
+
         resp.system.settings = MessageServerGlobals.configuration.settings_file
         for process in self._agent.get_processes():
             # _logger.debug("Agent system status adding %s" % process.name)

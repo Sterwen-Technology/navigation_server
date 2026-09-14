@@ -18,7 +18,8 @@ import subprocess
 
 _logger = logging.getLogger('ShipDataServer.' + __name__)
 
-from navigation_server.router_common import GrpcService, GrpcServerError, get_global_var, fill_uuid_protobuf, MessageServerGlobals
+from navigation_server.router_common import GrpcService, GrpcServerError, get_global_var, fill_uuid_protobuf, \
+    MessageServerGlobals, set_global_var
 from navigation_server.network.nmcli_interface import NetworkManagerControl, NetworkManagerError
 from navigation_server.network.mmcli_interface import ModemControl
 
@@ -174,6 +175,7 @@ class NetworkInterfaceConnection:
         self._params = params
         self._type = params['type']
         self._network_connection = None
+        self._main = params.get('main', False) # from 3.0.2 indicates the main connection as reference
         try:
             self._function = self._functions[params['function']]
         except KeyError:
@@ -190,6 +192,10 @@ class NetworkInterfaceConnection:
     @property
     def type(self):
         return self._type
+
+    @property
+    def is_main(self) -> bool:
+        return self._main
 
     @property
     def support_ssl(self) -> bool:
@@ -537,6 +543,13 @@ class NetworkService(GrpcService):
                         MessageServerGlobals.main_server.stop_navigation()
                     else:
                         _logger.warning(f"{MessageServerGlobals.server_name} must be restarted after new SSL configuration generated")
+
+        # now record the min connection
+        for connection in self.connections():
+            if connection.is_main:
+                _logger.info(f"NetworkService connection {connection.name} is main")
+                set_global_var('main_connection', connection)
+                break
 
     def read_configuration(self):
         try:
