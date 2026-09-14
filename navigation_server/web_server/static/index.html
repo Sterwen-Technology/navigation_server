@@ -699,7 +699,10 @@
             if (!data.connected) {
                 pill.className = "status-pill disconnected";
                 pill.textContent = t.t("status.disconnected");
-                info.textContent = data.agent_address ? `— agent: ${data.agent_address}` : "— agent: ?";
+                const sys = data.system || {};
+                info.textContent = (sys.hostname || sys.ip_address)
+                    ? `— ${fmt(sys.hostname)} · ${fmt(sys.ip_address)}`
+                    : "— ?";
                 summary.innerHTML = `<div class="empty">${escapeHtml(data.error || t.t("general.not_connected"))}</div>`;
                 grid.innerHTML = "";
                 t.translateAllElements();
@@ -708,9 +711,8 @@
 
             pill.className = "status-pill connected";
             pill.textContent = t.t("status.connected");
-            info.textContent = `— agent: ${data.agent_address}`;
-
             const s = data.system;
+            info.textContent = `— ${fmt(s.hostname)} · ${fmt(s.ip_address)}`;
             summary.innerHTML = `
                 <h2>${escapeHtml(s.name)} <span class="sub" style="color:var(--muted);font-weight:400;">v${fmt(s.version)}</span></h2>
                 <div class="row"><span class="k" data-i18n="system.host">Host</span><span class="v">${fmt(s.hostname)}</span></div>
@@ -750,9 +752,7 @@
             const startBtn = `<button ${isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','start')">\u25b6 Start</button>`;
             const stopBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','stop')">\u25a0 Stop</button>`;
             const restartBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','restart')">\u27f2 Restart</button>`;
-            const logBtn = p.is_systemd
-                ? `<button onclick="openLog('${escapeHtml(p.name)}')">\ud83d\udccb Log</button>`
-                : '';
+            const logBtn = `<button onclick="openLog('${escapeHtml(p.name)}')">\ud83d\udccb Log</button>`;
             
             // Build service buttons from the services list
             const serviceButtons = [];
