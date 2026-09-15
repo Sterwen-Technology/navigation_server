@@ -552,13 +552,13 @@ class AgentServicerImpl(AgentServicer):
         # some information are independent of the main server
         resp.system.hostname = gethostname()
         # let's retrieve the IP address
-        try:
-            connection = get_global_var('main_connection')
+
+        connection = get_global_var('main_connection')
+        if connection is not None:
             address = connection.ipv4_address
             if address:
                 resp.system.ip_address = address
-        except KeyError:
-            pass
+
         resp.system.settings = MessageServerGlobals.configuration.settings_file
         for process in self._agent.get_processes():
             # _logger.debug("Agent system status adding %s" % process.name)

@@ -540,6 +540,7 @@ class NavigationConfiguration:
             return self._globals[key]
         except KeyError:
             _logger.error("Global reference %s non existent" % key)
+            return None
 
     def store_hook(self, key, hook):
         self._hooks[key] = hook
