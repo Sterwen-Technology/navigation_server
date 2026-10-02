@@ -15,7 +15,8 @@ server_name: Energy
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
-secure_grpc: true
+enable_secure_grpc: true
+force_secure_grpc: true
 log_module:
     energy_mgmt.mppt_service: INFO
 
@@ -47,15 +48,20 @@ couplers:
 
 services:
 
-- MPPT:
+- EnergyService:
     class: MPPTService
     coupler: MPPTVEDirect
     server: gRPCMain
     publisher: NMEAPush
-    protocol: nmea0183
+    protocol: nmea2000
     talker: EM
     instance: 1
-
+    # device parameters
+    device_label: MPPT1
+    device_model: Victron MPPT Blue Solar 70-15
+    panel_max_power: 180
+    panel_max_voltage: 40
+    max_voltage: 15
 
 
 - Console:
@@ -71,7 +77,13 @@ publishers:
       output: PRINT
       couplers: [MPPTVEDirect]
 
-
+- NMEAPush:
+    class: N2KForwarderToServer
+    active: true
+    service: EnergyService
+    address: 127.0.0.1
+    port: 4512
+    device: MPPT
 
 
 

@@ -22,7 +22,7 @@ from .protobuf_utilities import (pb_enum_string, set_protobuf_data, ProtobufProx
                                  copy_protobuf_data, fill_protobuf_from_dict)
 from .protob_arguments import protob_to_dict, dict_to_protob
 from .xml_utilities import XMLDefinitionFile, XMLDecodeError
-from .configuration import NavigationConfiguration
+from .configuration import NavigationConfiguration, NavigationObject
 from .message_trace import MessageTraceError, NMEAMsgTrace
 from .server_common import NavigationServer
 from .grpc_server_service import GrpcServer, GrpcService, GrpcServerError, GrpcSecondaryService

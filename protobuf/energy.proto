@@ -1,6 +1,6 @@
 //-------------------------------------------------------------------------------
-// Name:        vedirect.proto
-// Purpose:     Victron RS485 messages protobuf definition file
+// Name:        energy.proto
+// Purpose:     Energy (Electric) management interface protobuf definition
 //
 // Author:      Laurent Carré
 //
@@ -11,13 +11,15 @@
 
 syntax = "proto3";
 
-// import "arguments.proto";
 
-// Messages to transmit Victron VE direct messages between the reader and the instrument
+// Victron VE direct protocol specific enum
 
 enum VE_Error{
   no_error=0;
   Battery_voltage_too_high=2;
+  Charger_Temperature_too_high=17;
+  Charger_over_current=18;
+  Charger_current_reversed=19;
   Bulk_time_limit_exceeded=20;
   Current_sensor_issue=21;
   Input_voltage_too_high=33;
@@ -33,9 +35,12 @@ enum VE_state {
   Float=5;
   Storage=6;
   Equalize=7;
+  Inverting=9;
+  Power_Supply=11;
   Starting_up=245;
   Repeated_absorption=246;
   Auto_equalize=247;
+  Battery_Safe=248;
   External_control=252;
 }
 
@@ -45,48 +50,86 @@ enum VE_MPPT {
   Active=2;
 }
 
+enum VE_Off_Reason {
+  no_reason=0;
+  No_input_power=1;
+  Switched_off_switch=2;
+  Switched_off_register=4;
+  Remote_input=8;
+  Protection_active=0x10;
+  Paygo=0x20;
+  BMS=0x40;
+  Engine_shutdown_detection=0x80;
+  Analyzing_input_voltage=0x100;
+}
+
+// Energy management enums
+
+enum EnergySource {
+  Battery=0;      // Default is Battery - useful to have a consistent device typing across all of them
+  Solar_MPPT=1;
+  Alternator=2;
+  AC_Charger=3;
+  AC_DC_ChargerConverter=8;
+  DC_DC_Charger=4;
+  Windmill=5;
+  Hydro_generator=6;
+  AC_Generator=7;
+}
+
 // Global messages
 
 message energy_request {
-  uint32 id=1;      // request ID
-  string command=2;         // Optional - Additional command
-  uint32 trend_samples=3;   // Optional -  Max number of samples to be returned
+  uint32 id=1;              // request ID
+  uint32 instance=2;        // Optional - In systems with multiple instances of one device
+  string command=3;         // Optional - Additional command
+  uint32 trend_samples=4;   // Optional -  Max number of samples to be returned
 }
 
-message VE_Hex_Parameter {
-  string  name=1;     // short name used as dictionary entry
-  string description=2; // full description as per documentation
-  uint32 register=3;    //
+message energy_command_response{
+  uint32 id=1;    // request ID
+  string command=2; // The command that was requested
+  string response=3; // Response message
 }
 
 // MPPT - Solar panel specific section
 
 message MPPT_device {
   // Semi static information
-  uint32 id=1;            // device ID - identify the device when more than one are used
-  bool communication_ok=14;  // True if the communication is working with the MPPT device
-  string device_label=12;
-  string  device_model=13;
-  string product_id = 2;
-  string firmware = 3;
-  string serial = 10;
-  VE_Error error =4;
-  VE_state state=5;
+  uint32 instance=1;          // device ID - identify the device when more than one are used
+  bool communication_ok=2;  // True if the communication is working with the MPPT device
+  string device_label=3;
+  string  device_model=4;
+  VE_Error error = 5;
+  VE_state state= 6;
   VE_MPPT mppt_state =7;
-  float day_max_power = 6;  //Watt
-  float day_power = 8;      //kilo Watt-heure
-  string msg_timestamp = 9; // ISO UTC
-  MPPT_parameters parameters = 11;  // Optional
+  string product_id = 8;
+  string firmware = 9;
+  string serial = 10;
+  float day_max_power = 11;  //Watt
+  float day_power = 12;      //kilo Watt-heure
+  string msg_timestamp = 13; // ISO UTC
+  MPPT_parameters parameters = 14;  // Optional
 }
 
 message MPPT_parameters {
   uint32 instance=6;          // Instance ID of the MPPT device
-  uint32 battery=7;           // Instance ID of the battery bank charged by the MPPT
   float panel_max_power=1;    // Watt
   float panel_max_voltage=2;  // Volt
   float max_voltage=3;        // Volt - on MPPT output
   float trend_duration=4;     // Duration in minutes of the trand series
   float trend_interval=5;     // interval in seconds between trend values
+}
+
+// that is the minimum set of parameters that are configurable from the service
+// Only the parameter that are set in the message are applied
+message MPPT_Configuration_parameters {
+  uint32 instance=1;
+  bool  enabled=2;
+  string battery_type=3;
+  float bulk_voltage=4;
+  float float_voltage=5;
+  float equalize_voltage=6;
 }
 
 message solar_output {
@@ -108,38 +151,51 @@ service MPPTService {
   rpc GetDeviceInfo(energy_request) returns (MPPT_device) {}
   rpc GetOutput(energy_request) returns (solar_output) {}
   rpc GetTrend(energy_request) returns (solar_trend_response) {}
+  rpc SetConfiguration(MPPT_Configuration_parameters) returns (energy_command_response) {}
 }
 
 // Battery bank service
 
 message ShuntDevice {
+  uint32 instance=1;                // instance ID of the controlling Shunt/Controller
   string product_id = 2;
   string firmware = 3;
+  uint32 battery_bank_instance=6;   // instance ID of the controlled battery bank
   string serial = 10;
   VE_Error error =4;
   VE_state state=5;
 }
 
 message BatteryBank {
-  uint32 instance=1;
-  string label=2;
-  string chemistry=11;
-  float nominal_voltage=3;    // Volt
-  float nominal_capacity=4;   // Wh
-  float voltage=5;            // Actual voltage
-  float state_of_charge=6;    // Percent
-  float max_voltage=7;        // Maximum charge voltage => alarm
-  float min_voltage=8;        // Minimum operating voltage => alarm
-  float charge_voltage=9;     // Bulk charge
-  float max_charge_current=10; // A
-  float last_24h_energy=12;   // Wh Positive charge
-  float reporting_interval=13; // In seconds
+  uint32 instance=1;          // Instance ID=0 by default
+  bool communication_ok=2;
+  uint32 controller=17;       // Instance ID of the Shunt
+  string device_label=3;
+  string device_model=4;
+  string chemistry=16;
+  float nominal_voltage=5;    // Volt
+  float nominal_capacity=6;   // Wh
+  float voltage=7;            // Actual voltage
+  float auxiliary_voltage=8;  // actual auxiliary voltage (engine circuit)
+  float state_of_charge=9;    // Percent
+  float max_voltage=10;        // Maximum charge voltage => alarm
+  float min_voltage=11;        // Minimum operating voltage => alarm
+  float charge_voltage=12;     // Bulk charge
+  float max_charge_current=13; // A
+  float last_24h_energy=14;   // Wh Positive charge
+  float reporting_interval=15; // In seconds
+  float trend_duration=18;     // Duration in minutes of the trand series
+  float trend_interval=19;     // interval in seconds between trend values
+  float high_power_scale_amp=20;    // Scale for data display in high power
+  float low_power_scale_amp=21;     // Scale for low power. If current exceed that value => high power
 }
 
 message battery_in_out {
-  float voltage = 1;  // Instant voltage
-  float current = 2;  // Instant current positive = charge, negative discharge
-  float energy_variation = 3; // Wh positive = charge
+  uint32 instance=1;  // Shunt instance ID
+  float voltage = 2;  // Instant voltage
+  float current = 3;  // Instant current positive = charge, negative discharge
+  float energy_variation = 4; // Wh positive = charge
+  float auxiliary_voltage = 5;  // Instant auxiliary voltage - engine battery in most of the cases
 }
 
 message battery_trend_bucket {
@@ -147,21 +203,152 @@ message battery_trend_bucket {
   float voltage=2;     // Voltage at the end of the period
   float energy_variation=3;      // in Wh positive charge - Variation during the interval
   float state_of_charge=4;    // Percent at the end of the period
+  float power=5;          // average power over the period in W
 }
 
 message battery_trend_response {
-  uint32 id=1;
+  uint32 instance=1;
   uint32 nb_values=2;   // Number of values in the response
   float interval=3;     // Interval between samples in seconds
   repeated battery_trend_bucket samples=4;
 }
 
+message battery_response {
+  // The message sent back is defined by the command field
+  //
+    BatteryBank battery=1;
+    optional ShuntDevice controller=2;
+    string response=3;
+}
+
 service BatteryService {
-    rpc GetInformation(energy_request) returns (BatteryBank) {}
+    rpc GetInformation(energy_request) returns (battery_response) {}
     rpc GetValues(energy_request) returns (battery_in_out) {}
     rpc GetTrend(energy_request) returns (battery_trend_response) {}
     }
 
 // DC-DC Charger
 
+
+// DC-DC charger definition
+message DC_DC_Charger_Parameters {
+  uint32 instance=1;    // instance number default=0, if single instance
+  string device_label=2;       // User label
+  string model=3;       // Device model and make
+  float nominal_input_voltage=4;
+  float  nominal_output_voltage=5;
+  float input_voltage_range=6;
+  float output_voltage_range=7;
+  float max_power=8; // W
+  VE_state state=9;
+  VE_Error error=10;
+  VE_Off_Reason off_reason=11;
+  bool communication_ok=12;
+  float trend_duration=13;     // Duration in minutes of the trand series
+  float trend_interval=14;     // interval in seconds between trend values
+}
+
+// DC-DC Charger dynamic values
+message DC_DC_Charger_running_values {
+  uint32 instance=1;
+  VE_state state=2;
+  VE_Error error=3;
+  VE_Off_Reason off_reason=4;
+  bool communication_ok=5;
+  float input_voltage=6;  // Current input voltage (V)
+  float input_current=7;  // Current input current (A)
+  float input_power=8;    // Current input power (W)
+  float output_voltage=9;
+  float output_current=10;
+  float output_power=11;  // W
+}
+
+// Configurable parameters
+message DC_DC_Charger_configuration {
+  uint32 instance=1;
+  bool charger_on=2;
+  float max_input_current=3;  // in A
+  float max_output_current=4; // in A
+}
+
+message DC_DC_Charger_trend {
+  uint32 instance=1;
+  uint32 nb_values=2;
+  float interval=3;
+  repeated DC_DC_Charger_running_values samples=4;
+}
+
+service DC_DC_Service {
+  rpc GetInformation(energy_request) returns (DC_DC_Charger_Parameters);
+  rpc GetValues(energy_request) returns (DC_DC_Charger_running_values);
+  rpc GetTrend(energy_request) returns (DC_DC_Charger_trend);
+  rpc SetConfiguration(DC_DC_Charger_configuration) returns (energy_command_response);
+}
+
+// Energy Controller
+// That service manages the global view and summary view of the electrical energy in the boat
+// In that version, only instantaneous values (with trend) are managed. No historical data
+
+message EnergySourceDevice {
+  uint32 instance_id = 1;
+  string label = 2;
+  EnergySource type = 3;
+}
+
+message BatteryUnit {
+  uint32 instance_id=1;
+  string label=2;       //
+}
+
+message EnergyControllerParameters {
+  float nominal_main_voltage=1;       // 12-24-48V
+  float nominal_auxiliary_voltage=2;
+  float maximum_main_voltage=3;       // => alarm
+  float minimum_main_voltage=4;       // => alarm
+  repeated EnergySourceDevice sources=5;
+  repeated BatteryUnit batteries=6;
+  float trend_duration=7;     // Duration in minutes of the trand series
+  float trend_interval=8;     // interval in seconds between trend values
+
+}
+
+message EnergySourceData {
+  uint32 instance=1;
+  float current = 2;  // Instantaneous current (A) injected/draw
+  float power = 3;    // Instantaneous Power input/draw (W) in the system
+  bool communication_ok =4; // True of communication with the device is OK
+  bool device_on = 5;       // True if the device is ON
+}
+
+message BatteryUnitData {
+  uint32 instance=1;
+  float current=4;  // Positive send current - negative draw current (charging)
+  float power=5;    // Positive power injected from the battery - negative power draw
+  float state_of_charge=6;  // Current SoC
+  float energy=7;   // Energy level in Wh
+}
+
+message EnergyControllerData {
+  // consolidated instantaneous data
+  float main_voltage=1;
+  float auxiliary_voltage=2;
+  float production_power=3;
+  float consumption_power=4; // Excluding injected in battery banks
+  float energy_stock=5;     // total energy available in all battery banks (Wh)
+  float battery_balance=6;  // positive power injected / negative draw (W)
+  repeated EnergySourceData sources_data=7;
+  repeated BatteryUnitData batteries_data=8;
+}
+
+message EnergyControllerTrend {
+  uint32 nb_values=1;   // number of samples
+  float interval=2;     // in seconds
+  repeated EnergyControllerData samples=3;  // if the interval is over the reporting period then average is reported
+}
+
+service EnergyService {
+  rpc GetInformation(energy_request) returns (EnergyControllerParameters) {}
+  rpc GetValues(energy_request) returns (EnergyControllerData) {}
+  rpc GetTrend(energy_request) returns (EnergyControllerTrend) {}
+}
 

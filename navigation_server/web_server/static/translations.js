@@ -22,6 +22,7 @@ const TRANSLATIONS = {
         'button.apply': 'Apply',
         'button.close': 'Close',
         'button.back': 'Back',
+        'button.retry': 'Retry',
         
         // Auto-refresh
         'auto_refresh.label': 'Auto refresh (5s)',
@@ -133,6 +134,9 @@ const TRANSLATIONS = {
         'general.per_second': '/s',
         'general.close': 'Close',
 
+        // Error messages
+        'error.connection_lost': 'Web server connection lost',
+
         // Authentication
         'auth.title': 'Sign in',
         'auth.username': 'Username',
@@ -142,6 +146,43 @@ const TRANSLATIONS = {
         'auth.error': 'Authentication error',
         'auth.session_expired': 'Session expired, please sign in again',
         
+        // Navigation
+        'nav.services': 'Services',
+        'nav.ems': 'Energy Management System',
+
+        // EMS
+        'ems.loading': 'Loading Energy Management System data...',
+        'ems.error': 'Error loading EMS data',
+        'ems.no_sources': 'No energy sources.',
+        'ems.controller_title': 'Energy Controller',
+        'ems.battery_title': 'Battery',
+        'ems.main_voltage': 'Main Voltage',
+        'ems.auxiliary_voltage': 'Auxiliary Voltage',
+        'ems.production_power': 'Production',
+        'ems.consumption_power': 'Consumption',
+        'ems.energy_stock': 'Energy Stock',
+        'ems.battery_balance': 'Battery Balance',
+        'ems.battery_current': 'Current',
+        'ems.state_of_charge': 'State of Charge',
+        'ems.battery_power': 'Power',
+        'ems.battery_energy': 'Energy',
+        'ems.battery_trend': 'Battery Trend',
+        'ems.source_trend': 'Trend',
+        'ems.current': 'Current',
+        'ems.power': 'Power',
+        'ems.on': 'ON',
+        'ems.off': 'OFF',
+        'ems.no_communication': 'NO COM',
+        'ems.type_0': 'Battery',
+        'ems.type_1': 'Solar',
+        'ems.type_2': 'Alternator',
+        'ems.type_3': 'AC Charger',
+        'ems.type_4': 'DC-DC Charger',
+        'ems.type_5': 'Windmill',
+        'ems.type_6': 'Hydro Generator',
+        'ems.type_7': 'AC Generator',
+        'ems.type_8': 'AC-DC Converter',
+
         // Engine
         'engine.title': 'Engine Data',
         'engine.voltage': 'Voltage',
@@ -189,9 +230,60 @@ const TRANSLATIONS = {
         'mppt.panel_power': 'Panel P',
         'mppt.trend': 'Power trend',
         'mppt.trend_power': 'Panel power (W)',
-        'mppt.no_trend': 'No trend data'
+        'mppt.no_trend': 'No trend data',
+
+        // Battery
+        'battery.title': 'Battery',
+        'battery.device_model': 'Model',
+        'battery.nominal_capacity': 'Nominal Capacity',
+        'battery.nominal_voltage': 'Nominal Voltage',
+        'battery.voltage': 'Voltage',
+        'battery.current': 'Current',
+        'battery.power': 'Power',
+        'battery.state_of_charge': 'State of Charge',
+        'battery.energy': 'Energy',
+        'battery.details': 'Details',
+        'battery.trend': 'Power Trend',
+        'battery.label': 'Label'
     },
     fr: {
+        // Navigation
+        'nav.services': 'Services',
+        'nav.ems': 'Système de Gestion d\'Énergie',
+
+        // EMS
+        'ems.loading': 'Chargement des données du système de gestion d\'énergie...',
+        'ems.error': 'Erreur lors du chargement des données EMS',
+        'ems.no_sources': 'Aucune source d\'énergie.',
+        'ems.controller_title': 'Contrôleur Énergétique',
+        'ems.battery_title': 'Batterie',
+        'ems.main_voltage': 'Tension Principale',
+        'ems.auxiliary_voltage': 'Tension Auxiliaire',
+        'ems.production_power': 'Production',
+        'ems.consumption_power': 'Consommation',
+        'ems.energy_stock': 'Stock Énergétique',
+        'ems.battery_balance': 'Équilibre Batterie',
+        'ems.battery_current': 'Courant',
+        'ems.state_of_charge': 'État de Charge',
+        'ems.battery_power': 'Puissance',
+        'ems.battery_energy': 'Énergie',
+        'ems.battery_trend': 'Tendance Batterie',
+        'ems.source_trend': 'Tendance',
+        'ems.current': 'Courant',
+        'ems.power': 'Puissance',
+        'ems.on': 'ON',
+        'ems.off': 'OFF',
+        'ems.no_communication': 'PAS DE COM',
+        'ems.type_0': 'Batterie',
+        'ems.type_1': 'Solaire',
+        'ems.type_2': 'Alternateur',
+        'ems.type_3': 'Chargeur CA',
+        'ems.type_4': 'Chargeur CC-CC',
+        'ems.type_5': 'Éolienne',
+        'ems.type_6': 'Générateur Hydro',
+        'ems.type_7': 'Générateur CA',
+        'ems.type_8': 'Convertisseur CA-CC',
+
         // Connection status
         'status.connected': 'connecte',
         'status.disconnected': 'deconnecte',
@@ -210,6 +302,7 @@ const TRANSLATIONS = {
         'button.apply': 'Appliquer',
         'button.close': 'Fermer',
         'button.back': 'Retour',
+        'button.retry': 'Reessayer',
         
         // Auto-refresh
         'auto_refresh.label': 'Rafraich. auto (5s)',
@@ -321,6 +414,9 @@ const TRANSLATIONS = {
         'general.per_second': '/s',
         'general.close': 'Fermer',
 
+        // Error messages
+        'error.connection_lost': 'Connexion au serveur web perdue',
+
         // Authentication
         'auth.title': 'Connexion',
         'auth.username': 'Utilisateur',
@@ -377,7 +473,21 @@ const TRANSLATIONS = {
         'mppt.panel_power': 'P panneau',
         'mppt.trend': 'Tendance puissance',
         'mppt.trend_power': 'Puissance panneau (W)',
-        'mppt.no_trend': 'Pas de tendance'
+        'mppt.no_trend': 'Pas de tendance',
+
+        // Battery
+        'battery.title': 'Batterie',
+        'battery.device_model': 'Modèle',
+        'battery.nominal_capacity': 'Capacité Nominale',
+        'battery.nominal_voltage': 'Tension Nominale',
+        'battery.voltage': 'Tension',
+        'battery.current': 'Courant',
+        'battery.power': 'Puissance',
+        'battery.state_of_charge': "État de Charge",
+        'battery.energy': 'Énergie',
+        'battery.details': 'Détails',
+        'battery.trend': 'Tendance de Puissance',
+        'battery.label': 'Étiquette'
     }
 };
 
@@ -484,8 +594,11 @@ async function initWebTranslations() {
                 t.setLanguage(config.language);
             }
         }
+        // Don't throw for non-OK responses - just use default language
     } catch (e) {
         console.debug('Could not fetch language from server config, using default (en):', e);
+        // Don't mark config errors as connection errors
+        // Don't re-throw - language config failure shouldn't break the page
     }
 }
 

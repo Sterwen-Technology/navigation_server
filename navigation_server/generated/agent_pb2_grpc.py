@@ -62,6 +62,16 @@ class AgentStub(object):
                 request_serializer=agent__pb2.AgentCmdMsg.SerializeToString,
                 response_deserializer=agent__pb2.AgentResponse.FromString,
                 _registered_method=True)
+        self.GetSettings = channel.unary_unary(
+                '/Agent/GetSettings',
+                request_serializer=agent__pb2.AgentCmdMsg.SerializeToString,
+                response_deserializer=agent__pb2.ProcessSettings.FromString,
+                _registered_method=True)
+        self.SetSettings = channel.unary_unary(
+                '/Agent/SetSettings',
+                request_serializer=agent__pb2.AgentCmdMsg.SerializeToString,
+                response_deserializer=agent__pb2.AgentResponse.FromString,
+                _registered_method=True)
 
 
 class AgentServicer(object):
@@ -97,6 +107,18 @@ class AgentServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetSettings(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SetSettings(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AgentServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -122,6 +144,16 @@ def add_AgentServicer_to_server(servicer, server):
             ),
             'GetServices': grpc.unary_unary_rpc_method_handler(
                     servicer.GetServices,
+                    request_deserializer=agent__pb2.AgentCmdMsg.FromString,
+                    response_serializer=agent__pb2.AgentResponse.SerializeToString,
+            ),
+            'GetSettings': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetSettings,
+                    request_deserializer=agent__pb2.AgentCmdMsg.FromString,
+                    response_serializer=agent__pb2.ProcessSettings.SerializeToString,
+            ),
+            'SetSettings': grpc.unary_unary_rpc_method_handler(
+                    servicer.SetSettings,
                     request_deserializer=agent__pb2.AgentCmdMsg.FromString,
                     response_serializer=agent__pb2.AgentResponse.SerializeToString,
             ),
@@ -259,6 +291,60 @@ class Agent(object):
             request,
             target,
             '/Agent/GetServices',
+            agent__pb2.AgentCmdMsg.SerializeToString,
+            agent__pb2.AgentResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetSettings(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Agent/GetSettings',
+            agent__pb2.AgentCmdMsg.SerializeToString,
+            agent__pb2.ProcessSettings.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SetSettings(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Agent/SetSettings',
             agent__pb2.AgentCmdMsg.SerializeToString,
             agent__pb2.AgentResponse.FromString,
             options,

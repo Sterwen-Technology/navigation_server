@@ -18,22 +18,24 @@
 #-------------------------------------------------------------------------------
 
 import logging
+import datetime
 
-from navigation_server.router_common import MessageServerGlobals, GenericTopServer
-from navigation_server.router_common.configuration import Parameters
-from .web_server_impl import NavigationWebServer, Authenticator
+from navigation_server.router_common import MessageServerGlobals, GenericTopServer, NavThread
+
+from .web_server import NavigationWebServer
+from .user_management import Authenticator
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-class WebTopServer(GenericTopServer):
+class WebTopServer(GenericTopServer, NavThread):
     """Main server for the web interface process.
 
     Instantiated from the Yaml configuration with a single Parameters
-    argument (the canonical interface). The web server uses the main thread:
-    start() prepares the HTTP server and wait() enters the blocking
-    serve_forever() loop. stop() (triggered by SIGINT) shuts the HTTP
-    server down.
+    argument (the canonical interface). The web server runs in a NavThread:
+    start() starts the NavThread which runs serve_forever() in a background thread,
+    wait() blocks the main thread until the NavThread stops. stop() (triggered by
+    SIGINT) shuts the HTTP server down.
 
     The TLS mode for the gRPC connections to the agent is inherited from
     the global configuration (MessageServerGlobals.configuration.
@@ -41,8 +43,9 @@ class WebTopServer(GenericTopServer):
     server_main before the objects are built.
     """
 
-    def __init__(self, opts: Parameters):
-        super().__init__(opts)
+    def __init__(self, opts):
+        GenericTopServer.__init__(self, opts)
+        NavThread.__init__(self, name="web_server", daemon=False)
         # self._name = 'web_top_server'
         MessageServerGlobals.main_server = self
         self._web_server = None
@@ -84,21 +87,24 @@ class WebTopServer(GenericTopServer):
         )
 
     def start(self) -> bool:
-        # The HTTP server itself is not started here; it is started in wait()
-        # because serve_forever() blocks the main thread. We only signal that
-        # the server is ready.
+        # Set up GenericTopServer state
         self._is_running = True
-        import datetime
         self._start_time = datetime.datetime.now()
         self._start_time_s = self._start_time.strftime("%Y/%m/%d-%H:%M:%S")
         _logger.info("Web server ready on http://%s:%d (main thread)"
                      % (self._web_server._host, self._web_server._port))
+        # Start the NavThread which will run serve_forever in a background thread
+        NavThread.start(self)
         return True
 
-    def wait(self):
-        # Blocks the main thread until the HTTP server stops (SIGINT or
-        # explicit stop).
+    def nrun(self):
+        # Run the HTTP server in the NavThread
         self._web_server.serve_forever()
+
+    def wait(self):
+        # Blocks the main thread until the NavThread stops (SIGINT or
+        # explicit stop).
+        self.join()
         _logger.info("Web server main loop ended")
         self._is_running = False
 

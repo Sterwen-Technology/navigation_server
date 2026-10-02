@@ -17,6 +17,7 @@ trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
 enable_secure_grpc: false
 force_secure_grpc: false
+connect_agent: false
 log_module:
     energy_mgmt.mppt_service: DEBUG
     nmea2000.nmea2k_publisher: INFO
@@ -42,29 +43,34 @@ couplers:
 
 - MPPTVEDirect:
     class: VEDirectCoupler
-    device: /dev/ttyUSB4
-    alt_device: /dev/ttyUSB8
-    interface: serial
-    logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
+    # device: /dev/ttyUSB4
+    # alt_device: /dev/ttyUSB8
+    interface: simulation
+    logfile: /mnt/meaban/Bateau/vedirect-traces/TRACE-VEDirect-240808-1503.log
     protocol: non_nmea
     max_attempt: 1
-    # device parameters
-    device_label: MPPT1
-    device_model: Victron MPPT Blue Solar 70-15
-    panel_max_power: 180
-    panel_max_voltage: 40
-    max_voltage: 15
+
 
 services:
 
-- EnergyService:
+- MPPTService:
     class: MPPTService
     coupler: MPPTVEDirect
     server: gRPCMain
     publisher: NMEAPush
     protocol: nmea2000
+    energy_controller: EnergyController
+      # device parameters
+    device_label: MPPT1
+    device_model: Victron MPPT Blue Solar 70-15
+    panel_max_power: 180
+    panel_max_voltage: 40
+    max_voltage: 15
     
-    # talker: EM
+- EnergyController:
+    class: EnergyService
+    server: gRPCMain
+    # all parameters as default
 
 - Console:
     class: Console

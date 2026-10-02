@@ -20,7 +20,8 @@ log_module:
     router_common.generic_top_server: INFO
 
 debug_configuration: false
-secure_grpc: true
+enable_secure_grpc: false
+force_secure_grpc: false
 
 features:
     - nmea2000
@@ -45,10 +46,22 @@ functions:
     
 services:
 
-- Engines:
+- Engine:
     class: EngineDataService
     server: gRPCMain
     source: DataSource
+    
+engines:
+
+- Engine1:
+    id: 0
+    model: Volvo D2-40
+    max_rpm: 3000
+    voltage_scale: 16
+    voltage_high_alert: 14.8
+    voltage_low_alert: 12.2
+    temperature_scale: 130
+    temperature_high_alert: 100
 
 
 
