@@ -19,7 +19,7 @@ from typing import Any, Generator
 from navigation_server.router_common import (GrpcClient, ServiceClient, NavThread, MessageServerGlobals,
                                              GrpcAccessException, GrpcServer, ProtobufProxy, pb_enum_string)
 from navigation_server.generated.agent_pb2_grpc import AgentStub
-from navigation_server.generated.agent_pb2 import AgentCmdMsg, AgentResponse, NavigationSystemMsg
+from navigation_server.generated.agent_pb2 import AgentCmdMsg, AgentResponse, NavigationSystemMsg, ProcessSettings
 from navigation_server.generated.services_server_pb2 import ProcessState, Connection, Server, SystemProcessMsg, Service
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
@@ -113,6 +113,7 @@ class AgentClient(ServiceClient):
     def system_cmd(self, cmd: str):
         msg = AgentCmdMsg()
         msg.cmd = cmd
+        assert self._stub is not None
         try:
             response = self._server_call(self._stub.AgentSystemCmd, msg, None)
         except GrpcAccessException:
@@ -168,6 +169,48 @@ class AgentClient(ServiceClient):
             return response.services_implementation
         except GrpcAccessException:
             _logger.error("Error accessing agetn to retrieve services")
+            return None
+
+    def get_settings(self, target: str):
+        """Get settings for a process or special target (agent, network).
+        
+        Args:
+            target: Process name or special target ('agent', 'network')
+            
+        Returns:
+            ProcessSettings message or None if error
+        """
+        msg = AgentCmdMsg()
+        msg.target = target
+        try:
+            response = self._server_call(self._stub.GetSettings, msg, None)
+            return response
+        except GrpcAccessException:
+            _logger.error(f"Error accessing server to retrieve settings for {target}")
+            return None
+
+    def set_settings(self, target: str, settings_content: str):
+        """Set settings for a process or special target (agent, network).
+        
+        Args:
+            target: Process name or special target ('agent', 'network')
+            settings_content: The YAML settings content to write
+            
+        Returns:
+            AgentResponse message or None if error
+        """
+        from navigation_server.generated.agent_pb2 import ProcessSettings
+        msg = AgentCmdMsg()
+        msg.target = target
+        # Use the oneof settings field
+        msg.settings.process_name = target
+        msg.settings.settings_content = settings_content
+        msg.settings.settings_file = ""  # Will be determined by server
+        try:
+            response = self._server_call(self._stub.SetSettings, msg, None)
+            return response
+        except GrpcAccessException:
+            _logger.error(f"Error accessing server to set settings for {target}")
             return None
 
 class AgentInterfaceRunner(NavThread):

@@ -16,16 +16,16 @@ import traceback
 
 from collections import namedtuple, deque
 
-from navigation_server.generated.energy_pb2 import solar_output, energy_request, MPPT_device, solar_trend_response
-from navigation_server.generated.energy_pb2_grpc import MPPTServiceServicer, add_MPPTServiceServicer_to_server, \
-    MPPTServiceServicer
+from navigation_server.generated.energy_pb2 import (solar_output, energy_request, MPPT_device, solar_trend_response,
+                                                    EnergySource, VE_MPPT, VE_Error)
+from navigation_server.generated.energy_pb2_grpc import MPPTServiceServicer, add_MPPTServiceServicer_to_server
 from navigation_server.router_common import (GrpcService, MessageServerGlobals, resolve_ref, copy_protobuf_data,
                                              NavGenericMsg, N2K_MSG, fill_protobuf_from_dict)
 from navigation_server.router_core import NMEA0183Sentences
-from navigation_server.couplers import mppt_nmea0183
 
-from navigation_server.generated.nmea2000_classes_gen import Pgn127751Class, Pgn127507Class
+from navigation_server.generated.nmea2000_classes_gen import Pgn127751Class
 
+from .energy_base_service import EnergyDevice
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -54,24 +54,9 @@ class MPPTData:
 
     state_dict = {0: 0, 2: 9, 3: 1, 4: 2, 5: 5, 7: 4, 247: 4}  # correspondence between Victron and NMEA2000 state
 
-
-    def gen_pgn_127507(self):
+    def gen_pgn_127751(self, sid: int):
         # 12/05/2026 (2.8.1) - the PGN is currently wrongly encoded do not use it for now
         # 31/08/2026 (3.0.0) - PGN definition updated
-        res = Pgn127507Class()
-        res.charger_instance = 1
-        res.battery_instance = 1
-        res.operating_state = self.state_dict.get(self.state, 0)
-        res.charger_mode = 0
-        if self.mppt_state != 0:
-            res.charger_enable = 1
-        else:
-            res.charger_enable = 0
-        res.equalization_pending = 0
-        res.eq_time_remaining = 0
-        return res
-
-    def gen_pgn_127751(self, sid: int):
         res = Pgn127751Class()
         res.sequence_id = sid % 256
         res.connection_number = 1
@@ -83,94 +68,73 @@ class MPPTData:
 MPPTBucket = namedtuple('MPPTBucket', ['voltage', 'panel_voltage', 'current', 'power'])
 
 
-class VictronMPPT:
+class VictronMPPT(EnergyDevice):
+    """
+    Victron MPPT device implementation
+    Extends EnergyDevice with MPPT-specific functionality
+    """
+    
+    # MPPT energy source type
+    energy_source_type = EnergySource.Solar_MPPT
 
     def __init__(self, opts, service):
-        self._name = opts.get('name', str, 'VictronMPPT')
-        self._coupler_name = opts.get('coupler', str, None)
-        if self._coupler_name is None:
-            _logger.error("The MPPT device must be linked with a coupler")
-            raise ValueError
-        self._coupler = None
-        self._coupler_timeout = opts.get('coupler_timeout', float, 20.0) # max number of seconds without messages from the coupler
-        self._publisher_name = opts.get('publisher', str, None)
-        if self._publisher_name is not None:
-            self._protocol = opts.get_choice('protocol', ('nmea0183', 'nmea2000'), 'nmea0183')
-            if self._protocol == 'nmea0183':
-                NMEA0183Sentences.set_talker(opts.get('talker', str, 'ST'))
-        self._publisher = None
-        self._publish_function = None
-        self._service = service
-        self._current_data = None
-        self._current_data_dict = None
-        trend_duration = opts.get('trend_duration', int, 5)
-        self._trend_period = opts.get('trend_interval', float, 10.)
-        self._trend_depth = int((trend_duration * 60.)/ self._trend_period)
-        self._trend_buckets = deque(maxlen=self._trend_depth)
-        self._device_label = opts.get('device_label', str, self._name)
-        self._device_model = opts.get('device_model', str, 'Unknown')
+        # Initialize base class
+        super().__init__(opts, service)
+        
+        # MPPT-specific parameters
         self._parameters = {
-            'instance' : opts.get('instance', int, 1),
+            'instance': opts.get('instance', int, 1),
             'battery': opts.get('battery', int, 1),
             'panel_max_power': opts.get('panel_max_power', float, 0.0),
             'panel_max_voltage': opts.get('panel_max_voltage', float, 0.0),
             'max_voltage': opts.get('max_voltage', float, 0.0),
-            'trend_duration': trend_duration,
+            'trend_duration': opts.get('trend_duration', int, 5),
             'trend_interval': self._trend_period
         }
-        self._start_period = 0.0
-        self._last_msg_ts = time.monotonic()
-        self._communication_ok = False
+        
+        # MPPT-specific tracking
+        self._output_power = 0.0
         self._mean_v = 0.0
         self._mean_a = 0.0
         self._mean_p = 0.0
         self._mean_pv = 0.0
         self._nb_sample = 0
 
-    def stop_service(self):
-        _logger.info(f"MPPT Victron {self._name} request to stop service")
-        self._service.stop_service()
-
     @property
-    def trend_interval(self):
-        return self._trend_period
+    def device_type(self):
+        """
+        Get the energy source type for this device
 
-    def get_trend_buckets(self):
-        for b in self._trend_buckets:
-            yield b
+        Returns the EnergySource enum value
+        """
+        return EnergySource.Solar_MPPT
 
     def start(self):
-        #
-        try:
-            self._coupler = resolve_ref(self._coupler_name)
-        except KeyError:
-            _logger.error("Victron MPPT missing coupler:%s" % self._coupler_name)
-            self.stop_service()
-        # now let's see for the publisher
-        if self._publisher_name is not None:
-            try:
-                self._publisher = resolve_ref(self._publisher_name)
-            except KeyError:
-                _logger.error("MPPTService no publisher %s" % self._publisher_name)
-
-            if self._publisher is not None:
-                _logger.debug(
-                    "MPPT Service publisher set:%s protocol:%s" % (self._publisher.object_name(), self._protocol))
-                if self._protocol == 'nmea0183':
-
-                    self._publish_function = self.publish0183
-                else:
-                    self._publish_function = self.publish2000
-                    self._sid = 0
-
-        self._coupler.register(self)
-        self._start_period = time.monotonic()
+        """Start the MPPT device"""
+        # Call parent start
+        super().start()
+        
+        # MPPT-specific initialization
+        # Note: _publish_function is already set in base class start()
+        # but we need to ensure _sid is initialized for NMEA2000
+        if self._publisher is not None and self._protocol == 'nmea2000':
+            self._sid = 0
 
     def publish(self, msg):
+        """Called by coupler when new data is available"""
         _logger.debug("VEDirect message:%s" % msg.msg)
-        self._current_data_dict = msg.msg  # that is the dictionary  with all current values
+        
+        # Store the current data
         self._current_data = MPPTData(msg.msg)
         clock = time.monotonic()
+
+        if self._current_data.mppt_state == VE_MPPT.MPPT_Off:
+            _logger.debug("MPPT is off")
+            if self._energy_controller is not None:
+                self._energy_controller.set_off_state(self._instance, self.device_type, False, True)
+            return
+        
+        # MPPT-specific processing
         if not self._communication_ok:
             # communication is back so we need to reset all calculation
             self._mean_v = 0.0
@@ -182,46 +146,54 @@ class VictronMPPT:
             self._start_period = clock
             self._communication_ok = True
 
-        # now let's compute the trend
+        # Process the trend data
         self._mean_v += self._current_data.voltage
         self._mean_a += self._current_data.current
         self._mean_pv += self._current_data.panel_voltage
         self._mean_p += self._current_data.panel_power
+        self._output_power = self._current_data.voltage * self._current_data.current
         self._nb_sample += 1
 
         self._last_msg_ts = clock
+        
+        # Create trend buckets periodically
         if clock - self._start_period >= self._trend_period and self._nb_sample > 0:
-            self._trend_buckets.append(MPPTBucket(self._mean_v/self._nb_sample, self._mean_a/self._nb_sample,
-                                                  self._mean_pv/self._nb_sample,self._mean_p/self._nb_sample))
+            self._trend_buckets.append(MPPTBucket(
+                self._mean_v/self._nb_sample, 
+                self._mean_a/self._nb_sample,
+                self._mean_pv/self._nb_sample,
+                self._mean_p/self._nb_sample))
             self._start_period = clock
             self._mean_v = 0.0
             self._mean_a = 0.0
             self._mean_p = 0.0
             self._mean_pv = 0.0
             self._nb_sample = 0
+        
+        # forward information through publisher
         if self._publish_function is not None:
             self._publish_function()
+
+        """Report MPPT data to the energy controller"""
+        if self._energy_controller is not None and self._current_data is not None:
+            _logger.debug("MPPT Service report to energy controller")
+            clock = time.monotonic()
+            self._energy_controller.source_update(
+                self._instance, 
+                self.device_type,
+                clock,
+                self._current_data.current, 
+                self._output_power,
+                self._current_data.voltage
+            )
 
     def get_solar_output(self, output_values_pb):
         if self._current_data is not None:
             self._current_data.output_pb(output_values_pb)
 
-    def get_device_info(self, device_info):
-        if time.monotonic() - self._last_msg_ts < self._coupler_timeout :
-            device_info.communication_ok = True
-            if self._current_data is not None:
-                self._current_data.output_info_pb(device_info)
-        else:
-            device_info.communication_ok = False
-            self._communication_ok = False
-        device_info.device_label = self._device_label
-        device_info.device_model = self._device_model
-
-    def get_device_parameters(self, device_parameters):
-        fill_protobuf_from_dict(device_parameters, self._parameters)
-
     def publish0183(self):
         _logger.debug("MPPT Service publish NMEA0183")
+        from navigation_server.couplers import mppt_nmea0183
         msg = mppt_nmea0183(self._current_data_dict)
         self._publisher.publish(msg)
 
@@ -243,7 +215,6 @@ class VictronMPPT:
         traceback.print_stack()
 
 
-
 class MPPTServicer(MPPTServiceServicer):
     """
 
@@ -252,23 +223,23 @@ class MPPTServicer(MPPTServiceServicer):
         self._mppt_device = mppt_device
 
     def GetDeviceInfo(self, request, context):
-        _logger.debug("GRPC request GetDevice")
+        _logger.debug("GRPC request MPPTService.GetDeviceInfo")
         ret_data = MPPT_device()
         self._mppt_device.get_device_info(ret_data)
         if request.command:
             if request.command == 'parameters':
-                self._mppt_device.get_parameters(ret_data.parameters)
+                self._mppt_device.get_device_parameters(ret_data.parameters)
         return ret_data
 
     def GetOutput(self, request, context):
-        _logger.debug("GRPC request GetOutput")
+        _logger.debug("GRPC request MPPTService.GetOutput")
         ret_val = solar_output()
         # object.__setattr__(ret_val, 'voltage', 12.6)
         self._mppt_device.get_solar_output(ret_val)
         return ret_val
 
     def GetTrend(self, request, context):
-        _logger.debug("GRPC request GetTrend")
+        _logger.debug("GRPC request MPPTService.GetTrend")
         ret_values = solar_trend_response()
         ret_values.id = request.id
         ret_values.nb_values = 0

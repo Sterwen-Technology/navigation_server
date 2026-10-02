@@ -24,10 +24,13 @@ class NavigationLogSystem:
     start_string = " "
 
     @staticmethod
-    def _set_level_on_module(module_name, level):
+    def _set_level_on_module(module_name: str, level: str):
         module_full_name = f"{MessageServerGlobals.root_package}.{module_name}"
         mod_log = _logger.getChild(module_full_name)
         # print(module, level, mod_log.level)
+        if level not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
+            _logger.error(f"Invalid log level %{level} for module {module_name} defaulting to INFO")
+            level = 'INFO'
         if mod_log is not None:
             mod_log.setLevel(level)
             # print(module, level, mod_log.level)

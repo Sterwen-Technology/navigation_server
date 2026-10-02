@@ -16,11 +16,12 @@ import time
 import os
 import json
 
-from navigation_server.router_common import MessageServerGlobals, GrpcService, resolve_ref, fill_protobuf_from_dict
+from navigation_server.router_common import (MessageServerGlobals, GrpcService, resolve_ref, fill_protobuf_from_dict,
+                                            NavigationObject)
 from navigation_server.generated.engine_data_pb2 import engine_data, engine_request, engine_response, engine_event, engine_run, engine_parameters, engine_list
 from navigation_server.generated.engine_data_pb2_grpc import EngineDataServicer, add_EngineDataServicer_to_server
 from navigation_server.generated.nmea2000_classes_gen import Pgn127488Class, Pgn127489Class
-from navigation_server.router_common.configuration import NavigationObject, Parameters
+
 
 _logger = logging.getLogger("ShipDataServer."+__name__)
 

@@ -11,8 +11,10 @@
 
 import logging
 
-from navigation_server.generated.gnss_pb2_grpc import GNSSServiceStub, GNSS_Status, request
-from router_common.client_common import GrpcClient, ServiceClient
+from navigation_server.generated.gnss_pb2_grpc import GNSSServiceStub
+from navigation_server.generated.gnss_pb2 import GNSS_Status
+from navigation_server.generated.nmea_messages_pb2 import server_cmd
+from navigation_server.router_common.client_common import GrpcClient, ServiceClient
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -45,7 +47,7 @@ class GNSSClient(ServiceClient):
 
     def gnss_status(self) -> GNSSStatusProxy:
         _logger.debug("GNSS status request")
-        return self._server_call(self._stub.gnss_status, request(), GNSSStatusProxy)
+        return self._server_call(self._stub.gnss_status, server_cmd(), GNSSStatusProxy)
 
 
 

@@ -49,6 +49,8 @@ message SystemProcessMsg {
   uint32 grpc_port = 4;  // port gRPC based communication
   bool secure_grpc = 16;  // true when secure gRPC is enabled
   bool console_present = 13;  //True when console is present // deprecated will be deleted
+  uint32 display_order = 18;  // Order of display on the service page start at 1 - indication for the web server
+  bool hidden=19;             // If true the process is not shown - indication for the web server
   string status=5;
   uint32 error=6;
   string version=7;

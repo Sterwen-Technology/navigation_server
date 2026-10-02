@@ -46,6 +46,17 @@ class GrpcClient:
 
     @classmethod
     def get_client(cls, server, use_request_id:bool = True, secure:bool = False):
+
+        # first check that port is non-zero
+        try:
+            port = server.split(":")[1]
+        except IndexError:
+            raise ValueError(f"Invalid server address format {server}")
+        if len(port) == 0 or not port.isdigit():
+            raise ValueError(f"Invalid server address format {server}")
+        port = int(port)
+        if port == 0:
+            raise ValueError(f"Server port cannot be zero {server}")
         # secure flag is Or'ed with the global force_secure_grpc (V3.0)
         if MessageServerGlobals.configuration is not None:
             # to cover the case when no configuration is defined (agent_cli)

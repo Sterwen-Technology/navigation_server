@@ -14,13 +14,14 @@ server_name: Data
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
-secure_grpc: true
 log_module:
     navigation_data.engine_service: INFO
-    router_common.can_grpc_stream_reader: INFO
+    router_common.can_grpc_stream_reader: DEBUG
     router_common.generic_top_server: INFO
 
 debug_configuration: false
+enable_secure_grpc: true  
+force_secure_grpc: true
 
 features:
     - nmea2000
@@ -42,11 +43,29 @@ functions:
     server: gRPCMain
     source_server: 127.0.0.1
     source_port: 4512
-
+    
 services:
-- Engines:
+
+- Engine:
     class: EngineDataService
     server: gRPCMain
     source: DataSource
+    
+engines:
+
+- Engine1:
+    id: 0
+    model: Volvo D2-40
+    max_rpm: 3000
+    voltage_scale: 16
+    voltage_high_alert: 14.8
+    voltage_low_alert: 12.2
+    temperature_scale: 130
+    temperature_high_alert: 100
+
+
+
+
+
 
 

@@ -19,7 +19,7 @@ from curses.ascii import isdigit
 
 from navigation_server.router_common import GrpcClient, AgentClient, GrpcAccessException
 from navigation_server.navigation_clients import NetworkClient
-from navigation_server.web_server.web_server_impl import UserStore
+from navigation_server.web_server.user_management import UserStore
 
 _logger = logging.getLogger("ShipDataServer")
 
