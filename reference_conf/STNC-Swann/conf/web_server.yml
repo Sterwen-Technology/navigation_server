@@ -6,26 +6,22 @@
 #
 # Author:      Vibe Code
 #
-# Created:     17/08/2025
-# Copyright:   (c) Sterwen Technology 2021-2025
+# Created:     10/09/2026
+# Copyright:   (c) Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
 function: Web interface server
-server_name: navigation_web
+server_name: WebServer
 log_level: INFO
 trace_dir: /var/log
-
-log_module:
-      web_server.web_server: INFO
-      web_server.data_collectors: INFO
-
 # The web server does not host a local gRPC server; it is a client of the agent.
 # Set connect_agent to false to skip agent registration (the web server is not
 # a managed process, it only queries the agent).
-connect_agent: false
-enable_secure_grpc: false
-client_certificate: nav_ca_cert_stnc800a003.pem
+connect_agent: true
+enable_secure_grpc: true
+force_secure_grpc: true
+# client_certificate: nav_ca_cert_stnc800a003.pem
 language: en
 # Optional web API authentication. When enabled, every /api/* route except
 # /api/login requires a valid session cookie. Credentials are stored ONLY in
@@ -43,11 +39,15 @@ servers:
       class: WebTopServer
       host: 0.0.0.0
       port: 8080
-      agent_address: stnc800a003
-      grpc_port: 4545
+      use_agent_connection: true
+      # agent_address: stnc800a003
+      # grpc_port: 4545
       auth:
-            enabled: true
+            enabled: false
             credentials_file: /home/laurent/certificates/web_users
             session_timeout: 3600
 
 
+- GrpcService:
+        class: GrpcServer
+        port: 4509

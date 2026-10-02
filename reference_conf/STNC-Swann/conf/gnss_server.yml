@@ -14,7 +14,8 @@ server_name: GNSS
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
-secure_grpc: true
+enable_secure_grpc: true
+force_secure_grpc: true
 log_module:
     gnss.gnss_data: INFO
     gnss.gnss_service: INFO

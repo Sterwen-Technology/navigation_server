@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Navigation Server — Web Interface</title>
+    <!-- CodeMirror for YAML syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/yaml/yaml.min.js"></script>
     <style>
         :root {
             --bg: #0f172a;
@@ -71,6 +76,41 @@
         }
         button:hover:not(:disabled) { background: var(--accent); color: #0f172a; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .connection-lost-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .connection-lost-message {
+            background: rgba(239, 68, 68, 0.95);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-align: center;
+            pointer-events: auto;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+        .connection-lost-message button {
+            background: var(--accent);
+            color: #0f172a;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.15s;
+        }
+        .connection-lost-message button:hover {
+            background: var(--green);
+            color: white;
+        }
         button.danger:hover:not(:disabled) { background: var(--red); color: white; }
         main { padding: 24px; max-width: 1400px; margin: 0 auto; }
         .grid {
@@ -126,11 +166,11 @@
         .stats-box { flex: 1; min-width: 200px; max-width: 280px; background: var(--panel-2); border-radius: 8px; padding: 12px; }
         .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
         .stat-row:last-child { border-bottom: none; }
-        .bar-graph { flex: 1; min-width: 60px; max-width: 80px; }
-        .bar-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
-        .bar-container { height: 150px; background: var(--panel-2); border-radius: 4px; overflow: hidden; position: relative; display: flex; flex-direction: column; justify-content: flex-end; }
-        .bar-fill { width: 100%; transition: height 0.3s ease; border-radius: 4px; }
-        .bar-value { font-size: 0.8rem; text-align: center; margin-top: 4px; font-family: ui-monospace, monospace; }
+        .bar-graph { flex: 1; min-width: 100px; }
+        .bar-label { font-size: 0.72rem; color: var(--muted); min-height: 3em; margin-bottom: 4px; text-align: center; }
+        .bar-container { height: 120px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; position: relative; display: flex; flex-direction: column; justify-content: flex-end; }
+        .bar-fill { width: 100%; transition: height 0.3s; border-radius: 3px; }
+        .bar-value { font-size: 0.78rem; text-align: center; margin-top: 4px; font-family: ui-monospace, monospace; }
         .stat-row:last-child { border-bottom: none; }
         .stat-label { color: var(--muted); font-size: 0.85rem; }
         .stat-value { color: var(--text); font-family: ui-monospace, monospace; font-size: 0.85rem; white-space: nowrap; }
@@ -151,16 +191,19 @@
         .mppt-info .row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid var(--border); }
         .mppt-info .k { color: var(--muted); }
         .mppt-com-lost { color: #ef4444; font-weight: 600; font-size: 0.8rem; padding: 4px 6px; margin-bottom: 6px; border: 1px solid #ef4444; border-radius: 4px; background: rgba(239,68,68,0.08); text-align: center; }
+        .battery-info { font-size: 0.82rem; }
+        .battery-info .row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid var(--border); }
+        .battery-info .k { color: var(--muted); }
         .mppt-bars { display: flex; gap: 12px; align-items: flex-end; }
-        .mppt-bar { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 4px; }
+        .mppt-bar { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 8px; }
         .mppt-bar-track { width: 100%; height: 120px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; position: relative; display: flex; align-items: flex-end; overflow: hidden; }
         .mppt-bar-fill { width: 100%; border-radius: 3px; transition: height 0.3s; }
-        .mppt-bar-fill.mppt-fill-voltage { background: linear-gradient(180deg, var(--accent), #0ea5e9); }
+        .mppt-bar-fill.mppt-fill-voltage { background: linear-gradient(180deg, #55aaff, #0000ff); }
         .mppt-bar-fill.mppt-fill-panel-ok { background: linear-gradient(180deg, var(--green), #16a34a); }
         .mppt-bar-fill.mppt-fill-panel-low { background: linear-gradient(180deg, #ea580c, #c2410c); }
-        .mppt-bar-fill.mppt-fill-current { background: linear-gradient(180deg, #f87171, #b91c1c); }
-        .mppt-bar-fill.mppt-fill-power { background: linear-gradient(180deg, var(--amber), #d97706); }
-        .mppt-bar-label { font-size: 0.72rem; color: var(--muted); }
+        .mppt-bar-fill.mppt-fill-current { background: linear-gradient(180deg, #ff00ff, #cc00cc); }
+        .mppt-bar-fill.mppt-fill-power { background: linear-gradient(180deg, #ff9900, #cc7700); }
+        .mppt-bar-label { font-size: 0.72rem; color: var(--muted); height: 2.4em; text-align: center; }
         .mppt-bar-value { font-size: 0.78rem; }
         .mppt-trend { display: flex; flex-direction: column; gap: 6px; }
         .mppt-trend-title { font-size: 0.85rem; color: var(--accent); }
@@ -170,6 +213,36 @@
         .mppt-trend-line { stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
         .mppt-trend-axis { font-size: 0.72rem; color: var(--muted); }
         @media (max-width: 640px) { .mppt-top { grid-template-columns: 1fr; } }
+        
+        /* Battery Service Styles */
+        .battery-dashboard { display: flex; flex-direction: column; gap: 12px; }
+        .battery-top { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .battery-info { font-size: 0.82rem; }
+        .battery-info .row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid var(--border); }
+        .battery-info .k { color: var(--muted); }
+        .battery-bars { display: flex; gap: 12px; align-items: flex-end; }
+        .battery-bar { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 8px; }
+        .battery-bar-track { width: 100%; height: 120px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; position: relative; display: flex; align-items: flex-end; overflow: hidden; }
+        .battery-bar-fill { width: 100%; border-radius: 3px; transition: height 0.3s; }
+        .battery-bar-fill.battery-fill-voltage { background: linear-gradient(180deg, #55aaff, #0000ff); }
+        .battery-bar-fill.battery-fill-current-pos { background: linear-gradient(180deg, #ff00ff, #cc00cc); }
+        .battery-bar-fill.battery-fill-current-neg { background: linear-gradient(180deg, #ff00ff, #cc00cc); }
+        .battery-bar-fill.battery-fill-power-pos { background: linear-gradient(180deg, #ff9900, #cc7700); }
+        .battery-bar-fill.battery-fill-power-neg { background: linear-gradient(180deg, #ff9900, #cc7700); }
+        .battery-bar-fill.battery-fill-soc { background: linear-gradient(180deg, #ffff00, #cccc00); }
+        .battery-bar-fill.battery-fill-energy { background: linear-gradient(180deg, #9900ff, #7700cc); }
+        .battery-bar-label { font-size: 0.72rem; color: var(--muted); height: 2.4em; text-align: center; }
+        .battery-bar-value { font-size: 0.78rem; }
+        .battery-trend { display: flex; flex-direction: column; gap: 6px; }
+        .battery-trend-title { font-size: 0.85rem; color: var(--accent); }
+        .battery-trend-canvas { height: 160px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; }
+        .battery-trend-svg { flex: 1; width: 100%; }
+        .battery-trend-area { fill: var(--amber); fill-opacity: 0.35; }
+        .battery-trend-line { stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+        .battery-trend-zero { stroke-dasharray: 2,2; }
+        .battery-trend-axis { font-size: 0.72rem; color: var(--muted); }
+        .battery-bar-zero-line { position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); }
+        @media (max-width: 640px) { .battery-top { grid-template-columns: 1fr; } }
         .run-header { color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
         .run-row { border-bottom: 1px solid var(--border); }
         .run-row:last-child { border-bottom: none; }
@@ -229,7 +302,7 @@
         .window-btn.minimize:before { content: "_"; }
         .window-btn.close:before { content: "\d7"; }
         .window-body {
-            flex: 1; overflow: auto; padding: 16px;
+            flex: 1; overflow: hidden; padding: 16px; display: flex; flex-direction: column; gap: 12px;
         }
         .window-content {
             max-width: 100%; max-height: 100%;
@@ -332,6 +405,316 @@
         .pgn-num { font-family: ui-monospace, monospace; color: var(--accent); min-width: 50px; text-align: right; }
         .pgn-desc { flex: 2; color: var(--text); }
         .pgn-count { font-family: ui-monospace, monospace; color: var(--muted); min-width: 40px; text-align: right; }
+
+        /* EMS (Energy Management System) Styles */
+        .page-nav {
+            display: flex; gap: 8px; margin-left: 24px;
+        }
+        .nav-btn {
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.15s;
+        }
+        .nav-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a; }
+        .nav-btn.active {
+            background: var(--accent);
+            color: #0f172a;
+            border-color: var(--accent);
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        .ems-dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .ems-top {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 768px) {
+            .ems-top { grid-template-columns: 1fr; }
+        }
+        .ems-box {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+        .ems-box h2 {
+            margin: 0 0 12px 0;
+            font-size: 1rem;
+            color: var(--accent);
+        }
+        .ems-bars {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .ems-bar {
+            flex: 0 0 80px;
+            min-width: 80px;
+            display: flex;
+            flex-direction: column;
+        }
+        .ems-bar-label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            min-height: 3em;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .ems-bar-container {
+            width: 100%;
+            height: 120px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        .ems-bar-fill {
+            width: 100%;
+            border-radius: 3px;
+            transition: height 0.3s;
+        }
+        .ems-bar-value {
+            font-size: 0.78rem;
+            margin-top: 4px;
+            font-family: ui-monospace, monospace;
+            text-align: center;
+            width: 100%;
+        }
+        /* EMS source bars - use only 1/3 width for MPPT sources */
+        .ems-source-bar {
+            flex: 0 0 calc(33% - 8px);
+            min-width: 100px;
+            display: flex;
+            flex-direction: column;
+        }
+        .ems-source-bar-container {
+            width: 100%;
+        }
+        .ems-source-trend-container {
+            flex: 1;
+            min-width: 150px;
+        }
+        /* Bar fill for positive values (grows up from center) */
+        .ems-bar-fill.positive {
+            bottom: 50%;
+            left: 0;
+            right: 0;
+            position: absolute;
+        }
+        /* Bar fill for negative values (grows down from center) */
+        .ems-bar-fill.negative {
+            top: 50%;
+            left: 0;
+            right: 0;
+            position: absolute;
+        }
+        /* Zero line for centered bars */
+        .ems-bar-zero-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--border);
+        }
+        .ems-source-row {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .ems-source-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .ems-source-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .ems-source-type {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+        .ems-source-state {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+        .ems-source-state-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+        .ems-source-state-indicator.off {
+            background: var(--red);
+        }
+        .ems-source-state-indicator.grey {
+            background: #9ca3af;
+        }
+        .ems-source-body {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .ems-source-bars {
+            display: flex;
+            gap: 12px;
+            flex: 0 0 calc(33% - 6px);
+            min-width: 170px;
+        }
+        .ems-trend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .ems-trend-title {
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+        .ems-trend-canvas {
+            height: 100px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        .ems-trend-svg {
+            flex: 1;
+            width: 100%;
+        }
+        .ems-trend-area {
+            fill: var(--amber);
+            fill-opacity: 0.35;
+        }
+        .ems-trend-line {
+            stroke: var(--accent);
+            stroke-width: 1.5;
+            vector-effect: non-scaling-stroke;
+        }
+        .ems-trend-axis {
+            font-size: 0.72rem;
+            color: var(--muted);
+        }
+        /* Settings Editor Styles */
+        .settings-editor {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .settings-header {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            background: var(--panel);
+        }
+        .settings-content {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+            overflow: auto;
+        }
+        .yaml-content {
+            font-family: ui-monospace, monospace, 'Courier New', Courier;
+            font-size: 0.82rem;
+            line-height: 1.4;
+            color: #cbd5e1;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
+            padding: 0;
+        }
+        .yaml-content .yaml-key { color: var(--accent); }
+        .yaml-content .yaml-value { color: #f472b6; }
+        .yaml-content .yaml-comment { color: var(--muted); }
+        /* Settings editor container for scrolling */
+        .settings-editor-container {
+            flex: 1;
+            overflow: auto;
+            min-height: 0;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: #0b1120;
+        }
+        
+        /* CodeMirror editor container */
+        .yaml-editor {
+            min-height: 100%;
+        }
+        
+        /* CodeMirror styling */
+        .CodeMirror {
+            height: 100%;
+            background: #0b1120;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+        
+        .CodeMirror-gutters {
+            background: #0b1120;
+            border-right: 1px solid var(--border);
+        }
+        
+        .CodeMirror-linenumber {
+            color: var(--muted);
+            padding: 0 8px;
+        }
+        
+        .CodeMirror-line {
+            font-family: ui-monospace, monospace, 'Courier New', Courier;
+            font-size: 0.82rem;
+            line-height: 1.4;
+        }
+        .settings-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .settings-actions button {
+            padding: 4px 12px;
+            font-size: 0.8rem;
+        }
+        .yaml-error {
+            color: var(--red);
+            font-size: 0.8rem;
+            margin-top: 8px;
+            padding: 6px 10px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--red);
+            border-radius: 4px;
+        }
+
 </style>
 </head>
 <body>
@@ -340,36 +723,41 @@
             Navigation Server
             <span class="sub" id="agent-info">— agent: …</span>
         </h1>
+        <div class="page-nav">
+            <button id="nav-services" class="nav-btn active" onclick="showPage('services')" data-i18n="nav.services">Services</button>
+            <button id="nav-ems" class="nav-btn" onclick="showPage('ems')" data-i18n="nav.ems">Energy Management System</button>
+        </div>
         <div class="actions">
             <span id="conn-status" class="status-pill disconnected">disconnected</span>
             <button id="refresh-btn" title="Refresh">⟳ <span id="last-refresh">—</span></button>
+            <button id="toggle-hidden-btn" onclick="toggleHidden()" title="Toggle hidden processes">👁 <span id="show-hidden-text">Show Hidden</span></button>
             <label style="font-size:0.8rem; color:var(--muted); display:inline-flex; gap:4px; align-items:center;">
                 <input type="checkbox" id="auto-refresh" checked> <span data-i18n="auto_refresh.label">Auto refresh (5s)</span>
             </label>
         </div>
     </header>
     <main>
-        <div id="system-summary" class="card" style="margin-bottom:16px;">
-            <div class="empty" data-i18n="main.no_data">No data. Click ↻ to refresh.</div>
+        <div id="services-page" class="page active">
+            <div id="system-summary" class="card" style="margin-bottom:16px;">
+                <div class="empty" data-i18n="main.no_data">No data. Click ↻ to refresh.</div>
+            </div>
+            <div id="processes-grid" class="grid"></div>
         </div>
-        <div id="processes-grid" class="grid"></div>
+        <div id="ems-page" class="page">
+            <div id="ems-dashboard" class="ems-dashboard">
+                <div class="empty" data-i18n="ems.loading">Loading Energy Management System data...</div>
+            </div>
+        </div>
     </main>
     <div id="toast" class="toast"></div>
     <div id="window-container" class="window-container"></div>
-
-    <div id="log-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="log-title">Logs</h2>
-                <div>
-                    <button id="log-start-btn" onclick="startLogStream()" title="Start">▶ Start</button>
-                    <button id="log-stop-btn" onclick="stopLogStream()" title="Stop" disabled>■ Stop</button>
-                    <button class="modal-close" onclick="closeLog()" title="Close">&times;</button>
-                </div>
-            </div>
-            <div id="log-body" class="log-content" data-i18n="console.start_stream">Click Start to start the log stream...</div>
+    <div id="connection-lost-overlay" class="connection-lost-overlay" style="display: none;">
+        <div class="connection-lost-message">
+            <div data-i18n="error.connection_lost">Web server connection lost</div>
+            <button onclick="retryConnection()" style="margin-top: 15px; background: var(--accent); color: #0f172a;" data-i18n="button.retry">Retry Connection</button>
         </div>
     </div>
+
 
     <div id="network-modal" class="modal">
         <div class="modal-content">
@@ -402,6 +790,8 @@
         let autoTimer = null;
         let isRefreshing = false;
         let autoEnabled = true;
+        let showHidden = false;  // Track whether to show hidden processes
+        let backendConnected = true; // Track if we can reach the web server (network-level)
 
         // Window Management System
         let windowZIndex = 1000;
@@ -586,6 +976,13 @@
             setTimeout(() => toastEl.classList.remove("show"), 3500);
         }
 
+        function toggleHidden() {
+            showHidden = !showHidden;
+            const btn = $("show-hidden-text");
+            btn.textContent = showHidden ? "Hide Hidden" : "Show Hidden";
+            refresh();
+        }
+
         // Authentication: when the backend returns 401 we show the login
         // overlay, await a successful login, then replay the original request.
         // Cookies travel automatically with same-origin fetch(), so once the
@@ -630,30 +1027,92 @@
         }
 
         async function apiGet(path) {
-            let r = await fetch(path, { cache: "no-store" });
-            if (r.status === 401) {
-                await handleAuthFailure();
-                r = await fetch(path, { cache: "no-store" });
+            try {
+                let r = await fetch(path, { cache: "no-store" });
+                if (r.status === 401) {
+                    await handleAuthFailure();
+                    r = await fetch(path, { cache: "no-store" });
+                }
+                if (!r.ok) {
+                    // HTTP errors (404, 500, etc.) are not connection errors
+                    const error = new Error(`HTTP ${r.status}`);
+                    error.status = r.status; // Mark as HTTP error
+                    throw error;
+                }
+                return r.json();
+            } catch (e) {
+                // For now, only mark as connection error if it's clearly a network failure
+                // This prevents false positives from API errors
+                if (isBackendDisconnected(e)) {
+                    e.isConnectionError = true;
+                }
+                throw e; // Re-throw so callers can handle the error
             }
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            return r.json();
         }
 
         async function apiPost(path, body) {
-            let r = await fetch(path, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-            });
-            if (r.status === 401) {
-                await handleAuthFailure();
-                r = await fetch(path, {
+            try {
+                let r = await fetch(path, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(body),
                 });
+                if (r.status === 401) {
+                    await handleAuthFailure();
+                    r = await fetch(path, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(body),
+                    });
+                }
+                if (!r.ok) {
+                    // HTTP errors (404, 500, etc.) are not connection errors
+                    const error = new Error(`HTTP ${r.status}`);
+                    error.status = r.status; // Mark as HTTP error
+                    throw error;
+                }
+                return r.json();
+            } catch (e) {
+                // For now, only mark as connection error if it's clearly a network failure
+                if (isBackendDisconnected(e)) {
+                    e.isConnectionError = true;
+                }
+                throw e; // Re-throw so callers can handle the error
             }
-            return r.json();
+        }
+
+        // Check if EnergyService is available
+        async function checkEnergyServiceAvailable() {
+            try {
+                const data = await apiGet("/api/energy_available");
+                return data.available || false;
+            } catch (e) {
+                // Don't treat EnergyService check failures as connection errors
+                // EnergyService might not be running, but backend could still be fine
+                console.error("Error checking EnergyService availability:", e);
+                return false;
+            }
+        }
+
+        // Update EMS button visibility based on service availability
+        async function updateEmsVisibility() {
+            const emsAvailable = await checkEnergyServiceAvailable();
+            const emsBtn = $("nav-ems");
+            const emsPage = $("ems-page");
+            
+            if (emsBtn) {
+                emsBtn.style.display = emsAvailable ? "" : "none";
+            }
+            if (emsPage) {
+                emsPage.style.display = emsAvailable ? "" : "none";
+            }
+            
+            // If EMS is not available and user is trying to view EMS page, switch to services
+            if (!emsAvailable && window.location.hash === "#ems") {
+                showPage("services");
+            }
+            
+            return emsAvailable;
         }
 
         function escapeHtml(s) {
@@ -664,24 +1123,145 @@
 
         function fmt(v) { return v === 0 || v ? escapeHtml(v) : "—"; }
 
+        // Function to disable all buttons on the page
+        function disableAllButtons() {
+            const allButtons = document.querySelectorAll('button');
+            allButtons.forEach(button => {
+                button.disabled = true;
+            });
+            // Also disable input elements
+            const allInputs = document.querySelectorAll('input[type="checkbox"], input[type="text"], select');
+            allInputs.forEach(input => {
+                input.disabled = true;
+            });
+        }
+
+        // Function to enable all buttons on the page
+        function enableAllButtons() {
+            const allButtons = document.querySelectorAll('button');
+            allButtons.forEach(button => {
+                button.disabled = false;
+            });
+            // Also enable input elements
+            const allInputs = document.querySelectorAll('input[type="checkbox"], input[type="text"], select');
+            allInputs.forEach(input => {
+                input.disabled = false;
+            });
+        }
+
+        // Function to show connection lost state (network-level only)
+        function showConnectionLost() {
+            if (!backendConnected) return; // Already in disconnected state
+            
+            backendConnected = false;
+            disableAllButtons();
+            const overlay = $("connection-lost-overlay");
+            if (overlay) {
+                overlay.style.display = "flex";
+            }
+            // Update connection status pill
+            const pill = $("conn-status");
+            if (pill) {
+                pill.className = "status-pill disconnected";
+                pill.textContent = t.t("status.disconnected");
+            }
+            
+            // Translate the overlay message
+            const messageEl = overlay ? overlay.querySelector('[data-i18n]') : null;
+            if (messageEl) {
+                messageEl.textContent = t.t("error.connection_lost");
+            }
+            
+            // Also translate the retry button
+            const retryBtn = overlay ? overlay.querySelector('button') : null;
+            if (retryBtn) {
+                retryBtn.textContent = t.t("button.retry");
+            }
+        }
+
+        // Function to show connection restored state (network-level only)
+        function showConnectionRestored() {
+            if (backendConnected) return; // Already connected
+            
+            backendConnected = true;
+            enableAllButtons();
+            const overlay = $("connection-lost-overlay");
+            if (overlay) {
+                overlay.style.display = "none";
+            }
+            // The pill will be updated by render() based on agent connection state
+        }
+
+        // Function to check if error indicates backend disconnection
+        function isBackendDisconnected(error) {
+            // HTTP errors (404, 500, etc.) are NOT connection errors
+            if (error.status) {
+                return false;
+            }
+            
+            // Check if the error indicates a network/server issue
+            const errorStr = String(error).toLowerCase();
+            const errorName = String(error.name || "").toLowerCase();
+            
+            // Only TypeError with "Failed to fetch" indicates actual network failure
+            return errorName.includes("typeerror") && errorStr.includes("failed to fetch");
+        }
+
+        // Function to retry connection
+        async function retryConnection() {
+            try {
+                // Try to fetch the system status
+                const data = await apiGet("/api/system/status");
+                // If we got a successful response, the network connection is restored
+                showConnectionRestored();
+                // Refresh the page to get fresh data
+                refresh();
+            } catch (e) {
+                toast(t.t("toast.refresh_error", {error: e.message}), false);
+            }
+        }
+
         async function refresh() {
             if (isRefreshing) return;
             isRefreshing = true;
             const btn = $("refresh-btn");
             btn.disabled = true;
             try {
-                const data = await apiGet("/api/status");
+                const data = await apiGet("/api/system/status");
                 render(data);
                 $("last-refresh").textContent = new Date().toLocaleTimeString("fr-FR");
+                
+                // Check EnergyService availability on each refresh
+                const newEmsAvailable = await checkEnergyServiceAvailable();
+                if (newEmsAvailable !== emsAvailable) {
+                    emsAvailable = newEmsAvailable;
+                    await updateEmsVisibility();
+                }
+                
+                // If backend reports disconnected (agent not connected), show overlay
+                // This handles the case where web server is up but agent is not connected
+                if (data && !data.connected) {
+                    if (backendConnected) {
+                        showConnectionLost();
+                    }
+                } else {
+                    // If we were in disconnected state and now connected, restore UI
+                    if (!backendConnected) {
+                        showConnectionRestored();
+                    }
+                }
             } catch (e) {
                 toast(t.t("toast.refresh_error", {error: e.message}), false);
+                // For network failures, show connection lost overlay
+                if (e.isConnectionError || isBackendDisconnected(e)) {
+                    if (backendConnected) {
+                        showConnectionLost();
+                    }
+                }
             } finally {
                 isRefreshing = false;
                 btn.disabled = false;
             }
-            // Schedule the next refresh if auto is enabled (recursive timer
-            // avoids piling up calls when a request takes longer than the
-            // interval).
             if (autoEnabled) scheduleNext();
         }
 
@@ -697,6 +1277,8 @@
             const grid = $("processes-grid");
 
             if (!data.connected) {
+                // Agent is not connected - show disconnected state
+                // This is different from backend being unreachable (handled by overlay)
                 pill.className = "status-pill disconnected";
                 pill.textContent = t.t("status.disconnected");
                 const sys = data.system || {};
@@ -723,6 +1305,8 @@
                     <button class="danger" onclick="systemCmdConfirm('halt')">⏻ Halt</button>
                     <button class="danger" onclick="systemCmdConfirm('reboot')">⟲ Reboot</button>
                     <button onclick="systemCmdConfirm('navigation_restart')" title="Restart all processes">⟲ Restart App</button>
+                    <button class="open-btn" onclick="showSettings('agent')" title="Agent settings">⚙ Agent Settings</button>
+                    <button class="open-btn" onclick="showSettings('network')" title="Network settings">⚙ Network Settings</button>
                     <button class="open-btn" onclick="openNetwork()" style="margin-left: auto;">⚙ Network</button>
                 </div>
             `;
@@ -733,9 +1317,16 @@
                 t.translateAllElements();
                 return;
             }
-            // Show running processes first, preserving the received order within each group.
-            const ordered = procs.slice().sort((a, b) =>
-                (b.state === "RUNNING" ? 1 : 0) - (a.state === "RUNNING" ? 1 : 0));
+            // Filter and sort processes: filter out hidden processes unless showHidden is true, then sort by display_order (with name as tiebreaker for stability)
+            const filtered = procs.filter(p => showHidden || p.hidden !== true);
+            const ordered = filtered.slice().sort((a, b) => {
+                const orderA = a.display_order !== undefined ? a.display_order : 0;
+                const orderB = b.display_order !== undefined ? b.display_order : 0;
+                if (orderA !== orderB) {
+                    return orderA - orderB;
+                }
+                return a.name.localeCompare(b.name);
+            });
             grid.innerHTML = ordered.map(procCard).join("");
             t.translateAllElements();
         }
@@ -756,6 +1347,7 @@
             const stopBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','stop')">\u25a0 Stop</button>`;
             const restartBtn = `<button ${!isRunning ? 'disabled' : ''} onclick="procCmd('${escapeHtml(p.name)}','restart')">\u27f2 Restart</button>`;
             const logBtn = `<button onclick="openLog('${escapeHtml(p.name)}')">\ud83d\udccb Log</button>`;
+            const settingsBtn = p.settings ? `<button class="open-btn" onclick="showSettings('${escapeHtml(p.name)}')">\u2699 Settings</button>` : '';
             
             // Build service buttons from the services list
             const serviceButtons = [];
@@ -771,6 +1363,8 @@
                     serviceButtons.push(`<button class="open-btn" onclick="openEngineData('${escapeHtml(p.name)}')">\u26a1 Engine</button>`);
                 } else if (rpcService === 'MPPTService') {
                     serviceButtons.push(`<button class="open-btn" onclick="openMppt('${escapeHtml(p.name)}')">\u2600 MPPT</button>`);
+                } else if (rpcService === 'BatteryService') {
+                    serviceButtons.push(`<button class="open-btn" onclick="openBattery('${escapeHtml(p.name)}')">\u26a1\ufe0f Battery</button>`);
                 }
             }
             
@@ -795,6 +1389,7 @@
                         ${stopBtn}
                         ${restartBtn}
                         ${logBtn}
+                        ${settingsBtn}
                     </div>
                     ${serviceButtons.length > 0 ? `<div class="card-actions">${serviceButtons.join('')}</div>` : ''}
                 </div>
@@ -803,7 +1398,7 @@
         }
         async function procCmd(target, cmd) {
             try {
-                const r = await apiPost("/api/process", { target, cmd });
+                const r = await apiPost(`/api/process/${encodeURIComponent(target)}/${cmd}`, {});
                 toast(`${cmd} ${target}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
                 if (r.ok) setTimeout(refresh, 800);
             } catch (e) {
@@ -813,7 +1408,7 @@
 
         async function systemCmd(cmd) {
             try {
-                const r = await apiPost("/api/system", { cmd });
+                const r = await apiPost(`/api/system/${cmd}`, {});
                 toast(`${cmd}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
                 if (r.ok) setTimeout(refresh, 800);
             } catch (e) {
@@ -835,7 +1430,7 @@
             if (!win || activeWindows.get(windowKey('console', win.processName)) !== win) return;
             const processName = win.processName;
             try {
-                const d = await apiGet(`/api/console/${encodeURIComponent(processName)}`);
+                const d = await apiGet(`/api/console/${encodeURIComponent(processName)}/status`);
                 if (activeWindows.get(windowKey('console', processName)) === win) {
                     renderConsole(d, processName, win.body);
                     win.timer = setTimeout(() => refreshConsole(win), REFRESH_INTERVAL);
@@ -922,7 +1517,7 @@
 
         async function couplerCmd(process, coupler, cmd) {
             try {
-                const r = await apiPost("/api/coupler", { process, coupler, cmd });
+                const r = await apiPost(`/api/console/${encodeURIComponent(process)}/coupler/${encodeURIComponent(coupler)}`, { cmd });
                 toast(`${cmd} ${coupler}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
                 if (r.ok) {
                     const win = focusWindow('console', process);
@@ -960,63 +1555,155 @@
             }
         }
 
-        let logProcess = null;
-        let logEventSource = null;
-
+        // Log window management using createWindow system
         function openLog(processName) {
-            logProcess = processName;
-            $("log-title").textContent = `Logs — ${processName}`;
-            $("log-body").textContent = "";
-            $("log-modal").classList.add("show");
+            const key = windowKey('log', processName);
+            const existing = activeWindows.get(key);
+            
+            if (existing) {
+                // Bring existing window to front
+                existing.element.style.zIndex = ++windowZIndex;
+                return;
+            }
+
+            const win = createWindow('log', processName, `Logs — ${processName}`, (win) => {
+                // Cleanup when window closes
+                stopLogStreamForWindow(win);
+            });
+            
+            // Set larger default size for log windows
+            win.element.style.width = '800px';
+            win.element.style.height = '600px';
+
+            // Create log window content
+            const content = document.createElement('div');
+            content.style.display = 'flex';
+            content.style.flexDirection = 'column';
+            content.style.height = '100%';
+            content.style.gap = '12px';
+
+            // Create controls
+            const controls = document.createElement('div');
+            controls.style.display = 'flex';
+            controls.style.gap = '8px';
+            controls.style.flexWrap = 'wrap';
+
+            const startBtn = document.createElement('button');
+            startBtn.textContent = '▶ Start';
+            startBtn.title = 'Start';
+            startBtn.id = `log-start-btn-${win.processName}`;
+
+            const stopBtn = document.createElement('button');
+            stopBtn.textContent = '■ Stop';
+            stopBtn.title = 'Stop';
+            stopBtn.disabled = true;
+            stopBtn.id = `log-stop-btn-${win.processName}`;
+
+            const clearBtn = document.createElement('button');
+            clearBtn.textContent = '✓ Clear';
+            clearBtn.title = 'Clear';
+            clearBtn.id = `log-clear-btn-${win.processName}`;
+
+            controls.appendChild(startBtn);
+            controls.appendChild(stopBtn);
+            controls.appendChild(clearBtn);
+
+            // Create log body
+            const logBody = document.createElement('div');
+            logBody.className = 'log-content';
+            logBody.id = `log-body-${win.processName}`;
+            logBody.textContent = 'Click Start to start the log stream...';
+            logBody.style.flex = '1';
+            logBody.style.overflowY = 'auto';
+
+            content.appendChild(controls);
+            content.appendChild(logBody);
+
+            win.body.appendChild(content);
+            win.body.style.overflow = 'hidden';
+            win.body.style.display = 'flex';
+            win.body.style.flexDirection = 'column';
+
+            // Store window-specific state
+            win.logProcess = win.processName;
+            win.logEventSource = null;
+
+            // Setup button handlers
+            startBtn.addEventListener('click', () => startLogStreamForWindow(win));
+            stopBtn.addEventListener('click', () => stopLogStreamForWindow(win));
+            clearBtn.addEventListener('click', () => clearLogForWindow(win));
+
             // Auto-start the stream
-            startLogStream();
+            startLogStreamForWindow(win);
         }
 
-        function startLogStream() {
-            if (!logProcess) return;
-            if (logEventSource) {
-                logEventSource.close();
-                logEventSource = null;
+        function startLogStreamForWindow(win) {
+            if (!win.logProcess) return;
+            
+            // Stop any existing stream
+            if (win.logEventSource) {
+                win.logEventSource.close();
+                win.logEventSource = null;
             }
-            $("log-body").textContent = "";
-            $("log-start-btn").disabled = true;
-            $("log-stop-btn").disabled = false;
-            logEventSource = new EventSource(`/api/log/stream/${encodeURIComponent(logProcess)}`);
-            logEventSource.addEventListener("started", () => {
-                appendLogLine(t.t("console.stream_started"));
+
+            const startBtn = document.getElementById(`log-start-btn-${win.processName}`);
+            const stopBtn = document.getElementById(`log-stop-btn-${win.processName}`);
+            
+            if (startBtn) startBtn.disabled = true;
+            if (stopBtn) stopBtn.disabled = false;
+
+            win.logEventSource = new EventSource(`/api/log/stream/${encodeURIComponent(win.logProcess)}`);
+            
+            win.logEventSource.addEventListener("started", () => {
+                appendLogLineForWindow(win, t.t("console.stream_started"));
             });
-            logEventSource.addEventListener("error", (e) => {
-                if (e.data) appendLogLine("ERREUR: " + e.data);
-                stopLogStream();
+            
+            win.logEventSource.addEventListener("error", (e) => {
+                if (e.data) appendLogLineForWindow(win, "ERREUR: " + e.data);
+                stopLogStreamForWindow(win);
             });
-            logEventSource.onmessage = (e) => {
-                appendLogLine(e.data);
+            
+            win.logEventSource.onmessage = (e) => {
+                appendLogLineForWindow(win, e.data);
             };
         }
 
-        async function stopLogStream() {
-            if (logEventSource) {
-                logEventSource.close();
-                logEventSource = null;
+        async function stopLogStreamForWindow(win) {
+            if (win.logEventSource) {
+                win.logEventSource.close();
+                win.logEventSource = null;
             }
-            $("log-start-btn").disabled = false;
-            $("log-stop-btn").disabled = true;
-            appendLogLine(t.t("console.stream_stopped"));
+
+            const startBtn = document.getElementById(`log-start-btn-${win.processName}`);
+            const stopBtn = document.getElementById(`log-stop-btn-${win.processName}`);
+            
+            if (startBtn) startBtn.disabled = false;
+            if (stopBtn) stopBtn.disabled = true;
+            
+            appendLogLineForWindow(win, t.t("console.stream_stopped"));
             try {
-                await apiPost("/api/log/stop", {});
+                await apiPost(`/api/log/stop/${encodeURIComponent(win.logProcess)}`, {});
             } catch (e) { /* ignore */ }
         }
 
-        function appendLogLine(line) {
-            const body = $("log-body");
-            body.textContent += line + "\n";
-            body.scrollTop = body.scrollHeight;
+        function appendLogLineForWindow(win, line) {
+            const logBody = document.getElementById(`log-body-${win.processName}`);
+            if (logBody) {
+                logBody.textContent += line + "\n";
+                logBody.scrollTop = logBody.scrollHeight;
+            }
+        }
+
+        function clearLogForWindow(win) {
+            const logBody = document.getElementById(`log-body-${win.processName}`);
+            if (logBody) {
+                logBody.textContent = "";
+            }
         }
 
         function closeLog() {
-            stopLogStream();
-            $("log-modal").classList.remove("show");
-            logProcess = null;
+            // This function is kept for backward compatibility but is no longer used
+            // since we're using createWindow system now
         }
 
         async function openNetwork() {
@@ -1024,8 +1711,8 @@
             $("network-body").innerHTML = `<div class="empty">${t.t("general.loading")}</div>`;
             try {
                 const [status, configs, connections] = await Promise.all([
-                    apiGet("/api/network"),
-                    apiGet("/api/network/configs"),
+                    apiGet("/api/network/status"),
+                    apiGet("/api/network/configurations"),
                     apiGet("/api/network/connections"),
                 ]);
                 renderNetwork(status, configs, connections);
@@ -1095,7 +1782,7 @@
             const config = sel.value;
             if (!confirm(t.t("network.apply_config", {config: config}))) return;
             try {
-                const r = await apiPost("/api/network/config", { configuration: config });
+                const r = await apiPost("/api/network/set_configuration", { config_name: config });
                 toast(`Configuration ${config}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
                 if (r.ok) setTimeout(openNetwork, 1000);
             } catch (e) {
@@ -1107,7 +1794,7 @@
         async function networkInterfaceCmd(interfaceName, connectionName, cmd) {
             if (!confirm(t.t("network.confirm_action", {action: cmd, interface: interfaceName}))) return;
             try {
-                const r = await apiPost("/api/network/interface", { interface: interfaceName, connection: connectionName, cmd: cmd });
+                const r = await apiPost("/api/network/interface", { interface_name: interfaceName, connection_name: connectionName, cmd: cmd });
                 toast(`${cmd} ${interfaceName}: ${r.ok ? "OK" : (r.error || t.t("toast.failure"))}`, r.ok);
                 if (r.ok) setTimeout(openNetwork, 1000);
             } catch (e) {
@@ -1133,10 +1820,272 @@
         function closeNetwork() {
             $("network-modal").classList.remove("show");
         }
+
+        // --- Settings view ----------------------------------------------------
+        async function showSettings(target) {
+            const win = createWindow('settings', target, `Settings — ${target}`, (w) => {
+                if (w.timer) { clearTimeout(w.timer); w.timer = null; }
+            });
+            win.target = target;
+            win.body.innerHTML = `<div class="empty">${t.t("general.loading")}</div>`;
+            await refreshSettings(win);
+        }
+
+        async function refreshSettings(win) {
+            if (!win || activeWindows.get(windowKey('settings', win.target)) !== win) return;
+            const target = win.target;
+            try {
+                const r = await apiGet(`/api/settings/${encodeURIComponent(target)}`);
+                if (activeWindows.get(windowKey('settings', target)) === win) {
+                    renderSettings(r, target, win.body, win);
+                }
+            } catch (e) {
+                if (activeWindows.get(windowKey('settings', target)) === win) {
+                    win.body.innerHTML = `<div class="empty">Error: ${escapeHtml(e.message)}</div>`;
+                }
+            }
+        }
+
+        function renderSettings(data, target, body, win) {
+            if (!data.ok) {
+                body.innerHTML = `<div class="empty">${escapeHtml(data.error || "Error loading settings")}</div>`;
+                t.translateAllElements();
+                return;
+            }
+            
+            // Create an editable YAML editor
+            const settingsContent = data.settings_content || '';
+            const settingsFile = escapeHtml(data.settings_file || '');
+            const escapedContent = escapeHtml(settingsContent);
+            
+            body.innerHTML = `
+                <div class="settings-header">
+                    <strong>File:</strong> ${settingsFile}
+                    <div class="settings-actions" style="margin-top: 8px;">
+                        <button class="open-btn" onclick="saveSettings('${target}', this)" title="Save changes">✓ Save</button>
+                        <button onclick="closeSettingsWindow('${target}')" title="Close">✕ Close</button>
+                    </div>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-editor-container">
+                        <div id="settings-codemirror-${target}" class="yaml-editor"></div>
+                    </div>
+                    <div id="yaml-error-${target}" class="yaml-error" style="display:none;"></div>
+                </div>
+            `;
+            t.translateAllElements();
+            
+            // Initialize CodeMirror editor if available
+            if (typeof CodeMirror !== 'undefined') {
+                const editorElement = document.getElementById(`settings-codemirror-${target}`);
+                if (editorElement) {
+                    win.codemirrorEditor = CodeMirror(editorElement, {
+                        value: settingsContent,
+                        mode: 'yaml',
+                        theme: 'dracula',
+                        lineNumbers: true,
+                        lineWrapping: true,
+                        indentUnit: 2,
+                        tabSize: 2,
+                        spellcheck: false,
+                        autofocus: true
+                    });
+                }
+            }
+            
+            // Store the original content for comparison
+            if (win) {
+                win.originalContent = settingsContent;
+            }
+            
+            // Add YAML validation on the fly (if available)
+            setupYamlValidation(target);
+        }
+
+        function closeSettingsWindow(target) {
+            const key = windowKey('settings', target);
+            closeWindow(key);
+        }
+
+        async function saveSettings(target, button) {
+            const win = activeWindows.get(windowKey('settings', target));
+            if (!win) return;
+            
+            let content = '';
+            
+            // Try to get content from CodeMirror first, fallback to textarea
+            if (win.codemirrorEditor) {
+                content = win.codemirrorEditor.getValue();
+            } else {
+                const textarea = $(`settings-textarea-${target}`);
+                if (!textarea) return;
+                content = textarea.value;
+            }
+            
+            // Validate YAML syntax first
+            const errorElement = $(`yaml-error-${target}`);
+            const validationError = validateYamlSyntax(content);
+            
+            if (validationError) {
+                if (errorElement) {
+                    errorElement.textContent = validationError;
+                    errorElement.style.display = 'block';
+                }
+                return;
+            }
+            
+            if (errorElement) {
+                errorElement.style.display = 'none';
+            }
+            
+            // Disable the button during save
+            const originalText = button.innerHTML;
+            button.innerHTML = 'Saving...';
+            button.disabled = true;
+            
+            try {
+                const response = await apiPost(`/api/settings/${encodeURIComponent(target)}`, {
+                    settings_content: content
+                });
+                
+                if (response.ok) {
+                    toast(`Settings for ${target} saved successfully`, true);
+                    // Update original content
+                    if (win) {
+                        win.originalContent = content;
+                    }
+                    // Re-load settings to get fresh content (in case server modified it)
+                    setTimeout(() => refreshSettings(win), 1000);
+                } else {
+                    toast(`Failed to save settings for ${target}: ${response.error || 'Unknown error'}`, false);
+                }
+            } catch (e) {
+                toast(`Error saving settings for ${target}: ${e.message}`, false);
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // YAML validation using js-yaml library (loaded from CDN)
+        function validateYamlSyntax(content) {
+            // Try using js-yaml if available
+            if (typeof jsyaml !== 'undefined') {
+                try {
+                    jsyaml.load(content);
+                    return null; // No error
+                } catch (e) {
+                    return `YAML syntax error: ${e.message}`;
+                }
+            }
+            
+            // Fallback to simple checks if js-yaml is not loaded
+            return simpleYamlValidation(content);
+        }
+
+        function simpleYamlValidation(content) {
+            // Basic YAML validation without js-yaml library
+            const lines = content.split('\n');
+            let indentLevel = -1;
+            let inBlock = false;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line === '' || line.startsWith('#')) continue;
+                
+                // Check for tabs (YAML spec requires spaces)
+                if (line.includes('\t')) {
+                    return 'YAML error: tabs are not allowed, use spaces for indentation';
+                }
+                
+                // Check indentation
+                const match = line.match(/^(\s*)/);
+                const indent = match ? match[1].length : 0;
+                
+                if (indentLevel === -1) {
+                    indentLevel = indent;
+                } else if (indent > indentLevel) {
+                    // Check that indentation increases by exactly 2 (common YAML standard)
+                    if ((indent - indentLevel) % 2 !== 0) {
+                        return 'YAML warning: indentation should increase by 2 spaces';
+                    }
+                }
+            }
+            
+            return null; // No errors found with simple validation
+        }
+
+        function setupYamlValidation(target) {
+            const win = activeWindows.get(windowKey('settings', target));
+            const textarea = $(`settings-textarea-${target}`);
+            
+            if (!textarea && !win?.codemirrorEditor) return;
+            
+            // Debounced validation (don't validate on every keystroke)
+            let validationTimeout = null;
+            
+            const validateContent = () => {
+                const content = win?.codemirrorEditor ? win.codemirrorEditor.getValue() : textarea.value;
+                const errorElement = $(`yaml-error-${target}`);
+                const validationError = validateYamlSyntax(content);
+                
+                if (validationError) {
+                    if (errorElement) {
+                        errorElement.textContent = validationError;
+                        errorElement.style.display = 'block';
+                    }
+                } else {
+                    if (errorElement) {
+                        errorElement.style.display = 'none';
+                    }
+                }
+            };
+            
+            // Set up validation for textarea
+            if (textarea) {
+                textarea.addEventListener('input', () => {
+                    clearTimeout(validationTimeout);
+                    validationTimeout = setTimeout(validateContent, 500);
+                });
+            }
+            
+            // Set up validation for CodeMirror
+            if (win?.codemirrorEditor) {
+                win.codemirrorEditor.on('change', () => {
+                    clearTimeout(validationTimeout);
+                    validationTimeout = setTimeout(validateContent, 500);
+                });
+            }
+        }
+
         // --- NMEA2000 view ----------------------------------------------------
         // Single NMEA2000 window per process. The device (PGN stats) view is an
         // in-place navigation within the same window; while in device view the
         // list auto-refresh is paused and resumes when returning to the list.
+        function stopNmea2000Refresh(win) {
+            if (win && win.refreshTimer) {
+                clearTimeout(win.refreshTimer);
+                win.refreshTimer = null;
+            }
+        }
+
+        // Load js-yaml library for better YAML validation
+        function loadJsYaml() {
+            if (typeof jsyaml !== 'undefined') return;
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js';
+            script.onload = () => {
+                console.log('js-yaml loaded');
+            };
+            script.onerror = () => {
+                console.log('js-yaml failed to load, using simple validation');
+            };
+            document.head.appendChild(script);
+        }
+
+        // Load js-yaml when the page loads
+        loadJsYaml();
+        
         function stopNmea2000Refresh(win) {
             if (win && win.refreshTimer) {
                 clearTimeout(win.refreshTimer);
@@ -1294,7 +2243,7 @@
                 return pgnDefCache.get(cacheKey);
             }
             try {
-                const data = await apiGet("/api/nmea2000/" + encodeURIComponent(processName) + "/device/" + pgn + "/pgn");
+                const data = await apiGet("/api/nmea2000/" + encodeURIComponent(processName) + "/pgn/" + pgn);
                 if (data.ok && data.definition) {
                     pgnDefCache.set(cacheKey, data.definition);
                     return data.definition;
@@ -1315,7 +2264,7 @@
 
         async function nmea2000TraceCmd(processName, cmd) {
             try {
-                const r = await apiPost("/api/nmea2000/" + encodeURIComponent(processName) + "/trace", { cmd: cmd });
+                const r = await apiPost("/api/nmea2000/" + encodeURIComponent(processName) + "/trace/" + cmd, {});
                 toast(cmd + ": " + (r.ok ? "OK" : (r.error || t.t("toast.failure"))), r.ok);
                 if (r.ok) {
                     const win = focusWindow('nmea2000', processName);
@@ -1346,7 +2295,7 @@
             win.headerTitle.textContent = "";
             win.body.innerHTML = `<div class="empty">${t.t("general.loading")}</div>`;
             try {
-                const data = await apiGet(`/api/engines`);
+                const data = await apiGet(`/api/engine/${encodeURIComponent(processName)}`);
                 renderEngineDashboard(data, processName, win);
                 startEngineRefresh(win);
                 await setEngineEventsMode(processName, 'runs');
@@ -1366,7 +2315,7 @@
                 let data = null;
                 let engine = null;
                 try {
-                    data = await apiGet(`/api/engines`);
+                    data = await apiGet(`/api/engine/${encodeURIComponent(processName)}`);
                     if (data && data.ok) {
                         const engines = data.engines || [];
                         engine = engines.find(e => e.process === processName);
@@ -1419,8 +2368,8 @@
             const speedPercent = isOff ? 0 : Math.min((engine.speed / (params.max_rpm || 1)) * 100, 100);
             const voltagePercent = isOff ? 0 : Math.min((engine.alternator_voltage / (params.voltage_scale || 1)) * 100, 100);
             const tempPercent = isOff ? 0 : Math.min((engine.temperature / (params.temperature_scale || 1)) * 100, 100);
-            const voltageColor = isOff ? "var(--muted)" : (engine.alternator_voltage >= params.voltage_high_alert || engine.alternator_voltage <= params.voltage_low_alert ? "var(--red)" : "var(--green)");
-            const tempColor = isOff ? "var(--muted)" : (engine.temperature >= params.temperature_high_alert ? "var(--red)" : "var(--green)");
+            const voltageColor = isOff ? "var(--muted)" : "#55aaff";
+            const tempColor = isOff ? "var(--muted)" : "#ff00ff";
             const stateSymbol = isRunning ? "▶️" : isOff ? "■" : "◆";
             const val = (v) => isOff ? "--" : fmt(v);
             // Tachometer: 270-degree arc from 7 o'clock (RPM=0) to 5 o'clock (100%),
@@ -1518,7 +2467,8 @@
                 container.innerHTML = `<div class="empty" data-i18n="general.loading">Loading...</div>`;
                 t.translateAllElements();
             }
-            const data = await apiGet(`/api/engine/0`);
+            // Get engine data from the specific process, using engine_id 0
+            const data = await apiGet(`/api/engine/${encodeURIComponent(processName)}/0`);
             if (data.ok) {
                 renderEngineEvents(data, processName, mode);
             }
@@ -1618,7 +2568,7 @@
         async function refreshMppt(win) {
             const processName = win.processName;
             try {
-                const data = await apiGet(`/api/mppt/${encodeURIComponent(processName)}`);
+                const data = await apiGet(`/api/mppt/${encodeURIComponent(processName)}/status`);
                 renderMpptDashboard(data, processName, win);
                 // When communication with the device is lost, the readings are
                 // frozen: do not fetch the trend, show a no-trend notice instead.
@@ -1794,13 +2744,238 @@
             if (m) m.classList.remove('show');
         }
 
+        // --- Battery Service Functions ---
+        let batteryAutoRefreshTimer = null;
+        const BATTERY_REFRESH_INTERVAL = 5000;
+
+        async function openBattery(processName) {
+            const win = createWindow('battery', processName, t.t("battery.title") || "Battery", (w) => {
+                stopBatteryRefresh(w);
+            });
+            win.processName = processName;
+            // Make battery window wider to accommodate labels and bars
+            win.element.style.width = '680px';
+            win.body.innerHTML = `<div class="empty">${t.t("general.loading")}</div>`;
+            try {
+                await refreshBattery(win);
+                startBatteryRefresh(win);
+            } catch (e) {
+                win.body.innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        function stopBatteryRefresh(win) {
+            if (win.batteryTimer) { clearTimeout(win.batteryTimer); win.batteryTimer = null; }
+        }
+
+        function startBatteryRefresh(win) {
+            stopBatteryRefresh(win);
+            win.batteryTimer = setTimeout(() => {
+                refreshBattery(win);
+                startBatteryRefresh(win);
+            }, BATTERY_REFRESH_INTERVAL);
+        }
+
+        async function refreshBattery(win) {
+            const processName = win.processName;
+            try {
+                const data = await apiGet(`/api/battery/${encodeURIComponent(processName)}/status`);
+                renderBatteryDashboard(data, processName, win);
+                // Fetch trend separately
+                try {
+                    const trend = await apiGet(`/api/battery/${encodeURIComponent(processName)}/trend`);
+                    renderBatteryTrend(trend, win);
+                } catch (te) {
+                    const c = win.body.querySelector('.battery-trend-canvas');
+                    if (c) c.innerHTML = `<div class="empty">${escapeHtml(te.message)}</div>`;
+                }
+            } catch (e) {
+                win.body.innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        // A vertical bargraph for battery with optional zero center.
+        // For positive/negative values, the fill starts from the middle (50%)
+        function batteryBar(label, value, max, unit, fillClass, centered = false) {
+            if (value === null || value === undefined) {
+                return `<div class="battery-bar">
+                    <div class="battery-bar-track"></div>
+                    <div class="battery-bar-label">${label}</div>
+                    <div class="battery-bar-value">-- ${unit}</div>
+                </div>`;
+            }
+            const v = Number(value) || 0;
+            const m = Number(max) || 0;
+            const displayValue = v.toFixed(v % 1 === 0 ? 0 : 1);
+            if (centered) {
+                // Centered bar: positive grows up from middle, negative grows down from middle
+                const absV = Math.abs(v);
+                const pct = m > 0 ? Math.max(0, Math.min(100, (absV / m) * 100)) : 0;
+                const fillClassName = v >= 0 ? fillClass + '-pos' : fillClass + '-neg';
+                const positionStyle = v >= 0 ? 'bottom: 50%' : 'top: 50%';
+                return `<div class="battery-bar">
+                    <div class="battery-bar-track">
+                        <div class="battery-bar-fill ${fillClassName}" style="height:${pct}%; ${positionStyle}; left: 0; right: 0; position: absolute;"></div>
+                        <div class="battery-bar-zero-line"></div>
+                    </div>
+                    <div class="battery-bar-label">${label}</div>
+                    <div class="battery-bar-value">${displayValue} ${unit}</div>
+                </div>`;
+            } else {
+                // Standard bar: grows up from bottom
+                const pct = m > 0 ? Math.max(0, Math.min(100, (v / m) * 100)) : 0;
+                return `<div class="battery-bar">
+                    <div class="battery-bar-track">
+                        <div class="battery-bar-fill ${fillClass}" style="height:${pct}%; bottom: 0;"></div>
+                    </div>
+                    <div class="battery-bar-label">${label}</div>
+                    <div class="battery-bar-value">${displayValue} ${unit}</div>
+                </div>`;
+            }
+        }
+
+        function renderBatteryTrend(trend, win) {
+            const canvas = win.body.querySelector('.battery-trend-canvas');
+            if (!canvas) return;
+            if (!trend.ok) {
+                canvas.innerHTML = `<div class="empty">${escapeHtml(trend.error || "Error")}</div>`;
+                return;
+            }
+            const values = trend.samples || [];
+            if (!values.length) {
+                canvas.innerHTML = `<div class="empty" data-i18n="general.loading">Loading...</div>`;
+                t.translateAllElements();
+                return;
+            }
+            const W = 100, H = 100;
+            // Battery trend uses power instead of energy_variation
+            const powerValues = values.map(v => Number(v.power || 0));
+            const maxAbs = Math.max(...powerValues.map(Math.abs), 1); // Maximum absolute value
+            const n = values.length;
+            // Polyline in a 100x100 viewBox; power on Y with 0 at center
+            // Positive values above centerline, negative values below
+            const pts = powerValues.map((val, i) => {
+                const x = n === 1 ? W / 2 : (i / (n - 1)) * W;
+                const y = H / 2 - (val / maxAbs) * (H / 2);
+                return `${x.toFixed(2)},${y.toFixed(2)}`;
+            }).join(" ");
+            // Area fill: create polygon from centerline to points to edge
+            const centerY = H / 2;
+            const areaPts = [`0,${centerY}`].concat(pts.split(' ')).concat([`${W},${centerY}`]).join(" ");
+            const maxVal = Math.max(...powerValues, 0);
+            const minVal = Math.min(...powerValues, 0);
+            canvas.innerHTML = `
+                <svg class="battery-trend-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+                    <polygon class="battery-trend-area" points="${areaPts}"/>
+                    <polyline class="battery-trend-line" points="${pts}" fill="none"/>
+                    <line class="battery-trend-zero" x1="0" y1="${centerY}" x2="${W}" y2="${centerY}" stroke="#ffffff" stroke-width="0.5" stroke-dasharray="2,2"/>
+                </svg>
+                <div class="battery-trend-axis">${fmt(maxVal)} W max, ${fmt(minVal)} W min</div>
+            `;
+        }
+
+        function renderBatteryDashboard(data, processName, win) {
+            const body = win.body;
+            if (!data.ok) {
+                body.innerHTML = `<div class="empty">${escapeHtml(data.error || "Error")}</div>`;
+                t.translateAllElements();
+                return;
+            }
+            
+            const label = data.label || processName;
+            const deviceModel = data.device_model || "Unknown";
+            const nominalCapacityRaw = data.nominal_capacity || 100;
+            const nominalVoltageRaw = data.nominal_voltage || 12;
+            const voltage = data.voltage || 0;
+            const current = data.current || 0;
+            const power = data.power || 0;
+            const soc = data.state_of_charge || 0;
+            const energy = data.energy || 0;
+            
+            win.headerTitle.textContent = `${t.t("battery.title") || "Battery"} \u2014 ${escapeHtml(label)}`;
+            
+            // Calculate max values for bars
+            // Use reasonable defaults that ensure bars are visible even for small values
+            const maxVoltage = nominalVoltageRaw ? nominalVoltageRaw * 1.2 : 20; // 20% above nominal
+            const maxCurrent = Math.max(Math.abs(current) * 1.5, 2); // 1.5x actual or 2A min
+            const maxPower = Math.max(Math.abs(power) * 1.5, 20); // 1.5x actual or 20W min
+            const maxEnergy = energy ? energy * 1.2 : 10000;
+            const maxSoc = 100;
+            
+            // Format values for display
+            const nominalCapacityDisplay = `${nominalCapacityRaw.toFixed(nominalCapacityRaw % 1 === 0 ? 0 : 1)} Ah`;
+            const nominalVoltageDisplay = `${nominalVoltageRaw.toFixed(nominalVoltageRaw % 1 === 0 ? 0 : 1)} V`;
+            
+            const info = `
+                <div class="battery-info">
+                    ${deviceModel !== "Unknown" ? `<div class="row"><span class="k" data-i18n="battery.device_model">Model</span><span class="v">${escapeHtml(deviceModel)}</span></div>` : ""}
+                    <div class="row"><span class="k" data-i18n="battery.nominal_capacity">Nominal Capacity</span><span class="v">${nominalCapacityDisplay}</span></div>
+                    <div class="row"><span class="k" data-i18n="battery.nominal_voltage">Nominal Voltage</span><span class="v">${nominalVoltageDisplay}</span></div>
+                    <div class="row"><button class="open-btn compact" id="battery-details-${CSS.escape(processName)}" data-i18n="battery.details">Details</button></div>
+                </div>
+            `;
+            
+            const bars = `
+                <div class="battery-bars">
+                    ${batteryBar(t.t("battery.voltage"), voltage, maxVoltage, "V", "battery-fill-voltage")}
+                    ${batteryBar(t.t("battery.current"), current, maxCurrent, "A", "battery-fill-current", true)}
+                    ${batteryBar(t.t("battery.power"), power, maxPower, "W", "battery-fill-power", true)}
+                    ${batteryBar(t.t("battery.state_of_charge"), soc, maxSoc, "%", "battery-fill-soc")}
+                    ${batteryBar(t.t("battery.energy"), energy, maxEnergy, "Wh", "battery-fill-energy")}
+                </div>
+            `;
+            
+            body.innerHTML = `
+                <div class="battery-dashboard">
+                    <div class="battery-top">${info}${bars}</div>
+                    <div class="battery-trend">
+                        <div class="battery-trend-title" data-i18n="battery.trend">Power Trend</div>
+                        <div class="battery-trend-canvas"><div class="empty" data-i18n="general.loading">Loading...</div></div>
+                    </div>
+                    <div id="battery-details-modal-${CSS.escape(processName)}" class="modal">
+                        <div class="modal-content" style="max-width:420px">
+                            <div class="modal-header">
+                                <h2 data-i18n="battery.details">Details</h2>
+                                <button class="modal-close" onclick="closeBatteryDetails('${CSS.escape(processName)}')" title="Close">&times;</button>
+                            </div>
+                            <div class="battery-info">
+                                <div class="row"><span class="k" data-i18n="battery.label">Label</span><span class="v">${escapeHtml(label)}</span></div>
+                                <div class="row"><span class="k" data-i18n="battery.device_model">Model</span><span class="v">${escapeHtml(deviceModel)}</span></div>
+                                <div class="row"><span class="k" data-i18n="battery.nominal_voltage">Nominal Voltage</span><span class="v">${nominalVoltageDisplay}</span></div>
+                                <div class="row"><span class="k" data-i18n="battery.nominal_capacity">Nominal Capacity</span><span class="v">${nominalCapacityDisplay}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Setup details button
+            const detailsBtn = body.querySelector('#battery-details-' + CSS.escape(processName));
+            if (detailsBtn) {
+                detailsBtn.addEventListener('click', () => {
+                    const m = body.querySelector('#battery-details-modal-' + CSS.escape(processName));
+                    if (m) m.classList.add('show');
+                });
+            }
+            
+            t.translateAllElements();
+        }
+
+        function closeBattery(processName) {
+            closeWindow(windowKey('battery', processName));
+        }
+
+        function closeBatteryDetails(processName) {
+            const win = activeWindows.get(windowKey('battery', processName));
+            const m = win && win.body.querySelector('#battery-details-modal-' + CSS.escape(processName));
+            if (m) m.classList.remove('show');
+        }
+
+        // --- Window function exports ---
         window.procCmd = procCmd;
         window.systemCmd = systemCmd;
         window.systemCmdConfirm = systemCmdConfirm;
         window.openLog = openLog;
-        window.startLogStream = startLogStream;
-        window.stopLogStream = stopLogStream;
-        window.closeLog = closeLog;
         window.openNetwork = openNetwork;
         window.closeNetwork = closeNetwork;
         window.openNmea2000 = openNmea2000;
@@ -1824,6 +2999,9 @@
         window.openMppt = openMppt;
         window.closeMppt = closeMppt;
         window.closeMpptDetails = closeMpptDetails;
+        window.openBattery = openBattery;
+        window.closeBattery = closeBattery;
+        window.closeBatteryDetails = closeBatteryDetails;
         $("refresh-btn").addEventListener("click", refresh);
         $("auto-refresh").addEventListener("change", toggleAuto);
         $("login-form").addEventListener("submit", async (e) => {
@@ -1863,11 +3041,438 @@
     
     // Call translation on page load and language change
     async function initPageTranslations() {
-        await initWebTranslations();
-        translateAllElements();
-        // Also re-translate when language changes (if needed)
+        try {
+            // Don't treat initialization errors as connection errors
+            // Only show connection lost when main API calls fail
+            await initWebTranslations();
+            translateAllElements();
+            // Also re-translate when language changes (if needed)
+            
+            // Check EnergyService availability and update UI
+            emsAvailable = await updateEmsVisibility();
+        } catch (e) {
+            // Don't show connection lost during initialization
+            // This prevents false positives from config/config issues
+            console.error("Initialization error:", e);
+        }
     }
     
+
+    // --- Energy Management System (EMS) --------------------------------
+    let emsAutoRefreshTimer = null;
+    const EMS_REFRESH_INTERVAL = 5000; // 5 seconds
+    let emsAvailable = false; // Track EMS availability
+
+    // Show either services or ems page
+    function showPage(page) {
+        // If EMS is requested but not available, fallback to services
+        if (page === "ems" && !emsAvailable) {
+            page = "services";
+        }
+
+        // Update nav button states
+        const servicesBtn = $("nav-services");
+        const emsBtn = $("nav-ems");
+        if (servicesBtn) {
+            servicesBtn.classList.remove("active");
+            if (page === "services") servicesBtn.classList.add("active");
+        }
+        if (emsBtn) {
+            emsBtn.classList.remove("active");
+            if (page === "ems") emsBtn.classList.add("active");
+        }
+
+        // Show/hide pages
+        const servicesPage = $("services-page");
+        const emsPage = $("ems-page");
+        if (servicesPage) {
+            servicesPage.classList.remove("active");
+            if (page === "services") servicesPage.classList.add("active");
+        }
+        if (emsPage) {
+            emsPage.classList.remove("active");
+            if (page === "ems") emsPage.classList.add("active");
+        }
+
+        // Start/stop EMS auto-refresh
+        if (page === "ems") {
+            startEmsRefresh();
+        } else {
+            stopEmsRefresh();
+        }
+    }
+
+    function stopEmsRefresh() {
+        if (emsAutoRefreshTimer) {
+            clearTimeout(emsAutoRefreshTimer);
+            emsAutoRefreshTimer = null;
+        }
+    }
+
+    function startEmsRefresh() {
+        stopEmsRefresh();
+        refreshEms();
+    }
+
+    // Map EnergySource enum values to human-readable type names
+    const energySourceTypeNames = {
+        0: "Battery",
+        1: "Solar",
+        2: "Alternator",
+        3: "AC Charger",
+        4: "DC-DC Charger",
+        5: "Windmill",
+        6: "Hydro Generator",
+        7: "AC Generator",
+        8: "AC-DC Converter"
+    };
+
+    // Format value with unit
+    function emsFmt(value, unit = "") {
+        if (value === 0 || value === null || value === undefined) return "--";
+        if (typeof value === "number") {
+            if (unit === "W" || unit === "Wh") {
+                return value.toFixed(0) + " " + unit;
+            }
+            if (unit === "A" || unit === "V") {
+                return value.toFixed(1) + " " + unit;
+            }
+            if (unit === "%") {
+                return value.toFixed(1) + " " + unit;
+            }
+            return value.toFixed(2);
+        }
+        return escapeHtml(value);
+    }
+
+    // Energy source type name from enum value
+    function getEnergySourceTypeName(typeValue) {
+        return energySourceTypeNames[typeValue] || ("Type " + typeValue);
+    }
+
+    // Render EMS dashboard
+    function renderEmsDashboard(data) {
+        const dashboard = $("ems-dashboard");
+        if (!dashboard) return;
+
+        // Handle missing or invalid data gracefully
+        if (!data) {
+            dashboard.innerHTML = '<div class="empty" data-i18n="ems.loading">Loading Energy Management System data...</div>';
+            t.translateAllElements();
+            return;
+        }
+
+        // Extract data with defaults
+        const batteries = data.batteries || [];
+        const sources = data.sources || [];
+
+        // Filter to get only instance 0 for single instance assumption
+        const battery = batteries.find(b => b.instance === 0) || batteries[0] || {};
+        const batteryData = battery.battery_data || {};
+
+        // Build the dashboard HTML
+        let html = '';
+
+        // Top row: Energy Controller Data (left) and Battery Data (right)
+        html += '<div class="ems-top">';
+
+        // Left box: Energy Controller Data (excluding sources_data and batteries_data)
+        html += '<div class="ems-box">';
+        html += '<h2 data-i18n="ems.controller_title">Energy Controller</h2>';
+        html += '<div class="ems-bars">';
+
+        // Main voltage
+        html += createEmsBar(
+            t.t("ems.main_voltage"),
+            data.main_voltage || 0,
+            "V",
+            "#0000ff",
+            0,
+            data.maximum_main_voltage || 30
+        );
+
+        // Auxiliary voltage
+        html += createEmsBar(
+            t.t("ems.auxiliary_voltage"),
+            data.auxiliary_voltage || 0,
+            "V",
+            "#55aaff",
+            0,
+            data.maximum_main_voltage || 30
+        );
+
+        // Production power
+        html += createEmsBar(
+            t.t("ems.production_power"),
+            data.production_power || 0,
+            "W",
+            "#ff9900",
+            0,
+            Math.max((data.production_power || 0) * 2, 1000)
+        );
+
+        // Consumption power
+        html += createEmsBar(
+            t.t("ems.consumption_power"),
+            data.consumption_power || 0,
+            "W",
+            "#ff9900",
+            0,
+            Math.max((data.consumption_power || 0) * 2, 1000)
+        );
+
+        // Energy stock
+        html += createEmsBar(
+            t.t("ems.energy_stock"),
+            data.energy_stock || 0,
+            "Wh",
+            "#9900ff",
+            0,
+            Math.max((data.energy_stock || 0) * 2, 10000)
+        );
+
+        // Battery balance
+        html += createEmsBar(
+            t.t("ems.battery_balance"),
+            data.battery_balance || 0,
+            "W",
+            "#ff9900",
+            0,
+            Math.max(Math.abs(data.battery_balance || 0) * 2, 500)
+        );
+
+        html += '</div></div>';
+
+        // Right box: Battery Data
+        html += '<div class="ems-box">';
+        html += '<h2 data-i18n="ems.battery_title">Battery</h2>';
+        html += '<div class="ems-bars">';
+
+        // Battery current (centered at 0)
+        const batteryCurrent = batteryData.current || 0;
+        html += createEmsCenteredBar(
+            t.t("ems.battery_current"),
+            batteryCurrent,
+            "A",
+            "#ff00ff",
+            Math.max(Math.abs(batteryCurrent) * 2, 2)
+        );
+
+        // State of charge
+        const soc = batteryData.state_of_charge || 0;
+        html += createEmsBar(
+            t.t("ems.state_of_charge"),
+            soc,
+            "%",
+            "#ffff00",
+            0,
+            100
+        );
+
+        // Battery power
+        const batteryPower = batteryData.power || 0;
+        html += createEmsCenteredBar(
+            t.t("ems.battery_power"),
+            batteryPower,
+            "W",
+            "#ff9900",
+            Math.max(Math.abs(batteryPower) * 2, 20)
+        );
+
+        // Battery energy
+        const batteryEnergy = batteryData.energy || 0;
+        html += createEmsBar(
+            t.t("ems.battery_energy"),
+            batteryEnergy,
+            "Wh",
+            "#9900ff",
+            0,
+            Math.max(batteryEnergy * 2, 10000)
+        );
+
+        // Battery trend
+        if (battery.trend && battery.trend.samples && battery.trend.samples.length > 0) {
+            html += '</div>';
+            html += '<div class="ems-trend">';
+            html += '<div class="ems-trend-title" data-i18n="ems.battery_trend">Battery Trend</div>';
+            html += '<div class="ems-trend-canvas" id="ems-battery-trend"></div>';
+            html += '</div>';
+        }
+        html += '</div></div>';
+
+        // Energy source rows
+        html += '<div class="ems-sources">';
+        
+        if (sources.length === 0) {
+            html += '<div class="empty" data-i18n="ems.no_sources">No energy sources.</div>';
+        } else {
+            for (const source of sources) {
+                const sourceData = source.source_data || {};
+                const instance = source.instance_id || source.instance || 0;
+                const label = source.label || ("Source " + instance);
+                const type = source.type || 0;
+                const typeName = getEnergySourceTypeName(type);
+                
+                // For single instance, only show instance 0
+                if (instance !== 0) continue;
+
+                const current = sourceData.current || 0;
+                const power = sourceData.power || 0;
+                const communicationOk = sourceData.communication_ok !== undefined ? sourceData.communication_ok : true;
+                const deviceOn = sourceData.device_on !== undefined ? sourceData.device_on : true;
+
+                html += '<div class="ems-source-row">';
+                html += '<div class="ems-source-header">';
+                html += '<span class="ems-source-title">' + escapeHtml(label) + '</span>';
+                html += '<span class="ems-source-type">' + escapeHtml(typeName) + '</span>';
+                html += '<span class="ems-source-state">';
+                if (!communicationOk) {
+                    html += '<span class="ems-source-state-indicator grey"></span>';
+                    html += '<span>' + t.t("ems.no_communication") + '</span>';
+                } else {
+                    html += '<span class="ems-source-state-indicator ' + (deviceOn ? '' : 'off') + '"></span>';
+                    html += '<span>' + (deviceOn ? t.t("ems.on") : t.t("ems.off")) + '</span>';
+                }
+                html += '</span>';
+                html += '</div>';
+                html += '<div class="ems-source-body">';
+                // Bars container - takes 1/3 width
+                html += '<div class="ems-source-bars">';
+                html += createEmsBar(t.t("ems.current"), Math.abs(current), "A", "#ff00ff", 0, Math.max(Math.abs(current) * 2, 50));
+                html += createEmsBar(t.t("ems.power"), Math.abs(power), "W", "#ff9900", 0, Math.max(Math.abs(power) * 2, 500));
+                html += '</div>';
+                
+                // Trend container - takes 2/3 width
+                html += '<div class="ems-source-trend-container">';
+                if (source.trend && source.trend.samples && source.trend.samples.length > 0) {
+                    html += '<div class="ems-trend">';
+                    html += '<div class="ems-trend-title" data-i18n="ems.source_trend">Trend</div>';
+                    html += '<div class="ems-trend-canvas" id="ems-source-trend-' + instance + '"></div>';
+                    html += '</div>';
+                }
+                html += '</div>';
+                html += '</div></div>';
+            }
+        }
+        
+        html += '</div>';
+
+        dashboard.innerHTML = html;
+        t.translateAllElements();
+
+        // Render trends if data is available
+        if (battery.trend && battery.trend.samples && battery.trend.samples.length > 0) {
+            renderEmsTrend(battery.trend, "ems-battery-trend", "state_of_charge");
+        }
+        for (const source of sources) {
+            const instance = source.instance_id || source.instance || 0;
+            if (instance !== 0) continue;
+            if (source.trend && source.trend.samples && source.trend.samples.length > 0) {
+                renderEmsTrend(source.trend, "ems-source-trend-" + instance, "power");
+            }
+        }
+    }
+
+    function createEmsBar(label, value, unit, color, minVal, maxVal) {
+        const percent = Math.min(Math.max((value - minVal) / (maxVal - minVal) * 100, 0), 100);
+        return `
+            <div class="ems-bar">
+                <div class="ems-bar-label">${escapeHtml(label)}</div>
+                <div class="ems-bar-container">
+                    <div class="ems-bar-fill" style="height: ${percent}%; background: ${color}; bottom: 0; width: 100%;"></div>
+                </div>
+                <div class="ems-bar-value">${emsFmt(value, unit)}</div>
+            </div>
+        `;
+    }
+
+    function createEmsCenteredBar(label, value, unit, color, maxAbsValue) {
+        const absValue = Math.abs(value);
+        const percent = Math.min((absValue / maxAbsValue) * 100, 100);
+        const isPositive = value >= 0;
+        const fillClass = isPositive ? "positive" : "negative";
+        const direction = isPositive ? "Charging" : "Discharging";
+        const positionStyle = isPositive ? 'bottom: 50%' : 'top: 50%';
+        
+        return `
+            <div class="ems-bar">
+                <div class="ems-bar-label">${escapeHtml(label)} (${direction})</div>
+                <div class="ems-bar-container">
+                    <div class="ems-bar-fill ${fillClass}" style="height: ${percent}%; background: ${color};"></div>
+                    <div class="ems-bar-zero-line"></div>
+                </div>
+                <div class="ems-bar-value">${emsFmt(value, unit)}</div>
+            </div>
+        `;
+    }
+
+    function renderEmsTrend(trend, canvasId, fieldName) {
+        const canvas = $(canvasId);
+        if (!canvas) return;
+
+        const values = trend.samples || [];
+        if (!values.length) {
+            canvas.innerHTML = '<div class="empty">No data</div>';
+            return;
+        }
+
+        const W = 100, H = 100;
+        let dataValues = [];
+        
+        if (fieldName === "state_of_charge") {
+            dataValues = values.map(v => v.state_of_charge || 0);
+        } else {
+            dataValues = values.map(v => {
+                if (v.power !== undefined) return v.power;
+                if (v.panel_power !== undefined) return v.panel_power;
+                if (v.current !== undefined && v.voltage !== undefined) return v.current * v.voltage;
+                return 0;
+            });
+        }
+
+        const minVal = Math.min(...dataValues, 0);
+        const maxVal = Math.max(...dataValues, 1);
+        const range = maxVal - minVal || 1;
+
+        const n = dataValues.length;
+        const pts = dataValues.map((val, i) => {
+            const x = n === 1 ? W / 2 : (i / (n - 1)) * W;
+            const y = H - ((val - minVal) / range) * H;
+            return `${x.toFixed(2)},${y.toFixed(2)}`;
+        }).join(" ");
+
+        const area = `0,${H} ${pts} ${W},${H}`;
+
+        canvas.innerHTML = `
+            <svg class="ems-trend-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+                <polygon class="ems-trend-area" points="${area}"/>
+                <polyline class="ems-trend-line" points="${pts}" fill="none"/>
+            </svg>
+            <div class="ems-trend-axis">${emsFmt(maxVal, fieldName === "state_of_charge" ? "%" : "W")} max</div>
+        `;
+    }
+
+    async function fetchEmsData() {
+        try {
+            const data = await apiGet("/api/energy");
+            return data;
+        } catch (e) {
+            return { ok: false, error: e.message };
+        }
+    }
+
+    async function refreshEms() {
+        const data = await fetchEmsData();
+        renderEmsDashboard(data);
+    }
+
+    function startEmsRefresh() {
+        stopEmsRefresh();
+        refreshEms();
+        emsAutoRefreshTimer = setTimeout(startEmsRefresh, EMS_REFRESH_INTERVAL);
+    }
+
+
     // Initialize on DOM load
     document.addEventListener('DOMContentLoaded', initPageTranslations);
     </script>

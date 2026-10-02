@@ -561,6 +561,7 @@ class NetworkService(GrpcService):
         if not os.path.isfile(conf_file):
             _logger.error("Missing configuration file %s" % conf_file)
             raise ValueError
+        set_global_var('network_settings', conf_file)
         with open(conf_file, 'r') as fp:
             try:
                 self._configuration = yaml.safe_load(fp)

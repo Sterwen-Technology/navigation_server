@@ -102,9 +102,9 @@ class Modem:
             if sim == "/":
                 break
             sim_no = sim[-1]
-            print("Querying SIM", sim_no)
+            # print("Querying SIM", sim_no)
             sim = mmcli_request(['-i', sim_no])
-            print (sim)
+            # print (sim)
             self._inserted_sims.append(SIM(sim_no, sim['sim']['properties']))
         if len(self._inserted_sims) > 0:
             self._active_sim = self._inserted_sims[int(self.sim[-1])]

@@ -29,6 +29,10 @@ message AgentCmdMsg {
   uint32 id=1;
   string cmd=2;
   string target=3;
+  oneof arguments {
+    ProcessSettings settings=5;
+    string optional_arg=6;    // place holder
+  }
 }
 
 // system commands
@@ -44,6 +48,7 @@ message AgentCmdMsg {
 //  restart = return process
 //  interrupt = returns error
 //  get_port = returns grpc_port and secure_grpc
+//  settings = returns
 
 message ServiceImplementor {  // provide the correspondance between a service and an implementor
   Service service=1;
@@ -68,7 +73,14 @@ message LogLines {
   string line=1;
 }
 
-
+message ProcessSettings {
+  uint32 id=1;
+  string process_name=2;
+  string settings_file=3; // Absolute path
+  string response=4;
+  uint32 err_code=5;
+  string settings_content=6;  // Content of the whole settings file including lf
+}
 
 
 service Agent {
@@ -77,4 +89,6 @@ service Agent {
   rpc RegisterProcess(SystemProcessMsg) returns(AgentResponse) {}
   rpc GetSystemLog(AgentCmdMsg) returns (stream LogLines) {}
   rpc GetServices(AgentCmdMsg) returns (AgentResponse) {}
+  rpc GetSettings(AgentCmdMsg) returns (ProcessSettings) {}
+  rpc SetSettings(AgentCmdMsg) returns (AgentResponse) {}
 }

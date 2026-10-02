@@ -18,8 +18,13 @@ import time
 import signal
 from socket import gethostname
 import os.path
+import yaml
+import shutil
+import os
+import stat
 
-from navigation_server.generated.agent_pb2 import NavigationSystemMsg, AgentResponse, LogLines, ServiceImplementor
+from navigation_server.generated.agent_pb2 import (NavigationSystemMsg, AgentResponse, LogLines, ServiceImplementor,
+                                                   ProcessSettings)
 from navigation_server.generated.services_server_pb2 import SystemProcessMsg, Server, Connection, ProcessState
 from navigation_server.generated.agent_pb2_grpc import AgentServicer, add_AgentServicer_to_server
 from navigation_server.router_common import (GrpcService, GenericTopServer, resolve_ref, copy_protobuf_data,
@@ -87,12 +92,20 @@ class ProcessABC:
     """
     (NOT_STARTED, RUNNING, STOPPED) = range(0, 3)
 
+    _display_order_counter = 0
+
     def __init__(self, opts):
         self._name = opts.get('name', str, 'incognito')
         self._follow = opts.get('follow', str, None)
         self._post = opts.get_choice('post', ['wait', 'delay', 'none'], 'none')
         self._autostart = opts.get('autostart', bool, False)
         self._controlled = opts.get('controlled', bool, True)
+        self._display_order_counter += 1
+        self.display_order = opts.get('display_order', int, 0)
+        if self.display_order == 0:
+            _logger.warning(f"Process {self._name} has no display_order setting default:{self._display_order_counter}")
+            self.display_order = self._display_order_counter
+        self.hidden = opts.get('hidden', bool, False)
         self._state = self.NOT_STARTED
         self._process_msg = None
         self._pid = 0
@@ -151,7 +164,7 @@ class ProcessABC:
         ids_colon = peer.index(':')
         ip_type = peer[:ids_colon]
         if ip_type != 'ipv4':
-            _logger.error(f"Process {process_msg.name}IP address type not supported:{ip_type} ({peer}")
+            _logger.error(f"Process {process_msg.name} IP address type not supported:{ip_type} ({peer}")
             return
         ide_addr = peer[ids_colon+1:].index(':') + ids_colon + 1
         ip_addr = peer[ids_colon+1:ide_addr]
@@ -326,7 +339,19 @@ class SimpleProcess(ProcessABC):
 
 
 class AgentServicerImpl(AgentServicer):
+    """
+    A servicer implementation for managing agent processes and handling system commands.
 
+    This class serves as an implementation of the AgentServicer. It provides methods to
+    manage processes, execute commands, retrieve system logs, get available services,
+    and configure settings. The primary goal of this class is to act as a middle layer that
+    orchestrates interaction between the AgentService and the client.
+
+    :ivar _vector: Registry of commands mapped to their respective handler methods.
+    :type _vector: dict
+    :ivar _system_vector: Registry of system commands mapped to their respective handler methods.
+    :type _system_vector: dict
+    """
     def __init__(self, agent):
         self._agent: AgentService = agent
         self._response_id = 1
@@ -459,11 +484,148 @@ class AgentServicerImpl(AgentServicer):
         resp.response = "SERVICES"
         return resp
 
+    def GetSettings(self, request, context):
+        '''
+        GetSettings from the service or for special targets 'agent' and 'network'
+        '''
+        resp = ProcessSettings()
+        resp.id = request.id
+        
+        # Handle special targets for agent and network settings
+        target = request.target
+        settings_file = None
+        
+        if target == 'agent':
+            # Return the main agent configuration file
+            settings_file = MessageServerGlobals.configuration.settings_file
+        elif target == 'network':
+            # Return the network configuration file (in the same directory as agent config)
+            conf_dir = get_global_var('settings_path')
+            settings_file = os.path.join(conf_dir, get_global_var('network_settings'))
+        else:
+            # Normal process lookup
+            try:
+                process = self._agent.get_process(target)
+                settings_file = process.settings
+            except KeyError:
+                resp.response = f"Unknown process {target}"
+                resp.err_code = 4
+                return resp
+        
+        resp.settings_file = settings_file
+        # now let's get the settings file
+        try:
+            with open(settings_file, 'r') as f:
+                resp.settings_content = f.read()
+            resp.response = 'OK'
+            resp.err_code = 0
+        except FileNotFoundError:
+            resp.response = f"Settings file {settings_file} not found"
+            resp.err_code = 5
+        except Exception as e:
+            resp.response = f"Error reading settings: {e}"
+            resp.err_code = 6
+        return resp
+
+    def SetSettings(self, request, context):
+        '''
+        SetSettings for a process or special targets 'agent' and 'network'
+        Writes the settings content to the appropriate file after validating YAML syntax
+        '''
+        resp = AgentResponse()
+        resp.id = request.id
+        
+        # Extract settings from the request
+        target = request.target
+        settings_content = ""
+        
+        # The request can come with settings in the oneof arguments
+        if request.HasField('settings'):
+            settings_content = request.settings.settings_content
+        
+        if not settings_content:
+            resp.err_code = 1
+            resp.response = f"No settings content provided for {target}"
+            return resp
+        
+        # Determine the settings file path
+        settings_file = None
+        if target == 'agent':
+            settings_file = MessageServerGlobals.configuration.settings_file
+        elif target == 'network':
+
+            conf_dir = get_global_var('settings_path')
+            network_file = get_global_var('network_settings')
+            settings_file = os.path.join(conf_dir, network_file)
+        else:
+            # Normal process lookup
+            try:
+                process = self._agent.get_process(target)
+                settings_file = process.settings
+            except KeyError:
+                resp.err_code = 4
+                resp.response = f"Unknown process {target}"
+                return resp
+        
+        if not settings_file:
+            resp.err_code = 4
+            resp.response = f"Cannot determine settings file for {target}"
+            return resp
+        
+        # Validate YAML syntax before writing
+        try:
+            # Try to parse the YAML to validate syntax
+            yaml.safe_load(settings_content)
+        except yaml.YAMLError as e:
+            resp.err_code = 2
+            resp.response = f"Invalid YAML syntax: {str(e)}"
+            return resp
+        
+        # Write the settings to file
+        try:
+            # Store original file stats for permission/ownership preservation
+            original_stat = None
+            if os.path.exists(settings_file):
+                original_stat = os.stat(settings_file)
+                # Make a backup of the original file
+                backup_file = settings_file + ".backup"
+                if not os.path.exists(backup_file):
+                    shutil.copy2(settings_file, backup_file)
+                    _logger.info(f"Backup of {settings_file} created at {backup_file}")
+            
+            # Write the new settings
+            with open(settings_file, 'w') as f:
+                f.write(settings_content)
+            
+            # Restore original permissions and ownership
+            if original_stat:
+                # Restore permissions
+                os.chmod(settings_file, original_stat.st_mode)
+                # Restore ownership (requires appropriate privileges)
+                try:
+                    os.chown(settings_file, original_stat.st_uid, original_stat.st_gid)
+                except (OSError, PermissionError) as e:
+                    _logger.warning(f"Could not restore file ownership for {settings_file}: {e}")
+            
+            resp.err_code = 0
+            resp.response = f"Settings for {target} updated successfully. Note: changes will take effect after manual service restart."
+            _logger.info(f"Settings for {target} written to {settings_file}")
+            
+        except Exception as e:
+            resp.err_code = 3
+            resp.response = f"Error writing settings to {settings_file}: {str(e)}"
+            _logger.error(f"Error writing settings: {e}")
+        
+        return resp
+
+
     process_attributes = ['grpc_port', 'version', 'start_time', 'console_present', 'pid', 'secure_grpc', 'hostname',
-                          'settings']
+                          'settings', 'display_order', 'hidden']
     def fill_process_response(self, process, resp):
+        # _logger.info(f"Process {process.name} display_order {process.display_order}")
         if process.is_controlled:
             copy_protobuf_data(process, resp, self.process_attributes)
+            # _logger.info(f"Process {process.name} display_order {resp.display_order}")
         resp.state = ProcessState.RUNNING
         resp.name = process.name
         if isinstance(process, SystemdProcess):
@@ -559,7 +721,7 @@ class AgentServicerImpl(AgentServicer):
             if address:
                 resp.system.ip_address = address
 
-        resp.system.settings = MessageServerGlobals.configuration.settings_file
+        resp.system.settings = get_global_var('settings_path')
         for process in self._agent.get_processes():
             # _logger.debug("Agent system status adding %s" % process.name)
             process_pb = SystemProcessMsg()
@@ -567,6 +729,9 @@ class AgentServicerImpl(AgentServicer):
                 self.fill_process_response(process, process_pb)
             else:
                 process_pb.name = process.name
+                process_pb.display_order = process.display_order
+                process_pb.hidden = process.hidden
+                # _logger.info(f"Process {process.name} display_order {process_pb.display_order}")
                 if process.local_state == SystemdProcess.RUNNING:
                     process_pb.state = ProcessState.RUNNING
                 else:
