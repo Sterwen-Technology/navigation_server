@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy Simulator</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --border-radius: 4px;
+            --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--dark-color);
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 1.8em;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            color: var(--secondary-color);
+            font-size: 0.95em;
+            font-weight: 300;
+        }
+
+        .main-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            font-size: 0.85em;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: var(--box-shadow);
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #219653;
+            transform: translateY(-2px);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+            background: var(--danger-color);
+        }
+
+        .status-indicator.running {
+            background: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .control-panel {
+            margin-bottom: 10px;
+        }
+
+        .device-box {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 12px;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+            width: 100%;
+        }
+
+        .device-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .device-title {
+            font-size: 1.1em;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .device-body {
+            display: grid;
+            gap: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .form-group label {
+            font-size: 0.85em;
+            color: var(--secondary-color);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 7px 10px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 0.85em;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .system-panel {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 18px;
+            box-shadow: var(--box-shadow);
+            margin-bottom: 18px;
+        }
+
+        .system-panel h2 {
+            color: var(--primary-color);
+            margin-bottom: 12px;
+            font-size: 1.3em;
+        }
+
+        .value-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+        }
+
+        .value-card {
+            background: var(--light-color);
+            border-radius: var(--border-radius);
+            padding: 12px;
+            text-align: center;
+        }
+
+        .value-card .label {
+            font-size: 0.8em;
+            color: var(--secondary-color);
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .value-card .value {
+            font-size: 1.3em;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .value-card .unit {
+            font-size: 0.75em;
+            color: var(--secondary-color);
+            margin-left: 4px;
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            color: var(--primary-color);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            padding: 8px;
+            background: rgba(231, 76, 60, 0.1);
+            border-radius: var(--border-radius);
+            margin: 8px 0;
+            font-size: 0.85em;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .runtime-values {
+            background: var(--light-color);
+            border-radius: var(--border-radius);
+            padding: 12px;
+            margin-top: 8px;
+            font-size: 0.85em;
+        }
+
+        .runtime-values h4 {
+            color: var(--secondary-color);
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .runtime-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid #ddd;
+            font-size: 0.85em;
+        }
+
+        .runtime-row:last-child {
+            border-bottom: none;
+        }
+
+        /* Slider for panel voltage */
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .slider-label {
+            font-size: 0.85em;
+            color: var(--secondary-color);
+            min-width: 100px;
+        }
+
+        .slider-value {
+            font-size: 0.85em;
+            color: var(--primary-color);
+            font-weight: 600;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Parameter list for non-modifiable settings */
+        .param-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.85em;
+        }
+
+        .param-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+
+        .param-label {
+            color: var(--secondary-color);
+        }
+
+        .param-value {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .control-panel {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .value-display {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .param-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .slider-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .slider-label, .slider-value {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Energy Simulator</h1>
+        <p class="subtitle">Simulate boat energy system with manual parameter control</p>
+    </header>
+
+    <div class="container">
+        <!-- System Status -->
+        <div class="system-panel">
+            <h2>System Status</h2>
+            <div class="main-controls">
+                <button class="btn btn-success" id="startBtn" onclick="startSimulation()">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="startBtnText">Start Simulation</span>
+                </button>
+                <button class="btn btn-danger" id="stopBtn" onclick="stopSimulation()">Stop Simulation</button>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="cyclePeriod" style="font-size: 0.85em; color: var(--secondary-color);">Cycle Period (s):</label>
+                    <input type="number" id="cyclePeriod" min="1" max="10" step="0.1" value="2.0" 
+                           style="padding: 7px; width: 70px; border-radius: 4px; border: 1px solid #ddd; font-size: 0.85em;">
+                    <button class="btn btn-primary" onclick="setCyclePeriod()">Set</button>
+                </div>
+            </div>
+            
+            <div class="error-message" id="errorMessage"></div>
+            
+            <div class="value-display" id="systemValues">
+                <div class="value-card">
+                    <div class="label">System Voltage</div>
+                    <div class="value"><span id="systemVoltage">0.0</span><span class="unit">V</span></div>
+                </div>
+                <div class="value-card">
+                    <div class="label">Consumption</div>
+                    <div class="value"><span id="consumptionPower">0.0</span><span class="unit">W</span></div>
+                </div>
+                <div class="value-card">
+                    <div class="label">Battery SoC</div>
+                    <div class="value"><span id="batterySoc">0.0</span><span class="unit">%</span></div>
+                </div>
+                <div class="value-card">
+                    <div class="label">Battery Voltage</div>
+                    <div class="value"><span id="batteryVoltage">0.0</span><span class="unit">V</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration will be loaded dynamically from status API -->
+        <div id="configSections"></div>
+    </div>
+
+    <script>
+        let isRunning = false;
+        let statusInterval = null;
+        let configData = null;
+        let configSectionsBuilt = false;
+        let mpptSliderTimeout = null;
+        
+        // Start the simulation
+        function startSimulation() {
+            fetch('/api/start', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.is_running) {
+                        isRunning = true;
+                        updateStatusIndicator();
+                        showError('');
+                        startStatusUpdates();
+                    }
+                })
+                .catch(error => {
+                    showError('Failed to start simulation: ' + error);
+                });
+        }
+        
+        // Stop the simulation
+        function stopSimulation() {
+            fetch('/api/stop', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    isRunning = false;
+                    updateStatusIndicator();
+                    showError('');
+                    stopStatusUpdates();
+                })
+                .catch(error => {
+                    showError('Failed to stop simulation: ' + error);
+                });
+        }
+        
+        // Set cycle period
+        function setCyclePeriod() {
+            const period = parseFloat(document.getElementById('cyclePeriod').value);
+            fetch('/api/cycle_period', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ period: period })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showError('');
+                }
+            })
+            .catch(error => {
+                showError('Failed to set cycle period: ' + error);
+            });
+        }
+        
+        // Save battery configuration
+        function saveBatteryConfig() {
+            const config = {
+                voltage_100pct: parseFloat(document.getElementById('batteryVoltage100').value),
+                voltage_0pct: parseFloat(document.getElementById('batteryVoltage0').value),
+                charging_efficiency: parseFloat(document.getElementById('batteryEfficiency').value),
+                initial_soc: parseFloat(document.getElementById('batteryInitialSoc').value) / 100.0
+            };
+            
+            fetch('/api/battery', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showError('');
+                }
+            })
+            .catch(error => {
+                showError('Failed to save battery config: ' + error);
+            });
+        }
+        
+        // Save consumption configuration
+        function saveConsumptionConfig() {
+            const config = {
+                consumption_type: document.getElementById('consumptionType').value,
+                constant_consumption: parseFloat(document.getElementById('constantConsumption').value),
+                min_consumption: parseFloat(document.getElementById('minConsumption').value),
+                max_consumption: parseFloat(document.getElementById('maxConsumption').value),
+                variation_interval: parseFloat(document.getElementById('consumptionVariation').value)
+            };
+            
+            fetch('/api/consumption', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showError('');
+                }
+            })
+            .catch(error => {
+                showError('Failed to save consumption config: ' + error);
+            });
+        }
+        
+        // Save MPPT configuration
+        function saveMPPTConfig(instance) {
+            const config = {
+                panel_voltage_min: parseFloat(document.getElementById(`mppt${instance}VoltageMin`).value),
+                panel_voltage_max: parseFloat(document.getElementById(`mppt${instance}VoltageMax`).value),
+                panel_voltage_max_power: parseFloat(document.getElementById(`mppt${instance}VoltageMaxPower`).value),
+                max_output_voltage: parseFloat(document.getElementById(`mppt${instance}MaxOutput`).value),
+                max_panel_power: parseFloat(document.getElementById(`mppt${instance}MaxPower`).value),
+                min_voltage_delta: parseFloat(document.getElementById(`mppt${instance}MinDelta`).value),
+                voltage_factor: parseFloat(document.getElementById(`mppt${instance}VoltageFactor`).value),
+                output_power_factor: parseFloat(document.getElementById(`mppt${instance}PowerFactor`).value)
+            };
+            
+            fetch(`/api/mppt/${instance}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showError('');
+                }
+            })
+            .catch(error => {
+                showError('Failed to save MPPT config: ' + error);
+            });
+        }
+        
+        // Update MPPT panel voltage from slider (debounced)
+        function updateMPPTPanelVoltage(instance) {
+            const slider = document.getElementById(`mppt${instance}PanelVoltageSlider`);
+            const valueDisplay = document.getElementById(`mppt${instance}PanelVoltageValue`);
+            
+            if (slider && valueDisplay) {
+                const value = parseFloat(slider.value);
+                valueDisplay.textContent = value.toFixed(1);
+                
+                // Clear previous timeout
+                if (mpptSliderTimeout) {
+                    clearTimeout(mpptSliderTimeout);
+                }
+                
+                // Send update after slider stops moving (200ms delay)
+                mpptSliderTimeout = setTimeout(() => {
+                    const params = { panel_voltage: value };
+                    fetch(`/api/mppt_manual/${instance}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(params)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status !== 'ok') {
+                            showError('Failed to update panel voltage');
+                        }
+                    })
+                    .catch(error => {
+                        showError('Error updating panel voltage: ' + error);
+                    });
+                }, 200);
+            }
+        }
+        
+        // Toggle MPPT ON/OFF state
+        function toggleMPPT(instance) {
+            const toggleBtn = document.getElementById(`mppt${instance}ToggleBtn`);
+            if (!toggleBtn) return;
+            
+            const currentState = toggleBtn.textContent.trim();
+            const newEnabled = currentState === 'OFF';
+            const newText = newEnabled ? 'ON' : 'OFF';
+            const newBg = newEnabled ? 'var(--secondary-color)' : 'var(--danger-color)';
+            
+            const params = { enabled: newEnabled };
+            fetch(`/api/mppt_enabled/${instance}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    toggleBtn.textContent = newText;
+                    toggleBtn.style.background = newBg;
+                } else {
+                    showError('Failed to update MPPT state');
+                }
+            })
+            .catch(error => {
+                showError('Error updating MPPT state: ' + error);
+            });
+        }
+        
+        // Toggle Charger ON/OFF state
+        function toggleCharger(instance) {
+            const toggleBtn = document.getElementById(`charger${instance}ToggleBtn`);
+            if (!toggleBtn) return;
+            
+            const currentState = toggleBtn.textContent.trim();
+            const newEnabled = currentState === 'OFF';
+            const newText = newEnabled ? 'ON' : 'OFF';
+            const newBg = newEnabled ? 'var(--secondary-color)' : 'var(--danger-color)';
+            
+            const params = { enabled: newEnabled };
+            fetch(`/api/charger_enabled/${instance}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    toggleBtn.textContent = newText;
+                    toggleBtn.style.background = newBg;
+                } else {
+                    showError('Failed to update Charger state');
+                }
+            })
+            .catch(error => {
+                showError('Error updating Charger state: ' + error);
+            });
+        }
+        
+        // Set charger voltage mode
+        function setChargerVoltageMode(instance) {
+            const selectElement = document.getElementById(`charger${instance}VoltageMode`);
+            if (!selectElement) return;
+            
+            const mode = selectElement.value;
+            const params = { mode: mode };
+            
+            fetch(`/api/charger_mode/${instance}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status !== 'ok') {
+                    showError('Failed to update charger voltage mode');
+                }
+            })
+            .catch(error => {
+                showError('Error updating charger voltage mode: ' + error);
+            });
+        }
+        
+        // Update charger output current from slider
+        function updateChargerCurrent(instance) {
+            const slider = document.getElementById(`charger${instance}OutputCurrentSlider`);
+            const valueDisplay = document.getElementById(`charger${instance}OutputCurrentValue`);
+            
+            if (slider && valueDisplay) {
+                const current = parseFloat(slider.value);
+                valueDisplay.textContent = current.toFixed(1);
+                
+                // Send update to server
+                const params = { current: current };
+                fetch(`/api/charger_current/${instance}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== 'ok') {
+                        showError('Failed to update charger current');
+                    }
+                })
+                .catch(error => {
+                    showError('Error updating charger current: ' + error);
+                });
+            }
+        }
+        
+        // Update battery initial SoC from slider
+        function updateBatteryInitialSoc() {
+            const slider = document.getElementById('batteryInitialSocSlider');
+            const valueDisplay = document.getElementById('batteryInitialSocValue');
+            
+            if (slider && valueDisplay) {
+                const socPercent = parseFloat(slider.value);
+                valueDisplay.textContent = socPercent.toFixed(0) + '%';
+                
+                // Send update to server
+                const config = { initial_soc: socPercent / 100 };
+                fetch('/api/battery', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== 'ok') {
+                        showError('Failed to update battery initial SoC');
+                    }
+                })
+                .catch(error => {
+                    showError('Error updating battery initial SoC: ' + error);
+                });
+            }
+        }
+        
+        // Save charger configuration
+        function saveChargerConfig(instance) {
+            const config = {
+                charger_efficiency: parseFloat(document.getElementById(`charger${instance}Efficiency`).value)
+            };
+            
+            fetch(`/api/charger/${instance}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showError('');
+                }
+            })
+            .catch(error => {
+                showError('Failed to save charger config: ' + error);
+            });
+        }
+        
+        // Save manual charger parameters
+        function saveChargerManualParams(instance) {
+            const params = {
+                input_voltage: parseFloat(document.getElementById(`charger${instance}ManualInputVoltage`).value),
+                input_current: parseFloat(document.getElementById(`charger${instance}ManualInputCurrent`).value),
+                output_voltage: parseFloat(document.getElementById(`charger${instance}ManualOutputVoltage`).value)
+            };
+            
+            fetch(`/api/charger_manual/${instance}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showError('');
+                }
+            })
+            .catch(error => {
+                showError('Failed to save charger manual params: ' + error);
+            });
+        }
+        
+        // Update status indicator
+        function updateStatusIndicator() {
+            const indicator = document.getElementById('statusIndicator');
+            const btnText = document.getElementById('startBtnText');
+            
+            if (isRunning) {
+                indicator.classList.add('running');
+                btnText.textContent = 'Running';
+            } else {
+                indicator.classList.remove('running');
+                btnText.textContent = 'Start Simulation';
+            }
+        }
+        
+        // Show error message
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            if (message) {
+                errorElement.textContent = message;
+                errorElement.classList.add('show');
+            } else {
+                errorElement.classList.remove('show');
+            }
+        }
+        
+        // Start periodic status updates
+        function startStatusUpdates() {
+            if (statusInterval) {
+                clearInterval(statusInterval);
+            }
+            updateStatus();
+            statusInterval = setInterval(updateStatus, 2000);
+        }
+        
+        // Stop periodic status updates
+        function stopStatusUpdates() {
+            if (statusInterval) {
+                clearInterval(statusInterval);
+                statusInterval = null;
+            }
+        }
+        
+        // Update system status
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    isRunning = data.is_running;
+                    updateStatusIndicator();
+                    
+                    // Update system values
+                    updateSystemValues(data);
+                    
+                    // Store config data for building UI
+                    configData = data;
+                    
+                    // Build config sections only once
+                    if (!configSectionsBuilt) {
+                        buildConfigSections(data);
+                        configSectionsBuilt = true;
+                        
+                        // Initialize MPPT button states after building sections
+                        if (data.manual_mppt_params) {
+                            for (const [instance, params] of Object.entries(data.manual_mppt_params)) {
+                                const enabled = params.enabled !== undefined ? params.enabled : true;
+                                const toggleBtn = document.getElementById(`mppt${instance}ToggleBtn`);
+                                if (toggleBtn) {
+                                    toggleBtn.textContent = enabled ? 'ON' : 'OFF';
+                                    toggleBtn.style.background = enabled ? 'var(--secondary-color)' : 'var(--danger-color)';
+                                }
+                            }
+                        }
+                        
+                        // Initialize charger button states
+                        if (data.manual_charger_params) {
+                            for (const [instance, params] of Object.entries(data.manual_charger_params)) {
+                                const enabled = params.enabled !== undefined ? params.enabled : true;
+                                const toggleBtn = document.getElementById(`charger${instance}ToggleBtn`);
+                                if (toggleBtn) {
+                                    toggleBtn.textContent = enabled ? 'ON' : 'OFF';
+                                    toggleBtn.style.background = enabled ? 'var(--secondary-color)' : 'var(--danger-color)';
+                                }
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to get status:', error);
+                });
+        }
+        
+        // Update system values display
+        function updateSystemValues(data) {
+            // Get runtime data
+            const runtime = data.runtime || {};
+            const battery = runtime.battery || {};
+            
+            // Update system values
+            document.getElementById('systemVoltage').textContent = runtime.system_voltage ? runtime.system_voltage.toFixed(2) : '0.0';
+            document.getElementById('consumptionPower').textContent = runtime.consumption_power ? runtime.consumption_power.toFixed(2) : '0.0';
+            document.getElementById('batterySoc').textContent = battery.state_of_charge ? (battery.state_of_charge * 100).toFixed(1) : '0.0';
+            document.getElementById('batteryVoltage').textContent = battery.voltage ? battery.voltage.toFixed(2) : '0.0';
+            
+            // Update MPPT runtime values
+            if (runtime.mppts) {
+                for (const [instance, mpptData] of Object.entries(runtime.mppts)) {
+                    const panelVoltageEl = document.getElementById(`mppt${instance}RuntimePanelVoltage`);
+                    const panelPowerEl = document.getElementById(`mppt${instance}RuntimePanelPower`);
+                    const outputCurrentEl = document.getElementById(`mppt${instance}RuntimeOutputCurrent`);
+                    
+                    if (panelVoltageEl) panelVoltageEl.textContent = mpptData.panel_voltage ? mpptData.panel_voltage.toFixed(2) : '0.0';
+                    if (panelPowerEl) panelPowerEl.textContent = mpptData.panel_power ? mpptData.panel_power.toFixed(2) : '0.0';
+                    if (outputCurrentEl) outputCurrentEl.textContent = mpptData.output_current ? mpptData.output_current.toFixed(2) : '0.0';
+                }
+            }
+            
+            // Update charger runtime values
+            if (runtime.chargers) {
+                for (const [instance, chargerData] of Object.entries(runtime.chargers)) {
+                    const inputVoltageEl = document.getElementById(`charger${instance}RuntimeInputVoltage`);
+                    const inputCurrentEl = document.getElementById(`charger${instance}RuntimeInputCurrent`);
+                    const outputVoltageEl = document.getElementById(`charger${instance}RuntimeOutputVoltage`);
+                    const outputCurrentEl = document.getElementById(`charger${instance}RuntimeOutputCurrent`);
+                    
+                    if (inputVoltageEl) inputVoltageEl.textContent = chargerData.input_voltage ? chargerData.input_voltage.toFixed(2) : '0.0';
+                    if (inputCurrentEl) inputCurrentEl.textContent = chargerData.input_current ? chargerData.input_current.toFixed(2) : '0.0';
+                    if (outputVoltageEl) outputVoltageEl.textContent = chargerData.output_voltage ? chargerData.output_voltage.toFixed(2) : '0.0';
+                    if (outputCurrentEl) outputCurrentEl.textContent = chargerData.output_current ? chargerData.output_current.toFixed(2) : '0.0';
+                }
+            }
+        }
+        
+        // Build configuration sections dynamically
+        function buildConfigSections(data) {
+            const container = document.getElementById('configSections');
+            const config = data;
+            container.innerHTML = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">';
+            
+            // Battery Configuration
+            if (config.battery_config) {
+                container.innerHTML += `
+                    <div class="device-box">
+                        <div class="device-header">
+                            <div class="device-title">Battery Configuration</div>
+                        </div>
+                        <div class="device-body">
+                            <div class="param-list">
+                                <h4>Parameters (from Energy Controller)</h4>
+                                <div class="param-item">
+                                    <span class="param-label">Nominal Voltage:</span>
+                                    <span class="param-value">${(config.battery_config.nominal_voltage || 12.0).toFixed(1)} V</span>
+                                </div>
+                                <div class="param-item">
+                                    <span class="param-label">Nominal Capacity:</span>
+                                    <span class="param-value">${(config.battery_config.nominal_capacity || 200.0).toFixed(0)} Ah</span>
+                                </div>
+                                <div class="param-item">
+                                    <span class="param-label">Voltage at 100%:</span>
+                                    <span class="param-value">${(config.battery_config.voltage_100pct || 14.4).toFixed(1)} V</span>
+                                </div>
+                                <div class="param-item">
+                                    <span class="param-label">Voltage at 0%:</span>
+                                    <span class="param-value">${(config.battery_config.voltage_0pct || 10.0).toFixed(1)} V</span>
+                                </div>
+                                <div class="param-item">
+                                    <span class="param-label">Charging Efficiency:</span>
+                                    <span class="param-value">${((config.battery_config.charging_efficiency || 0.9) * 100).toFixed(0)}%</span>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px;">
+                                <label style="font-size: 0.85em; color: var(--secondary-color); font-weight: 500; display: block; margin-bottom: 6px;">Adjust Initial SoC</label>
+                                <div class="slider-container">
+                                    <span class="slider-label">0%</span>
+                                    <input type="range" 
+                                           id="batteryInitialSocSlider" 
+                                           min="0" 
+                                           max="100" 
+                                           step="1" 
+                                           value="${(config.battery_config.initial_soc || 0.8) > 1 ? (config.battery_config.initial_soc || 0.8) : (config.battery_config.initial_soc || 0.8) * 100}"
+                                           class="slider"
+                                           oninput="updateBatteryInitialSoc()">
+                                    <span class="slider-value" id="batteryInitialSocValue">${(config.battery_config.initial_soc || 0.8) > 1 ? (config.battery_config.initial_soc || 0.8).toFixed(0) : ((config.battery_config.initial_soc || 0.8) * 100).toFixed(0)}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Consumption Configuration
+            if (config.consumption) {
+                container.innerHTML += `
+                    <div class="device-box">
+                        <div class="device-header">
+                            <div class="device-title">Consumption Configuration</div>
+                        </div>
+                        <div class="device-body">
+                            <div class="form-group">
+                                <label>Consumption Type</label>
+                                <select id="consumptionType" style="padding: 7px 10px; font-size: 0.85em;">
+                                    <option value="constant" ${config.consumption.type === 'constant' ? 'selected' : ''}>Constant</option>
+                                    <option value="variable" ${config.consumption.type === 'variable' ? 'selected' : ''}>Variable</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Constant Consumption (W)</label>
+                                    <input type="number" id="constantConsumption" value="${config.consumption.constant || 100}" step="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Variation Interval (s)</label>
+                                    <input type="number" id="consumptionVariation" value="${config.consumption.variation_interval || 30}" step="1">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Min Consumption (W)</label>
+                                    <input type="number" id="minConsumption" value="${config.consumption.min || 50}" step="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Max Consumption (W)</label>
+                                    <input type="number" id="maxConsumption" value="${config.consumption.max || 150}" step="1">
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="saveConsumptionConfig()">Save Consumption Config</button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // MPPT Configurations
+            if (config.mppt_configs) {
+                for (const [instance, mpptConfig] of Object.entries(config.mppt_configs)) {
+                    const minVoltage = mpptConfig.min_voltage || 10.0;
+                    const maxVoltage = mpptConfig.max_voltage || 40.0;
+                    const manualParams = config.manual_mppt_params && config.manual_mppt_params[instance] ? config.manual_mppt_params[instance] : {};
+                    const currentPanelVoltage = manualParams.panel_voltage !== undefined ? manualParams.panel_voltage : maxVoltage;
+                    const isEnabled = manualParams.enabled !== undefined ? manualParams.enabled : true;
+                    
+                    container.innerHTML += `
+                        <div class="device-box">
+                            <div class="device-header">
+                                <div class="device-title">MPPT ${instance} Configuration</div>
+                            </div>
+                            <div class="device-body">
+                                <div class="param-list">
+                                    <h4>Configuration Parameters (from YAML)</h4>
+                                    <div class="param-item">
+                                        <span class="param-label">Panel Voltage Min:</span>
+                                        <span class="param-value">${minVoltage.toFixed(1)} V</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Panel Voltage Max:</span>
+                                        <span class="param-value">${maxVoltage.toFixed(1)} V</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Voltage Max Power:</span>
+                                        <span class="param-value">${(mpptConfig.panel_voltage_max_power || 18.5).toFixed(1)} V</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Max Output Voltage:</span>
+                                        <span class="param-value">${(mpptConfig.max_output || 14.4).toFixed(1)} V</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Max Panel Power:</span>
+                                        <span class="param-value">${(mpptConfig.max_power || 300).toFixed(0)} W</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Min Voltage Delta:</span>
+                                        <span class="param-value">${(mpptConfig.min_voltage_delta || 0.5).toFixed(1)} V</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Voltage Factor:</span>
+                                        <span class="param-value">${(mpptConfig.voltage_factor || 0.1).toFixed(2)}</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Power Factor:</span>
+                                        <span class="param-value">${(mpptConfig.output_power_factor || 0.95).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                                
+                                <div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px;">
+                                    <label style="font-size: 0.85em; color: var(--secondary-color); font-weight: 500; display: block; margin-bottom: 6px;">Panel Voltage Control</label>
+                                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                        <button class="btn" onclick="toggleMPPT(${instance})" id="mppt${instance}ToggleBtn" style="background: ${isEnabled ? 'var(--secondary-color)' : 'var(--danger-color)'}; color: white;">${isEnabled ? 'ON' : 'OFF'}</button>
+                                    </div>
+                                    <div class="slider-container">
+                                        <span class="slider-label">${minVoltage.toFixed(1)} V</span>
+                                        <input type="range" 
+                                               id="mppt${instance}PanelVoltageSlider" 
+                                               min="${minVoltage}" 
+                                               max="${maxVoltage}" 
+                                               step="0.1" 
+                                               value="${currentPanelVoltage}"
+                                               class="slider"
+                                               oninput="updateMPPTPanelVoltage(${instance})">
+                                        <span class="slider-value" id="mppt${instance}PanelVoltageValue">${currentPanelVoltage.toFixed(1)}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="runtime-values">
+                                    <h4>Runtime Values</h4>
+                                    <div class="runtime-row">
+                                        <span>Panel Voltage:</span>
+                                        <span><strong id="mppt${instance}RuntimePanelVoltage">0.0</strong> V</span>
+                                    </div>
+                                    <div class="runtime-row">
+                                        <span>Panel Power:</span>
+                                        <span><strong id="mppt${instance}RuntimePanelPower">0.0</strong> W</span>
+                                    </div>
+                                    <div class="runtime-row">
+                                        <span>Output Current:</span>
+                                        <span><strong id="mppt${instance}RuntimeOutputCurrent">0.0</strong> A</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            // DC-DC Charger Configurations
+            if (config.charger_configs) {
+                for (const [instance, chargerConfig] of Object.entries(config.charger_configs)) {
+                    const minCurrent = chargerConfig.min_output_current || 0;
+                    const maxCurrent = chargerConfig.max_output_current || 20;
+                    const defaultCurrent = Math.min(maxCurrent, Math.max(minCurrent, 5.0));
+                    
+                    // Get current mode from manual params or default to absorption
+                    const manualParams = config.manual_charger_params && config.manual_charger_params[instance] ? config.manual_charger_params[instance] : {};
+                    const currentMode = manualParams.voltage_mode || 'absorption';
+                    const isEnabled = manualParams.enabled !== undefined ? manualParams.enabled : true;
+                    
+                    container.innerHTML += `
+                        <div class="device-box">
+                            <div class="device-header">
+                                <div class="device-title">DC-DC Charger ${instance} Configuration</div>
+                            </div>
+                            <div class="device-body">
+                                <div class="param-list">
+                                    <h4>Configuration Parameters (from YAML)</h4>
+                                    <div class="param-item">
+                                        <span class="param-label">Efficiency:</span>
+                                        <span class="param-value">${(chargerConfig.efficiency || 0.92).toFixed(2)}</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Alternator Voltage:</span>
+                                        <span class="param-value">${(chargerConfig.alternator_voltage || 24.0).toFixed(1)} V</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Auxiliary Voltage:</span>
+                                        <span class="param-value">${(chargerConfig.aux_voltage || 24.0).toFixed(1)} V</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Absorption Voltage:</span>
+                                        <span class="param-value">${(chargerConfig.absorption_voltage || 14.2).toFixed(1)} V</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Float Voltage:</span>
+                                        <span class="param-value">${(chargerConfig.float_voltage || 13.5).toFixed(1)} V</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Storage Voltage:</span>
+                                        <span class="param-value">${(chargerConfig.storage_voltage || 13.0).toFixed(1)} V</span>
+                                    </div>
+                                    <div class="param-item">
+                                        <span class="param-label">Current Range:</span>
+                                        <span class="param-value">${minCurrent.toFixed(1)} - ${maxCurrent.toFixed(1)} A</span>
+                                    </div>
+                                </div>
+                                
+                                <div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px;">
+                                    <label style="font-size: 0.85em; color: var(--secondary-color); font-weight: 500; display: block; margin-bottom: 6px;">Charger Control</label>
+                                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                        <button class="btn" onclick="toggleCharger(${instance})" id="charger${instance}ToggleBtn" style="background: ${isEnabled ? 'var(--secondary-color)' : 'var(--danger-color)'}; color: white;">${isEnabled ? 'ON' : 'OFF'}</button>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 8px;">
+                                        <label>Output Voltage Mode:</label>
+                                        <select id="charger${instance}VoltageMode" onchange="setChargerVoltageMode(${instance})" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                            <option value="absorption" ${currentMode === 'absorption' ? 'selected' : ''}>Absorption (${chargerConfig.absorption_voltage || 14.2} V)</option>
+                                            <option value="float" ${currentMode === 'float' ? 'selected' : ''}>Float (${chargerConfig.float_voltage || 13.5} V)</option>
+                                            <option value="storage" ${currentMode === 'storage' ? 'selected' : ''}>Storage (${chargerConfig.storage_voltage || 13.0} V)</option>
+                                        </select>
+                                    </div>
+                                    <div class="slider-container">
+                                        <span class="slider-label">${minCurrent.toFixed(1)} A</span>
+                                        <input type="range" 
+                                               id="charger${instance}OutputCurrentSlider" 
+                                               min="${minCurrent}" 
+                                               max="${maxCurrent}" 
+                                               step="0.1" 
+                                               value="${manualParams.output_current !== undefined ? manualParams.output_current : defaultCurrent}"
+                                               class="slider"
+                                               oninput="updateChargerCurrent(${instance})">
+                                        <span class="slider-value" id="charger${instance}OutputCurrentValue">${manualParams.output_current !== undefined ? manualParams.output_current.toFixed(1) : defaultCurrent.toFixed(1)}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="runtime-values">
+                                    <h4>Runtime Values</h4>
+                                    <div class="runtime-row">
+                                        <span>Input Voltage:</span>
+                                        <span><strong id="charger${instance}RuntimeInputVoltage">0.0</strong> V</span>
+                                    </div>
+                                    <div class="runtime-row">
+                                        <span>Input Current:</span>
+                                        <span><strong id="charger${instance}RuntimeInputCurrent">0.0</strong> A</span>
+                                    </div>
+                                    <div class="runtime-row">
+                                        <span>Output Voltage:</span>
+                                        <span><strong id="charger${instance}RuntimeOutputVoltage">0.0</strong> V</span>
+                                    </div>
+                                    <div class="runtime-row">
+                                        <span>Output Current:</span>
+                                        <span><strong id="charger${instance}RuntimeOutputCurrent">0.0</strong> A</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            container.innerHTML += '</div>';
+        }
+        
+        // Initial status check
+        updateStatus();
+        
+        // Check if simulation is running on page load
+        setTimeout(() => {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    isRunning = data.is_running;
+                    updateStatusIndicator();
+                    if (isRunning) {
+                        startStatusUpdates();
+                    }
+                });
+        }, 100);
+    </script>
+</body>
+</html>

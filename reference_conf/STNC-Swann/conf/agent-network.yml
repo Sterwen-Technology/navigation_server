@@ -21,7 +21,7 @@ log_module:
   router_common.agent_interface: INFO
 
 decode_definition_only: False
-enable_secure_grpc: true
+enable_secure_grpc: false
 STNC_hardware: true
 
 features:
@@ -55,46 +55,55 @@ processes:
       class: SystemdProcess
       service: can_server
       autostart: false
+      display_order: 2
 
   - STNC_MPX3_Server:
       class: SystemdProcess
       service: mpx3_server
       autostart: false
+      hidden: true
 
   - STNC_Message_Server:
       class: SystemdProcess
       service: navigation
       autostart: false
+      display_order: 3
 
   - CAN:
       class: SystemdProcess
       service: can
       controlled: false
+      hidden: true
 
   - GNSS:
       class: SystemdProcess
       service: gnss
       autostart: false
+      display_order: 6
 
   - GNSSConfig:
       class: SystemdProcess
       service: gnss_config
       controlled: false
+      hidden: true
 
   - Data:
       class: SystemdProcess
       service: navigation_data
       autostart: false
+      display_order: 5
 
   - Energy:
       class: SystemdProcess
       service: energy
       autostart: false
+      display_order: 4
 
   - WebServer:
       class: SystemdProcess
       service: navigation_web_server
       autostart: true
+      display_order: 1
 
 
 

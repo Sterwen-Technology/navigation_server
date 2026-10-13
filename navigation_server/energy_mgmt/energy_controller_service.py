@@ -223,7 +223,8 @@ class EnergyController:
 
 
     def battery_update(self, instance: int, current: float, power: float, 
-                      state_of_charge: float, energy: float, timestamp: float, voltage: float):
+                      state_of_charge: float, energy: float, timestamp: float, voltage: float,
+                       auxiliary_voltage: float):
         """
         Update battery unit data
         
@@ -235,6 +236,7 @@ class EnergyController:
             energy: Energy in Wh
             timestamp: The timestamp of the data
             voltage: Voltage in volts
+            auxiliary_voltage: Auxiliary voltage in volts
         """
         if instance not in self._batteries:
             _logger.warning(f"Battery instance {instance} not found")
@@ -246,15 +248,10 @@ class EnergyController:
             'state_of_charge': state_of_charge,
             'energy': energy,
             'timestamp': timestamp,
-            'voltage': voltage
+            'voltage': voltage,
+            'auxiliary_voltage': auxiliary_voltage
         }
-        # Update the battery definition if not already set
-        if instance not in self._batteries:
-            self._batteries[instance] = BatteryUnit(
-                instance_id=instance,
-                label=f"Battery_{instance}"
-            )
-        
+
         # Mark that we have new data
         self._compute_aggregates()
 
@@ -271,6 +268,7 @@ class EnergyController:
         total_battery_power = 0.0
         total_energy_stock = 0.0
         main_voltage = 0.0
+        auxiliary_voltage = 0.0
 
         
         # Process energy sources
@@ -301,6 +299,7 @@ class EnergyController:
             total_battery_power += data['power']
             total_energy_stock += data['energy']
             main_voltage = data['voltage']
+            auxiliary_voltage = data['auxiliary_voltage']
         
         # Battery balance: positive = net charging, negative = net discharging
         # This represents the net power flow to/from all batteries
@@ -318,7 +317,7 @@ class EnergyController:
         # For now, main and auxiliary voltages are set to nominal values
         # These would be updated from actual measurements if available
         self._main_voltage = main_voltage
-        self._auxiliary_voltage = 0.0
+        self._auxiliary_voltage = auxiliary_voltage
         
         # Create trend bucket if period has elapsed
         if clock - self._start_period >= self._trend_period:
@@ -347,7 +346,11 @@ class EnergyController:
         # Add source data
         for instance, data in self._source_data.items():
             source_data = EnergySourceData()
-            source_data.instance = instance[0]
+            # Use EnergySourceDevice to include both instance_id and type
+            source_data.device.instance_id = instance[0]
+            source_data.device.type = instance[1]
+            if instance in self._sources:
+                source_data.device.label = self._sources[instance].record.label
             source_data.current = data['current']
             source_data.power = data['power']
             source_data.communication_ok = data.get('communication_ok', True)
@@ -397,11 +400,16 @@ class EnergyController:
         response.consumption_power = self._consumption_power
         response.energy_stock = self._energy_stock
         response.battery_balance = self._battery_balance
+        response.auxiliary_voltage = self._auxiliary_voltage
         
         # Add source data
         for instance, data in self._source_data.items():
             source_data = EnergySourceData()
-            source_data.instance = instance[0]
+            # Use EnergySourceDevice to include both instance_id and type
+            source_data.device.instance_id = instance[0]
+            source_data.device.type = instance[1]
+            if instance in self._sources:
+                source_data.device.label = self._sources[instance].record.label
             source_data.current = data['current']
             source_data.power = data['power']
             source_data.communication_ok = data.get('communication_ok', True)

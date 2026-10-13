@@ -1,0 +1,4 @@
+#!/bin/bash
+# Run the Energy Simulator server using run_server
+./run_server conf/energy_simulator.yml
+

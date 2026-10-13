@@ -39,7 +39,7 @@ services:
 
 processes:
 
-  - Data:
+  - Energy:
       class: SimpleProcess
       autostart: false
 

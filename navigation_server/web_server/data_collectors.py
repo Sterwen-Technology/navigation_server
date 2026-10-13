@@ -24,6 +24,7 @@
 import logging
 import threading
 import time
+import datetime
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Tuple, Type, Any
 
@@ -34,7 +35,7 @@ from navigation_server.navigation_clients import NetworkClient
 from navigation_server.navigation_clients.console_client import ConsoleClient
 from navigation_server.navigation_clients.n2k_can_client import NMEA2000CanClient
 from navigation_server.navigation_clients.navigation_data_client import EngineClient
-from navigation_server.navigation_clients.energy_client import MPPT_Client, EnergyServiceClient, BatteryServiceClient
+from navigation_server.navigation_clients.energy_client import MPPT_Client, EnergyServiceClient, BatteryServiceClient, DC_DC_ServiceClient
 from navigation_server.navigation_clients.gnss_client import GNSSClient
 from navigation_server.generated.energy_pb2 import EnergyControllerData, EnergyControllerParameters, BatteryBank, battery_in_out, BatteryUnit, EnergySourceDevice, EnergySourceData
 from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
@@ -531,20 +532,20 @@ class NMEA2000ServiceCollector(BaseServiceCollector):
             return self.get_data()
         
         command = parameters[0]
-        
+        _logger.info(f"NMEA2000 command: {parameters}")
         if command == "status":
             return self.get_data()
-        elif command.startswith("device/"):
+        elif command.startswith("device"):
             # device/{address}
             try:
-                address = int(command.split("/", 1)[1])
+                address = int(parameters[1])
                 return self.get_device(address)
             except (ValueError, IndexError):
                 return {"ok": False, "error": f"Invalid device address in command: {command}"}
-        elif command.startswith("pgn/"):
+        elif command.startswith("pgn"):
             # pgn/{pgn}
             try:
-                pgn = int(command.split("/", 1)[1])
+                pgn = int(parameters[1])
                 return self.get_pgn_definition(pgn)
             except (ValueError, IndexError):
                 return {"ok": False, "error": f"Invalid PGN in command: {command}"}
@@ -873,7 +874,7 @@ class EnergyServiceCollector(BaseServiceCollector):
             trend = self._client.GetTrend()
             
             # Build sources data
-            sources_by_instance = {sd.instance: sd for sd in values.sources_data}
+            # Now sources_data uses EnergySourceDevice instead of encoded instance
             sources = []
             for source in info.sources:
                 source_obj = {
@@ -887,12 +888,14 @@ class EnergyServiceCollector(BaseServiceCollector):
                         "device_on": True
                     }
                 }
-                if source.instance_id in sources_by_instance:
-                    source_data = sources_by_instance[source.instance_id]
-                    source_obj["source_data"]["current"] = float(source_data.current)
-                    source_obj["source_data"]["power"] = float(source_data.power)
-                    source_obj["source_data"]["communication_ok"] = bool(source_data.communication_ok)
-                    source_obj["source_data"]["device_on"] = bool(source_data.device_on)
+                # Look for source_data with matching instance_id and type
+                for sd in values.sources_data:
+                    if sd.device.instance_id == source.instance_id and sd.device.type == source.type:
+                        source_obj["source_data"]["current"] = float(sd.current)
+                        source_obj["source_data"]["power"] = float(sd.power)
+                        source_obj["source_data"]["communication_ok"] = bool(sd.communication_ok)
+                        source_obj["source_data"]["device_on"] = bool(sd.device_on)
+                        break
                 sources.append(source_obj)
             
             # Build batteries data
@@ -909,6 +912,117 @@ class EnergyServiceCollector(BaseServiceCollector):
                     }
                 }
                 batteries.append(battery_obj)
+            
+            # If EnergyService doesn't have battery data (batteries not registered with EnergyController),
+            # try to get it directly from BatteryService for backward compatibility and to get trend data
+            if not batteries:
+                # Try to find BatteryService processes and get their data
+                system_collector = self._process_collector._system_collector
+                system = system_collector._get_agent_status()
+                if system:
+                    for proc in system.get_processes():
+                        if proc.state == "RUNNING":
+                            for svc in proc.services:
+                                if svc.rpc_service == "BatteryService":
+                                    endpoint_key = f"api/battery/{proc.name}"
+                                    battery_collector = system_collector._service_collector_cache.get(endpoint_key)
+                                    if battery_collector:
+                                        try:
+                                            battery_service_data = battery_collector.get_data()
+                                            if battery_service_data.get("ok"):
+                                                battery_obj = {
+                                                    "instance": battery_service_data.get("instance", 0),
+                                                    "battery_data": {
+                                                        "voltage": battery_service_data.get("voltage", 0.0),
+                                                        "current": battery_service_data.get("current", 0.0),
+                                                        "power": battery_service_data.get("power", 0.0),
+                                                        "state_of_charge": battery_service_data.get("state_of_charge", 0.0),
+                                                        "energy": battery_service_data.get("energy", 0.0),
+                                                    },
+                                                    "trend": battery_service_data.get("trend", {"samples": []})
+                                                }
+                                                batteries.append(battery_obj)
+                                        except Exception as e:
+                                            _logger.warning(f"Error getting battery data from {proc.name}: {e}")
+                                    break
+            
+            # If EnergyService doesn't have source data or we want to add trend data,
+            # try to get it directly from MPPTService for backward compatibility
+            if not sources:
+                # Try to find MPPTService processes and get their data
+                system_collector = self._process_collector._system_collector
+                system = system_collector._get_agent_status()
+                if system:
+                    for proc in system.get_processes():
+                        if proc.state == "RUNNING":
+                            for svc in proc.services:
+                                if svc.rpc_service == "MPPTService":
+                                    endpoint_key = f"api/mppt/{proc.name}"
+                                    mppt_collector = system_collector._service_collector_cache.get(endpoint_key)
+                                    if mppt_collector:
+                                        try:
+                                            mppt_data = mppt_collector.get_data()
+                                            if mppt_data.get("ok"):
+                                                # Create source object from MPPT data
+                                                source_obj = {
+                                                    "instance": mppt_data.get("instance", 0),
+                                                    "label": mppt_data.get("device_label", "MPPT"),
+                                                    "type": 1,  # EnergySource.Solar_MPPT
+                                                    "source_data": {
+                                                        "current": mppt_data.get("output", {}).get("current", 0.0) if mppt_data.get("output") else 0.0,
+                                                        "power": mppt_data.get("output", {}).get("panel_power", 0.0) if mppt_data.get("output") else 0.0,
+                                                        "communication_ok": mppt_data.get("communication_ok", True),
+                                                        "device_on": mppt_data.get("communication_ok", True)
+                                                    },
+                                                    "trend": {
+                                                        "samples": [
+                                                            {"power": float(v.get("panel_power", 0))}
+                                                            for v in mppt_data.get("output", {}).get("values", []) if isinstance(mppt_data.get("output"), dict)
+                                                        ] if mppt_data.get("output") and isinstance(mppt_data.get("output"), dict) else []
+                                                    }
+                                                }
+                                                sources.append(source_obj)
+                                        except Exception as e:
+                                            _logger.warning(f"Error getting MPPT data from {proc.name}: {e}")
+                                    break
+            
+            # If EnergyService doesn't have source data for DC-DC, try to get it directly
+            # from DC_DC_Service for backward compatibility
+            # Check if we have any sources and if any of them are DC_DC type
+            has_dc_dc_source = any(s.get('type') == 4 for s in sources)  # EnergySource.DC_DC_Charger = 4
+            dc_dc_processed = False
+            if not has_dc_dc_source:
+                system_collector = self._process_collector._system_collector
+                system = system_collector._get_agent_status()
+                if system:
+                    for proc in system.get_processes():
+                        if proc.state == "RUNNING":
+                            for svc in proc.services:
+                                if svc.rpc_service == "DC_DC_Service":
+                                    endpoint_key = f"api/dc_dc/{proc.name}"
+                                    dc_dc_collector = system_collector._service_collector_cache.get(endpoint_key)
+                                    if dc_dc_collector:
+                                        try:
+                                            dc_dc_data = dc_dc_collector.get_data()
+                                            if dc_dc_data.get("ok"):
+                                                # Create source object from DC-DC data
+                                                source_obj = {
+                                                    "instance": dc_dc_data.get("instance", 0),
+                                                    "label": dc_dc_data.get("device_label", "DC-DC"),
+                                                    "type": 4,  # EnergySource.DC_DC_Charger
+                                                    "source_data": {
+                                                        "current": dc_dc_data.get("output_current", 0.0),
+                                                        "power": dc_dc_data.get("output_power", 0.0),
+                                                        "communication_ok": dc_dc_data.get("communication_ok", True),
+                                                        "device_on": dc_dc_data.get("communication_ok", True)
+                                                    }
+                                                }
+                                                sources.append(source_obj)
+                                                dc_dc_processed = True
+                                        except Exception as e:
+                                            _logger.warning(f"Error getting DC-DC data from {proc.name}: {e}")
+                                    if dc_dc_processed:
+                                        break
             
             result = {
                 "ok": True,
@@ -1080,6 +1194,90 @@ class BatteryServiceCollector(BaseServiceCollector):
                 return {"ok": False, "error": "Battery trend call failed"}
         
         return {"ok": False, "error": f"Unknown battery command: {command}"}
+
+
+class DC_DC_ServiceCollector(BaseServiceCollector):
+    """Service collector for DC-DC Charger service.
+    
+    Collects DC-DC charger data including input/output voltage, current, power,
+    and trend data.
+    """
+    
+    def _initialize_client(self):
+        self._client = DC_DC_ServiceClient()
+        self._grpc_server.add_service(self._client)
+    
+    def get_data(self) -> dict:
+        """Get DC-DC charger status data."""
+        self._ensure_client()
+        try:
+            info = self._client.GetInformation()
+            values = self._client.GetValues()
+            
+            return {
+                "ok": True,
+                "process": self.process_name,
+                "instance": info.instance if hasattr(info, 'instance') else 0,
+                "device_label": info.device_label if hasattr(info, 'device_label') else "DC-DC",
+                "model": info.model if hasattr(info, 'model') else "Unknown",
+                "state": int(info.state) if hasattr(info, 'state') else 0,
+                "error": int(info.error) if hasattr(info, 'error') else 0,
+                "communication_ok": True,
+                "input_voltage": float(values.input_voltage) if hasattr(values, 'input_voltage') else 0.0,
+                "input_current": float(values.input_current) if hasattr(values, 'input_current') else 0.0,
+                "input_power": float(values.input_power) if hasattr(values, 'input_power') else 0.0,
+                "output_voltage": float(values.output_voltage) if hasattr(values, 'output_voltage') else 0.0,
+                "output_current": float(values.output_current) if hasattr(values, 'output_current') else 0.0,
+                "output_power": float(values.output_power) if hasattr(values, 'output_power') else 0.0,
+            }
+        except GrpcAccessException:
+            return {"ok": False, "error": "DC-DC service call failed"}
+    
+    def get_trend(self) -> dict:
+        """Get DC-DC charger trend data."""
+        self._ensure_client()
+        try:
+            trend = self._client.GetTrend()
+            samples = []
+            if trend and hasattr(trend, 'samples'):
+                for sample in trend.samples:
+                    sample_dict = {
+                        "input_voltage": float(sample.input_voltage) if hasattr(sample, 'input_voltage') else 0.0,
+                        "input_current": float(sample.input_current) if hasattr(sample, 'input_current') else 0.0,
+                        "input_power": float(sample.input_power) if hasattr(sample, 'input_power') else 0.0,
+                        "output_voltage": float(sample.output_voltage) if hasattr(sample, 'output_voltage') else 0.0,
+                        "output_current": float(sample.output_current) if hasattr(sample, 'output_current') else 0.0,
+                        "output_power": float(sample.output_power) if hasattr(sample, 'output_power') else 0.0,
+                    }
+                    samples.append(sample_dict)
+            return {
+                "ok": True,
+                "process": self.process_name,
+                "nb_values": trend.nb_values if trend else 0,
+                "interval": float(trend.interval) if trend else 0.0,
+                "samples": samples
+            }
+        except GrpcAccessException:
+            return {"ok": False, "error": "DC-DC trend call failed"}
+    
+    def execute(self, parameters: list, **kwargs) -> dict:
+        """Execute DC-DC service commands.
+        
+        Commands:
+        - No parameters or "status": get DC-DC status
+        - trend: get DC-DC trend data
+        """
+        if not parameters:
+            return self.get_data()
+        
+        command = parameters[0]
+        
+        if command == "status":
+            return self.get_data()
+        elif command == "trend":
+            return self.get_trend()
+        
+        return {"ok": False, "error": f"Unknown DC-DC command: {command}"}
 
 
 class GNSSServiceCollector(BaseServiceCollector):
@@ -1267,6 +1465,7 @@ ENDPOINT_SERVICE_MAP: Dict[str, Tuple[Optional[Type[BaseServiceCollector]], str,
     "mppt": (MPPTServiceCollector, "MPPTService", False),
     "energy": (EnergyServiceCollector, "EnergyService", False),
     "battery": (BatteryServiceCollector, "BatteryService", False),
+    "dc_dc": (DC_DC_ServiceCollector, "DC_DC_Service", False),
     "gnss": (GNSSServiceCollector, "GNSSService", False),
 }
 
@@ -1291,7 +1490,11 @@ class NavigationSystemCollector:
     """
 
     # Refresh interval for agent status cache (seconds)
-    REFRESH_INTERVAL = 10.0
+    # Increased to 30 seconds since autonomous KeepAlive now monitors every 2 seconds and will detect changes
+    REFRESH_INTERVAL = 30.0
+
+    # Default keep_alive interval for autonomous agent connection monitoring (seconds)
+    AUTONOMOUS_KEEPALIVE_INTERVAL = 2.0
 
     def __init__(self, address: str, port: int, secure: bool = False, language: str = "en"):
         self._address = address
@@ -1326,6 +1529,28 @@ class NavigationSystemCollector:
         
         # Main lock for thread safety
         self._lock = threading.Lock()
+        
+        # Connection state tracking for autonomous keep_alive
+        self._connection_state = {
+            "connected": False,
+            "system_changed": False,
+            "timestamp": "",
+            "last_check_time": 0.0,
+            "error": None,
+            "ok": False  # Initial state: not ok until first check completes
+        }
+        self._connection_state_lock = threading.Lock()
+        
+        # Autonomous keep_alive thread
+        self._keepalive_thread: Optional[threading.Thread] = None
+        self._keepalive_stop_event = threading.Event()
+        
+        # Initialize connection state synchronously to avoid race conditions
+        # This ensures the first UI request doesn't see a false disconnected state
+        self._initialize_connection_state_sync()
+        
+        # Start autonomous keep_alive monitoring
+        self._start_autonomous_keepalive()
         
         # Note: Collector initialization is lazy. Call refresh_status() to force initialization,
         # or it will be initialized automatically on the first request.
@@ -1404,7 +1629,7 @@ class NavigationSystemCollector:
             NavigationSystemMsgProxy or None if failed
         """
         current_time = time.time()
-        
+        _logger.debug(f"_get_agent_status: current_time={current_time}")
         # Check if we need to refresh
         if force_refresh or self._last_status is None or (current_time - self._last_status_time) > self.REFRESH_INTERVAL:
             with self._status_lock:
@@ -1633,6 +1858,244 @@ class NavigationSystemCollector:
             self._server.connect()
             self._server.wait_connect(5.0)
 
+    def keep_alive(self) -> dict:
+        """Perform a keep-alive check with the agent to determine if synchronization is needed.
+        
+        This method first checks if we have a recent cached connection state from the
+        autonomous keep_alive monitoring. If available and recent, it returns the
+        cached state immediately without making another gRPC call. This decouples
+        the UI-server keep_alive from the server-agent keep_alive, allowing the server
+        to maintain its own connection state autonomously.
+        
+        If no recent cached state is available, it performs a direct keep_alive
+        check with the agent.
+        
+        When system_changed is indicated by the agent, this method also processes the change
+        locally by invalidating the status cache and rebuilding collectors.
+        
+        Returns:
+            Dictionary with:
+            - ok: bool indicating success
+            - connected: bool indicating if agent is connected
+            - system_changed: bool indicating if system configuration has changed
+            - timestamp: string timestamp from the agent
+        """
+        # Check if we have a recent cached connection state (within the last interval)
+        with self._connection_state_lock:
+            current_time = time.time()
+            cached_state = self._connection_state
+            
+            # If we have a cached state that was updated recently, use it
+            if (cached_state["last_check_time"] > 0 and 
+                (current_time - cached_state["last_check_time"]) < self.AUTONOMOUS_KEEPALIVE_INTERVAL):
+                return {
+                    "ok": cached_state.get("ok", True),
+                    "connected": cached_state["connected"],
+                    "system_changed": cached_state["system_changed"],
+                    "timestamp": cached_state["timestamp"],
+                    "error": cached_state["error"]
+                }
+        
+        # No recent cached state, perform direct keep_alive check
+        return self._perform_keepalive_check()
+
+    def _initialize_connection_state_sync(self):
+        """Perform an immediate synchronous connection check to initialize the state.
+        
+        This is called during collector initialization to ensure we don't start
+        with a false 'disconnected' state. It performs the check synchronously
+        to establish the initial connection state before any UI requests come in.
+        
+        This is critical to prevent the "no connectivity message" issue after login,
+        as it ensures the connection state is properly initialized before the first
+        UI request is processed.
+        """
+        try:
+            # Try to connect and perform initial keep_alive
+            self._connect()
+            if self._server.not_connected:
+                self._update_connection_state({
+                    "ok": False,
+                    "connected": False,
+                    "system_changed": False,
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "error": "Agent gRPC server unreachable at initialization"
+                })
+            else:
+                # Perform initial keep_alive check synchronously
+                initial_result = self._perform_keepalive_check()
+                # If the initial check failed, we still have some state now
+                if not initial_result.get("ok", False):
+                    _logger.debug(f"Initial connection check result: {initial_result}")
+                else:
+                    _logger.info("Initial connection check successful")
+        except Exception as e:
+            # Don't fail initialization if we can't connect immediately
+            # The autonomous thread will retry
+            _logger.debug(f"Initial connection check failed (will retry): {e}")
+            self._update_connection_state({
+                "ok": False,
+                "connected": False,
+                "system_changed": False,
+                "timestamp": datetime.datetime.now().isoformat(),
+                "error": f"Initial connection check failed: {str(e)}"
+            })
+
+    def _perform_keepalive_check(self) -> dict:
+        """Perform a direct keep_alive check with the agent and update cached state.
+        
+        This is the actual implementation that makes the gRPC call to the agent.
+        It updates the cached connection state and returns the result.
+        
+        Returns:
+            Dictionary with keep_alive result
+        """
+        self._connect()
+        if self._server.not_connected:
+            result = {
+                "ok": False,
+                "connected": False,
+                "system_changed": False,
+                "timestamp": datetime.datetime.now().isoformat(),
+                "error": "Agent gRPC server unreachable"
+            }
+            self._update_connection_state(result)
+            return result
+        
+        try:
+            response = self._agent.keep_alive()
+            if response is None:
+                result = {
+                    "ok": False,
+                    "connected": False,
+                    "system_changed": False,
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "error": "KeepAlive call failed"
+                }
+                self._update_connection_state(result)
+                return result
+            
+            # Process the keepalive result locally
+            system_changed = response.system_changed
+            
+            # If the agent indicates system changes, process them locally
+            if system_changed:
+                _logger.debug("KeepAlive detected system changes, invalidating cache and rebuilding collectors")
+                # Invalidate the status cache by forcing a refresh
+                self._get_agent_status(force_refresh=True)
+            
+            result = {
+                "ok": True,
+                "connected": True,
+                "system_changed": system_changed,
+                "timestamp": response.timestamp
+            }
+            self._update_connection_state(result)
+            return result
+        except Exception as e:
+            _logger.debug(f"KeepAlive error: {e}")
+            result = {
+                "ok": False,
+                "connected": False,
+                "system_changed": False,
+                "timestamp": datetime.datetime.now().isoformat(),
+                "error": f"KeepAlive error: {str(e)}"
+            }
+            self._update_connection_state(result)
+            return result
+
+    def _update_connection_state(self, keepalive_result: dict):
+        """Update the cached connection state with the result from a keep_alive check.
+        
+        Args:
+            keepalive_result: Dictionary with keep_alive result containing:
+                            - connected: bool
+                            - system_changed: bool  
+                            - timestamp: string
+                            - error: string or None
+        """
+        with self._connection_state_lock:
+            self._connection_state = {
+                "connected": keepalive_result.get("connected", False),
+                "system_changed": keepalive_result.get("system_changed", False),
+                "timestamp": keepalive_result.get("timestamp", ""),
+                "last_check_time": time.time(),
+                "error": keepalive_result.get("error"),
+                "ok": keepalive_result.get("ok", True)  # Default to True for backward compatibility
+            }
+
+    def _perform_single_keepalive(self):
+        """Perform a single keep_alive check as part of the autonomous monitoring.
+        
+        This method is called periodically by the autonomous keep_alive thread
+        to maintain the connection state without requiring UI requests.
+        """
+        try:
+            self._perform_keepalive_check()
+        except Exception as e:
+            _logger.debug(f"Autonomous keep_alive error: {e}")
+            # Still update connection state to reflect the error
+            self._update_connection_state({
+                "ok": False,
+                "connected": False,
+                "system_changed": False,
+                "timestamp": datetime.datetime.now().isoformat(),
+                "error": f"Autonomous keep_alive error: {str(e)}"
+            })
+
+    def _autonomous_keepalive_loop(self):
+        """Main loop for autonomous keep_alive monitoring.
+        
+        This runs in a separate thread and periodically checks the agent connection.
+        """
+        _logger.info(f"Starting autonomous keep_alive monitoring for agent at {self.agent_address}")
+        while not self._keepalive_stop_event.is_set():
+            try:
+                self._perform_single_keepalive()
+                # Wait for the next interval
+                self._keepalive_stop_event.wait(self.AUTONOMOUS_KEEPALIVE_INTERVAL)
+            except Exception as e:
+                _logger.warning(f"Error in autonomous keep_alive loop: {e}")
+                # Wait a bit before retrying to avoid tight error loops
+                self._keepalive_stop_event.wait(min(self.AUTONOMOUS_KEEPALIVE_INTERVAL, 5.0))
+        
+        _logger.info(f"Autonomous keep_alive monitoring stopped for agent at {self.agent_address}")
+
+    def _start_autonomous_keepalive(self):
+        """Start the autonomous keep_alive monitoring thread."""
+        self._keepalive_stop_event.clear()
+        self._keepalive_thread = threading.Thread(
+            target=self._autonomous_keepalive_loop,
+            daemon=True,
+            name=f"AutonomousKeepAlive-{self._address}:{self._port}"
+        )
+        self._keepalive_thread.start()
+
+    def stop_autonomous_keepalive(self):
+        """Stop the autonomous keep_alive monitoring thread."""
+        if self._keepalive_thread is not None:
+            self._keepalive_stop_event.set()
+            self._keepalive_thread.join(timeout=5.0)  # Wait up to 5 seconds for clean shutdown
+            self._keepalive_thread = None
+
+    def get_connection_state(self) -> dict:
+        """Get the current cached connection state.
+        
+        This returns the server's own connection state to the agent, which is
+        maintained autonomously and decoupled from UI keep_alive requests.
+        
+        Returns:
+            Dictionary with current connection state:
+            - connected: bool indicating if agent is connected
+            - system_changed: bool indicating if system configuration has changed
+            - timestamp: string timestamp from the agent
+            - last_check_time: float timestamp when the state was last checked
+            - error: string error message or None
+        """
+        with self._connection_state_lock:
+            # Return a copy to avoid race conditions
+            return dict(self._connection_state)
+
     def service_execution(self, service_handle: str, parameters: list, **kwargs) -> dict:
         """Execute a service command based on service_handle and parameters.
         
@@ -1670,6 +2133,9 @@ class NavigationSystemCollector:
         elif service_handle == "energy_available":
             # Check if EnergyService is available
             return {"ok": True, "available": self.is_energy_service_available()}
+        elif service_handle == "keepalive":
+            # KeepAlive endpoint for connection status and change detection
+            return self.keep_alive()
         
         # Get the endpoint info
         endpoint_info = ENDPOINT_SERVICE_MAP.get(service_handle)
@@ -2007,172 +2473,6 @@ class NavigationSystemCollector:
                     process_agent.stop_log()
                 self._log_streams.clear()
 
-    def network_status(self) -> dict:
-        """Get network status from the NetworkServiceCollector."""
-        with self._lock:
-            self._connect()
-            if self._server.not_connected:
-                return {"ok": False, "error": "Agent gRPC server unreachable"}
-            net_collector = self._get_network_collector()
-            return net_collector.get_status()
-
-    def network_configurations(self) -> dict:
-        """Return the available global network configurations."""
-        with self._lock:
-            self._connect()
-            if self._server.not_connected:
-                return {"ok": False, "error": "Agent gRPC server unreachable"}
-            net_collector = self._get_network_collector()
-            return net_collector.get_configurations()
-
-    def network_connection_definitions(self) -> dict:
-        """Return the available connection names (configuration names)."""
-        with self._lock:
-            self._connect()
-            if self._server.not_connected:
-                return {"ok": False, "error": "Agent gRPC server unreachable"}
-            net_collector = self._get_network_collector()
-            return net_collector.get_connection_definitions()
-
-    def engine_list(self) -> dict:
-        """Return the list of available engines across processes with EngineData.
-
-        Each process with an EngineData service is served by an
-        EngineServiceCollector that caches its engine parameters; the collector's
-        get_engine_list() produces the summaries (with live runtime data).
-        """
-        system = self._get_agent_status()
-        if system is None:
-            return {"ok": False, "error": "Agent status not available"}
-        
-        engines = []
-        for proc in system.get_processes():
-            if proc.state == "RUNNING":
-                for svc in proc.services:
-                    if svc.rpc_service == "EngineData":
-                        endpoint_key = f"api/engine/{proc.name}"
-                        service_collector = self._service_collector_cache.get(endpoint_key)
-                        if service_collector and hasattr(service_collector, 'get_engine_list'):
-                            try:
-                                engines.extend(service_collector.get_engine_list())
-                            except Exception as e:
-                                _logger.warning(f"Error retrieving engine list from {proc.name}: {e}")
-                        break
-        return {"ok": True, "engines": engines}
-
-    def engine_data(self, engine_id: int) -> dict:
-        """Return detailed data for a specific engine instance.
-
-        Iterates processes with an EngineData service and returns the first one
-        able to serve the requested engine instance via its EngineServiceCollector.
-        """
-        system = self._get_agent_status()
-        if system is None:
-            return {"ok": False, "error": "Agent status not available"}
-        
-        for proc in system.get_processes():
-            if proc.state == "RUNNING":
-                for svc in proc.services:
-                    if svc.rpc_service == "EngineData":
-                        endpoint_key = f"api/engine/{proc.name}"
-                        service_collector = self._service_collector_cache.get(endpoint_key)
-                        if service_collector and hasattr(service_collector, 'get_engine_data'):
-                            try:
-                                result = service_collector.get_engine_data(engine_id)
-                                if result.get("ok"):
-                                    return result
-                            except Exception as e:
-                                _logger.warning(f"Error getting engine data from {proc.name}: {e}")
-                        break
-        return {"ok": False, "error": f"Engine {engine_id} not found or no process with EngineData service"}
-
-    def energy_status(self):
-        """Return energy management system status data.
-        
-        Returns a valid response with empty data if EnergyService is not running,
-        so the EMS page can still display.
-        """
-        try:
-            # Build response with default empty values
-            result = {
-                "ok": True,
-                "controller": {},
-                "batteries": [],
-                "sources": []
-            }
-            
-            system = self._get_agent_status()
-            if system is None:
-                return result
-            
-            # Try to get EnergyService data if available
-            for proc in system.get_processes():
-                if proc.state == "RUNNING":
-                    for svc in proc.services:
-                        if svc.rpc_service == "EnergyService":
-                            endpoint_key = f"api/energy/{proc.name}"
-                            service_collector = self._service_collector_cache.get(endpoint_key)
-                            if service_collector:
-                                try:
-                                    energy_data = service_collector.get_data()
-                                    if energy_data.get("ok"):
-                                        result["controller"] = {
-                                            "main_voltage": energy_data.get("main_voltage", 0.0),
-                                            "auxiliary_voltage": energy_data.get("auxiliary_voltage", 0.0),
-                                            "production_power": energy_data.get("production_power", 0.0),
-                                            "consumption_power": energy_data.get("consumption_power", 0.0),
-                                            "energy_stock": energy_data.get("energy_stock", 0.0),
-                                            "battery_balance": energy_data.get("battery_balance", 0.0),
-                                            "maximum_main_voltage": energy_data.get("maximum_main_voltage", 30.0),
-                                            "minimum_main_voltage": energy_data.get("minimum_main_voltage", 10.0),
-                                            "nominal_main_voltage": energy_data.get("nominal_main_voltage", 12.0),
-                                        }
-                                        result["sources"] = energy_data.get("sources", [])
-                                        if "trend" in energy_data:
-                                            result["controller_trend"] = energy_data["trend"]
-                                except Exception as e:
-                                    _logger.warning(f"Error getting energy controller data from {proc.name}: {e}")
-                            break
-            
-            # Try to get BatteryService data if available
-            for proc in system.get_processes():
-                if proc.state == "RUNNING":
-                    for svc in proc.services:
-                        if svc.rpc_service == "BatteryService":
-                            endpoint_key = f"api/battery/{proc.name}"
-                            service_collector = self._service_collector_cache.get(endpoint_key)
-                            if service_collector:
-                                try:
-                                    battery_data = service_collector.get_data()
-                                    if battery_data.get("ok"):
-                                        battery_obj = {
-                                            "instance": battery_data.get("instance", 0),
-                                            "label": battery_data.get("label", "Battery_0"),
-                                            "battery_data": {
-                                                "voltage": battery_data.get("voltage", 0.0),
-                                                "current": battery_data.get("current", 0.0),
-                                                "power": battery_data.get("power", 0.0),
-                                                "state_of_charge": battery_data.get("state_of_charge", 0.0),
-                                                "energy": battery_data.get("energy", 0.0),
-                                            },
-                                            "trend": battery_data.get("trend", {"samples": []})
-                                        }
-                                        result["batteries"].append(battery_obj)
-                                except Exception as e:
-                                    _logger.warning(f"Error getting battery data from {proc.name}: {e}")
-                            break
-            
-            return result
-        
-        except Exception as e:
-            _logger.warning(f"Error in energy_status: {e}")
-            return {
-                "ok": True,
-                "controller": {},
-                "batteries": [],
-                "sources": []
-            }
-
     def is_energy_service_available(self) -> bool:
         """Check if EnergyService is available in any running process.
         
@@ -2195,15 +2495,6 @@ class NavigationSystemCollector:
             _logger.warning(f"Error checking EnergyService availability: {e}")
             return False
 
-    def set_global_configuration(self, config_name: str) -> dict:
-        """Apply a global network configuration."""
-        with self._lock:
-            self._connect()
-            if self._server.not_connected:
-                return {"ok": False, "error": "Agent gRPC server unreachable"}
-            net_collector = self._get_network_collector()
-            return net_collector.set_global_configuration(config_name)
-
     def network_interface_cmd(self, interface_name: str, connection_name: str, cmd: str) -> dict:
         """Send a command to a network interface (up, down, delete, add connection)."""
         with self._lock:
@@ -2213,60 +2504,36 @@ class NavigationSystemCollector:
             net_collector = self._get_network_collector()
             return net_collector.interface_cmd(interface_name, connection_name, cmd)
 
-    def nmea2000_status(self, process_name: str) -> dict:
-        """Return the NMEA2000 controller status and devices for a process."""
-        endpoint_key = f"api/nmea2000/{process_name}"
-        service_collector = self._service_collector_cache.get(endpoint_key)
-        if service_collector is None:
-            return {"ok": False, "error": f"NMEA2000 service not available for {process_name}"}
-        return service_collector.get_data()
+    def cleanup(self):
+        """Clean up resources and stop autonomous monitoring.
+        
+        This should be called when the collector is no longer needed to ensure
+        proper cleanup of background threads and resources.
+        """
+        self.stop_autonomous_keepalive()
+        # Clean up log streams
+        with self._log_streams_lock:
+            for process_name, agent_client in self._log_streams.items():
+                try:
+                    # Try to close the agent client if possible
+                    if hasattr(agent_client, 'close') and callable(agent_client.close):
+                        agent_client.close()
+                except Exception as e:
+                    _logger.warning(f"Error closing agent client for {process_name}: {e}")
+            self._log_streams.clear()
+        
+        # Clean up process collectors
+        for process_collector in self._process_collectors.values():
+            try:
+                process_collector.close()
+            except Exception as e:
+                _logger.warning(f"Error closing process collector: {e}")
+        self._process_collectors.clear()
+        
+        # Clean up service collectors
+        self._service_collector_cache.clear()
+        
+        # Clean up network collector
+        self._network_collector = None
 
-    def nmea2000_device(self, process_name: str, device_address: int) -> dict:
-        """Return detailed info for a single NMEA2000 device."""
-        endpoint_key = f"api/nmea2000/{process_name}"
-        service_collector = self._service_collector_cache.get(endpoint_key)
-        if service_collector is None:
-            return {"ok": False, "error": f"NMEA2000 service not available for {process_name}"}
-        if hasattr(service_collector, 'get_device'):
-            return service_collector.get_device(device_address)
-        return {"ok": False, "error": "Device query not supported"}
 
-    def nmea2000_pgn_definition(self, process_name: str, pgn: int) -> dict:
-        """Return the PGN definition (description) for a given PGN."""
-        endpoint_key = f"api/nmea2000/{process_name}"
-        service_collector = self._service_collector_cache.get(endpoint_key)
-        if service_collector is None:
-            return {"ok": False, "error": f"NMEA2000 service not available for {process_name}"}
-        if hasattr(service_collector, 'get_pgn_definition'):
-            return service_collector.get_pgn_definition(pgn)
-        return {"ok": False, "error": "PGN definition query not supported"}
-
-    def nmea2000_trace_cmd(self, process_name: str, cmd: str) -> dict:
-        """Send a trace command (start_trace/stop_trace) to the NMEA2000 service."""
-        if cmd not in ("start_trace", "stop_trace"):
-            return {"ok": False, "error": f"Unsupported NMEA2000 command: {cmd}"}
-        endpoint_key = f"api/nmea2000/{process_name}"
-        service_collector = self._service_collector_cache.get(endpoint_key)
-        if service_collector is None:
-            return {"ok": False, "error": f"NMEA2000 service not available for {process_name}"}
-        if hasattr(service_collector, 'trace_cmd'):
-            return service_collector.trace_cmd(cmd)
-        return {"ok": False, "error": "Trace command not supported"}
-
-    def mppt_status(self, process_name: str) -> dict:
-        """Return the MPPT device info, parameters and live output for a process."""
-        endpoint_key = f"api/mppt/{process_name}"
-        service_collector = self._service_collector_cache.get(endpoint_key)
-        if service_collector is None:
-            return {"ok": False, "error": f"MPPT service not available for {process_name}"}
-        return service_collector.get_data()
-
-    def mppt_trend(self, process_name: str) -> dict:
-        """Return the trailing solar output trend for an MPPT process."""
-        endpoint_key = f"api/mppt/{process_name}"
-        service_collector = self._service_collector_cache.get(endpoint_key)
-        if service_collector is None:
-            return {"ok": False, "error": f"MPPT service not available for {process_name}"}
-        if hasattr(service_collector, 'get_trend'):
-            return service_collector.get_trend()
-        return {"ok": False, "error": "Trend query not supported"}

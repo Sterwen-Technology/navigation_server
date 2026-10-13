@@ -11,4 +11,6 @@
 
 from .mppt_service import MPPTService
 from .battery_service import BatteryService
+from .dc_dc_service import DC_DCService
 from .energy_controller_service import EnergyService
+from .energy_simulator_service import EnergySimulatorService

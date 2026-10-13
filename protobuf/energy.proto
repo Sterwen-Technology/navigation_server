@@ -234,7 +234,7 @@ service BatteryService {
 message DC_DC_Charger_Parameters {
   uint32 instance=1;    // instance number default=0, if single instance
   string device_label=2;       // User label
-  string model=3;       // Device model and make
+  string device_model=3;       // Device model and make
   float nominal_input_voltage=4;
   float  nominal_output_voltage=5;
   float input_voltage_range=6;
@@ -313,7 +313,7 @@ message EnergyControllerParameters {
 }
 
 message EnergySourceData {
-  uint32 instance=1;
+  EnergySourceDevice device=1;
   float current = 2;  // Instantaneous current (A) injected/draw
   float power = 3;    // Instantaneous Power input/draw (W) in the system
   bool communication_ok =4; // True of communication with the device is OK

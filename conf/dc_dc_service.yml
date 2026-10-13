@@ -1,0 +1,101 @@
+#-------------------------------------------------------------------------------
+# Name:        energy management.yml
+# Purpose:     Settings file for the local agent
+#
+# Author:      Laurent Carré
+#
+# Created:     08/07/2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+#
+#
+function: Energy management server
+server_name: DCDCTest
+log_level: INFO
+trace_dir: /data/navigation/traces
+data_dir: /data/navigation/data
+enable_secure_grpc: false
+force_secure_grpc: false
+connect_agent: false
+log_module:
+    energy_mgmt.dc_dc_service: DEBUG
+    couplers.vedirect_coupler: DEBUG
+    nmea2000.nmea2k_publisher: INFO
+    # router_common.grpc_server_service: DEBUG
+
+features:
+    - router_core
+    - energy_mgmt
+    - nmea2000
+    - couplers:
+          VEDirectCoupler
+
+servers:
+
+- Main:
+      class: NavigationMainServer
+
+- gRPCMain:
+    class: GrpcServer
+    port: 4505
+
+couplers:
+
+- VEDirect1:
+    class: VEDirectCoupler
+    device: /dev/ttyUSB0
+    # alt_device: /dev/ttyUSB8
+    interface: serial
+    protocol: non_nmea
+    max_attempt: 1
+
+
+services:
+
+- DC_DC_Service:
+    class: DC_DCService
+    coupler: VEDirect1
+    server: gRPCMain
+    mode: coupler
+    # publisher: NMEAPush
+    protocol: nmea2000
+    energy_controller: EnergyController
+      # device parameters
+    device_label: OrionXS
+    device_model: Victron Orion XS 70
+    # all parameters as default for now
+    
+- EnergyController:
+    class: EnergyService
+    server: gRPCMain
+    # all parameters as default
+
+- Console:
+    class: Console
+    server: gRPCMain
+
+publishers:
+
+#- NMEAPrint:
+#      class: N2KTracePublisher
+#      active: false
+#      flexible_decode: false
+#      output: PRINT
+#      couplers: [MPPTVEDirect]
+
+- NMEAPush:
+    class: N2KForwarderToServer
+    active: false
+    service: EnergyService
+    address: 127.0.0.1
+    port: 4512
+    device: DCDC
+
+
+
+
+
+
+
+

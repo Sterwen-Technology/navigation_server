@@ -18,6 +18,7 @@ import argparse
 import json
 import logging
 import os
+import ssl
 import uuid
 import queue
 import sys
@@ -98,9 +99,21 @@ class _RequestHandler(BaseHTTPRequestHandler):
         elif path == "/api/login":
             self._serve_login_status()
         elif path == "/health":
-            self._serve_json({"ok": True, "time": time.time(), "agent_connected": self.collector._server.connected})
+            # Use the collector's connection state for consistency with keep_alive mechanism
+            connection_state = self.collector.get_connection_state()
+            self._serve_json({
+                "ok": True, 
+                "time": time.time(), 
+                "agent_connected": connection_state.get("connected", self.collector._server.connected),
+                "agent_keepalive_ok": connection_state.get("ok", True),
+                "agent_timestamp": connection_state.get("timestamp", "")
+            })
         elif path == "/api/config":
             self._serve_config()
+        elif path == "/api/keepalive":
+            self._serve_keepalive()
+        elif path == "/api/connection_state":
+            self._serve_connection_state()
         elif not self._authorized(path):
             self._unauthorized()
             return
@@ -185,7 +198,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
 
     # Paths accessible without a session even when auth is enabled.
     _PUBLIC_API_PATHS = frozenset({"/api/login", "/api/logout", "/api/config",
-                                   "/health"})
+                                   "/health", "/api/keepalive", "/api/connection_state"})
 
     def _authorized(self, path: str) -> bool:
         if not path.startswith("/api/"):
@@ -381,6 +394,42 @@ class _RequestHandler(BaseHTTPRequestHandler):
             _logger.error("Error serving config: %s", e)
             self._serve_json({"language": "en", "version": "3.0.0"})
 
+    def _serve_keepalive(self):
+        """Serve keep-alive status for connection monitoring.
+        
+        This endpoint performs a keep-alive check with the agent, using cached state
+        when available to avoid unnecessary gRPC calls.
+        """
+        try:
+            result = self.collector.keep_alive()
+            self._serve_json(result)
+        except Exception as e:
+            _logger.error("Error serving keepalive: %s", e)
+            self._serve_json({"ok": False, "error": f"Keepalive error: {str(e)}"})
+
+    def _serve_connection_state(self):
+        """Serve the server's current connection state to the agent.
+        
+        This endpoint returns the server's cached connection state, which is maintained
+        autonomously by the server without requiring a new gRPC call to the agent.
+        This is particularly useful when multiple UIs are connected, as it allows them
+        to check the server's connection status without triggering additional agent calls.
+        """
+        try:
+            # Get the server's cached connection state to the agent
+            connection_state = self.collector.get_connection_state()
+            self._serve_json({
+                "ok": True,
+                "server_agent_connected": connection_state.get("connected", False),
+                "system_changed": connection_state.get("system_changed", False),
+                "timestamp": connection_state.get("timestamp", ""),
+                "last_check_time": connection_state.get("last_check_time", 0.0),
+                "error": connection_state.get("error")
+            })
+        except Exception as e:
+            _logger.error("Error serving connection_state: %s", e)
+            self._serve_json({"ok": False, "error": f"Connection state error: {str(e)}"})
+
     def _read_json_body(self):
         length = int(self.headers.get("Content-Length", 0) or 0)
         if length == 0:
@@ -414,7 +463,8 @@ class NavigationWebServer:
 
     def __init__(self, host: str, port: int, grpc_address: str, grpc_port: int,
                  secure: bool = False, language: str = "en",
-                 auth: Authenticator | None = None):
+                 auth: Authenticator | None = None,
+                 certfile: str | None = None, keyfile: str | None = None):
         self._host = host
         self._port = port
         self._language = language
@@ -422,6 +472,10 @@ class NavigationWebServer:
         self._collector = NavigationSystemCollector(grpc_address, grpc_port, secure, language)
         self._active_log_connections = {}  # process_name -> set of connection ids
         self._active_log_connections_lock = threading.Lock()
+        self._use_https = certfile is not None and keyfile is not None
+        self._certfile = certfile
+        self._keyfile = keyfile
+        
         # The request handler is re-instantiated per connection; expose the
         # collector and authenticator through a subclass so each handler has
         # access to them.
@@ -430,12 +484,24 @@ class NavigationWebServer:
                             "authenticator": self._authenticator})
         try:
             self._httpd = ThreadingHTTPServer((host, port), handler_cls)
+            
+            # Enable HTTPS if certificate file paths are provided
+            if self._use_https and self._certfile and self._keyfile:
+                try:
+                    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+                    context.load_cert_chain(certfile=self._certfile, keyfile=self._keyfile)
+                    self._httpd.socket = context.wrap_socket(self._httpd.socket, server_side=True)
+                    _logger.info("HTTPS enabled with server certificates")
+                except Exception as e:
+                    _logger.error(f"Failed to enable HTTPS: {e}")
+                    self._use_https = False
         except OSError as e:
             _logger.error(f"Cannot create HTTP server on {host}:{port}: {e}")
             raise RuntimeError(f"Socket error: cannot bind to {host}:{port}") from e
 
     def serve_forever(self):
-        _logger.info(f"Navigation web server listening on http://{self._host}:{self._port}")
+        protocol = "https" if self._use_https else "http"
+        _logger.info(f"Navigation web server listening on {protocol}://{self._host}:{self._port}")
         _logger.info(f"Connecting to gRPC agent at {self._collector.agent_address} "
                      f"(secure={self._collector.secure})")
 
@@ -443,6 +509,12 @@ class NavigationWebServer:
         self._httpd.server_close()
 
     def stop(self):
+        # Clean up the collector's autonomous keep_alive thread
+        if hasattr(self._collector, 'cleanup') and callable(self._collector.cleanup):
+            try:
+                self._collector.cleanup()
+            except Exception as e:
+                _logger.error(f"Error during collector cleanup: {e}")
         self._httpd.shutdown()
 
 
@@ -472,6 +544,12 @@ def _parser() -> argparse.ArgumentParser:
                    help="CA certificate file for secure gRPC, default None")
     p.add_argument("-ns", "--no-sec", action="store_true", default=False,
                    help="Disable secure gRPC communication")
+    p.add_argument("--https-cert", default=None,
+                   help="Server certificate file for HTTPS (PEM format)")
+    p.add_argument("--https-key", default=None,
+                   help="Server private key file for HTTPS (PEM format)")
+    p.add_argument("--https", action="store_true", default=False,
+                   help="Enable HTTPS using server certificates from global config")
     p.add_argument("-v", "--verbose", action="store_true", default=False,
                    help="Verbose mode (info logging)")
     p.add_argument("-d", "--debug", action="store_true", default=False,
@@ -517,6 +595,27 @@ def web_main(argv=None):
                                        enabled=True)
         _logger.info("Web API authentication enabled (file=%s)" % options.auth_file)
 
+    # Handle HTTPS configuration
+    certfile = None
+    keyfile = None
+    
+    # Check if HTTPS is explicitly enabled via --https flag
+    if options.https:
+        # Try to use server certificates from global configuration
+        config = MessageServerGlobals.configuration
+        if (config and config.server_secure_communications):
+            certfile = config.get_global('server_cert_file')
+            keyfile = config.get_global('server_key_file')
+            _logger.info("Using HTTPS server certificates from global config")
+        else:
+            _logger.warning("HTTPS requested but server secure communications not enabled")
+    
+    # Command line HTTPS certificate/key override the global config
+    if options.https_cert:
+        certfile = options.https_cert
+    if options.https_key:
+        keyfile = options.https_key
+
     server = NavigationWebServer(
         host=options.address,
         port=options.port,
@@ -524,6 +623,8 @@ def web_main(argv=None):
         grpc_port=options.grpc_port,
         secure=secure,
         auth=authenticator,
+        certfile=certfile,
+        keyfile=keyfile,
     )
     server.serve_forever()
     return 0

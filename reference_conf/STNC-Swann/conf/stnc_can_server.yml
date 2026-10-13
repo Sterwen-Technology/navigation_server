@@ -14,8 +14,8 @@ server_name: STNC_CAN_Server
 log_level: INFO
 trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
-enable_secure_grpc: true
-force_secure_grpc: true
+enable_secure_grpc: false
+force_secure_grpc: false
 
 log_module:
   nmea2000.nmea2000_msg: INFO

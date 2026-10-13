@@ -330,14 +330,15 @@ class N2KForwarderToServer(ServiceClient, ExternalPublisher):
         self._push_port = opts.get('port', int, 4512)
         self._device = opts.get('device', str, None)
         if self._device is None:
-            _logger.error(f"N2KForwarderToServer Device number {self._device} out of range")
+            _logger.error(f"N2KForwarderToServer Device name {self._device} missing")
             raise ValueError
         self._push_server = GrpcClient.get_client(f"{self._push_address}:{self._push_port}", use_request_id=False)
 
     def start(self):
-        self._push_server.add_service(self)
-        self._push_server.connect()
-        super().start()
+        if self._active:
+            self._push_server.add_service(self)
+            self._push_server.connect()
+            super().start()
 
     def process_msg(self, msg: NavGenericMsg):
         if msg.type != N2K_MSG:

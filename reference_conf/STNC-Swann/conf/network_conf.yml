@@ -76,6 +76,7 @@ connections:
        function: LAN_CONTROLLER
        ipv4_address: 172.16.0.1
        support_ssl: true
+       main: true
 
 # lastly we define the possible configurations for the networking in this system
 configurations:

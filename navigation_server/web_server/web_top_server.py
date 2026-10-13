@@ -66,6 +66,19 @@ class WebTopServer(GenericTopServer, NavThread):
         # Get language from configuration
         language = config.get_option('language', 'en')
 
+        # Check for HTTPS configuration from global settings
+        https_certfile = None
+        https_keyfile = None
+        https_enabled = opts.get('https_enabled', bool, False)
+        
+        # If HTTPS is enabled in web server config and server secure communications is enabled globally
+        if https_enabled and config.server_secure_communications:
+            https_certfile = config.get_global('server_cert_file')
+            https_keyfile = config.get_global('server_key_file')
+            _logger.info("HTTPS enabled for web server using server certificates")
+        else:
+            _logger.debug("HTTPS not enabled: server_secure_communications is False or https_enabled is False")
+
         # Optional web API authentication. The 'auth' section of the web server
         # YAML block (a dict) is retrieved as a raw dict via getv: the credentials
         # file it points to lives on the device, never in the repository.
@@ -84,6 +97,8 @@ class WebTopServer(GenericTopServer, NavThread):
             secure=secure,
             language=language,
             auth=authenticator,
+            certfile=https_certfile,
+            keyfile=https_keyfile,
         )
 
     def start(self) -> bool:
@@ -91,8 +106,9 @@ class WebTopServer(GenericTopServer, NavThread):
         self._is_running = True
         self._start_time = datetime.datetime.now()
         self._start_time_s = self._start_time.strftime("%Y/%m/%d-%H:%M:%S")
-        _logger.info("Web server ready on http://%s:%d (main thread)"
-                     % (self._web_server._host, self._web_server._port))
+        protocol = "https" if self._web_server._use_https else "http"
+        _logger.info("Web server ready on %s://%s:%d (main thread)"
+                     % (protocol, self._web_server._host, self._web_server._port))
         # Start the NavThread which will run serve_forever in a background thread
         NavThread.start(self)
         return True

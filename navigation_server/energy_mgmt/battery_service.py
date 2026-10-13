@@ -23,10 +23,12 @@ from navigation_server.generated.energy_pb2_grpc import BatteryServiceServicer, 
 from navigation_server.router_common import (GrpcService, MessageServerGlobals, resolve_ref, copy_protobuf_data,
                                              NavGenericMsg, N2K_MSG, fill_protobuf_from_dict)
 from navigation_server.router_core import NMEA0183Sentences
+from navigation_server.couplers import VEDirectMsg, VED_TEXT
 
 from navigation_server.generated.nmea2000_classes_gen import Pgn127751Class
 
-from .energy_base_service import EnergyDevice
+from .energy_base_service import EnergyDevice, SIMULATION, COUPLER
+
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -123,7 +125,7 @@ class BatteryData:
             raise
 
     
-    def process_msg(self, value_dict) -> bool:
+    def process_msg(self, msg: VEDirectMsg) -> bool:
         """Process a message and return True if all data is complete.
         
         Message 1 contains: PID, V, VS, I, P, CE, SOC, TTG, Alarm, FW, SER#, etc.
@@ -132,6 +134,12 @@ class BatteryData:
         Returns True only after both message types have been processed.
         If not initialized and first message is message2, it's ignored.
         """
+        if msg.msg_type == VED_TEXT:
+            value_dict = msg.msg
+        else:
+            # right now we don't support HEX mode
+            return False
+
         if not self._initialized:
             if 'PID' in value_dict:
                 try:
@@ -198,7 +206,7 @@ class BatteryOnVictronSmartShunt(EnergyDevice):
         # Battery-specific parameters
         self._parameters = {
             'instance': self._instance,
-            'nominal_voltage': opts.get('nominal_voltage', float, 12.0),
+            'nominal_voltage': opts.get('nominal_voltage', float, 12.8),
             'nominal_capacity': opts.get('nominal_capacity', float, 100.0),  # Ah
             'chemistry': opts.get('chemistry', str, 'Lead Acid'),
             'max_voltage': opts.get('max_voltage', float, 15.0),
@@ -230,12 +238,12 @@ class BatteryOnVictronSmartShunt(EnergyDevice):
         # Call parent start
         super().start()
 
-    def publish(self, msg):
+    def publish(self, msg: VEDirectMsg):
         """Called by coupler when new data is available"""
         _logger.debug("VEDirect message:%s" % msg.msg)
         clock = time.monotonic()
         # Process the message and check if we have complete data
-        if not self._current_data.process_msg(msg.msg):
+        if not self._current_data.process_msg(msg):
             # Data not complete yet (waiting for both message1 and message2)
             return
         # we take into account only valid messages
@@ -313,7 +321,8 @@ class BatteryOnVictronSmartShunt(EnergyDevice):
                     self._parameters.get('nominal_capacity', 100.0) * 
                     self._parameters.get('nominal_voltage', 12.0),
                 clock,
-                self._current_data.voltage
+                self._current_data.voltage,
+                self._current_data.auxiliary_voltage
             )
 
     def get_battery_values(self, output_pb):
@@ -414,3 +423,7 @@ class BatteryService(GrpcService):
         super().finalize('Battery', 'BatteryService')
         add_BatteryServiceServicer_to_server(BatteryServicer(self._battery_device), self.grpc_server)
         self._battery_device.start()
+
+    @property
+    def device(self):
+        return self._battery_device

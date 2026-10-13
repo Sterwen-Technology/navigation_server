@@ -392,18 +392,6 @@ For the GNSS receiver from the STNC800 see [STNC GNSS documentation](stnc-gnss.m
 No additional parameters in this version. The coupler connects to the GNSS receiver via a TTY port. 
 
 
-#### VEDirectCoupler(Coupler)
-
-This class manages Victron VEDirect serial interface or a VEDirect log file as simulation. As VEDirect is not NMEA, they have a specific internal format by default. If the coupler mode is set to NMEA0183, then a XDR sentence is generated with the current, voltage and power from the panel.
-This coupler is intended to be used by the energy management agent, rather than the global messaging router-server. However, if only some measurements are needed for display, it can be integrated like any other coupler but only in NMEA mode (protocol => nmea0183)
-
-| Name       | Type               | Default | Signification                                          |
-|------------|--------------------|---------|--------------------------------------------------------|
-| device     | string             | None    | name of the serial device with the VEDirect connection |
-| alt_device | string             | None    | name of an alternative device to be used               |
-| interface  | serial, simulation | serial  | type of input: direct serial or simulation             |
-| logfile    | string             | None    | name of the file to be used for VEDirect simulation    |
-
 #### DirectCANCoupler(Coupler)
 This coupler class works when a CAN bus interface with a socketcan driver is installed on the system. By construction, only NMEA2000 messages can be processed.
 The CAN bus coupler must be declared as **nmea2000_app** with a specific NMEA2000 controller: **NMEA2KActiveController**. This controller handles the bus access control protocol and all CAN parameters, and the coupler is considered as a specific device (CA) on the CAN bus. 
@@ -488,26 +476,6 @@ Gather all data coming from engines and expose them over a gRPC interface (engin
 |--------|--------|---------|----------------------------------------------------------|
 | source | string | None    | input function associated. This is a mandatory parameter |
 
-#### Energy management service
-
-The service provides a global control for several services linked to energy management. The interface is described in **energy.proto**.
-Currently, only the **MPPTService** is available, the team is working on the implementation of new services, for batteries and chargers.
-
-##### MPPTService
-
-This service receives the MPPT info via a VEDirectCoupler and keeps track of data and trends from the solar panel and MPPT output.
-The service can also be used to forward NMEA0183 or NMEA2000 messages via a **GrpcPublisher** towards another server.
-Interface is part of **energy.proto**
-
-Additional parameters
-
-| Name         | Type               | Default  | Signification                                                          |
-|--------------|--------------------|----------|------------------------------------------------------------------------|
-| coupler      | string             | None     | VEDirectCoupler required for data input. This is a mandatory parameter |
-| publisher    | string             | None     | Optional publisher used to forward energy messages (see below)         |
-| protocol     | nmea0183, nmea2000 | nmea0183 | XDR sentence for NMEA0183, PGN 127507, 127751 for NMEA2000             |
-| trend_depth  | int                | 30       | number of values in the trend table                                    |
-| trend_period | float              | 10       | period of the trend bucket in seconds (min 1 sec)                      |
 
 ### Functions
 

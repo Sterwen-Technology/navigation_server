@@ -22,6 +22,9 @@ from navigation_server.generated.energy_pb2 import EnergySource
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
+SIMULATION = 0
+COUPLER = 1
+
 class EnergyDevice:
     """
     Base class for energy devices (MPPT, Battery, etc.)
@@ -41,10 +44,17 @@ class EnergyDevice:
         """
         # Device identification
         self._name = opts.get('name', str, 'EnergyDevice')
-        self._coupler_name = opts.get('coupler', str, None)
-        if self._coupler_name is None:
-            _logger.error("The energy device must be linked with a coupler")
-            raise ValueError("coupler is required")
+        self._mode_str = opts.get_choice('mode', ['coupler', 'simulation'], 'coupler')
+        if self._mode_str == 'simulation':
+            self._coupler_name = None
+            self._mode = SIMULATION
+        else:
+            self._coupler_name = opts.get('coupler', str, None)
+            self._mode = COUPLER
+            if self._coupler_name is None:
+                _logger.error("The energy device must be linked with a coupler")
+                raise ValueError("coupler is required")
+
         self._coupler = None
         self._instance = opts.get('instance', int, 0)
         
@@ -128,13 +138,14 @@ class EnergyDevice:
         Start the device - resolve references and register with coupler
         To be overridden by subclasses for additional initialization
         """
-        # Resolve coupler reference
-        try:
-            self._coupler = resolve_ref(self._coupler_name)
-        except KeyError:
-            _logger.error(f"{self._name} missing coupler: {self._coupler_name}")
-            self.stop_service()
-            return
+        if self._coupler_name is not None:
+            # Resolve coupler reference
+            try:
+                self._coupler = resolve_ref(self._coupler_name)
+            except KeyError:
+                _logger.error(f"{self._name} missing coupler: {self._coupler_name}")
+                self.stop_service()
+                return
         
         # Attach to energy controller if configured
         if self._energy_controller_name is not None:
@@ -163,7 +174,9 @@ class EnergyDevice:
                     self._publish_function = self.publish2000
         
         # Register with coupler
-        self._coupler.register(self)
+        if self._coupler is not None:
+            self._coupler.register(self)
+
         self._start_period = time.monotonic()
 
     def publish(self, msg):

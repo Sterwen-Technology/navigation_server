@@ -20,8 +20,8 @@ log_module:
     router_common.generic_top_server: INFO
 
 debug_configuration: false
-enable_secure_grpc: true  
-force_secure_grpc: true
+enable_secure_grpc: false  
+force_secure_grpc: false
 
 features:
     - nmea2000

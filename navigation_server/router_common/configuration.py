@@ -380,6 +380,7 @@ class NavigationConfiguration:
                     if os.path.isfile(server_cert):
                         with open(server_cert, 'rb') as f:
                             self._server_cert = f.read()
+                            self.set_global('server_cert_file', server_cert)
                     else:
                         _logger.warning(f"Server certificate file {server_cert} does not exist")
                 except IOError as e:
@@ -390,6 +391,7 @@ class NavigationConfiguration:
                     if os.path.isfile(server_key):
                         with open(server_key, 'rb') as f:
                             self._server_key = f.read()
+                            self.set_global('server_key_file', server_key)
                     else:
                         _logger.warning(f"Server key file {server_key} does not exist")
                 except IOError as e:
@@ -472,7 +474,11 @@ class NavigationConfiguration:
         return self._configuration.get(name, default)
 
     def object_descr_iter(self, obj_type):
-        impl_obj_list = self._configuration[obj_type]
+        try:
+            impl_obj_list = self._configuration[obj_type]
+        except KeyError:
+            _logger.info("No %s objects in the settings file" % obj_type)
+            return
         if impl_obj_list is None:
             # nothing to iterate
             _logger.info("No %s objects in the settings file" % obj_type)

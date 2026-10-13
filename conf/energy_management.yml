@@ -18,10 +18,14 @@ data_dir: /data/navigation/data
 enable_secure_grpc: false
 force_secure_grpc: false
 connect_agent: false
+
 log_module:
-    energy_mgmt.mppt_service: DEBUG
+    energy_mgmt.mppt_service: INFO
+    energy_mgmt.energy_controller_service: DEBUG
+    energy_mgmt.energy_simulator_service: DEBUG
     nmea2000.nmea2k_publisher: INFO
-    router_common.grpc_server_service: DEBUG
+    router_common.grpc_server_service: INFO
+    
 
 features:
     - router_core
@@ -41,12 +45,19 @@ servers:
 
 couplers:
 
+- SmartShunt1_VEDirect:
+    class: VEDirectCoupler
+    device: /dev/ttyUSB1        # RS232 port #1
+    # alt_device: /dev/ttyUSB8
+    interface: serial
+    protocol: non_nmea
+    max_attempt: 1
+
 - MPPTVEDirect:
     class: VEDirectCoupler
-    # device: /dev/ttyUSB4
-    # alt_device: /dev/ttyUSB8
-    interface: simulation
-    logfile: /mnt/meaban/Bateau/vedirect-traces/TRACE-VEDirect-240808-1503.log
+    device: /dev/ttyUSB4
+    alt_device: /dev/ttyUSB8
+    interface: serial
     protocol: non_nmea
     max_attempt: 1
 
@@ -56,8 +67,9 @@ services:
 - MPPTService:
     class: MPPTService
     coupler: MPPTVEDirect
+    mode: simulation
     server: gRPCMain
-    publisher: NMEAPush
+    # publisher: NMEAPush
     protocol: nmea2000
     energy_controller: EnergyController
       # device parameters
@@ -66,11 +78,40 @@ services:
     panel_max_power: 180
     panel_max_voltage: 40
     max_voltage: 15
-    
+
+- MainBattery:
+    class: BatteryService
+    coupler: SmartShunt1_VEDirect
+    server: gRPCMain
+    energy_controller: EnergyController
+    # parameters
+    nominal_voltage: 12.8
+    nominal_capacity: 12.0
+    chemistry: LFP
+    max_charge_current: 10.0
+
 - EnergyController:
     class: EnergyService
     server: gRPCMain
     # all parameters as default
+
+- EnergySimulator:
+    class: EnergySimulatorService
+    server: gRPCMain
+    battery_service: MainBattery
+    mppt_services: [MPPTService]
+    dc_dc_services: []
+    energy_controller: EnergyController
+    # all other parameters as default
+
+# DC-DC Charger service example (uncomment to use):
+# - DC_DC_Charger:
+#     class: DC_DCService
+#     coupler: DC_DC_VEDirect
+#     server: gRPCMain
+#     energy_controller: EnergyController
+#     device_label: Orion_XS
+#     protocol: non_nmea
 
 - Console:
     class: Console
@@ -78,12 +119,12 @@ services:
 
 publishers:
 
-- NMEAPrint:
-      class: N2KTracePublisher
-      active: false
-      flexible_decode: false
-      output: PRINT
-      couplers: [MPPTVEDirect]
+# - NMEAPrint:
+#       class: N2KTracePublisher
+#       active: false
+#       flexible_decode: false
+#       output: PRINT
+#       couplers: [MPPTVEDirect]
 
 - NMEAPush:
     class: N2KForwarderToServer

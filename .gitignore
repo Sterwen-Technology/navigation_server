@@ -4,3 +4,9 @@ dist
 .python-version
 __pycache__/
 *.pyc
+
+# Temporary and cache files
+Vibe_work_log/
+doc/@eaDir/
+doc/Thumbs.db
+External documentation

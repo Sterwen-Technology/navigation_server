@@ -244,7 +244,21 @@ const TRANSLATIONS = {
         'battery.energy': 'Energy',
         'battery.details': 'Details',
         'battery.trend': 'Power Trend',
-        'battery.label': 'Label'
+        'battery.label': 'Label',
+        
+        // DC-DC Charger
+        'dc_dc.title': 'DC-DC Charger',
+        'dc_dc.device_label': 'Label',
+        'dc_dc.model': 'Model',
+        'dc_dc.state': 'State',
+        'dc_dc.error': 'Error',
+        'dc_dc.input_voltage': 'Input V',
+        'dc_dc.input_current': 'Input A',
+        'dc_dc.input_power': 'Input P',
+        'dc_dc.output_voltage': 'Output V',
+        'dc_dc.output_current': 'Output A',
+        'dc_dc.output_power': 'Output P',
+        'dc_dc.trend': 'Power trend'
     },
     fr: {
         // Navigation
@@ -487,7 +501,21 @@ const TRANSLATIONS = {
         'battery.energy': 'Énergie',
         'battery.details': 'Détails',
         'battery.trend': 'Tendance de Puissance',
-        'battery.label': 'Étiquette'
+        'battery.label': 'Étiquette',
+        
+        // DC-DC Charger
+        'dc_dc.title': 'Chargeur CC-CC',
+        'dc_dc.device_label': 'Étiquette',
+        'dc_dc.model': 'Modèle',
+        'dc_dc.state': 'État',
+        'dc_dc.error': 'Erreur',
+        'dc_dc.input_voltage': 'Tension Entrée',
+        'dc_dc.input_current': 'Courant Entrée',
+        'dc_dc.input_power': 'Puissance Entrée',
+        'dc_dc.output_voltage': 'Tension Sortie',
+        'dc_dc.output_current': 'Courant Sortie',
+        'dc_dc.output_power': 'Puissance Sortie',
+        'dc_dc.trend': 'Tendance de puissance'
     }
 };
 

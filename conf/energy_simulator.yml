@@ -1,0 +1,88 @@
+#-------------------------------------------------------------------------------
+# Name:        energy_simulator.yml
+# Purpose:     Configuration file for the Energy Simulator server
+#
+# Author:      Vibe Code
+#
+# Created:     05/10/2026
+# Copyright:   (c) Sterwen Technology 2021-2026
+# Licence:     Eclipse Public License 2.0
+#-------------------------------------------------------------------------------
+
+function: Energy Simulator Server
+server_name: EnergySimulator
+log_level: INFO
+trace_dir: /mnt/meaban/Bateau/tests
+decode_definition_only: false
+enable_secure_grpc: false
+connect_agent: false
+log_module:
+    router_common.client_common: INFO
+    log_replay.energy_simulator_server: DEBUG
+    energy_mgmt.energy_simulator_models: DEBUG
+
+
+features:
+  - web_server
+  - log_replay
+  - energy_mgmt
+
+
+servers:
+
+- Main:
+    class: EnergySimulatorTopServer
+    port: 8081
+    host: 0.0.0.0
+    
+    # gRPC client configuration to connect to EnergySimulator service
+    # agent_host: 127.0.0.1
+    energy_host: 127.0.0.1
+    energy_port: 4505
+
+    
+    # Simulation cycle period (1-10 seconds)
+    cycle_period: 2.0
+    
+    # Battery configuration
+    battery_voltage_100: 14.4
+    battery_voltage_0: 10.0
+    battery_efficiency: 0.9
+    battery_initial_soc: 0.8
+
+    # Consumption configuration
+    consumption_type: variable
+    consumption_constant: 100.0
+    consumption_min: 50.0
+    consumption_max: 150.0
+    consumption_variation: 30.0
+    
+    # MPPT instances to simulate
+    # These must match the instance IDs configured in the EnergyService
+    mppt_instances: [0]
+    
+    # MPPT 0 configuration (instance 0)
+    mppt_0_voltage_min: 10.0
+    mppt_0_voltage_max: 40.0
+    mppt_0_voltage_max_power: 38.5
+    mppt_0_max_output: 14.4
+    mppt_0_max_power: 300.0
+    mppt_0_voltage_factor: 0.1
+    mppt_0_power_factor: 0.95
+    mppt_0_min_delta: 5.0
+    
+    # DC-DC charger instances to simulate
+    charger_instances: [0]
+    
+    # DC-DC charger 0 configuration (instance 0)
+    charger_0_efficiency: 0.92
+    # Voltage sources
+    charger_0_alternator_voltage: 14.4
+    charger_0_aux_voltage: 12.7
+    # Output voltage modes (V)
+    charger_0_absorption_voltage: 14.4
+    charger_0_float_voltage: 13.5
+    charger_0_storage_voltage: 13.0
+    # Output current limits (A)
+    charger_0_min_current: 0.0
+    charger_0_max_current: 70.0
