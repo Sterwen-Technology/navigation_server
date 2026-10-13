@@ -1,0 +1,64 @@
+//-------------------------------------------------------------------------------
+// Name:        energy_simulator.proto
+// Purpose:     Energy (Electric) simulator interface protobuf definition
+//
+// Author:      Laurent Carré
+//
+// Created:     03/10/2026
+// Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
+// Licence:     Eclipse Public License 2.0
+//-------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+import "energy.proto";
+
+message simulator_parameter {
+  string name=1;
+  enum value_type_enum {
+      VALUE_INT = 0;
+      VALUE_FLOAT = 1;
+      VALUE_STRING = 2;
+  }
+  value_type_enum value_type = 2;
+  oneof value {
+    int32 int_value = 3;
+    float float_value = 4;
+    string string_value = 5;
+  }
+}
+
+
+message battery_simulated_data {
+  float voltage=1;    // system voltage
+  float current=2;    // positive => charging
+  float state_of_charge=3;  // percentage (0 to 1)
+  float power=4;      // Power flow positive => charging
+  repeated simulator_parameter parameters=5;
+}
+
+// Message sent from the simulator to the MPPT service
+message mppt_simulated_data {
+  uint32 instance=1;
+  float panel_voltage=2;
+  float panel_power=3;
+  float output_voltage=4;
+  float output_current=5;
+  repeated simulator_parameter parameters=6;  // The parameters shall be direct VE-Direct keyword-Values
+}
+
+message dc_dc_charger_simulated_data {
+  uint32 instance=1;
+  float input_voltage=2;
+  float input_current=3;
+  float output_voltage=4;
+  float output_current=5;
+  repeated simulator_parameter parameters=6;
+}
+
+service EnergySimulator {
+  rpc SimulateBattery(battery_simulated_data) returns (energy_command_response) {}
+  rpc SimulateMPPT(mppt_simulated_data) returns (energy_command_response) {}
+  rpc SimulateDcDc(dc_dc_charger_simulated_data) returns (energy_command_response) {}
+}
+

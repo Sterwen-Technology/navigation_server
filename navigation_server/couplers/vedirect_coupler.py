@@ -20,7 +20,7 @@ import datetime
 import time
 import os
 
-from navigation_server.router_common import MessageServerGlobals, NavGenericMsg, TRANSPARENT_MSG, NULL_MSG
+from navigation_server.router_common import MessageServerGlobals, NavGenericMsg, TRANSPARENT_MSG, NULL_MSG, NavThread
 from navigation_server.router_core import (Coupler, XDR, NMEA0183Sentences, NMEA0183Msg)
 from navigation_server.log_replay import RawLogFile, LogReadError
 
@@ -28,17 +28,19 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 HexCommandContext = namedtuple('HexCommandContext', ['command', 'field', 'callback'])
 
+(VED_TEXT, VED_ASYNC_HEX, VED_RESP_HEX) = range(3)
 
 class VEDirectException(Exception):
     pass
 
 
-class Vedirect(threading.Thread):
+class Vedirect(NavThread):
 
-    (HEX, WAIT_HEADER, IN_KEY, IN_VALUE, IN_CHECKSUM) = range(5)
+    (UNKNOWN, HEX, WAIT_HEADER, IN_KEY, IN_VALUE, IN_CHECKSUM) = range(6)
 
-    def __init__(self, serialport: str, alt_serialport: str, timeout, input_queue, trace_input=False):
-        super().__init__(name="Vedirect", daemon=True)
+    def __init__(self, coupler:str, serialport: str, alt_serialport: str, timeout, input_queue, trace_input=False):
+
+        super().__init__(name=f"Vedirect-{coupler}", daemon=True)
         self._serialport = serialport
         self._alt_serialport = alt_serialport
         self._timeout = timeout
@@ -51,11 +53,13 @@ class Vedirect(threading.Thread):
         self.key = ''
         self.value = ''
         self.bytes_sum = 0
-        self.state = self.WAIT_HEADER
+        self.state = self.UNKNOWN
         self.dict = {}
         self._stop_flag = False
         self._buffer = bytearray(512)
         self._buflen = 0
+        self._hexbuffer = bytearray(128)
+        self._hexbuffer_len = 0
         self._hex_send_buffer = bytearray(32)
         self._hex_send_buffer[0] = ord(':')
         self._hex_cmd_context = None
@@ -94,10 +98,13 @@ class Vedirect(threading.Thread):
             else:
                 return False
         else:
+            _logger.error(f"Cannot open VEdirect serial interface with no alternate port specified")
             return False
 
 
     def close(self):
+        _logger.debug("Vedirect serial port %s closed" % self._serialport)
+        self.stop()
         if self._serial_fd is not None:
             self._serial_fd.close()
 
@@ -105,6 +112,14 @@ class Vedirect(threading.Thread):
         self._stop_flag = True
 
     def input(self, byte):
+
+        if self.state == self.UNKNOWN:
+            # at the beginning, let's wait for the first LF
+            if byte == self.header2:
+                self.state = self.WAIT_HEADER
+                self._buflen = 0
+            return None
+
         try:
             self._buffer[self._buflen] = byte
         except IndexError:
@@ -116,6 +131,7 @@ class Vedirect(threading.Thread):
 
         if byte == self.hexmarker and self.state != self.IN_CHECKSUM:
             self.state = self.HEX
+            return None
         if self.state == self.WAIT_HEADER:
             self.bytes_sum += byte
             if byte == self.header1:
@@ -150,35 +166,44 @@ class Vedirect(threading.Thread):
             self.state = self.WAIT_HEADER
             if self.bytes_sum % 256 == 0:
                 self.bytes_sum = 0
-                return self.dict
+                return VED_TEXT, self.dict
             else:
                 self.bytes_sum = 0
+                return None
         elif self.state == self.HEX:
-            self.bytes_sum = 0
             if byte == self.header2:
-                message = self._buffer[:self._buflen]
-                self.receive_hex_resp(message)
+                message = self._hexbuffer[:self._hexbuffer_len]
+
                 self.state = self.WAIT_HEADER
                 self._buflen = 0
-                return None
+                self._hexbuffer_len = 0
+                if self.receive_hex_resp(message):
+                    return VED_ASYNC_HEX, message
+                else:
+                    return VED_RESP_HEX, message
+            else:
+                self._hexbuffer[self._hexbuffer_len] = byte
+                self._hexbuffer_len += 1
+            return None
         else:
             raise AssertionError()
 
-    def run(self):
+    def nrun(self):
         msg_count = 0
         while True:
             if self._stop_flag:
                 return
             try:
                 data = self._serial_fd.read()
-            except (serial.SerialException, serial.SerialTimeoutException):
+            except (serial.SerialException, serial.SerialTimeoutException) :
                 _logger.error(f"VEdirect read on port {self._serialport} that is not open")
                 return
 
             for byte in data:
-                packet = self.input(byte)
-                if packet is not None:
+                resp = self.input(byte)
+                if resp is not None:
                     # ok we have a good packet
+                    msg_type, packet = resp
                     if self._trace_fd is not None:
                         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
                         try:
@@ -191,11 +216,18 @@ class Vedirect(threading.Thread):
                             self._trace_fd = None
                         except UnicodeDecodeError as e:
                             _logger.error("VEdirect Unicode error %s in buffer %s" % (e, self._buffer[:self._buflen]))
-
-                    self.dict['timestamp'] = time.monotonic()
-                    # send the dict in the queue
+                    if msg_type == VED_TEXT:
+                        self.dict['timestamp'] = time.monotonic()
+                        msg  = VEDirectMsg(self.dict, VED_TEXT)
+                    elif msg_type == VED_ASYNC_HEX:
+                        msg  = VEDirectMsg(packet, VED_ASYNC_HEX)
+                    else:
+                        _logger.error("Non supported VEdirect message type %d" % msg_type)
+                        continue
+                    # send the message in the queue
+                    _logger.debug("VEDirect output queue put %s" % msg.printable())
                     try:
-                        self._queue.put(VEDirectMsg(self.dict), block=True, timeout=1.0)
+                        self._queue.put(msg, block=True, timeout=1.0)
                     except queue.Full:
                         _logger.error("VEDirect output queue full message lost")
                         continue
@@ -243,9 +275,13 @@ class Vedirect(threading.Thread):
             _logger.error(f"VE Direct: Error writing HEX command {e} on tty {self._serialport}")
             raise VEDirectException
 
-    def receive_hex_resp(self, message: bytearray):
-        _logger.debug("VE.direct receive HEX response:%s" % message.hex())
+    def receive_hex_resp(self, message: bytearray) -> bool:
+        # _logger.debug("VE.direct receive HEX response:%s %s" % (message.decode(), message[0]))
         response_id = message[0]
+        if response_id == ord('A'):
+            return True
+        else:
+            return False
 
     vedirect_fields = {'current': ('I', float, 0.001),
                         'voltage': ('V', float, 0.001),
@@ -302,11 +338,20 @@ class VEDirectHEXParam:
 
 class VEDirectMsg(NavGenericMsg):
 
-    def __init__(self, ve_dict: dict):
-        super().__init__(TRANSPARENT_MSG, raw=ve_dict, msg=ve_dict)
+    def __init__(self, ve_message, msg_type):
+        self._msg_type = msg_type
+        super().__init__(TRANSPARENT_MSG, raw=ve_message, msg=ve_message)
 
     def printable(self) -> str:
-        return str(self._msg)
+        if self._msg_type == VED_TEXT:
+            return str(self._msg)
+        else:
+            return self._msg.decode()
+
+    @property
+    def msg_type(self):
+        return self._msg_type
+
 
 
 class VEDirectLogReader(threading.Thread):
@@ -387,7 +432,7 @@ class VEDirectCoupler(Coupler):
             device = opts.get('device', str, '/dev/ttyUSB0')
             alt_device = opts.get('alt_device', str, None)
             trace = opts.get('trace_vedirect', bool, False)
-            self._reader = Vedirect(device, alt_device, self._timeout, self._input_queue, trace)
+            self._reader = Vedirect(self.name, device, alt_device, self._timeout, self._input_queue, trace)
         elif self._interface == 'simulation':
             log_file = opts.get('logfile', str, None)
             if log_file is None:

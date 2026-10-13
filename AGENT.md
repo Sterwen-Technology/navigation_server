@@ -17,6 +17,8 @@ Tous les fichiers et chemins indiqués en suivant sont relatifs à cette racine.
 - `navigation_server/router_common/` Package des classes et fonctions communes - NE PAS EDITER
 - `navigation_server/router_core/` — code Python spécifique au routage des messages NMEA - NE PAS EDITER
 - `navigation_server/navigation_clients` - classes proxy clientes pour accès gRPC à utiliser impérativement si elles existent et à créer si nécessaire
+- `navigation_server/energy_mgmt/` - services de gestion d'énergie (Battery, MPPT, DC-DC, EnergyController, EnergySimulator)
+- `navigation_server/log_replay/` - services de relecture et simulation (Energy Simulator server)
 - `navigation_server/<autress packages>` - Ce sont les packages applicatifs qui ne doivent pas être édités sans instructions explicites
 - `protobuf/` — définitions .proto. Source de vérité. Toute modification ici impacte possiblement l'application, le back-end ET le front : NE JAMAIS les réverter pour « limiter son périmètre ».
 - `navigation_server/generated/` — code Python généré à partir des .proto.
@@ -31,6 +33,7 @@ Tous les fichiers et chemins indiqués en suivant sont relatifs à cette racine.
 - Régénérer protobuf : `gen_proto`
 - Lancer un process (serveur) : `./run_server` (voir `doc/` pour la config)
 - Lancer Python `python3` si on est dans l'environnement projet sinon `poetry run python3`
+- Lancer Energy Simulator : `./run_energy_simulator` (Web UI sur http://localhost:8081/energy_simulator.html)
 
 ## Règles de périmètre (IMPORTANT)
 1. Un prompt = un périmètre. Si la demande concerne l'UI/web, ne toucher QUE
@@ -49,6 +52,7 @@ Tous les fichiers et chemins indiqués en suivant sont relatifs à cette racine.
   d'abord à l'utilisateur, ou utiliser `git stash push -- <chemins>`.
 - Avant toute commande git destructrice sur des fichiers HORS périmètre :
   DEMANDER d'abord. En cas de doute : demander.
+- Eviter les micro-commit pour quelques lignes modifiées sauf s'ils sont vraiment nécessaires.
 
 ## Discipline de travail
 1. Vérifier `git status` au début de la session ; signaler tout travail non commité
@@ -58,15 +62,40 @@ Tous les fichiers et chemins indiqués en suivant sont relatifs à cette racine.
    convention existante du dépôt, ex. "Web UI: <description>").
 4. Ne jamais reformater ou « nettoyer » du code non concerné par la tâche.
 
+## Utilisation du framework existant
+
+L'utilisation du framework existant est obligatoire. Si une fonction existe déjà, elle doit être utilisée.
+En suivant des points spécifiques à respecter.
+
+### Client gRPC
+
+L'accès au serveur et services associés doit se faire impérativement en utilisant les classes et mécanismes suivants:
+
+L'accès au serveur se fait par la classe **GrpcClient**. Il y a un client par process implémentant un serveur gRPC.
+La création du client se fait par `server_client = GrpcClient.get_client(server_address:string, use_request_id: bool, secure: bool)`
+server_address: URL string including port
+use_request-id: indicates that the protobuf message includes a *id* field that is checked internally by the service superclass.
+secure: possibly overrides the default value for secure communication. To keep the default value pass MessageServerGlobals.configuration.client_secure_communications
+
+Pour chaque service attaché au serveur, il faut d'abord créer une classe client qui hérite de `ServiceClient`. Ces classes clientes sont crées dans le package `navigation_server.navigation_client` soit dans un nouveau module, soit par extension d'un module existant.
+Voir les exemples pour les détails d'implémentation.
+
+Ensuite il faut créer le client du service et l'attacher au client du serveur.
+` service_client = ServiceClientClass()
+  server_client.add_service(service_client)
+`
+L'accès aux couches gRPC directe ne doit jamais être utilisé.
 
 ## Conventions code
 - Python : suivre le style existant du fichier modifié (pas de reformatage global).
 - Les commentaires dans le code sont en anglais.
 - Pas de nouvelle dépendance sans le signaler explicitement.
+- Les fonctions accessibles en dehors du package doivent être déclarées dans __init__.py
 - Tous les imports doivent se faire dans la section imports en tête de fichier dans l'ordre suivant :
 - import sur les packages standards
 - import sur les packages externes (importés)
-- import sur les packages internes sans duplication, avec une ligne par package. Les packagesinternes doivent toujours être préfixés par `navigation_server`
-- Les imports sur package internes doivent être faits u niveau package, pas au niveau module sauf pour `generated`
-- Si un symbole n'est pas trouvé au niveau package, ne pas importer depuis le module, demander explicitement si nécessaire
+- import sur les packages internes sans duplication, avec une ligne par package. Les packagesin ternes doivent toujours être préfixés par `navigation_server`
+- Les imports sur package internes doivent être faits au niveau package, pas au niveau module sauf pour `generated`
+- Si un symbole n'est pas trouvé au niveau package, ne pas importer depuis le module, demander explicitement si nécessaire.
+- En dernier les imports internes au package qui peuvent être relatifs préfixés par '.'.
 - Aucun accès aux membres privés de classes.

@@ -15,6 +15,7 @@ import shlex
 import threading
 import logging
 import time
+import datetime
 import signal
 from socket import gethostname
 import os.path
@@ -24,7 +25,7 @@ import os
 import stat
 
 from navigation_server.generated.agent_pb2 import (NavigationSystemMsg, AgentResponse, LogLines, ServiceImplementor,
-                                                   ProcessSettings)
+                                                   ProcessSettings, KeepAliveResponse)
 from navigation_server.generated.services_server_pb2 import SystemProcessMsg, Server, Connection, ProcessState
 from navigation_server.generated.agent_pb2_grpc import AgentServicer, add_AgentServicer_to_server
 from navigation_server.router_common import (GrpcService, GenericTopServer, resolve_ref, copy_protobuf_data,
@@ -355,6 +356,7 @@ class AgentServicerImpl(AgentServicer):
     def __init__(self, agent):
         self._agent: AgentService = agent
         self._response_id = 1
+        self._system_changed = True
         self._vector = {
             'status' : self.status ,
             'start' : self.start,
@@ -383,6 +385,7 @@ class AgentServicerImpl(AgentServicer):
                 _logger.info(f"Agent spontaneous registration for {request.name}")
             process.start_confirmation(request, context.peer())
             resp.response = f"process {request.name} started with service {process.service}"
+            self._system_changed = True
         except KeyError:
             _logger.error(f"Agent Register for unknown process {request.name}")
             resp.response = f"registration error for process {request.name} unknown from Agent"
@@ -390,7 +393,7 @@ class AgentServicerImpl(AgentServicer):
 
     def AgentCmd(self, request, context):
         cmd = request.cmd
-        _logger.info("Agent command %s on %s" % (cmd, request.target))
+        _logger.info("Agent command %s on %s from %s" % (cmd, request.target, context.peer()))
         resp = AgentResponse()
         resp.id = request.id
         if cmd not in self._vector:
@@ -408,7 +411,7 @@ class AgentServicerImpl(AgentServicer):
 
     def AgentSystemCmd(self, request, context):
         cmd = request.cmd
-        _logger.info("Agent system command: %s" % cmd)
+        _logger.info("Agent system command: %s from %s" % (cmd, context.peer()))
         resp = AgentResponse()
         resp.id = request.id
         if cmd not in self._system_vector:
@@ -618,9 +621,17 @@ class AgentServicerImpl(AgentServicer):
         
         return resp
 
+    def KeepAlive(self, request, context):
+        _logger.debug("Agent keep alive id:%d changed:%s", request.id, self._system_changed)
+        resp = KeepAliveResponse()
+        resp.id = request.id
+        resp.system_changed = self._system_changed
+        resp.timestamp = datetime.datetime.now().isoformat()
+        return resp
 
     process_attributes = ['grpc_port', 'version', 'start_time', 'console_present', 'pid', 'secure_grpc', 'hostname',
                           'settings', 'display_order', 'hidden']
+
     def fill_process_response(self, process, resp):
         # _logger.info(f"Process {process.name} display_order {process.display_order}")
         if process.is_controlled:
@@ -662,6 +673,7 @@ class AgentServicerImpl(AgentServicer):
 
     def start(self, process:SystemdProcess, resp):
         code = process.start()
+        self._system_changed = True
         if code == 0:
             resp.err_code = 0
             resp.response = f"process {process.name} is started"
@@ -673,12 +685,14 @@ class AgentServicerImpl(AgentServicer):
 
     def stop(self, process:SystemdProcess, resp):
         process.stop()
+        self._system_changed = True
         resp.err_code = 0
         resp.process.state = ProcessState.STOPPED
         resp.process.name = process.name
 
     def restart(self, process:SystemdProcess, resp):
         code = process.restart()
+        self._system_changed = True
         if code == 0:
             resp.err_code = 0
             resp.response = f"{process.name} started"
@@ -717,11 +731,16 @@ class AgentServicerImpl(AgentServicer):
 
         connection = get_global_var('main_connection')
         if connection is not None:
-            address = connection.ipv4_address
+            try:
+                address = connection.ipv4_address
+            except AttributeError:
+                _logger.error("Unable to retrieve IP address from main connection")
+                address = None
             if address:
                 resp.system.ip_address = address
 
         resp.system.settings = get_global_var('settings_path')
+        resp.system_changed = self._system_changed
         for process in self._agent.get_processes():
             # _logger.debug("Agent system status adding %s" % process.name)
             process_pb = SystemProcessMsg()
@@ -737,6 +756,7 @@ class AgentServicerImpl(AgentServicer):
                 else:
                     process_pb.state = ProcessState.NOT_STARTED
             resp.system.processes.append(process_pb)
+        self._system_changed = False
         return resp
 
     def navigation_restart(self, resp):

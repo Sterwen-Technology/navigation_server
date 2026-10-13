@@ -37,4 +37,5 @@ from .data_collectors import (
     MPPTServiceCollector,
     EnergyServiceCollector,
     BatteryServiceCollector,
+    DC_DC_ServiceCollector,
 )

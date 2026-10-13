@@ -12,3 +12,4 @@
 
 from .raw_log_reader import RawLogFile, LogReadError
 from .raw_log_coupler import RawLogCoupler, TransparentCanLogCoupler, AsynchLogReader
+from .energy_simulator_server import EnergySimulatorTopServer

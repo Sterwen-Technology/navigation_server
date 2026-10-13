@@ -19,8 +19,8 @@ trace_dir: /var/log
 # Set connect_agent to false to skip agent registration (the web server is not
 # a managed process, it only queries the agent).
 connect_agent: true
-enable_secure_grpc: true
-force_secure_grpc: true
+enable_secure_grpc: false
+force_secure_grpc: false
 # client_certificate: nav_ca_cert_stnc800a003.pem
 language: en
 # Optional web API authentication. When enabled, every /api/* route except

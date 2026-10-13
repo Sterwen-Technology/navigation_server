@@ -16,7 +16,7 @@ from .serial_nmeaport import NMEASerialPort
 from .grpc_nmea_coupler import GrpcNmeaCoupler
 from .ydn2k_coupler import YDCoupler
 from .nmea_tcp_coupler import NMEATCPReader
-from .vedirect_coupler import VEDirectCoupler, VEDirectMsg, mppt_nmea0183
+from .vedirect_coupler import VEDirectCoupler, VEDirectMsg, mppt_nmea0183, VED_RESP_HEX, VED_TEXT, VED_ASYNC_HEX
 from .nmea2k_grpc_coupler import N2KGrpcCoupler
 from .grpc_send_coupler import N2KGrpcSendCoupler
 from .serial_gps import SerialGPS

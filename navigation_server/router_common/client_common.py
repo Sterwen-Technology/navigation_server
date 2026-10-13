@@ -13,6 +13,7 @@ import grpc
 import logging
 import queue
 import threading
+import inspect
 
 from navigation_server.router_common import GrpcAccessException, NavThread, MessageServerGlobals
 from navigation_server.generated.grpc_control_pb2 import GrpcCommand, GrpcAck
@@ -45,7 +46,7 @@ class GrpcClient:
     _credentials = None
 
     @classmethod
-    def get_client(cls, server, use_request_id:bool = True, secure:bool = False):
+    def get_client(cls, server, use_request_id:bool = True, secure:bool = False) -> "GrpcClient":
 
         # first check that port is non-zero
         try:
@@ -220,6 +221,9 @@ class GrpcClient:
     def not_connected(self) -> bool:
         return self._state == self.NOT_CONNECTED
 
+    def close(self):
+        self._channel.close()
+
     def server_call(self, rpc_func, req, response_class):
         """
         Performs a server call through gRPC client.
@@ -263,7 +267,8 @@ class GrpcClient:
                 return response
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info(f"client_common server call => Server error:{err.details()}")
+                # rpc_func_info = inspect.getmembers(rpc_func)
+                _logger.info(f"client_common server call {str(rpc_func._method)} => Server error:{err.details()}")
                 # self._state = self.NOT_CONNECTED
             else:
                 _logger.error(f"Error accessing server:{err.details()}")
@@ -307,7 +312,7 @@ class GrpcClient:
                     yield response
         except grpc.RpcError as err:
             if err.code() != grpc.StatusCode.UNAVAILABLE:
-                _logger.info(f"client_common server call multiple => Server error:{err.details()}")
+                _logger.info(f"client_common server call multiple {str(rpc_func._method)} => Server error:{err.details()}")
                 # self._state = self.NOT_CONNECTED
             else:
                 _logger.error(f"Error accessing server:{err.details()}")

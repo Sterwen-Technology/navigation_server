@@ -95,6 +95,9 @@ class Publisher(NavThread):
         here we implement the filtering, no need to fill the queue with useless messages
         that is also implying that the filtering is processed in the Coupler thread
         """
+        if not self._active:
+            return
+
         if self._filters is not None:
             _logger.debug("Publisher %s publish with filter msg:%s" % (self._name, msg))
             if self._filters.process_filter(msg, select_filter=self._filter_select):

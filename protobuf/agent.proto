@@ -55,9 +55,16 @@ message ServiceImplementor {  // provide the correspondance between a service an
   SystemProcessMsg process = 2;
 }
 
+message KeepAliveResponse {
+  uint32 id=1;            // same id as the KeepAlive call
+  bool system_changed=2;  // True if a new system configuration is to be requested
+  string timestamp=3;     // Time stamp of the response
+}
+
 message AgentResponse {
   uint32 id=1;
   uint32 err_code = 2;  // 0 = no error
+  bool system_changed=11;  // True if the system configuration has changed
   // depending on the command the server will reply one more of the following values
   string response = 3;  // string with result or error
   NavigationSystemMsg system=4;
@@ -91,4 +98,6 @@ service Agent {
   rpc GetServices(AgentCmdMsg) returns (AgentResponse) {}
   rpc GetSettings(AgentCmdMsg) returns (ProcessSettings) {}
   rpc SetSettings(AgentCmdMsg) returns (AgentResponse) {}
+  // For the rpc only the id is significant in the AgentCmdMsg
+  rpc KeepAlive(AgentCmdMsg) returns (KeepAliveResponse) {}
 }

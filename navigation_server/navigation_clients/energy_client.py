@@ -11,8 +11,10 @@
 
 import logging
 
-from navigation_server.generated.energy_pb2_grpc import MPPTServiceStub, EnergyServiceStub, BatteryServiceStub
-from navigation_server.generated.energy_pb2 import MPPT_device, energy_request, EnergyControllerParameters, battery_response, battery_in_out, battery_trend_response
+from navigation_server.generated.energy_pb2_grpc import MPPTServiceStub, EnergyServiceStub, BatteryServiceStub, DC_DC_ServiceStub
+from navigation_server.generated.energy_pb2 import MPPT_device, energy_request, EnergyControllerParameters, battery_response, battery_in_out, battery_trend_response, energy_command_response
+from navigation_server.generated.energy_simulator_pb2 import battery_simulated_data, mppt_simulated_data, dc_dc_charger_simulated_data
+from navigation_server.generated.energy_simulator_pb2_grpc import EnergySimulatorStub
 from navigation_server.router_common import GrpcClient, ServiceClient, pb_enum_string, ProtobufProxy
 
 
@@ -149,5 +151,46 @@ class BatteryServiceClient(ServiceClient):
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 
+
+class DC_DC_ServiceClient(ServiceClient):
+    """Client for DC-DC Charger service"""
+    
+    def __init__(self):
+        super().__init__(DC_DC_ServiceStub)
+    
+    def GetInformation(self):
+        _logger.debug("Client GetInformation")
+        return self._server_call(self._stub.GetInformation, energy_request(), None)
+    
+    def GetValues(self):
+        _logger.debug("Client GetValues")
+        return self._server_call(self._stub.GetValues, energy_request(), None)
+    
+    def GetTrend(self):
+        _logger.debug("Client GetTrend")
+        trend = self._server_call(self._stub.GetTrend, energy_request(), None)
+        _logger.debug("Trend response with %d values" % trend.nb_values)
+        return trend
+
+
+class EnergySimulatorClient(ServiceClient):
+    """
+    Client for the EnergySimulator service
+    """
+
+    def __init__(self):
+        super().__init__(EnergySimulatorStub)
+
+    def SimulateBattery(self, battery_data: battery_simulated_data) -> energy_command_response:
+        _logger.debug("Client SimulateBattery")
+        return self._server_call(self._stub.SimulateBattery, battery_data, None)
+
+    def SimulateMPPT(self, mppt_data: mppt_simulated_data) -> energy_command_response:
+        _logger.debug("Client SimulateMPPT")
+        return self._server_call(self._stub.SimulateMPPT, mppt_data, None)
+
+    def SimulateDcDc(self, charger_data: dc_dc_charger_simulated_data) -> energy_command_response:
+        _logger.debug("Client SimulateDcDc")
+        return self._server_call(self._stub.SimulateDcDc, charger_data, None)
 
 

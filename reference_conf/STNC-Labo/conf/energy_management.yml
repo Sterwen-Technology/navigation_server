@@ -5,7 +5,7 @@
 # Author:      Laurent Carré
 #
 # Created:     08/07/2024
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2024
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 #
@@ -17,9 +17,11 @@ trace_dir: /data/navigation/traces
 data_dir: /data/navigation/data
 enable_secure_grpc: false
 force_secure_grpc: false
+connect_agent: true
 log_module:
     energy_mgmt.mppt_service: INFO
     energy_mgmt.energy_controller_service: DEBUG
+    energy_mgmt.energy_simulator_service: DEBUG
     nmea2000.nmea2k_publisher: INFO
     router_common.grpc_server_service: INFO
     
@@ -42,12 +44,27 @@ servers:
 
 couplers:
 
+- SmartShunt1_VEDirect:
+    class: VEDirectCoupler
+    device: /dev/ttyUSB1        # RS232 port #1
+    # alt_device: /dev/ttyUSB8
+    interface: serial
+    protocol: non_nmea
+    max_attempt: 1
+
 - MPPTVEDirect:
     class: VEDirectCoupler
     device: /dev/ttyUSB4
     alt_device: /dev/ttyUSB8
     interface: serial
-    logfile: /mnt/meaban/Bateau/tests/TRACE-VEDirect-240808-1503.log
+    protocol: non_nmea
+    max_attempt: 1
+
+- DCDCVEDirect:
+    class: VEDirectCoupler
+    device: /dev/ttyUSB5
+    alt_device: /dev/ttyUSB9
+    interface: serial
     protocol: non_nmea
     max_attempt: 1
 
@@ -57,8 +74,9 @@ services:
 - MPPTService:
     class: MPPTService
     coupler: MPPTVEDirect
+    mode: coupler
     server: gRPCMain
-    publisher: NMEAPush
+    # publisher: NMEAPush
     protocol: nmea2000
     energy_controller: EnergyController
       # device parameters
@@ -68,10 +86,43 @@ services:
     panel_max_voltage: 40
     max_voltage: 15
 
+- MainBattery:
+    class: BatteryService
+    coupler: SmartShunt1_VEDirect
+    server: gRPCMain
+    mode: coupler
+    energy_controller: EnergyController
+    # parameters
+    nominal_voltage: 12.8
+    nominal_capacity: 12.0
+    chemistry: LFP
+    max_charge_current: 10.0
+
+- DCDCCharger:
+    class: DC_DCService
+    coupler: DCDCVEDirect
+    server: gRPCMain
+    mode: coupler
+    energy_controller: EnergyController
+    # device parameters
+    device_label: DCDC1
+    device_model: Victron Orion XS 70
+    max_power: 1000
+
+
 - EnergyController:
     class: EnergyService
     server: gRPCMain
     # all parameters as default
+
+- EnergySimulator:
+    class: EnergySimulatorService
+    server: gRPCMain
+    battery_service: MainBattery
+    mppt_services: [MPPTService]
+    dc_dc_services: [DCDCCharger]
+    energy_controller: EnergyController
+    # all other parameters as default
 
 - Console:
     class: Console
@@ -79,12 +130,12 @@ services:
 
 publishers:
 
-- NMEAPrint:
-      class: N2KTracePublisher
-      active: false
-      flexible_decode: false
-      output: PRINT
-      couplers: [MPPTVEDirect]
+# - NMEAPrint:
+#       class: N2KTracePublisher
+#       active: false
+#       flexible_decode: false
+#       output: PRINT
+#       couplers: [MPPTVEDirect]
 
 - NMEAPush:
     class: N2KForwarderToServer

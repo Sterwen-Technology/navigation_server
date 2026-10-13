@@ -93,7 +93,10 @@ class AgentClient(ServiceClient):
         response = self._server_call(self._stub.RegisterProcess, process, None)
         _logger.info(f"Registration result:{response.response}")
 
-    def process_cmd(self, cmd: str, process_name: str):
+    def keep_alive(self):
+        return self._server_call(self._stub.KeepAlive, AgentCmdMsg(), None)
+
+    def process_cmd(self, cmd: str, process_name: str) -> AgentResponseProxy:
         msg = AgentCmdMsg()
         msg.cmd = cmd
         msg.target = process_name

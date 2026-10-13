@@ -22,6 +22,7 @@ from navigation_server.generated.energy_pb2_grpc import MPPTServiceServicer, add
 from navigation_server.router_common import (GrpcService, MessageServerGlobals, resolve_ref, copy_protobuf_data,
                                              NavGenericMsg, N2K_MSG, fill_protobuf_from_dict)
 from navigation_server.router_core import NMEA0183Sentences
+from navigation_server.couplers import VEDirectMsg, VED_TEXT
 
 from navigation_server.generated.nmea2000_classes_gen import Pgn127751Class
 
@@ -31,19 +32,42 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
 class MPPTData:
-    def __init__(self, value_dict):
-        self.current = float(value_dict['I']) * 0.001
-        self.voltage = float(value_dict['V']) * 0.001
-        self.panel_voltage = float(value_dict['VPV']) * 0.001
-        self.panel_power = float(value_dict['PPV'])
-        self.product_id = value_dict['PID']
-        self.firmware = value_dict['FW']
-        self.serial = value_dict['SER#']
-        self.error = int(value_dict['ERR'])
-        self.state = int(value_dict['CS'])
-        self.mppt_state = int(value_dict['MPPT'])
-        self.day_max_power = float(value_dict['H21'])
-        self.day_power = float(value_dict['H20']) * 10.0
+
+    def __init__(self):
+        self.current = 0.0
+        self.voltage = 0.0
+        self.panel_voltage = 0.0
+        self.panel_power = 0.0
+        self.product_id = 'Unknown'
+        self.firmware = 'Unknown'
+        self.serial = 'Unknown'
+        self.error = 0
+        self.state = 0
+        self.mppt_state = 0
+        self.day_max_power = 0
+        self.day_power = 0
+
+    def process_msg(self, msg: VEDirectMsg) -> bool:
+        if msg.msg_type != VED_TEXT:
+            return False
+        value_dict = msg.msg
+        try:
+            self.current = float(value_dict['I']) * 0.001
+            self.voltage = float(value_dict['V']) * 0.001
+            self.panel_voltage = float(value_dict['VPV']) * 0.001
+            self.panel_power = float(value_dict['PPV'])
+            self.product_id = value_dict['PID']
+            self.firmware = value_dict['FW']
+            self.serial = value_dict['SER#']
+            self.error = int(value_dict['ERR'])
+            self.state = int(value_dict['CS'])
+            self.mppt_state = int(value_dict['MPPT'])
+            self.day_max_power = float(value_dict['H21'])
+            self.day_power = float(value_dict['H20']) * 10.0
+        except KeyError as e:
+            _logger.error(f"Missing key in MPPT Vedirect message - suspecting wrong device: {e}")
+            return False
+        return True
 
     def output_pb(self, output_pb_v):
         copy_protobuf_data(self, output_pb_v, ('current', 'voltage', 'panel_voltage','panel_power'))
@@ -93,6 +117,7 @@ class VictronMPPT(EnergyDevice):
         }
         
         # MPPT-specific tracking
+        self._current_data = MPPTData()
         self._output_power = 0.0
         self._mean_v = 0.0
         self._mean_a = 0.0
@@ -120,12 +145,11 @@ class VictronMPPT(EnergyDevice):
         if self._publisher is not None and self._protocol == 'nmea2000':
             self._sid = 0
 
-    def publish(self, msg):
+    def publish(self, msg: VEDirectMsg):
         """Called by coupler when new data is available"""
-        _logger.debug("VEDirect message:%s" % msg.msg)
-        
+        _logger.debug("VEDirect message:%s" % msg.printable())
         # Store the current data
-        self._current_data = MPPTData(msg.msg)
+        self._current_data.process_msg(msg)
         clock = time.monotonic()
 
         if self._current_data.mppt_state == VE_MPPT.MPPT_Off:
@@ -264,3 +288,7 @@ class MPPTService(GrpcService):
         super().finalize('MPPT', 'MPPTService')
         add_MPPTServiceServicer_to_server(MPPTServicer(self._mppt_device), self.grpc_server)
         self._mppt_device.start()
+
+    @property
+    def device(self):
+        return self._mppt_device
