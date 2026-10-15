@@ -28,17 +28,41 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 HexCommandContext = namedtuple('HexCommandContext', ['command', 'field', 'callback'])
 
-(VED_TEXT, VED_ASYNC_HEX, VED_RESP_HEX) = range(3)
-
-class VEDirectException(Exception):
-    pass
+(VED_TEXT, VED_ASYNC_HEX, VED_RESP_HEX, VE_CMD_HEX) = range(4)
 
 
 class Vedirect(NavThread):
 
     (UNKNOWN, HEX, WAIT_HEADER, IN_KEY, IN_VALUE, IN_CHECKSUM) = range(6)
 
-    def __init__(self, coupler:str, serialport: str, alt_serialport: str, timeout, input_queue, trace_input=False):
+    def __init__(self, coupler:str, serialport: str, alt_serialport: str, timeout, input_queue, trace_input=False,
+                 output_hex_queue=None):
+        """
+        Initializes a VEDirect communication handler.
+
+        This constructor sets up the required configuration for interacting
+        with the VE.Direct serial protocol. It initializes the primary and
+        alternate serial ports, timeout for communication, input queue, and
+        optional tracing capabilities. Additionally, it establishes internal
+        buffers for data processing and prepares the handler state.
+
+        :param coupler: Identifier for the VE.Direct communication handler.
+        :type coupler: str
+        :param serialport: The primary serial port for VE.Direct communication.
+        :type serialport: str
+        :param alt_serialport: The alternate serial port for VE.Direct communication.
+        :type alt_serialport: str
+        :param timeout: Timeout value for the serial communication.
+        :type timeout: Any
+        :param input_queue: Queue object for exchanging parsed input data.
+        :type input_queue: Any
+        :param trace_input: Flag to enable tracing of input data into a log
+            file (default is False).
+        :type trace_input: bool
+        :param output_hex_queue: Optional queue for transmitting raw
+            hexadecimal data.
+        :type output_hex_queue: Any
+        """
 
         super().__init__(name=f"Vedirect-{coupler}", daemon=True)
         self._serialport = serialport
@@ -58,11 +82,14 @@ class Vedirect(NavThread):
         self._stop_flag = False
         self._buffer = bytearray(512)
         self._buflen = 0
+        self._output_hex_queue: queue.Queue = output_hex_queue
         self._hexbuffer = bytearray(128)
         self._hexbuffer_len = 0
-        self._hex_send_buffer = bytearray(32)
-        self._hex_send_buffer[0] = ord(':')
-        self._hex_cmd_context = None
+        # self._hex_send_buffer = bytearray(32) removed in 3.0.5 moved to victron_interface
+        #   self._hex_send_buffer[0] = ord(':')
+        #  self._hex_cmd_context = None
+        # new in 3.0.5 introducing HEX cmd sending - only half duplex transactions
+        self._in_hex_transaction = False
         # self._ts = 0
         self._trace_fd = None
         if trace_input:
@@ -221,6 +248,13 @@ class Vedirect(NavThread):
                         msg  = VEDirectMsg(self.dict, VED_TEXT)
                     elif msg_type == VED_ASYNC_HEX:
                         msg  = VEDirectMsg(packet, VED_ASYNC_HEX)
+                    elif msg_type == VED_RESP_HEX:
+                        if self._in_hex_transaction:
+                            msg  = VEDirectMsg(packet, VED_RESP_HEX)
+                            self._in_hex_transaction = False
+                        else:
+                            _logger.error("Unexpected VEdirect response message")
+                            continue
                     else:
                         _logger.error("Non supported VEdirect message type %d" % msg_type)
                         continue
@@ -236,44 +270,28 @@ class Vedirect(NavThread):
                     # _logger.debug(self._buffer[:self._buflen])
                     self._buflen = 0
 
-    def send_hex_cmd(self, cmd: int, parameters=None):
-        #
-        # send a VEDirect HEX command
-        #
-        if 0 < cmd < 10:
-            hex_cmd = 0x30 + cmd
-        elif cmd < 17:
-            hex_cmd = 0x31 + cmd
-        else:
-            raise VEDirectException("Illegal HEX command")
-        # inster the cmd in buffer
-        self._hex_send_buffer[1] = hex_cmd
-        cmd_size = 2
-        # compute initial checksum
-        checksum = 0x55 - cmd
+            # now let's check if we need to send a HEX command
+            if self._output_hex_queue:
 
-        if parameters is not None:
-            for length, value in parameters.items():
-                bytes_val = value.to_bytes(length, 'big')
-                nb_nibble_count = 0
-                start = 0
-                while nb_nibble_count < length:
-                    checksum -= (bytes_val[start] * 16) + bytes_val[start + 1]
-                    start += 2
-                encoded_val = bytes_val.hex().upper().encode()
-                self._hex_send_buffer[cmd_size:] = encoded_val
-                cmd_size += length * 2
-        # add checksum in buffer
-        hex_checksum = checksum.to_bytes(2, 'big').hex().upper().encode()
-        self._hex_send_buffer[cmd_size:] = hex_checksum
-        cmd_size += 2
-        self._hex_send_buffer[cmd_size] = 0x10
-        _logger.debug("VE.Direct send HEX message:%s" % self._hex_send_buffer[:cmd_size + 1])
-        try:
-            self._serial_fd.write(memoryview(self._hex_send_buffer[:cmd_size + 1]))
-        except (serial.SerialException, BrokenPipeError) as e:
-            _logger.error(f"VE Direct: Error writing HEX command {e} on tty {self._serialport}")
-            raise VEDirectException
+                try:
+                    # get a VEDirect HEX command
+                    msg = self._output_hex_queue.get(block=False)
+                except queue.Empty:
+                    continue
+                _logger.debug("VEDirect output queue get %s" % msg.printable())
+                if self._in_hex_transaction:
+                    # only one transaction at a time
+                    _logger.error(f"No new transaction - VEDirect HEX transaction in progress - msg:{msg.printable()}")
+                    continue
+                self._in_hex_transaction = True
+                try:
+                    self._serial_fd.write(msg.msg)
+                except (serial.SerialException, serial.SerialTimeoutException) :
+                    _logger.error(f"VEdirect write on port {self._serialport} that is not open")
+                    return
+
+
+
 
     def receive_hex_resp(self, message: bytearray) -> bool:
         # _logger.debug("VE.direct receive HEX response:%s %s" % (message.decode(), message[0]))
@@ -282,58 +300,6 @@ class Vedirect(NavThread):
             return True
         else:
             return False
-
-    vedirect_fields = {'current': ('I', float, 0.001),
-                        'voltage': ('V', float, 0.001),
-                        'panel_power': ('PPV', float, 1.0),
-                        'product_id':('PID', str, None),
-                        'firmware': ('FW', str, None),
-                        'serial': ('SER#', str, None),
-                        'error': ('ERR', int, 1),
-                        'state': ('CS', int, 1),
-                        'mppt_state': ('MPPT', int, 1),
-                        'day_max_power': ('H21', float, 1.0),  # W
-                        'day_power':('H20', float, 10.0)  # Wh
-                        }
-    @staticmethod
-    def value_from_message(msg, field_name):
-        ved_field, field_type, coef = Vedirect.vedirect_fields[field_name]
-        if field_type is float:
-            value = float(msg[ved_field]) * coef
-        elif field_type is int:
-            value = int(msg[ved_field])
-        else:
-            value = msg[ved_field]
-        return value
-
-
-class VEHEXType:
-    ve_type_definition = {
-        "un8": (False, 1),
-        "un16": (False, 2),
-        "un24": (False, 3),
-        "un32": (False, 4),
-        "sn16": (True, 2),
-        "sn24": (True, 3),
-        "sn32": (True, 4),
-        "string": (False, -1)
-    }
-
-    def __init__(self, ve_type:str):
-        self.ve_type = ve_type
-        try:
-            self._type_def = self.ve_type_definition[ve_type]
-        except KeyError:
-            raise ValueError("Unknown vedirect type %s" % ve_type)
-
-
-class VEDirectHEXParam:
-    '''
-    This class represents a VEDirect HEX parameter
-    and implments encoding and decoding the values
-    '''
-    def __init__(self, register:int, name:str, description:str, v_type, scale: float=1.0):
-        pass
 
 
 class VEDirectMsg(NavGenericMsg):

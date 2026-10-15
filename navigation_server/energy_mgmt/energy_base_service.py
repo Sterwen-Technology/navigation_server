@@ -86,7 +86,7 @@ class EnergyDevice:
         
         # Device metadata
         self._device_label = opts.get('device_label', str, self._name)
-        self._device_model = opts.get('device_model', str, 'Unknown')
+        self._device_model = 'Unknown'
         
         # Parameters dictionary (to be overridden by subclasses)
         self._parameters = {}
@@ -117,6 +117,14 @@ class EnergyDevice:
     def device_label(self):
         """Get the device label"""
         return self._device_label
+
+    @property
+    def device_model(self):
+        """Get the device model"""
+        if self._device_model == 'Unknown':
+            if self._current_data is not None and self._current_data.device_model is not None:
+                self._device_model = self._current_data.device_model
+        return self._device_model
 
     def stop_service(self):
         """Request to stop the service"""
@@ -195,8 +203,9 @@ class EnergyDevice:
             if self._energy_controller is not None:
                 self._energy_controller.set_off_state(self._instance, self.device_type, False, False)
         device_info.device_label = self._device_label
-        device_info.device_model = self._device_model
+        device_info.device_model = self.device_model
         device_info.instance = self._instance
+        _logger.debug(f"{self._name} EnergyBase get_device_info OK model={self._device_model}")
 
     def get_device_parameters(self, device_parameters):
         """

@@ -27,66 +27,9 @@ from navigation_server.couplers import VEDirectMsg, VED_TEXT
 from navigation_server.generated.nmea2000_classes_gen import Pgn127751Class
 
 from .energy_base_service import EnergyDevice
+from .victron_interface import VictronMPPTData
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
-
-
-class MPPTData:
-
-    def __init__(self):
-        self.current = 0.0
-        self.voltage = 0.0
-        self.panel_voltage = 0.0
-        self.panel_power = 0.0
-        self.product_id = 'Unknown'
-        self.firmware = 'Unknown'
-        self.serial = 'Unknown'
-        self.error = 0
-        self.state = 0
-        self.mppt_state = 0
-        self.day_max_power = 0
-        self.day_power = 0
-
-    def process_msg(self, msg: VEDirectMsg) -> bool:
-        if msg.msg_type != VED_TEXT:
-            return False
-        value_dict = msg.msg
-        try:
-            self.current = float(value_dict['I']) * 0.001
-            self.voltage = float(value_dict['V']) * 0.001
-            self.panel_voltage = float(value_dict['VPV']) * 0.001
-            self.panel_power = float(value_dict['PPV'])
-            self.product_id = value_dict['PID']
-            self.firmware = value_dict['FW']
-            self.serial = value_dict['SER#']
-            self.error = int(value_dict['ERR'])
-            self.state = int(value_dict['CS'])
-            self.mppt_state = int(value_dict['MPPT'])
-            self.day_max_power = float(value_dict['H21'])
-            self.day_power = float(value_dict['H20']) * 10.0
-        except KeyError as e:
-            _logger.error(f"Missing key in MPPT Vedirect message - suspecting wrong device: {e}")
-            return False
-        return True
-
-    def output_pb(self, output_pb_v):
-        copy_protobuf_data(self, output_pb_v, ('current', 'voltage', 'panel_voltage','panel_power'))
-
-    def output_info_pb(self, output_pb):
-        copy_protobuf_data(self, output_pb, ('product_id', 'firmware', 'serial', 'error', 'state', 'mppt_state',
-                                             'day_max_power', 'day_power'))
-
-    state_dict = {0: 0, 2: 9, 3: 1, 4: 2, 5: 5, 7: 4, 247: 4}  # correspondence between Victron and NMEA2000 state
-
-    def gen_pgn_127751(self, sid: int):
-        # 12/05/2026 (2.8.1) - the PGN is currently wrongly encoded do not use it for now
-        # 31/08/2026 (3.0.0) - PGN definition updated
-        res = Pgn127751Class()
-        res.sequence_id = sid % 256
-        res.connection_number = 1
-        res.voltage = self.voltage
-        res.current = self.current
-        return res
 
 
 MPPTBucket = namedtuple('MPPTBucket', ['voltage', 'panel_voltage', 'current', 'power'])
@@ -117,7 +60,7 @@ class VictronMPPT(EnergyDevice):
         }
         
         # MPPT-specific tracking
-        self._current_data = MPPTData()
+        self._current_data = VictronMPPTData()
         self._output_power = 0.0
         self._mean_v = 0.0
         self._mean_a = 0.0
@@ -247,12 +190,13 @@ class MPPTServicer(MPPTServiceServicer):
         self._mppt_device = mppt_device
 
     def GetDeviceInfo(self, request, context):
-        _logger.debug("GRPC request MPPTService.GetDeviceInfo")
+        _logger.debug(f"GRPC request MPPTService.GetDeviceInfo command={request.command}")
         ret_data = MPPT_device()
         self._mppt_device.get_device_info(ret_data)
         if request.command:
             if request.command == 'parameters':
                 self._mppt_device.get_device_parameters(ret_data.parameters)
+        _logger.debug(f"MPPTService.GetDeviceInfo OK")
         return ret_data
 
     def GetOutput(self, request, context):
@@ -260,6 +204,7 @@ class MPPTServicer(MPPTServiceServicer):
         ret_val = solar_output()
         # object.__setattr__(ret_val, 'voltage', 12.6)
         self._mppt_device.get_solar_output(ret_val)
+        _logger.debug(f"MPPTService.GetOutput OK")
         return ret_val
 
     def GetTrend(self, request, context):
@@ -275,6 +220,7 @@ class MPPTServicer(MPPTServiceServicer):
             val.current = bucket.current
             val.panel_power = bucket.power
             ret_values.values.append(val)
+        _logger.debug(f"MPPTService.GetTrend OK")
         return ret_values
 
 

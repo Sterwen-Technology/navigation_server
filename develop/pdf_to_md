@@ -1,0 +1,2 @@
+# !/bin/bash
+python $NAVIGATION_HOME/develop/pdf_to_md.py $1

@@ -43,7 +43,7 @@ servers:
       class: WebTopServer
       host: 0.0.0.0
       port: 8080
-      agent_address: 127.0.0.1
+      agent_address: stnc800a003
       grpc_port: 4545
       https_enabled: true
       auth:
