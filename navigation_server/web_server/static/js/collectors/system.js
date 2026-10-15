@@ -63,8 +63,8 @@ async function refresh() {
         
         // Check EnergyService availability on each refresh
         const newEmsAvailable = await checkEnergyServiceAvailable();
-        if (newEmsAvailable !== emsAvailable) {
-            emsAvailable = newEmsAvailable;
+        if (newEmsAvailable !== state.emsAvailable) {
+            state.emsAvailable = newEmsAvailable;
             await updateEmsVisibility();
         }
         
