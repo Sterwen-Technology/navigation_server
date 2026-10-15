@@ -22,7 +22,6 @@ let dragOffset = {x: 0, y: 0};
 let nextWindowPos = {x: 80, y: 80};
 
 
-const $ = (id) => document.getElementById(id);
 
 function windowKey(serviceType, processName) {
     return `${serviceType}:${processName}`;
