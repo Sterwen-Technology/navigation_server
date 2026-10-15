@@ -1,3 +1,4 @@
+import { state } from './config.js';
 import {
   updateEmsVisibility
 } from './api.js';
@@ -29,7 +30,7 @@ try {
     // Also re-translate when language changes (if needed)
     
     // Check EnergyService availability and update UI
-    emsAvailable = await updateEmsVisibility();
+    state.emsAvailable = await updateEmsVisibility();
 } catch (e) {
     // Don't show connection lost during initialization
     // This prevents false positives from config/config issues

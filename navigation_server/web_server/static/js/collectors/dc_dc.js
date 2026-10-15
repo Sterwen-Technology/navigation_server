@@ -148,7 +148,7 @@ function renderDcDcDashboard(data, processName, win) {
     const outputVoltage = data.output_voltage || 0;
     const outputCurrent = data.output_current || 0;
     const outputPower = data.output_power || 0;
-    const state = data.state || 0;
+    const veState = data.state || 0;
     const error = data.error || 0;
     
     win.headerTitle.textContent = `${t.t("dc_dc.title") || "DC-DC"} \u2014 ${escapeHtml(label)}`;
@@ -163,7 +163,7 @@ function renderDcDcDashboard(data, processName, win) {
         <div class="dc-dc-info">
             ${data.device_label ? `<div class="row"><span class="k" data-i18n="dc_dc.device_label">Label</span><span class="v">${escapeHtml(data.device_label)}</span></div>` : ""}
             ${data.model ? `<div class="row"><span class="k" data-i18n="dc_dc.model">Model</span><span class="v">${escapeHtml(data.model)}</span></div>` : ""}
-            <div class="row"><span class="k" data-i18n="dc_dc.state">State</span><span class="v">${escapeHtml(getVeStateName(state))}</span></div>
+            <div class="row"><span class="k" data-i18n="dc_dc.state">State</span><span class="v">${escapeHtml(getVeStateName(veState))}</span></div>
             <div class="row"><span class="k" data-i18n="dc_dc.error">Error</span><span class="v">${escapeHtml(getVeErrorName(error))}</span></div>
         </div>
     `;

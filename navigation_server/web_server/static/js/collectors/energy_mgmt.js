@@ -1,5 +1,5 @@
 import {
-  $
+  $, state
 } from '../config.js';
 import {
   apiGet
@@ -31,14 +31,14 @@ export { startEmsRefresh };
 export { stopEmsRefresh };
 
     // --- Energy Management System (EMS) --------------------------------
-    let emsAutoRefreshTimer = null;
+    state.emsAutoRefreshTimer = null;
     const EMS_REFRESH_INTERVAL = 10000; // 10 seconds - reduced frequency since KeepAlive monitors every 2s
-    let emsAvailable = false; // Track EMS availability
+    state.emsAvailable = false; // Track EMS availability
 
     // Show either services or ems page
     function showPage(page) {
 // If EMS is requested but not available, fallback to services
-if (page === "ems" && !emsAvailable) {
+if (page === "ems" && !state.emsAvailable) {
     page = "services";
 }
 
@@ -75,9 +75,9 @@ if (page === "ems") {
     }
 
     function stopEmsRefresh() {
-if (emsAutoRefreshTimer) {
-    clearTimeout(emsAutoRefreshTimer);
-    emsAutoRefreshTimer = null;
+if (state.emsAutoRefreshTimer) {
+    clearTimeout(state.emsAutoRefreshTimer);
+    state.emsAutoRefreshTimer = null;
 }
     }
 
@@ -510,7 +510,7 @@ renderEmsDashboard(data);
 stopEmsRefresh();
 // Integrate with KeepAlive: use the EMS_REFRESH_INTERVAL for EMS-specific refreshes
 refreshEms();
-emsAutoRefreshTimer = setTimeout(startEmsRefresh, EMS_REFRESH_INTERVAL);
+state.emsAutoRefreshTimer = setTimeout(startEmsRefresh, EMS_REFRESH_INTERVAL);
     }
 
 
