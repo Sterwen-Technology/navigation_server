@@ -5,7 +5,8 @@ import {
   escapeHtml, fmt
 } from '../common.js';
 import {
-  REFRESH_INTERVAL
+  REFRESH_INTERVAL, $
+
 } from '../config.js';
 import {
   translateAllElements
