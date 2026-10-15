@@ -1,9 +1,21 @@
-import { apiGet } from '../api.js';
-import { getVeErrorName, getVeStateName } from './energy_mgmt.js';
-import { escapeHtml, fmt } from '../common.js';
-import { translateAllElements } from '../i18n.js';
-import { activeWindows, closeWindow, createWindow, windowKey } from '../windows.js';
-import { t } from '../translations-bridge.js';
+import {
+  apiGet
+} from '../api.js';
+import {
+  getVeErrorName, getVeStateName
+} from './energy_mgmt.js';
+import {
+  escapeHtml, fmt
+} from '../common.js';
+import {
+  translateAllElements
+} from '../i18n.js';
+import {
+  activeWindows, closeWindow, createWindow, windowKey
+} from '../windows.js';
+import {
+  t
+} from '../translations-bridge.js';
 
 export { batteryBar };
 export { closeBattery };

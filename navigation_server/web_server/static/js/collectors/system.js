@@ -1,12 +1,30 @@
-import { apiGet, apiPost, checkEnergyServiceAvailable, startKeepAliveMonitoring, stopKeepAliveMonitoring, updateEmsVisibility } from '../api.js';
-import { escapeHtml, fmt, isBackendDisconnected, showConnectionLost, showConnectionRestored } from '../common.js';
-import { REFRESH_INTERVAL, autoEnabled, autoTimer, backendConnected, isRefreshing, showHidden, $ } from '../config.js';
-import { translateAllElements } from '../i18n.js';
-import { openLog } from '../utilities/logs.js';
-import { openNetwork } from '../utilities/network.js';
-import { showSettings } from '../utilities/settings.js';
-import { activeWindows, closeWindow, createWindow, focusWindow, toast, windowKey } from '../windows.js';
-import { t } from '../translations-bridge.js';
+import {
+  apiGet, apiPost, checkEnergyServiceAvailable, startKeepAliveMonitoring, stopKeepAliveMonitoring, updateEmsVisibility
+} from '../api.js';
+import {
+  escapeHtml, fmt, isBackendDisconnected, showConnectionLost, showConnectionRestored
+} from '../common.js';
+import {
+  REFRESH_INTERVAL, autoEnabled, autoTimer, backendConnected, isRefreshing, showHidden, $
+} from '../config.js';
+import {
+  translateAllElements
+} from '../i18n.js';
+import {
+  openLog
+} from '../utilities/logs.js';
+import {
+  openNetwork
+} from '../utilities/network.js';
+import {
+  showSettings
+} from '../utilities/settings.js';
+import {
+  activeWindows, closeWindow, createWindow, focusWindow, toast, windowKey
+} from '../windows.js';
+import {
+  t
+} from '../translations-bridge.js';
 
 export { closeConsole };
 export { couplerCmd };

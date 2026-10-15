@@ -1,9 +1,21 @@
-import { apiGet } from '../api.js';
-import { escapeHtml, fmt } from '../common.js';
-import { REFRESH_INTERVAL } from '../config.js';
-import { translateAllElements } from '../i18n.js';
-import { activeWindows, closeWindow, createWindow, focusWindow, windowKey } from '../windows.js';
-import { t } from '../translations-bridge.js';
+import {
+  apiGet
+} from '../api.js';
+import {
+  escapeHtml, fmt
+} from '../common.js';
+import {
+  REFRESH_INTERVAL
+} from '../config.js';
+import {
+  translateAllElements
+} from '../i18n.js';
+import {
+  activeWindows, closeWindow, createWindow, focusWindow, windowKey
+} from '../windows.js';
+import {
+  t
+} from '../translations-bridge.js';
 
 export { closeEngine };
 export { openEngineData };

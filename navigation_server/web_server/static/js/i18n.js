@@ -1,5 +1,9 @@
-import { updateEmsVisibility } from './api.js';
-import { t } from './translations-bridge.js';
+import {
+  updateEmsVisibility
+} from './api.js';
+import {
+  t
+} from './translations-bridge.js';
 
 export { initPageTranslations };
 export { translateAllElements };

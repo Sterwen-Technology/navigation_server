@@ -1,7 +1,15 @@
-import { apiGet } from '../api.js';
-import { escapeHtml } from '../common.js';
-import { translateAllElements } from '../i18n.js';
-import { t } from '../translations-bridge.js';
+import {
+  apiGet
+} from '../api.js';
+import {
+  escapeHtml
+} from '../common.js';
+import {
+  translateAllElements
+} from '../i18n.js';
+import {
+  t
+} from '../translations-bridge.js';
 
 export { createEmsBar };
 export { createEmsCenteredBar };

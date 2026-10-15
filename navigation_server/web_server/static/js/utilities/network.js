@@ -1,8 +1,18 @@
-import { apiGet, apiPost } from '../api.js';
-import { escapeHtml } from '../common.js';
-import { translateAllElements } from '../i18n.js';
-import { toast } from '../windows.js';
-import { t } from '../translations-bridge.js';
+import {
+  apiGet, apiPost
+} from '../api.js';
+import {
+  escapeHtml
+} from '../common.js';
+import {
+  translateAllElements
+} from '../i18n.js';
+import {
+  toast
+} from '../windows.js';
+import {
+  t
+} from '../translations-bridge.js';
 
 export { addConnection };
 export { applyNetworkConfig };

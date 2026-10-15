@@ -1,6 +1,12 @@
-import { apiPost } from '../api.js';
-import { activeWindows, createWindow, windowKey } from '../windows.js';
-import { t } from '../translations-bridge.js';
+import {
+  apiPost
+} from '../api.js';
+import {
+  activeWindows, createWindow, windowKey
+} from '../windows.js';
+import {
+  t
+} from '../translations-bridge.js';
 
 export { appendLogLineForWindow };
 export { clearLogForWindow };

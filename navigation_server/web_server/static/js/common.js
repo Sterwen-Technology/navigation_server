@@ -1,8 +1,18 @@
-import { apiGet } from './api.js';
-import { backendConnected } from './config.js';
-import { toast } from './windows.js';
-import { getRefresh } from './runtime.js';
-import { t } from './translations-bridge.js';
+import {
+  apiGet
+} from './api.js';
+import {
+  backendConnected
+} from './config.js';
+import {
+  toast
+} from './windows.js';
+import {
+  getRefresh
+} from './runtime.js';
+import {
+  t
+} from './translations-bridge.js';
 
 export { disableAllButtons };
 export { enableAllButtons };

@@ -1,7 +1,15 @@
-import { autoEnabled, isRefreshing } from './config.js';
-import { getRefresh, getShowPage } from './runtime.js';
-import { isBackendDisconnected } from './common.js';
-import { t } from './translations-bridge.js';
+import {
+  autoEnabled, isRefreshing
+} from './config.js';
+import {
+  getRefresh, getShowPage
+} from './runtime.js';
+import {
+  isBackendDisconnected
+} from './common.js';
+import {
+  t
+} from './translations-bridge.js';
 
 export { apiGet };
 export { apiPost };

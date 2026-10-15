@@ -1,4 +1,6 @@
-import { $ } from './config.js';
+import {
+  $
+} from './config.js';
 
 
 export { activeWindows };
