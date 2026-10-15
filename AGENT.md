@@ -86,6 +86,44 @@ Ensuite il faut créer le client du service et l'attacher au client du serveur.
 `
 L'accès aux couches gRPC directe ne doit jamais être utilisé.
 
+## Interface Web (front-end) — structure modulaire
+
+Le front-end (`navigation_server/web_server/static/`) est découpé en modules ES natifs
+(`<script type="module">`, pas de bundler, pas de framework). Structure :
+
+- `index.html` — HTML seul (pages, modals, overlays). Le CSS est dans `css/main.css`.
+- `js/config.js` — constantes (`REFRESH_INTERVAL`, `$`) et objet `state` :
+  TOUT état mutable partagé entre modules doit vivre sur `state` (les exports de
+  primitives ES sont des liaisons en lecture seule — ne jamais exporter un `let`
+  destiné à être modifié par un autre module).
+- `js/api.js` — appels serveur (`apiGet`/`apiPost`), login, keepalive.
+- `js/windows.js` — socle des fenêtres/box flottantes (`createWindow`, drag/resize,
+  toasts). Toute fenêtre passe par ce socle.
+- `js/collectors/` — un fichier par collector, miroir de `data_collectors.py` :
+  `system` (point d'entrée), `nmea2000` (définitions PGN incluses), `engine`,
+  `mppt`, `battery`, `dc_dc`, `energy_mgmt` (page EMS).
+- `js/utilities/` — `logs`, `network`, `settings`.
+- `js/i18n.js`, `js/translations-bridge.js` — traductions (pont vers le `t`
+  global de `translations.js`, qui est un script classique, PAS un module).
+- `js/runtime.js` — indirections cassant les cycles d'imports
+  (`getRefresh()`/`getShowPage()`). Ne pas importer `refresh`/`showPage`
+  depuis `api.js`/`common.js` : passer par `runtime.js`.
+- `js/app.js` — point d'entrée : bindings `window.*` pour les `onclick` inline du
+  HTML, listeners, init `DOMContentLoaded`.
+
+Règles pour toute modification du front-end :
+1. Toute dépendance inter-modules DOIT être un `import` explicite. Vérifier que
+   chaque symbole utilisé est bien importé (y compris `$`)
+2. Les fonctions appelées depuis des attributs `onclick` (HTML ou template
+   literals) doivent être exposées via `window.<nom> = <nom>;` dans `js/app.js`.
+3. Une nouvelle page = un `div.page` dans `index.html` + éventuellement un
+   nouveau fichier dans `js/collectors/` ; un nouveau collector = nouveau
+   fichier dans `js/collectors/` utilisant le socle `windows.js`.
+4. `energy_simulator.*` est une application à part (usage interne) : ne pas la
+   toucher dans le cadre de tâches sur l'UI principale.
+5. Après modification JS : vérifier la syntaxe de chaque fichier modifié
+   (`node --check <fichier>`) et l'absence de doublons d'import.
+
 ## Conventions code
 - Python : suivre le style existant du fichier modifié (pas de reformatage global).
 - Les commentaires dans le code sont en anglais.
