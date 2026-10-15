@@ -28,163 +28,10 @@ from navigation_server.couplers import VEDirectMsg, VED_TEXT
 from navigation_server.generated.nmea2000_classes_gen import Pgn127751Class
 
 from .energy_base_service import EnergyDevice, SIMULATION, COUPLER
+from .victron_interface import VictronSmartShuntData
 
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
-
-
-class BatteryData:
-    """
-    Data structure for Victron SmartShunt battery monitor data
-    Attribute names match protobuf field names for compatibility with copy_protobuf_data
-    
-    The device sends data in 2 consecutive messages:
-    - Message 1: Static data (PID, V, VS, I, P, CE, SOC, TTG, Alarm, etc.) + some dynamic
-    - Message 2: Historical/dynamic data (H1, H2, H3, H4, H5, H6, H7, H8, H9, H10, etc.)
-    
-    This class handles both messages and only marks data as complete when both are received.
-    """
-    def __init__(self):
-        # Initialization flag
-        self._initialized = False
-        
-        # Default values for all fields
-        # Battery voltage in Volts
-        self.voltage = 0.0
-        # Battery current in Amps (positive = charge, negative = discharge)
-        self.current = 0.0
-        # Instantaneous power in Watts
-        self.power = 0.0
-        # State of Charge in percent
-        self.state_of_charge = 0.0
-        # Energy variation in Wh
-        self.energy_variation = 0.0
-        # Auxiliary voltage
-        self.auxiliary_voltage = 0.0
-        
-        # Additional battery information (for BatteryBank protobuf)
-        self.min_voltage = 0.0
-        self.max_voltage = 0.0
-        self.charge_voltage = 0.0
-        
-        # Other fields
-        self.consumed_ah = 0.0
-        self.time_to_go = 0.0
-        self.product_id = 'Unknown'
-        self.firmware = 'Unknown'
-        self.model = 'Unknown'
-        self.alarm = None
-        self.last_discharge_voltage = 0.0
-        self.total_ah = 0.0
-        self.charge_cycles = 0
-        self.deepest_discharge = 0.0
-        self.last_discharge = 0.0
-        # Track which message types have been received
-        self._has_message1 = False
-        # Timestamp
-        self.timestamp = time.monotonic()
-
-    def _process_static(self, value_dict):
-
-        try:
-            self.product_id = value_dict['PID']
-            self.firmware = value_dict['FW']
-            self.model = value_dict['BMV']
-        except KeyError:
-            _logger.warning(f'Missing static data in battery message {value_dict}')
-            raise
-
-    def _process_msg1(self, value_dict):
-
-        try:
-            self.alarm = value_dict['Alarm']
-            # Dynamic data from message1
-            self.voltage = float(value_dict['V']) * 0.001
-            self.current = float(value_dict['I']) * 0.001
-            self.power = float(value_dict['P'])
-            self.state_of_charge = float(value_dict['SOC']) * 0.01
-            self.consumed_ah = float(value_dict['CE']) *0.001
-            self.time_to_go = float(value_dict['TTG'])
-            self.auxiliary_voltage = float(value_dict['VS']) * 0.001
-        except KeyError:
-            _logger.warning(f'Missing data in battery message 1 {value_dict}')
-            raise
-
-    def _process_msg2(self, value_dict):
-        try:
-            self.min_voltage = float(value_dict['H7']) * 0.001
-            self.max_voltage = float(value_dict['H8']) * 0.001
-            self.charge_voltage = float(value_dict['H10']) * 0.001
-            self.last_discharge_voltage = float(value_dict['H9']) * 0.001
-            self.total_ah = float(value_dict['H6']) * 0.001
-            self.charge_cycles = int(value_dict['H4'])
-            self.deepest_discharge = float(value_dict['H1']) * 0.001
-            self.last_discharge = float(value_dict['H2']) * 0.001
-        except KeyError:
-            _logger.warning(f'Missing data in battery message 2 {value_dict}')
-            raise
-
-    
-    def process_msg(self, msg: VEDirectMsg) -> bool:
-        """Process a message and return True if all data is complete.
-        
-        Message 1 contains: PID, V, VS, I, P, CE, SOC, TTG, Alarm, FW, SER#, etc.
-        Message 2 contains: H1, H2, H3, H4, H5, H6, H7, H8, H9, H10, etc.
-        
-        Returns True only after both message types have been processed.
-        If not initialized and first message is message2, it's ignored.
-        """
-        if msg.msg_type == VED_TEXT:
-            value_dict = msg.msg
-        else:
-            # right now we don't support HEX mode
-            return False
-
-        if not self._initialized:
-            if 'PID' in value_dict:
-                try:
-                    self._process_static(value_dict)
-                    self._process_msg1(value_dict)
-                except KeyError:
-                    return False
-                self._initialized = True
-                self._has_message1 = True
-                return True
-            else:
-                return False
-
-        if self._has_message1:
-            # we have the message1, so let's go for the 2
-            _logger.debug("BatteryService Processing message2")
-            if not 'H1' in value_dict:
-                _logger.warning("BatteryService Missing H1 in message wrong sequence")
-                return False
-            else:
-                try:
-                    self._process_msg2(value_dict)
-                except KeyError:
-                    return False
-                self._has_message1 = False
-                self.timestamp = time.monotonic()
-                return True
-        else:
-            _logger.debug("BatteryService processing  message1")
-            try:
-                self._process_msg1(value_dict)
-                self._has_message1 = True
-            except KeyError:
-                return False
-            return False
-
-    def output_pb(self, output_pb):
-        """Fill battery_in_out protobuf with current values using copy_protobuf_data"""
-        # battery_in_out has: voltage, current, energy_variation, auxiliary_voltage
-        copy_protobuf_data(self, output_pb, ('voltage', 'current', 'energy_variation', 'auxiliary_voltage'))
-
-    def output_info_pb(self, output_pb):
-        """Fill BatteryBank protobuf with device information using copy_protobuf_data"""
-        # BatteryBank fields that we have: voltage, state_of_charge, min_voltage, max_voltage, charge_voltage
-        copy_protobuf_data(self, output_pb, ('voltage', 'state_of_charge', 'min_voltage', 'max_voltage', 'charge_voltage'))
 
 
 BatteryBucket = namedtuple('BatteryBucket', ['timestamp', 'voltage', 'current', 'power', 'state_of_charge', 'energy_variation'])
@@ -219,7 +66,7 @@ class BatteryOnVictronSmartShunt(EnergyDevice):
         }
         
         # Battery-specific tracking
-        self._current_data = BatteryData()
+        self._current_data = VictronSmartShuntData()
         self._mean_v = 0.0
         self._mean_a = 0.0
         self._mean_p = 0.0
@@ -377,6 +224,7 @@ class BatteryServicer(BatteryServiceServicer):
             if request.command == 'parameters':
                 self._battery_device.get_device_parameters(ret_data.battery)
         ret_data.response = 'OK'
+        _logger.debug("BatteryService.GetInformation OK")
         return ret_data
 
     def GetValues(self, request, context):
@@ -384,6 +232,7 @@ class BatteryServicer(BatteryServiceServicer):
         _logger.debug("GRPC request BatteryService.GetValues")
         ret_val = battery_in_out()
         self._battery_device.get_battery_values(ret_val)
+        _logger.debug("BatteryService.GetValues OK")
         return ret_val
 
     def GetTrend(self, request, context):

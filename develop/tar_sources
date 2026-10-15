@@ -1,0 +1,6 @@
+#!/bin/bash
+VERSION=$1
+echo "Creating tar file for version $VERSION"
+cd $NAVIGATION_HOME
+clean_python
+tar cvf "sources-$VERSION.tar" navigation_server/

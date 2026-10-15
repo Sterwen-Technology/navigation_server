@@ -70,6 +70,7 @@ def main():
         print(e)
         return
     line_count = 0
+    previous_write = time.monotonic()
     while True:
 
         try:
@@ -83,7 +84,11 @@ def main():
             print(data)
             if len(data) == 0:
                 break
+            next_write = time.monotonic()
+            if next_write - previous_write < 1.0:
+                time.sleep(1.0 - (next_write - previous_write))
             output.write(data)
+            previous_write = time.monotonic()
             line_count += 1
             if 0 < opts.count <= line_count:
                 break
