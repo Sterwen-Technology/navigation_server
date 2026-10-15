@@ -127,10 +127,14 @@ All contributions are welcome.
 ## Authors and acknowledgment
 Laurent Carré - [Sterwen Technology](http://www.sterwen-technology.eu). 
 
+The NMEA 2000 PGN definitions come from [CANboat](https://github.com/canboat/canboat) (Apache License 2.0).
+
 ## License
 Eclipse Public License 2.0. for all development from Sterwen Technology
+
 GNU Lesser GPL v3.0 for Python-can
-Apache License 2.0 for grpc
+
+Apache License 2.0 for grpc, and CANBOAT contribution
 
 ## Project status
 Under development.
