@@ -1,4 +1,7 @@
 import {
+  $
+} from '../config.js';
+import {
   apiGet
 } from '../api.js';
 import {

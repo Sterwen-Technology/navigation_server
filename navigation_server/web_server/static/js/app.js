@@ -1,5 +1,5 @@
 import {
-  REFRESH_INTERVAL, autoTimer, isRefreshing, autoEnabled, showHidden, backendConnected, $
+  REFRESH_INTERVAL, $, state
 } from './config.js';
 import {
   toast
@@ -126,7 +126,7 @@ refresh();
 document.addEventListener('DOMContentLoaded', function() {
     initPageTranslations().then(() => {
         // Do an initial refresh to load data
-        if (autoEnabled) {
+        if (state.autoEnabled) {
             refresh().then(() => {
                 // Start KeepAlive monitoring after initial data is loaded
                 startKeepAliveMonitoring();

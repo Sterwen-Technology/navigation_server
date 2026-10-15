@@ -1,5 +1,5 @@
 import {
-  autoEnabled, isRefreshing
+  $, state
 } from './config.js';
 import {
   getRefresh, getShowPage
@@ -104,9 +104,9 @@ async function checkKeepAlive() {
     
     // Safety net: do a full refresh periodically even if no changes detected
     // This handles cases where keep_alive might not be working properly
-    if (autoEnabled && now - lastFullRefreshTime > FULL_REFRESH_SAFETY_INTERVAL) {
+    if (state.autoEnabled && now - lastFullRefreshTime > FULL_REFRESH_SAFETY_INTERVAL) {
         lastFullRefreshTime = now;
-        if (!isRefreshing) {
+        if (!state.isRefreshing) {
             getRefresh()().catch(() => {});
         }
         return;
@@ -122,7 +122,7 @@ async function checkKeepAlive() {
             if (keepalive.system_changed && !lastSystemChanged) {
                 lastSystemChanged = true;
                 lastFullRefreshTime = now; // Reset the safety timer
-                if (!isRefreshing && autoEnabled) {
+                if (!state.isRefreshing && state.autoEnabled) {
                     getRefresh()().catch(() => {});
                 }
             } else if (!keepalive.system_changed) {

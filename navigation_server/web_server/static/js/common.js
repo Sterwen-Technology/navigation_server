@@ -2,7 +2,7 @@ import {
   apiGet
 } from './api.js';
 import {
-  backendConnected
+  $, state
 } from './config.js';
 import {
   toast
@@ -59,9 +59,9 @@ function enableAllButtons() {
 
 // Function to show connection lost state (network-level only)
 function showConnectionLost() {
-    if (!backendConnected) return; // Already in disconnected state
+    if (!state.backendConnected) return; // Already in disconnected state
     
-    backendConnected = false;
+    state.backendConnected = false;
     disableAllButtons();
     const overlay = $("connection-lost-overlay");
     if (overlay) {
@@ -89,9 +89,9 @@ function showConnectionLost() {
 
 // Function to show connection restored state (network-level only)
 function showConnectionRestored() {
-    if (backendConnected) return; // Already connected
+    if (state.backendConnected) return; // Already connected
     
-    backendConnected = true;
+    state.backendConnected = true;
     enableAllButtons();
     const overlay = $("connection-lost-overlay");
     if (overlay) {

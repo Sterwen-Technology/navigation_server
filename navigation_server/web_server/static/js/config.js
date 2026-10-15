@@ -1,15 +1,14 @@
-export { $ };
-export { REFRESH_INTERVAL };
-export { autoEnabled };
-export { autoTimer };
-export { backendConnected };
-export { isRefreshing };
-export { showHidden };
+// État global partagé de l'application.
+// Les primitives exportées d'un module ES sont des liaisons en lecture seule:
+// l'état mutable est donc exposé via un objet unique, modifiable par propriété.
+export const state = {
+    autoTimer: null,
+    isRefreshing: false,
+    autoEnabled: true,
+    showHidden: false,
+    backendConnected: true,
+};
 
-const REFRESH_INTERVAL = 5000;
-let autoTimer = null;
-let isRefreshing = false;
-let autoEnabled = true;
-let showHidden = false;  // Track whether to show hidden processes
-let backendConnected = true; // Track if we can reach the web server (network-level)
-const $ = (id) => document.getElementById(id);
+export const REFRESH_INTERVAL = 5000;
+
+export const $ = (id) => document.getElementById(id);

@@ -5,7 +5,7 @@ import {
   escapeHtml, fmt, isBackendDisconnected, showConnectionLost, showConnectionRestored
 } from '../common.js';
 import {
-  REFRESH_INTERVAL, autoEnabled, autoTimer, backendConnected, isRefreshing, showHidden, $
+  REFRESH_INTERVAL, $, state
 } from '../config.js';
 import {
   translateAllElements
@@ -42,9 +42,9 @@ export { toggleAuto };
 export { toggleHidden };
 
 function toggleHidden() {
-    showHidden = !showHidden;
+    state.showHidden = !state.showHidden;
     const btn = $("show-hidden-text");
-    btn.textContent = showHidden ? "Hide Hidden" : "Show Hidden";
+    btn.textContent = state.showHidden ? "Hide Hidden" : "Show Hidden";
     refresh();
 }
 
@@ -52,8 +52,8 @@ function toggleHidden() {
 // overlay, await a successful login, then replay the original request.
 // Cookies travel automatically with same-origin fetch(), so once the
 async function refresh() {
-    if (isRefreshing) return;
-    isRefreshing = true;
+    if (state.isRefreshing) return;
+    state.isRefreshing = true;
     const btn = $("refresh-btn");
     btn.disabled = true;
     try {
@@ -71,12 +71,12 @@ async function refresh() {
         // If backend reports disconnected (agent not connected), show overlay
         // This handles the case where web server is up but agent is not connected
         if (data && !data.connected) {
-            if (backendConnected) {
+            if (state.backendConnected) {
                 showConnectionLost();
             }
         } else {
             // If we were in disconnected state and now connected, restore UI
-            if (!backendConnected) {
+            if (!state.backendConnected) {
                 showConnectionRestored();
             }
         }
@@ -84,12 +84,12 @@ async function refresh() {
         toast(t.t("toast.refresh_error", {error: e.message}), false);
         // For network failures, show connection lost overlay
         if (e.isConnectionError || isBackendDisconnected(e)) {
-            if (backendConnected) {
+            if (state.backendConnected) {
                 showConnectionLost();
             }
         }
     } finally {
-        isRefreshing = false;
+        state.isRefreshing = false;
         btn.disabled = false;
     }
     // Note: Automatic scheduling removed - refresh is now driven by KeepAlive mechanism
@@ -98,9 +98,9 @@ async function refresh() {
 function scheduleNext() {
     // With KeepAlive mechanism, we only need to trigger an immediate refresh
     // The KeepAlive will handle subsequent refresh timing based on changes
-    if (autoTimer) clearTimeout(autoTimer);
-    autoTimer = null;
-    if (autoEnabled) {
+    if (state.autoTimer) clearTimeout(state.autoTimer);
+    state.autoTimer = null;
+    if (state.autoEnabled) {
         // Trigger immediate refresh, KeepAlive will handle the scheduling
         refresh().catch(() => {});
     }
@@ -153,8 +153,8 @@ function render(data) {
         t.translateAllElements();
         return;
     }
-    // Filter and sort processes: filter out hidden processes unless showHidden is true, then sort by display_order (with name as tiebreaker for stability)
-    const filtered = procs.filter(p => showHidden || p.hidden !== true);
+    // Filter and sort processes: filter out hidden processes unless state.showHidden is true, then sort by display_order (with name as tiebreaker for stability)
+    const filtered = procs.filter(p => state.showHidden || p.hidden !== true);
     const ordered = filtered.slice().sort((a, b) => {
         const orderA = a.display_order !== undefined ? a.display_order : 0;
         const orderB = b.display_order !== undefined ? b.display_order : 0;
@@ -371,17 +371,17 @@ function closeConsole(processName) {
 }
 
 function toggleAuto() {
-    autoEnabled = $("auto-refresh").checked;
-    if (autoEnabled) {
+    state.autoEnabled = $("auto-refresh").checked;
+    if (state.autoEnabled) {
         // Restart KeepAlive monitoring and trigger immediate refresh
         startKeepAliveMonitoring();
         scheduleNext();
     } else {
         // Stop KeepAlive monitoring
         stopKeepAliveMonitoring();
-        if (autoTimer) {
-            clearTimeout(autoTimer);
-            autoTimer = null;
+        if (state.autoTimer) {
+            clearTimeout(state.autoTimer);
+            state.autoTimer = null;
         }
     }
 }
