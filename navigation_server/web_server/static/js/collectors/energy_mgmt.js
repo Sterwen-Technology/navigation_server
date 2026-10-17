@@ -139,6 +139,7 @@ if (state.emsAutoRefreshTimer) {
 0x20: "PayGo",
 0x40: "BMS",
 0x80: "Engine Shutdown Detection",
+0x81: "Input voltage low",
 0x100: "Analyzing Input Voltage"
     };
 

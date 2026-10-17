@@ -252,13 +252,18 @@ const TRANSLATIONS = {
         'dc_dc.model': 'Model',
         'dc_dc.state': 'State',
         'dc_dc.error': 'Error',
+        'dc_dc.off_reason': 'Off Reason',
         'dc_dc.input_voltage': 'Input V',
         'dc_dc.input_current': 'Input A',
         'dc_dc.input_power': 'Input P',
         'dc_dc.output_voltage': 'Output V',
         'dc_dc.output_current': 'Output A',
         'dc_dc.output_power': 'Output P',
-        'dc_dc.trend': 'Power trend'
+        'dc_dc.trend': 'Power trend',
+        'dc_dc.on': 'On',
+        'dc_dc.off': 'Off',
+        'dc_dc.turn_on': 'Turn On',
+        'dc_dc.turn_off': 'Turn Off'
     },
     fr: {
         // Navigation
@@ -509,13 +514,18 @@ const TRANSLATIONS = {
         'dc_dc.model': 'Modèle',
         'dc_dc.state': 'État',
         'dc_dc.error': 'Erreur',
+        'dc_dc.off_reason': 'Raison Arrêt',
         'dc_dc.input_voltage': 'Tension Entrée',
         'dc_dc.input_current': 'Courant Entrée',
         'dc_dc.input_power': 'Puissance Entrée',
         'dc_dc.output_voltage': 'Tension Sortie',
         'dc_dc.output_current': 'Courant Sortie',
         'dc_dc.output_power': 'Puissance Sortie',
-        'dc_dc.trend': 'Tendance de puissance'
+        'dc_dc.trend': 'Tendance de puissance',
+        'dc_dc.on': 'Marche',
+        'dc_dc.off': 'Arrêt',
+        'dc_dc.turn_on': 'Allumer',
+        'dc_dc.turn_off': 'Éteindre'
     }
 };
 

@@ -1,8 +1,8 @@
 import {
-  apiGet
+  apiGet, apiPost
 } from '../api.js';
 import {
-  getVeErrorName, getVeStateName
+  getVeErrorName, getVeStateName, getVeOffReasonName
 } from './energy_mgmt.js';
 import {
   escapeHtml, fmt
@@ -150,8 +150,11 @@ function renderDcDcDashboard(data, processName, win) {
     const outputPower = data.output_power || 0;
     const veState = data.state || 0;
     const error = data.error || 0;
+    const offReason = data.off_reason || 0;
     
     win.headerTitle.textContent = `${t.t("dc_dc.title") || "DC-DC"} \u2014 ${escapeHtml(label)}`;
+    win.offReason = offReason;
+    win.processName = processName;
     
     // Calculate max values for bars
     const maxInputVoltage = 50;  // Reasonable default for input voltage
@@ -159,12 +162,33 @@ function renderDcDcDashboard(data, processName, win) {
     const maxCurrent = 50;        // Reasonable default for current
     const maxPower = Math.max(inputPower, outputPower, 1000);
     
+    // Button logic: Show 'Turn On' only if off_reason is 4 (Switched Off (Register))
+    // Otherwise, show 'Turn Off' if charger is on, or no button if off for other reasons
+    const showTurnOn = offReason === 4;
+    const showTurnOff = veState !== 0 && !showTurnOn;
+    const showButton = showTurnOn || showTurnOff;
+    
+    let controls = '';
+    if (showButton) {
+        const isOnCommand = showTurnOn;
+        controls = `
+        <div class="dc-dc-controls">
+            <button class="dc-dc-button dc-dc-button-${isOnCommand ? 'on' : 'off'}" 
+                    data-command="${isOnCommand ? 'charger_on' : 'charger_off'}" 
+                    data-i18n="dc_dc.${isOnCommand ? 'turn_on' : 'turn_off'}">
+                ${t.t(isOnCommand ? 'dc_dc.turn_on' : 'dc_dc.turn_off') || (isOnCommand ? 'Turn On' : 'Turn Off')}
+            </button>
+        </div>
+    `;
+    }
+    
     const info = `
         <div class="dc-dc-info">
             ${data.device_label ? `<div class="row"><span class="k" data-i18n="dc_dc.device_label">Label</span><span class="v">${escapeHtml(data.device_label)}</span></div>` : ""}
             ${data.model ? `<div class="row"><span class="k" data-i18n="dc_dc.model">Model</span><span class="v">${escapeHtml(data.model)}</span></div>` : ""}
             <div class="row"><span class="k" data-i18n="dc_dc.state">State</span><span class="v">${escapeHtml(getVeStateName(veState))}</span></div>
             <div class="row"><span class="k" data-i18n="dc_dc.error">Error</span><span class="v">${escapeHtml(getVeErrorName(error))}</span></div>
+            <div class="row"><span class="k" data-i18n="dc_dc.off_reason">Off Reason</span><span class="v">${escapeHtml(getVeOffReasonName(offReason))}</span></div>
         </div>
     `;
     
@@ -182,6 +206,9 @@ function renderDcDcDashboard(data, processName, win) {
     body.innerHTML = `
         <div class="dc-dc-dashboard">
             <div class="dc-dc-top">${info}${bars}</div>
+            <div class="dc-dc-controls-container">
+                ${controls}
+            </div>
             <div class="dc-dc-trend">
                 <div class="dc-dc-trend-title" data-i18n="dc_dc.trend">Power trend</div>
                 <div class="dc-dc-trend-canvas"><div class="empty">${t.t("general.loading")}</div></div>
@@ -189,7 +216,30 @@ function renderDcDcDashboard(data, processName, win) {
         </div>
     `;
     
+    // Add event listener for the on/off button
+    const button = body.querySelector('.dc-dc-button');
+    if (button) {
+        button.addEventListener('click', async () => {
+            const command = button.dataset.command;
+            await sendDcDcCommand(processName, command, win);
+        });
+    }
+    
     t.translateAllElements();
+}
+
+async function sendDcDcCommand(processName, command, win) {
+    try {
+        const response = await apiPost(`/api/dc_dc/${encodeURIComponent(processName)}/${command}`, {});
+        if (response.ok) {
+            // Refresh the data after a short delay to show the new state
+            setTimeout(() => refreshDcDc(win), 1000);
+        } else {
+            alert(`Error: ${response.error || 'Unknown error'}`);
+        }
+    } catch (e) {
+        alert(`Failed to send command: ${e.message}`);
+    }
 }
 
 function closeDcDc(processName) {

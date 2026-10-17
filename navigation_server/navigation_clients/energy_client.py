@@ -172,6 +172,12 @@ class DC_DC_ServiceClient(ServiceClient):
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 
+    def DeviceCommand(self, command:str):
+        _logger.debug("Client DeviceCommand")
+        cmd = energy_request()
+        cmd.command = command
+        return self._server_call(self._stub.DeviceCommand, cmd, None)
+
 
 class EnergySimulatorClient(ServiceClient):
     """

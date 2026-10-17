@@ -12,7 +12,7 @@
 import logging
 import time
 
-from navigation_server.couplers import VEDirectMsg, VED_TEXT
+from navigation_server.couplers import VEDirectMsg, VED_TEXT, VED_CMD_HEX, VED_RESP_HEX
 from navigation_server.router_common import copy_protobuf_data
 from navigation_server.generated.nmea2000_classes_gen import Pgn127751Class
 
@@ -229,92 +229,8 @@ class VEDirectException(Exception):
     pass
 
 
-def send_hex_cmd(self, cmd: int, parameters=None):
-    # send a VEDirect HEX command
-    #
-    if 0 < cmd < 10:
-        hex_cmd = 0x30 + cmd
-    elif cmd < 17:
-        hex_cmd = 0x31 + cmd
-    else:
-        raise VEDirectException("Illegal HEX command")
-    # inster the cmd in buffer
-    self._hex_send_buffer[1] = hex_cmd
-    cmd_size = 2
-    # compute initial checksum
-    checksum = 0x55 - cmd
 
-    if parameters is not None:
-        for length, value in parameters.items():
-            bytes_val = value.to_bytes(length, 'big')
-            nb_nibble_count = 0
-            start = 0
-            while nb_nibble_count < length:
-                checksum -= (bytes_val[start] * 16) + bytes_val[start + 1]
-                start += 2
-            encoded_val = bytes_val.hex().upper().encode()
-            self._hex_send_buffer[cmd_size:] = encoded_val
-            cmd_size += length * 2
-    # add checksum in buffer
-    hex_checksum = checksum.to_bytes(2, 'big').hex().upper().encode()
-    self._hex_send_buffer[cmd_size:] = hex_checksum
-    cmd_size += 2
-    self._hex_send_buffer[cmd_size] = 0x10
-
-
-vedirect_fields = {'current': ('I', float, 0.001),
-                        'voltage': ('V', float, 0.001),
-                        'panel_power': ('PPV', float, 1.0),
-                        'product_id':('PID', str, None),
-                        'firmware': ('FW', str, None),
-                        'serial': ('SER#', str, None),
-                        'error': ('ERR', int, 1),
-                        'state': ('CS', int, 1),
-                        'mppt_state': ('MPPT', int, 1),
-                        'day_max_power': ('H21', float, 1.0),  # W
-                        'day_power':('H20', float, 10.0)  # Wh
-                        }
-
-def value_from_message(msg, field_name):
-    ved_field, field_type, coef = vedirect_fields[field_name]
-    if field_type is float:
-        value = float(msg[ved_field]) * coef
-    elif field_type is int:
-        value = int(msg[ved_field])
-    else:
-        value = msg[ved_field]
-    return value
-
-
-class VEHEXType:
-    ve_type_definition = {
-        "un8": (False, 1),
-        "un16": (False, 2),
-        "un24": (False, 3),
-        "un32": (False, 4),
-        "sn16": (True, 2),
-        "sn24": (True, 3),
-        "sn32": (True, 4),
-        "string": (False, -1)
-    }
-
-    def __init__(self, ve_type:str):
-        self.ve_type = ve_type
-        try:
-            self._type_def = self.ve_type_definition[ve_type]
-        except KeyError:
-            raise ValueError("Unknown vedirect type %s" % ve_type)
-
-
-class VEDirectHEXParam:
-    '''
-    This class represents a VEDirect HEX parameter
-    and implments encoding and decoding the values
-    '''
-    def __init__(self, register:int, name:str, description:str, v_type, scale: float=1.0):
-        pass
-
-class VictronTextDecoderABC:
+class VictronVEDirectDecoderABC:
     '''
     This class is the ABC of VEDirect text decoder
     and implements only common decoding methods
@@ -324,6 +240,7 @@ class VictronTextDecoderABC:
         self.product_id = None
         self._device_model = None
         self.serial_number = None
+        self._transaction_context = None
 
     @property
     def initialized(self) -> bool:
@@ -354,8 +271,43 @@ class VictronTextDecoderABC:
             self._device_model = 'Unknown'
         self._initialized = True
 
+    def set_charger_on(self, coupler):
+        if self._transaction_context is not None:
+            raise VEDirectException("VE Direct transaction already in progress")
+        hex_cmd = encode_charge_control_command(DEVICE_MODE_ON)
+        msg = VEDirectMsg(hex_cmd, VED_CMD_HEX)
+        self._transaction_context = (HEX_COMMAND_SET, 0x0200)
+        coupler.send(msg)
 
-class VictronSmartShuntData (VictronTextDecoderABC):
+    def set_charger_off(self, coupler):
+        if self._transaction_context is not None:
+            raise VEDirectException("VE Direct transaction already in progress")
+        hex_cmd = encode_charge_control_command(DEVICE_MODE_OFF)
+        msg = VEDirectMsg(hex_cmd, VED_CMD_HEX)
+        self._transaction_context = (HEX_COMMAND_SET, 0x0200)
+        coupler.send(msg)
+
+    def response_handling(self, response):
+        command = response.get('response_code')
+        if command is None:
+            _logger.warning(f"Received response without response_id: {response}")
+            return
+        register_id = response.get('register_id')
+        if register_id is None:
+            _logger.warning(f"Received response without register_id: {response}")
+            return
+        if command != self._transaction_context[0]:
+            _logger.warning(f"Received response with unexpected command: {response}")
+            return
+        if register_id != self._transaction_context[1]:
+            _logger.warning(f"Received response with unexpected register_id: {response}")
+            return
+        self._transaction_context = None
+
+
+
+
+class VictronSmartShuntData (VictronVEDirectDecoderABC):
     """
     Data structure for Victron SmartShunt battery monitor data
     Attribute names match protobuf field names for compatibility with copy_protobuf_data
@@ -496,8 +448,13 @@ class VictronSmartShuntData (VictronTextDecoderABC):
         # BatteryBank fields that we have: voltage, state_of_charge, min_voltage, max_voltage, charge_voltage
         copy_protobuf_data(self, output_pb, ('voltage', 'state_of_charge', 'min_voltage', 'max_voltage', 'charge_voltage'))
 
+    def set_charger_off(self, coupler):
+        _logger.error("set_charger_off not not allowed")
 
-class VictronDC_DC_Data(VictronTextDecoderABC):
+    def set_charger_on(self, coupler):
+        _logger.error("set_charger_on not not allowed")
+
+class VictronDC_DC_Data(VictronVEDirectDecoderABC):
     """
     Data structure for Victron Orion XS DC-DC charger
     Based on VE.Direct protocol - SmartBuckboost column
@@ -551,7 +508,13 @@ class VictronDC_DC_Data(VictronTextDecoderABC):
         if msg.msg_type == VED_TEXT:
             value_dict = msg.msg
         else:
-            # right now we don't support HEX mode
+            # Let's just trace the HEX responseE
+            _logger.info(f"HEX message: {msg.msg}")
+            result = VEDirectHEXFrame.decode_hex_response(msg.msg)
+            if msg.msg_type == VED_RESP_HEX:
+                self.response_handling(result)
+            formatted_result = VEDirectHEXFrame.print_decoded_response(result)
+            _logger.info(f"HEX response decoded: {formatted_result}")
             return False
 
         try:
@@ -622,7 +585,7 @@ class VictronDC_DC_Data(VictronTextDecoderABC):
         parameters_pb.communication_ok = True
 
 
-class VictronMPPTData(VictronTextDecoderABC):
+class VictronMPPTData(VictronVEDirectDecoderABC):
     """
     Data structure for Victron MPPT solar charger data
     """
@@ -683,3 +646,958 @@ class VictronMPPTData(VictronTextDecoderABC):
         res.voltage = self.voltage
         res.current = self.current
         return res
+
+
+# =============================================================================
+# VE.Direct HEX Protocol Encoding and Decoding
+# Based on: Orion-XS-HEX-protocol.md and BlueSolar-HEX-protocol.md
+# =============================================================================
+
+# VE.Direct HEX Command codes
+HEX_COMMAND_PING = 0x1
+HEX_COMMAND_GET = 0x7
+HEX_COMMAND_SET = 0x8
+HEX_COMMAND_RESTART = 0x6
+HEX_COMMAND_ENTER_BOOT = 0x0
+HEX_COMMAND_APP_VERSION = 0x3
+HEX_COMMAND_PRODUCT_ID = 0x4
+
+# VE.Direct HEX Response codes
+HEX_RESPONSE_DONE = 0x1
+HEX_RESPONSE_CHECKSUM_ERROR = 0x2
+HEX_RESPONSE_UNKNOWN = 0x3
+HEX_RESPONSE_ERROR = 0x4
+HEX_RESPONSE_PING = 0x5
+HEX_RESPONSE_GET = 0x7
+HEX_RESPONSE_SET = 0x8
+HEX_RESPONSE_ASYNC = 0xA
+
+# Common register IDs (same for MPPT and DC-DC)
+REGISTER_DEVICE_MODE = 0x0200
+REGISTER_DEVICE_STATE = 0x0201
+REGISTER_DEVICE_OFF_REASON = 0x0207
+REGISTER_PRODUCT_ID = 0x0100
+REGISTER_FIRMWARE_VERSION = 0x0102
+
+
+# VE.Direct HEX Register Definition Table
+# Maps register IDs to their properties for proper decoding
+# Based on Orion-XS-HEX-protocol.md and BlueSolar-HEX-protocol.md
+VE_DIRECT_REGISTER_TABLE = {
+    # ============================================================================
+    # Product Information Registers
+    # ============================================================================
+    0x0100: {
+        'name': 'Product Id',
+        'type': 'un32',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'product_id_hex'
+    },
+    0x0102: {
+        'name': 'Firmware version',
+        'type': 'un32',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'firmware_version_hex'
+    },
+    0x0104: {
+        'name': 'Group Id',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'group_id'
+    },
+    0x010A: {
+        'name': 'Serial number',
+        'type': 'string',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'serial_number_hex'
+    },
+    0x010B: {
+        'name': 'Model name',
+        'type': 'string',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'model_name_hex'
+    },
+    0x0140: {
+        'name': 'Capabilities',
+        'type': 'un32',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'capabilities'
+    },
+    
+    # ============================================================================
+    # Generic Device Control Registers
+    # ============================================================================
+    0x0200: {
+        'name': 'Device mode',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'device_mode',
+        'enum': {
+            0: 'OFF',
+            1: 'ON',
+            3: 'ON_ALT',
+            4: 'OFF_ALT'
+        }
+    },
+    0x0201: {
+        'name': 'Device state',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'device_state',
+        'enum': {
+            0: 'NOT_CHARGING',
+            2: 'FAULT',
+            3: 'BULK',
+            4: 'ABSORPTION',
+            5: 'FLOAT',
+            6: 'STORAGE',
+            7: 'MANUAL_EQUALISE',
+            11: 'PSU',
+            245: 'WAKE_UP',
+            246: 'REPEATED_ABSORPTION',
+            247: 'AUTO_EQUALISE',
+            248: 'BATTERY_SAFE',
+            250: 'BLOCKED',
+            252: 'EXTERNAL_CONTROL',
+            255: 'UNAVAILABLE'
+        }
+    },
+    0x0202: {
+        'name': 'Remote control used',
+        'type': 'un32',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'remote_control_used'
+    },
+    0x0205: {
+        'name': 'Device off reason',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'device_off_reason'
+    },
+    0x0207: {
+        'name': 'Device off reason (extended)',
+        'type': 'un32',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'device_off_reason_extended'
+    },
+    
+    # ============================================================================
+    # Battery Settings Registers
+    # ============================================================================
+    0xEDF0: {
+        'name': 'Battery maximum current',
+        'type': 'un16',
+        'scale': 0.1,
+        'unit': 'A',
+        'key': 'battery_max_current'
+    },
+    0xEDF1: {
+        'name': 'Battery type',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'battery_type',
+        'enum': {
+            1: 'DEFAULT',
+            2: 'TYPE_1',
+            3: 'TYPE_2',
+            4: 'TYPE_3',
+            5: 'TYPE_4',
+            6: 'TYPE_5',
+            7: 'TYPE_6',
+            8: 'TYPE_7',
+            255: 'USER'
+        }
+    },
+    0xEDF2: {
+        'name': 'Battery temp. compensation',
+        'type': 'sn16',
+        'scale': 0.01,
+        'unit': 'mV/K',
+        'key': 'battery_temp_compensation'
+    },
+    0xEDF4: {
+        'name': 'Battery equalisation voltage',
+        'type': 'un16',
+        'scale': 0.01,
+        'unit': 'V',
+        'key': 'battery_equalisation_voltage'
+    },
+    0xEDF6: {
+        'name': 'Battery float voltage',
+        'type': 'un16',
+        'scale': 0.01,
+        'unit': 'V',
+        'key': 'battery_float_voltage'
+    },
+    0xEDF7: {
+        'name': 'Battery absorption voltage',
+        'type': 'un16',
+        'scale': 0.01,
+        'unit': 'V',
+        'key': 'battery_absorption_voltage'
+    },
+    0xEDFB: {
+        'name': 'Battery absorption time limit',
+        'type': 'un16',
+        'scale': 0.01,
+        'unit': 'hours',
+        'key': 'battery_absorption_time_limit'
+    },
+    0xEDFC: {
+        'name': 'Battery bulk time limit',
+        'type': 'un16',
+        'scale': 0.01,
+        'unit': 'hours',
+        'key': 'battery_bulk_time_limit'
+    },
+    0xEDEF: {
+        'name': 'Battery voltage',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': 'V',
+        'key': 'battery_voltage_setting'
+    },
+    0xEDEA: {
+        'name': 'Battery voltage setting',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': 'V',
+        'key': 'battery_voltage_setting'
+    },
+    0xEDEC: {
+        'name': 'Battery temperature',
+        'type': 'un16',
+        'scale': 0.01,
+        'unit': 'K',
+        'key': 'battery_temperature'
+    },
+    0xEDE8: {
+        'name': 'BMS present',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'bms_present'
+    },
+    0xEDFE: {
+        'name': 'Adaptive mode',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'adaptive_mode'
+    },
+    0xEDFF: {
+        'name': 'Battery safe mode',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'battery_safe_mode'
+    },
+    
+    # ============================================================================
+    # Charger Data Registers
+    # ============================================================================
+    0xED8D: {
+        'name': 'Output voltage',
+        'type': 'un16',
+        'scale': 0.01,
+        'unit': 'V',
+        'key': 'output_voltage'
+    },
+    0xED8E: {
+        'name': 'Output power',
+        'type': 'un32',
+        'scale': 0.01,
+        'unit': 'W',
+        'key': 'output_power'
+    },
+    0xED8F: {
+        'name': 'Output current',
+        'type': 'un16',
+        'scale': 0.1,
+        'unit': 'A',
+        'key': 'output_current'
+    },
+    0xEDBB: {
+        'name': 'Input Voltage',
+        'type': 'un16',
+        'scale': 0.01,
+        'unit': 'V',
+        'key': 'input_voltage'
+    },
+    0xEDBC: {
+        'name': 'Input power',
+        'type': 'un32',
+        'scale': 0.01,
+        'unit': 'W',
+        'key': 'input_power'
+    },
+    0xEDBD: {
+        'name': 'Input current',
+        'type': 'un16',
+        'scale': 0.1,
+        'unit': 'A',
+        'key': 'input_current'
+    },
+    0xD18D: {
+        'name': 'Battery voltage (precise)',
+        'type': 'sn32',
+        'scale': 0.001,
+        'unit': 'V',
+        'key': 'battery_voltage_precise'
+    },
+    0xEDDB: {
+        'name': 'Charger temperature',
+        'type': 'sn16',
+        'scale': 0.01,
+        'unit': '°C',
+        'key': 'charger_temperature'
+    },
+    0xEDDA: {
+        'name': 'Charger error code',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'charger_error'
+    },
+    
+    # ============================================================================
+    # Device Function
+    # ============================================================================
+    0x0206: {
+        'name': 'Device function',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'device_function',
+        'enum': {
+            0: 'CHARGER',
+            1: 'PSU'
+        }
+    },
+    
+    # ============================================================================
+    # Network/Remote Control Registers
+    # ============================================================================
+    0x2000: {
+        'name': 'Charge algorithm version',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'charge_algorithm_version'
+    },
+    0x2001: {
+        'name': 'Charge voltage set-point',
+        'type': 'un16',
+        'scale': 0.01,
+        'unit': 'V',
+        'key': 'charge_voltage_setpoint'
+    },
+    0x2002: {
+        'name': 'Battery voltage sense',
+        'type': 'un16',
+        'scale': 0.01,
+        'unit': 'V',
+        'key': 'battery_voltage_sense'
+    },
+    0x2003: {
+        'name': 'Battery temperature sense',
+        'type': 'sn16',
+        'scale': 0.01,
+        'unit': '°C',
+        'key': 'battery_temperature_sense'
+    },
+    0x200A: {
+        'name': 'Battery charge current',
+        'type': 'sn32',
+        'scale': 0.001,
+        'unit': 'A',
+        'key': 'battery_charge_current'
+    },
+    0x200C: {
+        'name': 'Device state (remote)',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'device_state_remote'
+    },
+    0x200D: {
+        'name': 'Network info',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'network_info'
+    },
+    0x200E: {
+        'name': 'Network mode',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'network_mode'
+    },
+    0x200F: {
+        'name': 'Network status register',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'network_status'
+    },
+    0x2015: {
+        'name': 'Charge current limit',
+        'type': 'un16',
+        'scale': 0.1,
+        'unit': 'A',
+        'key': 'charge_current_limit'
+    },
+    
+    # ============================================================================
+    # Additional Orion XS / MPPT Registers
+    # ============================================================================
+    0xD18D: {
+        'name': 'Battery voltage (precise)',
+        'type': 'sn32',
+        'scale': 0.001,
+        'unit': 'V',
+        'key': 'battery_voltage_precise'
+    },
+    0xEDDB: {
+        'name': 'Charger temperature',
+        'type': 'sn16',
+        'scale': 0.01,
+        'unit': '°C',
+        'key': 'charger_temperature'
+    },
+    0xEDDA: {
+        'name': 'Charger error code',
+        'type': 'un8',
+        'scale': 1.0,
+        'unit': None,
+        'key': 'charger_error'
+    },
+    0xE000: {
+        'name': 'Energy yield (cumulative)',
+        'type': 'un32',
+        'scale': 0.01,
+        'unit': 'kWh',
+        'key': 'energy_yield_cumulative'
+    },
+}
+
+
+# Type handlers for decoding
+VE_DIRECT_TYPE_HANDLERS = {
+    'un8': lambda data: int.from_bytes(data, 'little') if data else 0,
+    'un16': lambda data: int.from_bytes(data, 'little') if len(data) >= 2 else int.from_bytes(data + b'\x00', 'little'),
+    'un24': lambda data: int.from_bytes(data, 'little') if len(data) >= 3 else int.from_bytes(data + b'\x00' * (3 - len(data)), 'little'),
+    'un32': lambda data: int.from_bytes(data, 'little') if len(data) >= 4 else int.from_bytes(data + b'\x00' * (4 - len(data)), 'little'),
+    'sn8': lambda data: int.from_bytes(data, 'little', signed=True) if data else 0,
+    'sn16': lambda data: int.from_bytes(data, 'little', signed=True) if len(data) >= 2 else int.from_bytes(data + b'\x00', 'little', signed=True),
+    'sn24': lambda data: int.from_bytes(data, 'little', signed=True) if len(data) >= 3 else int.from_bytes(data + b'\x00' * (3 - len(data)), 'little', signed=True),
+    'sn32': lambda data: int.from_bytes(data, 'little', signed=True) if len(data) >= 4 else int.from_bytes(data + b'\x00' * (4 - len(data)), 'little', signed=True),
+    'string': lambda data: data.decode('ascii') if data else ''
+}
+
+# Device mode values (for REGISTER_DEVICE_MODE)
+DEVICE_MODE_OFF = 0x00
+DEVICE_MODE_ON = 0x01
+DEVICE_MODE_OFF_ALT = 0x04
+DEVICE_MODE_ON_ALT = 0x03
+
+
+class VEDirectHEXException(VEDirectException):
+    """Exception raised for VE.Direct HEX protocol errors"""
+    pass
+
+
+class VEDirectHEXFrame:
+    """
+    Represents a VE.Direct HEX protocol frame.
+    
+    The frame format is: : [command] [data][data][...] [check]\n
+    Where:
+    - command is a single nibble (0-F)
+    - data is hexadecimal ASCII representation (uppercase)
+    - check is a single byte
+    - The sum of all ASCII bytes between ':' and check must equal 0x55
+    - Numbers are sent in Little Endian format
+    """
+    
+    FRAME_START = ord(':')
+    FRAME_END = ord('\n')
+    DLE = 0x10  # Data Link Escape, used as alternative frame end in some implementations
+    
+    @staticmethod
+    def calculate_checksum(data_bytes: bytes) -> int:
+        """
+        Calculate the checksum for VE.Direct HEX protocol.
+        
+        According to the specification: "The sum of all data bytes and the check must equal 0x55"
+        This means: sum(command_value + all_data_byte_values + checksum_value) mod 256 = 0x55
+        Therefore: checksum = (0x55 - sum(command + data)) mod 256
+        
+        The data_bytes are in ASCII hex representation, so we need to decode them to
+        their numeric values before calculating the sum.
+        
+        For example: message "A8DED00380594" means:
+        - Command: 'A' = 0x0A
+        - Data: 0x8D, 0xED, 0x00, 0x38, 0x05 (from hex pairs "8D", "ED", "00", "38", "05")
+        - Checksum: 0x94
+        - Sum: 0x0A + 0x8D + 0xED + 0x00 + 0x38 + 0x05 + 0x94 = 0x255
+        - 0x255 mod 256 = 0x55 ✓
+        
+        Args:
+            data_bytes: All bytes between the start marker ':' and the checksum (in ASCII hex)
+            
+        Returns:
+            The checksum value as an integer (0-255)
+        """
+        # Decode ASCII hex bytes to their numeric values
+        # For VE.Direct HEX, data is sent in hexadecimal ASCII representation
+        # We need to convert hex pairs to their byte values and sum those
+        
+        try:
+            hex_str = data_bytes.decode('ascii')
+            # Pad with leading zero if odd length to make pairs
+            if len(hex_str) % 2 != 0:
+                hex_str = '0' + hex_str
+            # Decode hex string to bytes
+            decoded_data = bytes.fromhex(hex_str)
+            # Sum all byte values
+            total = sum(decoded_data)
+        except (ValueError, UnicodeDecodeError):
+            # If decoding fails, fall back to ASCII byte sum (shouldn't happen with valid messages)
+            total = sum(data_bytes)
+        
+        checksum = (0x55 - total) & 0xFF
+        return checksum
+    
+    @staticmethod
+    def to_little_endian_hex(value: int, length: int) -> str:
+        """
+        Convert a value to little-endian hexadecimal string.
+        
+        Args:
+            value: The integer value to convert
+            length: The number of bytes (1, 2, 4, etc.)
+            
+        Returns:
+            Hexadecimal string in little-endian order (uppercase)
+        """
+        result = []
+        for i in range(length):
+            byte = (value >> (i * 8)) & 0xFF
+            result.append(f"{byte:02X}")
+        return ''.join(result)
+    
+    @staticmethod
+    def encode_command(command: int, data_bytes: bytes = b'') -> bytes:
+        """
+        Encode a VE.Direct HEX command frame.
+        
+        Args:
+            command: The command code (0-15)
+            data_bytes: Additional data bytes as ASCII hex string
+            
+        Returns:
+            Complete frame as bytes including start marker, command, data, checksum, and end marker
+        """
+        if command < 0 or command > 0xF:
+            raise VEDirectHEXException(f"Invalid command code: {command}. Must be 0-15.")
+        
+        # Start building the frame
+        frame_parts = []
+        
+        # Add start marker
+        frame_parts.append(bytes([VEDirectHEXFrame.FRAME_START]))
+        
+        # Add command as ASCII hex nibble
+        cmd_byte = f"{command:X}".encode('ascii')
+        frame_parts.append(cmd_byte)
+        
+        # Add data bytes
+        frame_parts.append(data_bytes)
+        
+        # Combine all parts except end marker for checksum calculation
+        frame_without_checksum = b''.join(frame_parts)
+        
+        # Calculate checksum (all bytes between ':' and checksum)
+        # Exclude the start marker ':' itself
+        checksum_data = frame_without_checksum[1:]  # Skip the ':'
+        checksum = VEDirectHEXFrame.calculate_checksum(checksum_data)
+        
+        # Add checksum as two ASCII hex characters
+        checksum_bytes = f"{checksum:02X}".encode('ascii')
+        frame_parts.append(checksum_bytes)
+        
+        # Add end marker
+        frame_parts.append(bytes([VEDirectHEXFrame.FRAME_END]))
+        
+        return b''.join(frame_parts)
+    
+    @staticmethod
+    def build_set_command(register_id: int, value: int, value_type: str = None) -> bytes:
+        """
+        Build a SET command (command 8) for writing to a register.
+        
+        Args:
+            register_id: The register ID to write to
+            value: The value to write
+            value_type: The type of the value ('un8', 'un16', 'un32', 'sn8', 'sn16', 'sn32')
+                      If None, will be determined from the value
+        
+        Returns:
+            Complete HEX command frame as bytes
+        """
+        # Determine value type and length if not specified
+        if value_type is None:
+            if -0x80 <= value < 0x80:
+                value_type = 'un8'
+                length = 1
+            elif -0x8000 <= value < 0x10000:
+                value_type = 'un16' if value >= 0 else 'sn16'
+                length = 2
+            elif -0x80000000 <= value < 0x100000000:
+                value_type = 'un32' if value >= 0 else 'sn32'
+                length = 4
+            else:
+                raise VEDirectHEXException(f"Value {value} is too large for VE.Direct HEX protocol")
+        else:
+            # Map type to length
+            type_lengths = {
+                'un8': 1, 'sn8': 1,
+                'un16': 2, 'sn16': 2,
+                'un24': 3, 'sn24': 3,
+                'un32': 4, 'sn32': 4
+            }
+            length = type_lengths.get(value_type)
+            if length is None:
+                raise VEDirectHEXException(f"Unsupported value type: {value_type}")
+        
+        # Encode register ID (always uint16 in little-endian)
+        reg_hex = VEDirectHEXFrame.to_little_endian_hex(register_id, 2)
+        
+        # Encode flags (always 0x00 for now)
+        flags_hex = "00"
+        
+        # Encode value in little-endian hex
+        # Mask value to the appropriate length
+        mask = (1 << (length * 8)) - 1
+        masked_value = value & mask
+        val_hex = VEDirectHEXFrame.to_little_endian_hex(masked_value, length)
+        
+        # Build data part: register + flags + value
+        data_hex = reg_hex + flags_hex + val_hex
+        data_bytes = data_hex.encode('ascii')
+        
+        # Encode the complete command
+        return VEDirectHEXFrame.encode_command(HEX_COMMAND_SET, data_bytes)
+    
+    @staticmethod
+    def build_get_command(register_id: int) -> bytes:
+        """
+        Build a GET command (command 7) for reading from a register.
+        
+        Args:
+            register_id: The register ID to read from
+        
+        Returns:
+            Complete HEX command frame as bytes
+        """
+        # Encode register ID (uint16 in little-endian)
+        reg_hex = VEDirectHEXFrame.to_little_endian_hex(register_id, 2)
+        
+        # Encode flags (always 0x00 for now)
+        flags_hex = "00"
+        
+        # Build data part: register + flags
+        data_hex = reg_hex + flags_hex
+        data_bytes = data_hex.encode('ascii')
+        
+        # Encode the complete command
+        return VEDirectHEXFrame.encode_command(HEX_COMMAND_GET, data_bytes)
+    
+    @staticmethod
+    def decode_response(frame: bytes) -> dict:
+        """
+        Decode a VE.Direct HEX response frame (expected to be stripped of markers by the coupler).
+        
+        Frame format: [command_nibble][data_hex_pairs][checksum_hex_pair]
+        
+        Where:
+        - command_nibble: single hex digit (0-F) in ASCII
+        - data_hex_pairs: hexadecimal data bytes in ASCII (even number of chars)
+        - checksum_hex_pair: two hex digits representing the checksum byte in ASCII
+        - The sum of (command_value + all_data_byte_values + checksum_value) mod 256 = 0x55
+        
+        Note: The frame is expected to be stripped of start (':') and end (\\n or DLE) markers
+        by the coupler before being passed to this function.
+        
+        Args:
+            frame: The response frame as bytes (without markers)
+            
+        Returns:
+            Dictionary containing:
+            - 'response_code': The response code (int)
+            - 'data': The data part as bytes (raw hex bytes, not decoded)
+            - 'data_decoded': The data part decoded to numeric bytes
+            - 'raw_frame': The original frame
+            - 'checksum_valid': Whether the checksum validation passed
+        
+        Raises:
+            VEDirectHEXException: If the frame is invalid
+        """
+        # Frame is expected to be stripped of markers by the coupler
+        # Format: command_nibble + data_hex_pairs + checksum_hex_pair (odd length: 1 + 2N + 2)
+        if len(frame) < 3 or len(frame) % 2 == 0:
+            raise VEDirectHEXException(f"Invalid frame length: {frame.hex()}")
+        
+        try:
+            hex_str = frame.decode('ascii')
+        except UnicodeDecodeError:
+            raise VEDirectHEXException(f"Invalid ASCII in frame: {frame.hex()}")
+        
+        # Extract: command (1 char) + data (even chars) + checksum (2 chars)
+        response_code = int(hex_str[0], 16)
+        checksum_value = int(hex_str[-2:], 16)
+        data_hex = hex_str[1:-2]
+        data_bytes = bytes.fromhex(data_hex) if data_hex else b''
+        
+        # Verify: (response_code + sum(data_bytes) + checksum_value) mod 256 = 0x55
+        total = response_code + sum(data_bytes) + checksum_value
+        checksum_valid = (total & 0xFF) == 0x55
+        
+        if not checksum_valid:
+            _logger.warning(f"Checksum mismatch: total={total:02X}, frame={frame.hex()}")
+        
+        return {
+            'response_code': response_code,
+            'data': data_hex.encode('ascii') if data_hex else b'',
+            'data_decoded': data_bytes,
+            'raw_frame': frame,
+            'checksum_valid': checksum_valid
+        }
+    
+    @staticmethod
+    def decode_hex_response(frame: bytes) -> dict:
+        """
+        Decode a VE.Direct HEX response frame and parse the data according to response type.
+        
+        For GET, SET, and Async responses (response_code == 7, 8, or 0xA), this will:
+        1. Decode the basic frame structure
+        2. Identify the register ID from the data
+        3. Look up the register type and scale
+        4. Decode the value according to the register type
+        5. Apply scale if applicable
+        
+        For other response codes (PING, DONE, ERROR, etc.), only basic frame parsing is performed.
+        
+        Args:
+            frame: The complete response frame as bytes
+            
+        Returns:
+            Dictionary containing:
+            - 'response_code': The response code (int)
+            - All fields from decode_response()
+            - 'register_id': The register ID (for GET/SET/Async responses)
+            - 'value': The decoded value (for GET/Async responses)
+            - 'flags': Flags byte (for GET/SET/Async responses)
+            - Additional fields depending on response type
+        """
+        result = VEDirectHEXFrame.decode_response(frame)
+        response_code = result['response_code']
+        data_decoded = result['data_decoded']
+        
+        parsed = {'response_code': response_code}
+        parsed.update(result)
+        
+        # Parse based on response code
+        # GET, SET, and Async messages all have the same format:
+        # register_id (2 bytes LE) + flags (1 byte) + value (variable)
+        if response_code in (HEX_RESPONSE_GET, HEX_RESPONSE_SET, HEX_RESPONSE_ASYNC):
+            if len(data_decoded) < 3:
+                _logger.warning(f"GET/SET/Async response too short: {frame.hex()}")
+                return parsed
+            
+            # Extract register ID (first 2 bytes, little-endian)
+            register_id = int.from_bytes(data_decoded[:2], 'little')
+            flags = data_decoded[2:3][0] if len(data_decoded) >= 3 else 0
+            value_data = data_decoded[3:] if len(data_decoded) > 3 else b''
+            
+            parsed['register_id'] = register_id
+            parsed['flags'] = flags
+            
+            # Look up register info
+            register_info = VE_DIRECT_REGISTER_TABLE.get(register_id)
+            if register_info:
+                value_type = register_info['type']
+                scale = register_info.get('scale', 1.0)
+                key = register_info.get('key', f'register_{register_id:04X}')
+                
+                # Decode value based on type
+                value = VEDirectHEXFrame._decode_value_by_type(value_data, value_type)
+                scaled_value = value * scale
+                
+                parsed['value'] = scaled_value
+                parsed['value_raw'] = value
+                parsed['value_type'] = value_type
+                parsed['register_name'] = register_info['name']
+                parsed['key'] = key
+                parsed['scale'] = scale
+                
+                # Add enum description if available
+                if 'enum' in register_info and value in register_info['enum']:
+                    parsed['value_description'] = register_info['enum'][value]
+            else:
+                # Unknown register, store raw value
+                parsed['value_raw'] = value_data
+                parsed['register_name'] = f'Unknown_0x{register_id:04X}'
+        
+        else:
+            # Other response codes (PING, DONE, ERROR, etc.)
+            # Just store the raw data
+            if data_decoded:
+                parsed['data_value'] = int.from_bytes(data_decoded, 'little') if data_decoded else 0
+        
+        return parsed
+    
+    @staticmethod
+    def _decode_value_by_type(data: bytes, value_type: str):
+        """
+        Decode raw bytes to a numeric value based on the type.
+        
+        Args:
+            data: Raw bytes to decode
+            value_type: Type string ('un8', 'un16', 'un32', 'sn8', 'sn16', 'sn32', 'string')
+            
+        Returns:
+            Decoded value (int or str)
+        """
+        handler = VE_DIRECT_TYPE_HANDLERS.get(value_type)
+        if handler:
+            return handler(data)
+        else:
+            _logger.warning(f"Unknown value type: {value_type}")
+            return int.from_bytes(data, 'little') if data else 0
+
+    @staticmethod
+    def print_decoded_response(decoded: dict) -> str:
+        """
+        Format a decoded HEX response for printing.
+        
+        Args:
+            decoded: Dictionary returned by decode_hex_response()
+            
+        Returns:
+            Formatted string with register ID (hex), description, and value
+        """
+        lines = []
+        
+        # Response code
+        response_code = decoded.get('response_code')
+        if response_code is not None:
+            if response_code == HEX_RESPONSE_GET:
+                lines.append(f"GET Response")
+            elif response_code == HEX_RESPONSE_SET:
+                lines.append(f"SET Response")
+            elif response_code == 0xA:
+                lines.append(f"Async Message")
+            elif response_code == HEX_RESPONSE_DONE:
+                lines.append(f"DONE Response")
+            elif response_code == HEX_RESPONSE_PING:
+                lines.append(f"PING Response")
+            else:
+                lines.append(f"Response Code: 0x{response_code:02X}")
+        
+        # Register information
+        register_id = decoded.get('register_id')
+        if register_id is not None:
+            register_name = decoded.get('register_name', f'Unknown 0x{register_id:04X}')
+            lines.append(f"  Register: 0x{register_id:04X} ({register_name})")
+        
+        # Flags
+        flags = decoded.get('flags')
+        if flags is not None:
+            lines.append(f"  Flags: 0x{flags:02X}")
+        
+        # Value
+        value = decoded.get('value')
+        value_raw = decoded.get('value_raw')
+        value_type = decoded.get('value_type')
+        value_description = decoded.get('value_description')
+        unit = decoded.get('unit')
+        scale = decoded.get('scale')
+        
+        if value is not None:
+            if value_type == 'string':
+                lines.append(f"  Value: '{value}'")
+            elif value_description:
+                lines.append(f"  Value: {value} ({value_description})")
+            elif unit:
+                lines.append(f"  Value: {value} {unit}")
+            else:
+                lines.append(f"  Value: {value}")
+        elif value_raw is not None:
+            if isinstance(value_raw, bytes):
+                lines.append(f"  Raw Value: {value_raw.hex()}")
+            else:
+                lines.append(f"  Raw Value: {value_raw}")
+        
+        # Checksum status
+        checksum_valid = decoded.get('checksum_valid')
+        if checksum_valid is not None:
+            lines.append(f"  Checksum: {'VALID' if checksum_valid else 'INVALID'}")
+        
+        return '\n'.join(lines)
+
+
+def encode_charge_control_command(device_mode: int) -> bytes:
+    """
+    Encode a charge control command (start/stop charging).
+    
+    This uses the SET command (8) to write to the DEVICE_MODE register (0x0200).
+    The command is the same for both MPPT and DC-DC chargers.
+    
+    Args:
+        device_mode: The device mode value to set
+                     Use DEVICE_MODE_ON (0x01) or DEVICE_MODE_ON_ALT (0x03) to start
+                     Use DEVICE_MODE_OFF (0x00) or DEVICE_MODE_OFF_ALT (0x04) to stop
+    
+    Returns:
+        Complete HEX command frame as bytes
+    
+    Example:
+        To start charging: encode_charge_control_command(DEVICE_MODE_ON)
+        To stop charging: encode_charge_control_command(DEVICE_MODE_OFF)
+    """
+    return VEDirectHEXFrame.build_set_command(REGISTER_DEVICE_MODE, device_mode)
+
+
+def encode_start_charging_command() -> bytes:
+    """
+    Encode a command to start charging.
+    
+    Returns:
+        Complete HEX command frame as bytes
+    """
+    return encode_charge_control_command(DEVICE_MODE_ON)
+
+
+def encode_stop_charging_command() -> bytes:
+    """
+    Encode a command to stop charging.
+    
+    Returns:
+        Complete HEX command frame as bytes
+    """
+    return encode_charge_control_command(DEVICE_MODE_OFF)

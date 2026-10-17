@@ -55,6 +55,11 @@ class MPPTServiceStub(object):
                 request_serializer=energy__pb2.MPPT_Configuration_parameters.SerializeToString,
                 response_deserializer=energy__pb2.energy_command_response.FromString,
                 _registered_method=True)
+        self.DeviceCommand = channel.unary_unary(
+                '/MPPTService/DeviceCommand',
+                request_serializer=energy__pb2.energy_request.SerializeToString,
+                response_deserializer=energy__pb2.energy_command_response.FromString,
+                _registered_method=True)
 
 
 class MPPTServiceServicer(object):
@@ -85,6 +90,12 @@ class MPPTServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def DeviceCommand(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_MPPTServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -106,6 +117,11 @@ def add_MPPTServiceServicer_to_server(servicer, server):
             'SetConfiguration': grpc.unary_unary_rpc_method_handler(
                     servicer.SetConfiguration,
                     request_deserializer=energy__pb2.MPPT_Configuration_parameters.FromString,
+                    response_serializer=energy__pb2.energy_command_response.SerializeToString,
+            ),
+            'DeviceCommand': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeviceCommand,
+                    request_deserializer=energy__pb2.energy_request.FromString,
                     response_serializer=energy__pb2.energy_command_response.SerializeToString,
             ),
     }
@@ -216,6 +232,33 @@ class MPPTService(object):
             target,
             '/MPPTService/SetConfiguration',
             energy__pb2.MPPT_Configuration_parameters.SerializeToString,
+            energy__pb2.energy_command_response.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeviceCommand(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/MPPTService/DeviceCommand',
+            energy__pb2.energy_request.SerializeToString,
             energy__pb2.energy_command_response.FromString,
             options,
             channel_credentials,
@@ -415,6 +458,11 @@ class DC_DC_ServiceStub(object):
                 request_serializer=energy__pb2.DC_DC_Charger_configuration.SerializeToString,
                 response_deserializer=energy__pb2.energy_command_response.FromString,
                 _registered_method=True)
+        self.DeviceCommand = channel.unary_unary(
+                '/DC_DC_Service/DeviceCommand',
+                request_serializer=energy__pb2.energy_request.SerializeToString,
+                response_deserializer=energy__pb2.energy_command_response.FromString,
+                _registered_method=True)
 
 
 class DC_DC_ServiceServicer(object):
@@ -444,6 +492,13 @@ class DC_DC_ServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def DeviceCommand(self, request, context):
+        """Allow to start and stop the charger
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_DC_DC_ServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -465,6 +520,11 @@ def add_DC_DC_ServiceServicer_to_server(servicer, server):
             'SetConfiguration': grpc.unary_unary_rpc_method_handler(
                     servicer.SetConfiguration,
                     request_deserializer=energy__pb2.DC_DC_Charger_configuration.FromString,
+                    response_serializer=energy__pb2.energy_command_response.SerializeToString,
+            ),
+            'DeviceCommand': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeviceCommand,
+                    request_deserializer=energy__pb2.energy_request.FromString,
                     response_serializer=energy__pb2.energy_command_response.SerializeToString,
             ),
     }
@@ -575,6 +635,33 @@ class DC_DC_Service(object):
             target,
             '/DC_DC_Service/SetConfiguration',
             energy__pb2.DC_DC_Charger_configuration.SerializeToString,
+            energy__pb2.energy_command_response.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeviceCommand(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/DC_DC_Service/DeviceCommand',
+            energy__pb2.energy_request.SerializeToString,
             energy__pb2.energy_command_response.FromString,
             options,
             channel_credentials,

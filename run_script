@@ -21,7 +21,7 @@ then
 else
   PYTHON=python3
 fi
-SCRIPT="navigation_server/"$1
+SCRIPT=$1
 shift
 echo "running $PYTHON $SCRIPT $*"
 ${PYTHON} "${SCRIPT}" "$@"

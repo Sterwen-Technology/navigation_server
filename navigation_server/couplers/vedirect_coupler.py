@@ -28,7 +28,7 @@ _logger = logging.getLogger("ShipDataServer." + __name__)
 
 HexCommandContext = namedtuple('HexCommandContext', ['command', 'field', 'callback'])
 
-(VED_TEXT, VED_ASYNC_HEX, VED_RESP_HEX, VE_CMD_HEX) = range(4)
+(VED_TEXT, VED_ASYNC_HEX, VED_RESP_HEX, VED_CMD_HEX) = range(4)
 
 
 class Vedirect(NavThread):
@@ -218,7 +218,8 @@ class Vedirect(NavThread):
     def nrun(self):
         msg_count = 0
         while True:
-            if self._stop_flag:
+            if self._stop_flag or self._serial_fd is None:
+                _logger.info(f"VEdirect coupler {self._name} stopped")
                 return
             try:
                 data = self._serial_fd.read()
@@ -289,9 +290,6 @@ class Vedirect(NavThread):
                 except (serial.SerialException, serial.SerialTimeoutException) :
                     _logger.error(f"VEdirect write on port {self._serialport} that is not open")
                     return
-
-
-
 
     def receive_hex_resp(self, message: bytearray) -> bool:
         # _logger.debug("VE.direct receive HEX response:%s %s" % (message.decode(), message[0]))
@@ -393,12 +391,14 @@ class VEDirectCoupler(Coupler):
     def __init__(self, opts):
         super().__init__(opts)
         self._input_queue = queue.Queue(5)
+        self._output_queue = queue.Queue(5)
         self._interface = opts.get('interface', str, 'serial')
         if self._interface == 'serial':
             device = opts.get('device', str, '/dev/ttyUSB0')
             alt_device = opts.get('alt_device', str, None)
             trace = opts.get('trace_vedirect', bool, False)
-            self._reader = Vedirect(self.name, device, alt_device, self._timeout, self._input_queue, trace)
+            self._reader = Vedirect(self.name, device, alt_device, self._timeout, self._input_queue, trace,
+                                    output_hex_queue=self._output_queue)
         elif self._interface == 'simulation':
             log_file = opts.get('logfile', str, None)
             if log_file is None:
@@ -427,12 +427,16 @@ class VEDirectCoupler(Coupler):
             msg = self._convert_message(msg)
         return msg
 
+    def send(self, msg):
+        self._output_queue.put(msg)
+        return True
+
     def close(self):
         self._reader.close()
 
     def stop(self):
         if self._reader is not None:
-            self._reader.stop()
+            self._reader.close()
         super().stop()
 
     def convert_nmea0183(self, msg):

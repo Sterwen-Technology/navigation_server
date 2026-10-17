@@ -210,6 +210,19 @@ class VictronDC_DC(EnergyDevice):
             self._current_data.running_values_pb(running_values_pb)
             running_values_pb.instance = self._instance
 
+    def send_command(self, command):
+        """Send a command to the DC-DC device
+
+        Args:
+            command: Command to send
+        """
+        if command == 'charger_on':
+            self._current_data.set_charger_on(self._coupler)
+        elif command == 'charger_off':
+            self._current_data.set_charger_off(self._coupler)
+        else:
+            _logger.error("Unknown command %s", command)
+
     def publish0183(self):
         """Publish data in NMEA0183 format"""
         _logger.debug("DC-DC Service publish NMEA0183")
@@ -330,6 +343,30 @@ class DC_DCServicer(DC_DC_ServiceServicer):
         response.response = "OK"
         return response
 
+    def DeviceCommand(self, request, context):
+        """
+        Handle sending a command to the device
+        Current the following commands are supported:
+        - "charger_on"
+        - "charger_off"
+
+        :param request:
+        :type request:
+        :param context:
+        :type context:
+        :return:
+        :rtype:
+        """
+        _logger.debug("gRPC request DC_DC_Service.DeviceCommand %s", request.command)
+        response = energy_command_response()
+        response.id = request.instance
+        response.command = request.command
+        if request.command in ["charger_on", "charger_off"]:
+            self._dc_dc_device.send_command(request.command)
+            response.response = "OK"
+        else:
+            response.response = "ERROR - Unknown command"
+        return response
 
 class DC_DCService(GrpcService):
     """

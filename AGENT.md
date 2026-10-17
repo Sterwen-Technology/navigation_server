@@ -34,6 +34,7 @@ Tous les fichiers et chemins indiqués en suivant sont relatifs à cette racine.
 - Lancer un process (serveur) : `./run_server` (voir `doc/` pour la config)
 - Lancer Python `python3` si on est dans l'environnement projet sinon `poetry run python3`
 - Lancer Energy Simulator : `./run_energy_simulator` (Web UI sur http://localhost:8081/energy_simulator.html)
+- Pour executer un script Python, ne pas utiliser directement 'python3' ou encore pire '/usr/bin/python3', cela est interdit car inéfficace. Il faut utiliser 'run_script' qui lance Python dans le bon environnement virtuel.
 
 ## Règles de périmètre (IMPORTANT)
 1. Un prompt = un périmètre. Si la demande concerne l'UI/web, ne toucher QUE

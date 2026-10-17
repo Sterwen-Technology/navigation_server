@@ -60,6 +60,7 @@ enum VE_Off_Reason {
   Paygo=0x20;
   BMS=0x40;
   Engine_shutdown_detection=0x80;
+  Input_Voltage_Low=0x81;
   Analyzing_input_voltage=0x100;
 }
 
@@ -152,6 +153,7 @@ service MPPTService {
   rpc GetOutput(energy_request) returns (solar_output) {}
   rpc GetTrend(energy_request) returns (solar_trend_response) {}
   rpc SetConfiguration(MPPT_Configuration_parameters) returns (energy_command_response) {}
+  rpc DeviceCommand(energy_request) returns (energy_command_response) {}
 }
 
 // Battery bank service
@@ -279,10 +281,12 @@ message DC_DC_Charger_trend {
 }
 
 service DC_DC_Service {
-  rpc GetInformation(energy_request) returns (DC_DC_Charger_Parameters);
-  rpc GetValues(energy_request) returns (DC_DC_Charger_running_values);
-  rpc GetTrend(energy_request) returns (DC_DC_Charger_trend);
-  rpc SetConfiguration(DC_DC_Charger_configuration) returns (energy_command_response);
+  rpc GetInformation(energy_request) returns (DC_DC_Charger_Parameters) {}
+  rpc GetValues(energy_request) returns (DC_DC_Charger_running_values) {}
+  rpc GetTrend(energy_request) returns (DC_DC_Charger_trend){}
+  rpc SetConfiguration(DC_DC_Charger_configuration) returns (energy_command_response) {}
+  // Allow to start and stop the charger
+  rpc DeviceCommand(energy_request) returns (energy_command_response) {}
 }
 
 // Energy Controller

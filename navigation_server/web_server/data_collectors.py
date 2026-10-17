@@ -1222,6 +1222,7 @@ class DC_DC_ServiceCollector(BaseServiceCollector):
                 "model": info.model if hasattr(info, 'model') else "Unknown",
                 "state": int(info.state) if hasattr(info, 'state') else 0,
                 "error": int(info.error) if hasattr(info, 'error') else 0,
+                "off_reason": int(values.off_reason) if hasattr(values, 'off_reason') else 0,
                 "communication_ok": True,
                 "input_voltage": float(values.input_voltage) if hasattr(values, 'input_voltage') else 0.0,
                 "input_current": float(values.input_current) if hasattr(values, 'input_current') else 0.0,
@@ -1266,6 +1267,8 @@ class DC_DC_ServiceCollector(BaseServiceCollector):
         Commands:
         - No parameters or "status": get DC-DC status
         - trend: get DC-DC trend data
+        - charger_on: turn charger on
+        - charger_off: turn charger off
         """
         if not parameters:
             return self.get_data()
@@ -1276,8 +1279,33 @@ class DC_DC_ServiceCollector(BaseServiceCollector):
             return self.get_data()
         elif command == "trend":
             return self.get_trend()
+        elif command == "charger_on":
+            return self._send_device_command("charger_on")
+        elif command == "charger_off":
+            return self._send_device_command("charger_off")
         
         return {"ok": False, "error": f"Unknown DC-DC command: {command}"}
+    
+    def _send_device_command(self, command: str) -> dict:
+        """Send a device command to the DC-DC charger.
+        
+        Args:
+            command: Command to send ("charger_on" or "charger_off")
+            
+        Returns:
+            Dictionary with "ok" and "response" keys
+        """
+        self._ensure_client()
+        try:
+            response = self._client.DeviceCommand(command)
+            return {
+                "ok": True,
+                "command": command,
+                "response": response.response if hasattr(response, 'response') else "OK"
+            }
+        except Exception as e:
+            _logger.error(f"Failed to send DC-DC command {command}: {e}")
+            return {"ok": False, "error": str(e)}
 
 
 class GNSSServiceCollector(BaseServiceCollector):
