@@ -231,6 +231,9 @@ const TRANSLATIONS = {
         'mppt.trend': 'Power trend',
         'mppt.trend_power': 'Panel power (W)',
         'mppt.no_trend': 'No trend data',
+        'mppt.off_reason': 'Off Reason',
+        'mppt.turn_on': 'Turn On',
+        'mppt.turn_off': 'Turn Off',
 
         // Battery
         'battery.title': 'Battery',
@@ -493,6 +496,9 @@ const TRANSLATIONS = {
         'mppt.trend': 'Tendance puissance',
         'mppt.trend_power': 'Puissance panneau (W)',
         'mppt.no_trend': 'Pas de tendance',
+        'mppt.off_reason': 'Raison Arrêt',
+        'mppt.turn_on': 'Allumer',
+        'mppt.turn_off': 'Éteindre',
 
         // Battery
         'battery.title': 'Batterie',

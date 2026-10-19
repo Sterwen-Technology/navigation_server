@@ -158,9 +158,11 @@ class DC_DC_ServiceClient(ServiceClient):
     def __init__(self):
         super().__init__(DC_DC_ServiceStub)
     
-    def GetInformation(self):
-        _logger.debug("Client GetInformation")
-        return self._server_call(self._stub.GetInformation, energy_request(), None)
+    def GetInformation(self, command:str):
+        _logger.debug("Client GetInformation %s", command)
+        request = energy_request()
+        request.command = command
+        return self._server_call(self._stub.GetInformation, request, None)
     
     def GetValues(self):
         _logger.debug("Client GetValues")

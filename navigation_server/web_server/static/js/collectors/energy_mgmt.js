@@ -14,6 +14,14 @@ import {
   t
 } from '../translations-bridge.js';
 
+// Dual-scale power display constants
+// High power mode: full scale = 100% of capacity
+// Low power mode: full scale = 20% of capacity (better precision for small values)
+// Switch threshold: if |value| > 10% of capacity -> High power, else Low power
+const HIGH_POWER_THRESHOLD = 0.10;  // 10%
+const LOW_POWER_SCALE = 0.20;        // 20% of capacity
+
+
 export { createEmsBar };
 export { createEmsCenteredBar };
 export { emsFmt };
@@ -82,6 +90,14 @@ if (state.emsAutoRefreshTimer) {
     }
 
 
+
+    // Helper function to calculate dynamic scale max for power/current values
+    // Uses dual-scale approach: High power (100% scale) or Low power (20% scale)
+    function getPowerScaleMax(value, referenceMax) {
+        const absValue = Math.abs(value);
+        const threshold = referenceMax * HIGH_POWER_THRESHOLD;
+        return absValue > threshold ? referenceMax : referenceMax * LOW_POWER_SCALE;
+    }
 
     // Map EnergySource enum values to human-readable type names
     const energySourceTypeNames = {
@@ -219,89 +235,124 @@ let html = '';
 // Top row: Energy Controller Data (left) and Battery Data (right)
 html += '<div class="ems-top">';
 
+// Helper function to extract numeric value from either object or primitive
+function getValue(objOrVal) {
+    if (objOrVal && typeof objOrVal === 'object' && objOrVal.parsedValue !== undefined) {
+        return objOrVal.parsedValue || 0;
+    }
+    return objOrVal || 0;
+}
+
 // Left box: Energy Controller Data (excluding sources_data and batteries_data)
+// Determine scale mode for Energy Controller box (use production power as indicator)
+const productionPower = getValue(data.production_power);
+const totalPowerHigh = getValue(data.total_power_high) || 1000.0;
+const totalPowerLow = getValue(data.total_power_low) || 200.0;
+// total_power_low is the threshold to switch from low to high power
+const isHighPowerEms = Math.abs(productionPower) > totalPowerLow;
+const emsScaleTooltip = isHighPowerEms ? 'Power Scale: High' : 'Power Scale: Low';
+const emsScaleIcon = isHighPowerEms ? '⚡' : '◎';
+const emsScaleClass = isHighPowerEms ? 'power-scale-icon high' : 'power-scale-icon low';
+
 html += '<div class="ems-box">';
-html += '<h2 data-i18n="ems.controller_title">Energy Controller</h2>';
+html += `<h2><span data-i18n="ems.controller_title">Energy Controller</span><span class="${emsScaleClass}" title="${emsScaleTooltip}">${emsScaleIcon}</span></h2>`;
 html += '<div class="ems-bars">';
 
 // Main voltage
 html += createEmsBar(
     t.t("ems.main_voltage"),
-    data.main_voltage || 0,
+    getValue(data.main_voltage),
     "V",
     "#0000ff",
     0,
-    data.maximum_main_voltage || 30
+    getValue(data.maximum_main_voltage) || 30
 );
 
 // Auxiliary voltage
 html += createEmsBar(
     t.t("ems.auxiliary_voltage"),
-    data.auxiliary_voltage || 0,
+    getValue(data.auxiliary_voltage),
     "V",
     "#55aaff",
     0,
-    data.maximum_main_voltage || 30
+    getValue(data.maximum_main_voltage) || 30
 );
 
-// Production power
+// Production power - dual scale using parameters from EnergyController
+const productionMax = Math.abs(productionPower) > totalPowerLow ? totalPowerHigh : totalPowerLow;
 html += createEmsBar(
     t.t("ems.production_power"),
-    data.production_power || 0,
+    productionPower,
     "W",
     "#ff9900",
     0,
-    Math.max((data.production_power || 0) * 2, 1000)
+    productionMax
 );
 
-// Consumption power
+// Consumption power - dual scale using parameters from EnergyController
+const consumptionPower = getValue(data.consumption_power);
+const consumptionMax = Math.abs(consumptionPower) > totalPowerLow ? totalPowerHigh : totalPowerLow;
 html += createEmsBar(
     t.t("ems.consumption_power"),
-    data.consumption_power || 0,
+    consumptionPower,
     "W",
     "#ff9900",
     0,
-    Math.max((data.consumption_power || 0) * 2, 1000)
+    consumptionMax
 );
 
-// Energy stock
+// Energy stock - using total_energy_capacity from EnergyController
+const energyStockValue = getValue(data.energy_stock);
+const totalEnergyCapacity = getValue(data.total_energy_capacity) || Math.max(energyStockValue * 1.5, 1000);
 html += createEmsBar(
     t.t("ems.energy_stock"),
-    (data.energy_stock || 0) * 10,
+    energyStockValue,
     "Wh",
     "#9900ff",
     0,
-    Math.max((data.energy_stock || 0) * 20, 10000)
+    totalEnergyCapacity
 );
 
-// Battery balance
+// Battery balance - dual scale using parameters from EnergyController
+const batteryBalance = getValue(data.battery_balance);
+const batteryBalanceMax = Math.abs(batteryBalance) > totalPowerLow ? totalPowerHigh : totalPowerLow;
 html += createEmsCenteredBar(
     t.t("ems.battery_balance"),
-    data.battery_balance || 0,
+    batteryBalance,
     "W",
     "#ff9900",
-    Math.max(Math.abs(data.battery_balance || 0) * 2, 500)
+    batteryBalanceMax
 );
 
 html += '</div></div>';
 
 // Right box: Battery Data
+// Determine scale mode for Battery box (use battery current as indicator)
+const batteryCurrent = getValue(batteryData.current);
+const highPowerScaleAmp = getValue(battery.high_power_scale_amp) || 50.0;
+const lowPowerScaleAmp = getValue(battery.low_power_scale_amp) || 10.0;
+// low_power_scale_amp is the threshold to switch from low to high power
+const isHighPowerBattery = Math.abs(batteryCurrent) > lowPowerScaleAmp;
+const batteryScaleTooltip = isHighPowerBattery ? 'Power Scale: High' : 'Power Scale: Low';
+const batteryScaleIcon = isHighPowerBattery ? '⚡' : '◎';
+const batteryScaleClass = isHighPowerBattery ? 'power-scale-icon high' : 'power-scale-icon low';
+
 html += '<div class="ems-box">';
-html += '<h2 data-i18n="ems.battery_title">Battery</h2>';
+html += `<h2><span data-i18n="ems.battery_title">Battery</span><span class="${batteryScaleClass}" title="${batteryScaleTooltip}">${batteryScaleIcon}</span></h2>`;
 html += '<div class="ems-bars">';
 
-// Battery current (centered at 0)
-const batteryCurrent = batteryData.current || 0;
+// Battery current (centered at 0) - dual scale using battery parameters
+const batteryCurrentMax = Math.abs(batteryCurrent) > lowPowerScaleAmp ? highPowerScaleAmp : lowPowerScaleAmp;
 html += createEmsCenteredBar(
     t.t("ems.battery_current"),
     batteryCurrent,
     "A",
     "#ff00ff",
-    Math.max(Math.abs(batteryCurrent) * 2, 2)
+    batteryCurrentMax
 );
 
-// State of charge
-const soc = batteryData.state_of_charge || 0;
+// State of charge - FIXED SCALE (not dual-scale)
+const soc = getValue(batteryData.state_of_charge);
 html += createEmsBar(
     t.t("ems.state_of_charge"),
     soc,
@@ -311,25 +362,33 @@ html += createEmsBar(
     100
 );
 
-// Battery power
-const batteryPower = batteryData.power || 0;
+// Battery power (centered at 0) - dual scale using battery parameters
+const batteryPower = getValue(batteryData.power);
+// Calculate power scales from current scales and nominal voltage
+// If we don't have nominal_voltage, use reasonable defaults
+const highPowerScaleWatt = (getValue(battery.high_power_scale_amp) || 50.0) * (getValue(battery.nominal_voltage) || 12.0);
+const lowPowerScaleWatt = (getValue(battery.low_power_scale_amp) || 10.0) * (getValue(battery.nominal_voltage) || 12.0);
+const batteryPowerMax = Math.abs(batteryPower) > lowPowerScaleWatt ? highPowerScaleWatt : lowPowerScaleWatt;
 html += createEmsCenteredBar(
     t.t("ems.battery_power"),
     batteryPower,
     "W",
     "#ff9900",
-    Math.max(Math.abs(batteryPower) * 2, 20)
+    batteryPowerMax
 );
 
 // Battery energy
-const batteryEnergy = batteryData.energy || 0;
+const batteryEnergy = getValue(batteryData.energy);
+const batterySoc = getValue(batteryData.state_of_charge);
+// Calculate max energy based on current energy and SOC: max_energy = current_energy / (soc/100)
+const maxEnergy = batterySoc > 0 ? batteryEnergy / (batterySoc / 100.0) : 10000;
 html += createEmsBar(
     t.t("ems.battery_energy"),
     batteryEnergy,
     "Wh",
     "#9900ff",
     0,
-    Math.max(batteryEnergy * 2, 10000)
+    maxEnergy
 );
 
 // Battery trend
@@ -358,8 +417,8 @@ if (sources.length === 0) {
         // For single instance, only show instance 0
         if (instance !== 0) continue;
 
-        const current = sourceData.current || 0;
-        const power = sourceData.power || 0;
+        const current = getValue(sourceData.current);
+        const power = getValue(sourceData.power);
         const communicationOk = sourceData.communication_ok !== undefined ? sourceData.communication_ok : true;
         const deviceOn = sourceData.device_on !== undefined ? sourceData.device_on : true;
 
@@ -380,8 +439,16 @@ if (sources.length === 0) {
         html += '<div class="ems-source-body">';
         // Bars container - takes 1/3 width
         html += '<div class="ems-source-bars">';
-        html += createEmsBar(t.t("ems.current"), Math.abs(current), "A", "#ff00ff", 0, Math.max(Math.abs(current) * 2, 50));
-        html += createEmsBar(t.t("ems.power"), Math.abs(power), "W", "#ff9900", 0, Math.max(Math.abs(power) * 2, 500));
+        // Source current - dual scale using fixed thresholds
+        const sourceHighPowerScaleAmp = 50.0;   // Default high power scale (A)
+        const sourceLowPowerScaleAmp = 10.0;    // Default low power threshold (A)
+        const sourceCurrentMax = Math.abs(current) > sourceLowPowerScaleAmp ? sourceHighPowerScaleAmp : sourceLowPowerScaleAmp;
+        html += createEmsBar(t.t("ems.current"), Math.abs(current), "A", "#ff00ff", 0, sourceCurrentMax);
+        // Source power - dual scale using fixed thresholds
+        const sourceHighPowerScaleWatt = 500.0;  // Default high power scale (W)
+        const sourceLowPowerScaleWatt = 100.0;   // Default low power threshold (W)
+        const sourcePowerMax = Math.abs(power) > sourceLowPowerScaleWatt ? sourceHighPowerScaleWatt : sourceLowPowerScaleWatt;
+        html += createEmsBar(t.t("ems.power"), Math.abs(power), "W", "#ff9900", 0, sourcePowerMax);
         html += '</div>';
         
         // Trend container - takes 2/3 width
@@ -430,7 +497,9 @@ return `
 
     function createEmsCenteredBar(label, value, unit, color, maxAbsValue) {
 const absValue = Math.abs(value);
-const percent = Math.min((absValue / maxAbsValue) * 100, 100);
+// For centered bars, maxAbsValue represents the value at which the fill takes half the bar height (50%)
+// So we multiply by 50, not 100, to keep the fill within bounds (0-50% for positive, 0-50% for negative)
+const percent = Math.min((absValue / maxAbsValue) * 50, 50);
 const isPositive = value >= 0;
 const fillClass = isPositive ? "positive" : "negative";
 const positionStyle = isPositive ? 'bottom: 50%' : 'top: 50%';

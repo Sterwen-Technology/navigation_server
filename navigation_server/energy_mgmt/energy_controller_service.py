@@ -19,7 +19,7 @@ from collections import deque, namedtuple
 from navigation_server.generated.energy_pb2 import (
     EnergyControllerParameters, EnergyControllerData, EnergyControllerTrend,
     EnergySourceDevice, BatteryUnit, EnergySourceData, BatteryUnitData,
-    energy_request, energy_command_response, EnergySource,
+    energy_request, energy_command_response, EnergySource, VE_state
 )
 from navigation_server.generated.energy_pb2_grpc import (
     EnergyServiceServicer, add_EnergyServiceServicer_to_server
@@ -99,7 +99,10 @@ class EnergyController:
             'maximum_main_voltage': self._maximum_main_voltage,
             'minimum_main_voltage': self._minimum_main_voltage,
             'trend_duration': trend_duration,
-            'trend_interval': self._trend_period
+            'trend_interval': self._trend_period,
+            'total_energy_capacity': 0.0,
+            'total_power_high': 0.0,
+            'total_power_low': 0.0
         }
 
     def stop_service(self):
@@ -162,6 +165,11 @@ class EnergyController:
             if device.instance not in self._batteries:
                 self._batteries[device.instance] = device_record(
                     device,BatteryUnit(instance_id=device.instance, label= device.device_label))
+                # now update the capacity and scales
+                capacity = self._parameters['total_energy_capacity'] + device.energy_capacity
+                self._parameters['total_energy_capacity'] = capacity
+                self._parameters['total_power_high'] = 2.0 * capacity
+                self._parameters['total_power_low'] = capacity * 2.0 / 5.0
                 _logger.info(f"{self._name} registered battery: {device.device_label}")
             else:
                 _logger.warning(f"{self._name} battery already registered: {device.device_label}")
@@ -172,12 +180,13 @@ class EnergyController:
                 label=device.device_label,
                 type=device.device_type
             ))
+            self.set_off_state(device.instance, device.device_type, False, False)
             _logger.info(f"{self._name} registered source: {device.device_label} instance: {device.instance}, type: {_get_source_type(device.device_type)}")
         else:
             _logger.warning(f"{self._name} source already registered: {device.device_label}")
 
     def source_update(self, instance: int, source_type: EnergySource, timestamp: float,
-                     current: float, power: float, voltage: float):
+                     current: float, power: float, voltage: float, state):
         """
         Update energy source data
         
@@ -188,6 +197,7 @@ class EnergyController:
             current: Current in amps
             power: Power in watts
             voltage: Voltage in volts
+            state: The state of the source
         """
         if (instance, source_type) not in self._sources:
             _logger.error(f"Source update for unknown source instance {instance} and type {source_type}")
@@ -195,7 +205,7 @@ class EnergyController:
         # Store the source data
         if self._cycle_lock.acquire(blocking=True, timeout=self._cycle_period):
             self._source_data[(instance, source_type)] = {
-                'device_on': True,
+                'device_on': state != VE_state.Off,
                 'communication_ok': True,
                 'current': current,
                 'power': power,
@@ -204,6 +214,7 @@ class EnergyController:
                 'type': source_type
             }
             self._cycle_lock.release()
+            _logger.debug(f"Source update for {_get_source_type(source_type)}:{instance}: {self._source_data[(instance, source_type)]}")
         else:
             _logger.error(f"Source update lock failed for {_get_source_type(source_type)}:{instance}")
 
@@ -220,6 +231,7 @@ class EnergyController:
             'timestamp': 0.0,
             'type': source_type
         }
+        _logger.debug(f"Source set off for {_get_source_type(source_type)}:{instance}")
 
 
     def battery_update(self, instance: int, current: float, power: float, 
@@ -251,6 +263,7 @@ class EnergyController:
             'voltage': voltage,
             'auxiliary_voltage': auxiliary_voltage
         }
+        _logger.debug(f"Battery {instance} data updated:{self._battery_data[instance]}")
 
         # Mark that we have new data
         self._compute_aggregates()
@@ -277,7 +290,7 @@ class EnergyController:
             # Positive power = production, negative = consumption
             _logger.debug(f"EnergyController processing energy source {_get_source_type(key[1])}:{key[0]} with power {data['power']}")
             if not(data['device_on'] and data['communication_ok']):
-                _logger.debug(f"EnergyController skipping source {_get_source_type(key[1])}:{key[0]} due to communication issues")
+                _logger.debug(f"EnergyController skipping source {_get_source_type(key[1])}:{key[0]} comm:{data['communication_ok']}, On:{data['device_on']}")
                 continue
             if clock - data['timestamp'] > self._cycle_period:
                 _logger.debug(f"EnergyController skipping source {_get_source_type(key[1])}:{key[0]} due to timeout")
@@ -412,8 +425,8 @@ class EnergyController:
                 source_data.device.label = self._sources[instance].record.label
             source_data.current = data['current']
             source_data.power = data['power']
-            source_data.communication_ok = data.get('communication_ok', True)
-            source_data.device_on = data.get('device_on', True)
+            source_data.communication_ok = data['communication_ok']
+            source_data.device_on = data['device_on']
             response.sources_data.append(source_data)
         
         # Add battery data

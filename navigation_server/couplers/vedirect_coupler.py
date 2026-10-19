@@ -14,7 +14,7 @@
 import logging
 import queue
 import threading
-from collections import namedtuple
+
 import serial
 import datetime
 import time
@@ -26,7 +26,6 @@ from navigation_server.log_replay import RawLogFile, LogReadError
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
-HexCommandContext = namedtuple('HexCommandContext', ['command', 'field', 'callback'])
 
 (VED_TEXT, VED_ASYNC_HEX, VED_RESP_HEX, VED_CMD_HEX) = range(4)
 

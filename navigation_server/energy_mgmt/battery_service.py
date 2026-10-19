@@ -51,18 +51,25 @@ class BatteryOnVictronSmartShunt(EnergyDevice):
         super().__init__(opts, service)
         
         # Battery-specific parameters
+        capacity = opts.get('nominal_capacity', float, None)
+        if capacity is None:
+            _logger.warning('Battery capacity not specified, using default value of 100.0 Ah')
+            capacity = 100.0
+
         self._parameters = {
             'instance': self._instance,
             'nominal_voltage': opts.get('nominal_voltage', float, 12.8),
-            'nominal_capacity': opts.get('nominal_capacity', float, 100.0),  # Ah
+            'nominal_capacity': capacity,  # Ah
             'chemistry': opts.get('chemistry', str, 'Lead Acid'),
             'max_voltage': opts.get('max_voltage', float, 15.0),
             'min_voltage': opts.get('min_voltage', float, 10.0),
             'charge_voltage': opts.get('charge_voltage', float, 14.4),
-            'max_charge_current': opts.get('max_charge_current', float, 50.0),
+            'max_charge_current': opts.get('max_charge_current', float, capacity / 2.0),
             'trend_duration': opts.get('trend_duration', int, 5),
             'trend_interval': self._trend_period,
-            'reporting_interval': opts.get('reporting_interval', float, 1.0)
+            'reporting_interval': opts.get('reporting_interval', float, 1.0),
+            'high_power_scale_amp': opts.get('high_power_scale_amp', float, capacity),
+            'low_power_scale_amp' : opts.get('low_power_scale_amp', float, capacity / 5.0)
         }
         
         # Battery-specific tracking
@@ -75,10 +82,15 @@ class BatteryOnVictronSmartShunt(EnergyDevice):
         self._nb_sample = 0
         self._last_voltage = 0.0
         self._last_ah = 0.0
+        self._nominal_energy = self._parameters['nominal_capacity'] * self._parameters['nominal_voltage']
 
     @property
     def device_type(self):
         return EnergySource.Battery
+
+    @property
+    def energy_capacity(self) -> float:
+        return self._parameters['nominal_capacity'] * self._parameters['nominal_voltage']
 
     def start(self):
         """Start the battery device"""
@@ -89,12 +101,12 @@ class BatteryOnVictronSmartShunt(EnergyDevice):
         """Called by coupler when new data is available"""
         _logger.debug("VEDirect message:%s" % msg.msg)
         clock = time.monotonic()
+        self._last_msg_ts = clock
         # Process the message and check if we have complete data
         if not self._current_data.process_msg(msg):
             # Data not complete yet (waiting for both message1 and message2)
             return
-        # we take into account only valid messages
-        self._last_msg_ts = clock
+
         # Battery-specific processing - only after complete data is received
         if not self._communication_ok:
             # Communication restored, reset calculations
@@ -164,9 +176,7 @@ class BatteryOnVictronSmartShunt(EnergyDevice):
                 power,
                 self._current_data.state_of_charge,
                 # Energy estimate: SoC * nominal_capacity * nominal_voltage (in Wh)
-                (self._current_data.state_of_charge / 100.0) * 
-                    self._parameters.get('nominal_capacity', 100.0) * 
-                    self._parameters.get('nominal_voltage', 12.0),
+                self._current_data.state_of_charge * self._nominal_energy,
                 clock,
                 self._current_data.voltage,
                 self._current_data.auxiliary_voltage
@@ -255,7 +265,7 @@ class BatteryServicer(BatteryServiceServicer):
             ret_values.samples.append(val)
             energy_var.append(bucket.power)
 
-        _logger.info(f"Battery trend energy_var: {energy_var}")
+        _logger.debug(f"Battery trend energy_var: {energy_var}")
         return ret_values
 
 

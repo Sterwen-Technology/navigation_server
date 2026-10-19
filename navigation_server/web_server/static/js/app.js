@@ -20,7 +20,7 @@ import {
   openNetwork, closeNetwork, applyNetworkConfig, networkInterfaceCmd, addConnection, showAddConnection
 } from './utilities/network.js';
 import {
-  showSettings, saveSettings
+  showSettings, saveSettings, closeSettingsWindow
 } from './utilities/settings.js';
 import {
   openNmea2000, closeNmea2000, nmea2000TraceCmd, openNmea2000Device, backToNmea2000List
@@ -57,6 +57,7 @@ setShowPage(showPage);
 
 // Exports window.* supplémentaires pour les onclick inline générés dynamiquement
 window.saveSettings = saveSettings;
+window.closeSettingsWindow = closeSettingsWindow;
 
 // --- Exports window.* pour les gestionnaires onclick inline du HTML ---
 window.procCmd = procCmd;

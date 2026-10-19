@@ -14,17 +14,15 @@ import logging
 import time
 import traceback
 
-from collections import namedtuple, deque
+from collections import namedtuple
 
 from navigation_server.generated.energy_pb2 import (solar_output, energy_request, MPPT_device, solar_trend_response,
-                                                    EnergySource, VE_MPPT, VE_Error)
+                                                    EnergySource, VE_MPPT, VE_Error, energy_command_response)
 from navigation_server.generated.energy_pb2_grpc import MPPTServiceServicer, add_MPPTServiceServicer_to_server
 from navigation_server.router_common import (GrpcService, MessageServerGlobals, resolve_ref, copy_protobuf_data,
                                              NavGenericMsg, N2K_MSG, fill_protobuf_from_dict)
-from navigation_server.router_core import NMEA0183Sentences
-from navigation_server.couplers import VEDirectMsg, VED_TEXT
 
-from navigation_server.generated.nmea2000_classes_gen import Pgn127751Class
+from navigation_server.couplers import VEDirectMsg
 
 from .energy_base_service import EnergyDevice
 from .victron_interface import VictronMPPTData
@@ -92,14 +90,13 @@ class VictronMPPT(EnergyDevice):
         """Called by coupler when new data is available"""
         _logger.debug("VEDirect message:%s" % msg.printable())
         # Store the current data
-        self._current_data.process_msg(msg)
-        clock = time.monotonic()
 
-        if self._current_data.mppt_state == VE_MPPT.MPPT_Off:
-            _logger.debug("MPPT is off")
-            if self._energy_controller is not None:
-                self._energy_controller.set_off_state(self._instance, self.device_type, False, True)
+        clock = time.monotonic()
+        if not self._current_data.process_msg(msg):
+            self._last_msg_ts = clock
             return
+
+
         
         # MPPT-specific processing
         if not self._communication_ok:
@@ -141,8 +138,13 @@ class VictronMPPT(EnergyDevice):
         if self._publish_function is not None:
             self._publish_function()
 
-        """Report MPPT data to the energy controller"""
-        if self._energy_controller is not None and self._current_data is not None:
+        if self._current_data.mppt_state == VE_MPPT.MPPT_Off:
+            _logger.debug("MPPT is off")
+            if self._energy_controller is not None:
+                self._energy_controller.set_off_state(self._instance, self.device_type, True, False)
+
+        #Report MPPT data to the energy controller
+        elif self._energy_controller is not None and self._current_data is not None:
             _logger.debug("MPPT Service report to energy controller")
             clock = time.monotonic()
             self._energy_controller.source_update(
@@ -151,12 +153,26 @@ class VictronMPPT(EnergyDevice):
                 clock,
                 self._current_data.current, 
                 self._output_power,
-                self._current_data.voltage
+                self._current_data.voltage,
+                self._current_data.state
             )
 
     def get_solar_output(self, output_values_pb):
         if self._current_data is not None:
             self._current_data.output_pb(output_values_pb)
+
+    def send_command(self, command):
+        """Send a command to the DC-DC device
+
+        Args:
+            command: Command to send
+        """
+        if command == 'charger_on':
+            self._current_data.set_charger_on(self._coupler)
+        elif command == 'charger_off':
+            self._current_data.set_charger_off(self._coupler)
+        else:
+            _logger.error("Unknown command %s", command)
 
     def publish0183(self):
         _logger.debug("MPPT Service publish NMEA0183")
@@ -223,6 +239,30 @@ class MPPTServicer(MPPTServiceServicer):
         _logger.debug(f"MPPTService.GetTrend OK")
         return ret_values
 
+    def DeviceCommand(self, request, context):
+        """
+        Handle sending a command to the device
+        Current the following commands are supported:
+        - "charger_on"
+        - "charger_off"
+
+        :param request:
+        :type request:
+        :param context:
+        :type context:
+        :return:
+        :rtype:
+        """
+        _logger.debug("gRPC request DC_DC_Service.DeviceCommand %s", request.command)
+        response = energy_command_response()
+        response.id = request.instance
+        response.command = request.command
+        if request.command in ["charger_on", "charger_off"]:
+            self._mppt_device.send_command(request.command)
+            response.response = "OK"
+        else:
+            response.response = "ERROR - Unknown command"
+        return response
 
 class MPPTService(GrpcService):
 

@@ -11,6 +11,11 @@
 
 syntax = "proto3";
 
+// Global remark concerning units used in these services
+//  Voltage are in Volt, current Ampere
+//  Power in Watt, Energy in Watt-hour
+//  Time in seconds
+//  Date and timestamp are UTC
 
 // Victron VE direct protocol specific enum
 
@@ -60,7 +65,6 @@ enum VE_Off_Reason {
   Paygo=0x20;
   BMS=0x40;
   Engine_shutdown_detection=0x80;
-  Input_Voltage_Low=0x81;
   Analyzing_input_voltage=0x100;
 }
 
@@ -104,9 +108,10 @@ message MPPT_device {
   VE_Error error = 5;
   VE_state state= 6;
   VE_MPPT mppt_state =7;
+  uint32 off_reason=15; // Bitwise OR of the reasons as per VE_Off_Reason
   string product_id = 8;
   string firmware = 9;
-  string serial = 10;
+  string serial_number = 10;
   float day_max_power = 11;  //Watt
   float day_power = 12;      //kilo Watt-heure
   string msg_timestamp = 13; // ISO UTC
@@ -179,7 +184,7 @@ message BatteryBank {
   float nominal_capacity=6;   // Wh
   float voltage=7;            // Actual voltage
   float auxiliary_voltage=8;  // actual auxiliary voltage (engine circuit)
-  float state_of_charge=9;    // Percent
+  float state_of_charge=9;    // (ratio between 0-1)
   float max_voltage=10;        // Maximum charge voltage => alarm
   float min_voltage=11;        // Minimum operating voltage => alarm
   float charge_voltage=12;     // Bulk charge
@@ -204,7 +209,7 @@ message battery_trend_bucket {
   string timestamp=1;  // ISO UTC of the reporting period end
   float voltage=2;     // Voltage at the end of the period
   float energy_variation=3;      // in Wh positive charge - Variation during the interval
-  float state_of_charge=4;    // Percent at the end of the period
+  float state_of_charge=4;    // Percent at the end of the period (ratio between 0-1)
   float power=5;          // average power over the period in W
 }
 
@@ -244,7 +249,7 @@ message DC_DC_Charger_Parameters {
   float max_power=8; // W
   VE_state state=9;
   VE_Error error=10;
-  VE_Off_Reason off_reason=11;
+  uint32 off_reason=11;     // Bitwise OR of the reasons as per VE_Off_Reason
   bool communication_ok=12;
   float trend_duration=13;     // Duration in minutes of the trand series
   float trend_interval=14;     // interval in seconds between trend values
@@ -313,7 +318,9 @@ message EnergyControllerParameters {
   repeated BatteryUnit batteries=6;
   float trend_duration=7;     // Duration in minutes of the trand series
   float trend_interval=8;     // interval in seconds between trend values
-
+  float total_energy_capacity=9;  // sum of all batteries capacity in Wh (for display scale)
+  float total_power_high=10;    // Total power (ceiling) in high power mode (for display scale)
+  float total_power_low=11;     // Total power in low power mode (for display scale)
 }
 
 message EnergySourceData {
@@ -328,7 +335,7 @@ message BatteryUnitData {
   uint32 instance=1;
   float current=4;  // Positive send current - negative draw current (charging)
   float power=5;    // Positive power injected from the battery - negative power draw
-  float state_of_charge=6;  // Current SoC
+  float state_of_charge=6;  // Current SoC (ratio between 0-1)
   float energy=7;   // Energy level in Wh
 }
 

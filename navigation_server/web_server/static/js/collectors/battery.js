@@ -92,7 +92,9 @@ function batteryBar(label, value, max, unit, fillClass, centered = false) {
     if (centered) {
         // Centered bar: positive grows up from middle, negative grows down from middle
         const absV = Math.abs(v);
-        const pct = m > 0 ? Math.max(0, Math.min(100, (absV / m) * 100)) : 0;
+        // For centered bars, max represents the value at which the fill takes half the bar height (50%)
+        // So we multiply by 50, not 100, to keep the fill within bounds (0-50% for positive, 0-50% for negative)
+        const pct = m > 0 ? Math.max(0, Math.min(50, (absV / m) * 50)) : 0;
         const fillClassName = v >= 0 ? fillClass + '-pos' : fillClass + '-neg';
         const positionStyle = v >= 0 ? 'bottom: 50%' : 'top: 50%';
         return `<div class="battery-bar">
@@ -178,11 +180,18 @@ function renderBatteryDashboard(data, processName, win) {
     
     // Calculate max values for bars
     // Use reasonable defaults that ensure bars are visible even for small values
-    const maxVoltage = nominalVoltageRaw ? nominalVoltageRaw * 1.2 : 20; // 20% above nominal
-    const maxCurrent = Math.max(Math.abs(current) * 1.5, 2); // 1.5x actual or 2A min
-    const maxPower = Math.max(Math.abs(power) * 1.5, 20); // 1.5x actual or 20W min
-    const maxEnergy = energy ? energy * 1.2 : 10000;
-    const maxSoc = 100;
+    const maxVoltage = nominalVoltageRaw ? nominalVoltageRaw * 1.2 : 20; // 20% above nominal - FIXED SCALE
+    
+    // Current and power use DUAL SCALE (high/low power modes)
+    // Get power scale parameters from data or use defaults
+    const highPowerScaleAmp = data.high_power_scale_amp || 50.0;
+    const lowPowerScaleAmp = data.low_power_scale_amp || 10.0;
+    const maxCurrent = Math.abs(current) > lowPowerScaleAmp ? highPowerScaleAmp : lowPowerScaleAmp;
+    const maxPower = (Math.abs(power) > (lowPowerScaleAmp * nominalVoltageRaw)) ? 
+                    (highPowerScaleAmp * nominalVoltageRaw) : (lowPowerScaleAmp * nominalVoltageRaw);
+    
+    const maxEnergy = energy ? energy * 1.2 : 10000; // FIXED SCALE
+    const maxSoc = 100; // FIXED SCALE
     
     // Format values for display
     const nominalCapacityDisplay = `${nominalCapacityRaw.toFixed(nominalCapacityRaw % 1 === 0 ? 0 : 1)} Ah`;

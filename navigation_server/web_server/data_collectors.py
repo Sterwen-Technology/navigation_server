@@ -42,6 +42,52 @@ from navigation_server.generated.network_pb2 import NetInterface as NetInterface
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
+# VE_Off_Reason bitmask enum mapping
+# These are the possible reasons a device can be turned off, and they can be OR'ed together
+VE_OFF_REASON_MAP = {
+    0x000: "no_reason",
+    0x001: "No_input_power",
+    0x002: "Switched_off_switch",
+    0x004: "Switched_off_register",
+    0x008: "Remote_input",
+    0x010: "Protection_active",
+    0x020: "Paygo",
+    0x040: "BMS",
+    0x080: "Engine_shutdown_detection",
+    0x100: "Analyzing_input_voltage",
+}
+
+
+def decode_off_reason(off_reason_value: int) -> List[str]:
+    """Decode a VE_Off_Reason bitmask value into a list of active reason strings.
+    
+    The VE_Off_Reason enum is designed as a bitmask where multiple reasons can be
+    OR'ed together. This function extracts all the active reasons from the bitmask.
+    
+    Args:
+        off_reason_value: The integer bitmask value from VE_Off_Reason
+        
+    Returns:
+        List of strings representing the active reasons. If the value is 0 or
+        no known reasons are active, returns ["no_reason"].
+    """
+    if off_reason_value == 0:
+        return ["no_reason"]
+    
+    reasons = []
+    for bitmask, name in VE_OFF_REASON_MAP.items():
+        if bitmask == 0:
+            # Skip no_reason if there are other reasons active
+            continue
+        if off_reason_value & bitmask:
+            reasons.append(name)
+    
+    # If no specific reasons found but value is non-zero, include it as unknown
+    if not reasons:
+        return [f"unknown_reason_0x{off_reason_value:03X}"]
+    
+    return reasons
+
 
 # Forward declarations for type hints
 class NavigationSystemCollector:
@@ -783,6 +829,12 @@ class MPPTServiceCollector(BaseServiceCollector):
                     "current": None,
                     "panel_power": None,
                 }
+            _logger.debug(f"{device.device_label} com:{communication_ok} state:{device.state}")
+            
+            # Get off_reason value and decode it
+            off_reason_raw = int(device.off_reason) if hasattr(device, 'off_reason') else 0
+            off_reason_list = decode_off_reason(off_reason_raw)
+            
             return {
                 "ok": True,
                 "process": self.process_name,
@@ -792,10 +844,12 @@ class MPPTServiceCollector(BaseServiceCollector):
                 "device_model": device.device_model,
                 "product_id": device.product_id,
                 "firmware": device.firmware,
-                "serial": device.serial,
+                "serial": device.serial_number,
                 "error": device.error,
                 "state": device.state,
                 "mppt_state": device.mppt_state,
+                "off_reason": off_reason_list,
+                "off_reason_raw": off_reason_raw,
                 "day_max_power": round(device.day_max_power, 1),
                 "day_power": round(device.day_yield, 3),
                 "msg_timestamp": device.msg_timestamp,
@@ -840,6 +894,8 @@ class MPPTServiceCollector(BaseServiceCollector):
         Commands:
         - No command or "status": get MPPT status
         - trend: get MPPT trend data
+        - charger_on: turn MPPT charger on
+        - charger_off: turn MPPT charger off
         """
         if not parameters:
             return self.get_data()
@@ -850,8 +906,33 @@ class MPPTServiceCollector(BaseServiceCollector):
             return self.get_trend()
         elif command == "status":
             return self.get_data()
+        elif command == "charger_on":
+            return self._send_device_command("charger_on")
+        elif command == "charger_off":
+            return self._send_device_command("charger_off")
         
         return {"ok": False, "error": f"Unknown MPPT command: {command}"}
+    
+    def _send_device_command(self, command: str) -> dict:
+        """Send a device command to the MPPT charger.
+        
+        Args:
+            command: Command to send ("charger_on" or "charger_off")
+            
+        Returns:
+            Dictionary with "ok" and "response" keys
+        """
+        self._ensure_client()
+        try:
+            response = self._client.DeviceCommand(command)
+            return {
+                "ok": True,
+                "command": command,
+                "response": response.response if hasattr(response, 'response') else "OK"
+            }
+        except Exception as e:
+            _logger.error(f"Failed to send MPPT command {command}: {e}")
+            return {"ok": False, "error": str(e)}
 
 
 class EnergyServiceCollector(BaseServiceCollector):
@@ -877,6 +958,7 @@ class EnergyServiceCollector(BaseServiceCollector):
             # Now sources_data uses EnergySourceDevice instead of encoded instance
             sources = []
             for source in info.sources:
+                _logger.debug(f"Energy get_data source:{source.label}====================")
                 source_obj = {
                     "instance": int(source.instance_id),
                     "label": source.label,
@@ -890,25 +972,48 @@ class EnergyServiceCollector(BaseServiceCollector):
                 }
                 # Look for source_data with matching instance_id and type
                 for sd in values.sources_data:
+                    _logger.debug(f"\tEnergy get_data source_data:{sd}")
                     if sd.device.instance_id == source.instance_id and sd.device.type == source.type:
                         source_obj["source_data"]["current"] = float(sd.current)
                         source_obj["source_data"]["power"] = float(sd.power)
                         source_obj["source_data"]["communication_ok"] = bool(sd.communication_ok)
                         source_obj["source_data"]["device_on"] = bool(sd.device_on)
                         break
+                _logger.debug(f"\tEnergy get_data:{source_obj}")
                 sources.append(source_obj)
             
             # Build batteries data
             batteries = []
             for battery_unit_data in values.batteries_data:
+                # Find matching battery in info.batteries to get parameters for scaling
+                high_power_scale_amp = 50.0  # Default value (A)
+                low_power_scale_amp = 10.0   # Default value (A) - switch threshold
+                nominal_voltage = 12.0       # Default value (V)
+                
+                if hasattr(battery_unit_data, 'instance'):
+                    for battery_bank in info.batteries:
+                        # BatteryUnit has instance_id, BatteryUnitData has instance
+                        if hasattr(battery_bank, 'instance_id') and hasattr(battery_unit_data, 'instance'):
+                            if int(battery_bank.instance_id) == int(battery_unit_data.instance):
+                                if hasattr(battery_bank, 'high_power_scale_amp') and battery_bank.high_power_scale_amp:
+                                    high_power_scale_amp = float(battery_bank.high_power_scale_amp)
+                                if hasattr(battery_bank, 'low_power_scale_amp') and battery_bank.low_power_scale_amp:
+                                    low_power_scale_amp = float(battery_bank.low_power_scale_amp)
+                                if hasattr(battery_bank, 'nominal_voltage') and battery_bank.nominal_voltage:
+                                    nominal_voltage = float(battery_bank.nominal_voltage)
+                                break
+                
                 battery_obj = {
-                    "instance": int(battery_unit_data.instance),
+                    "instance": int(battery_unit_data.instance) if hasattr(battery_unit_data, 'instance') else 0,
+                    "high_power_scale_amp": high_power_scale_amp,
+                    "low_power_scale_amp": low_power_scale_amp,
+                    "nominal_voltage": nominal_voltage,
                     "battery_data": {
                         "voltage": float(values.main_voltage),
                         "current": float(battery_unit_data.current),
                         "power": float(battery_unit_data.power),
-                        "state_of_charge": float(battery_unit_data.state_of_charge) * 10.0,  # BatteryService applies incorrect scaling
-                        "energy": float(battery_unit_data.energy) * 10.0  # BatteryService applies incorrect scaling
+                        "state_of_charge": float(battery_unit_data.state_of_charge) * 100.0,  # Convert from 0-1 to 0-100%
+                        "energy": float(battery_unit_data.energy)  # Already in Wh
                     }
                 }
                 batteries.append(battery_obj)
@@ -972,7 +1077,7 @@ class EnergyServiceCollector(BaseServiceCollector):
                                                         "current": mppt_data.get("output", {}).get("current", 0.0) if mppt_data.get("output") else 0.0,
                                                         "power": mppt_data.get("output", {}).get("panel_power", 0.0) if mppt_data.get("output") else 0.0,
                                                         "communication_ok": mppt_data.get("communication_ok", True),
-                                                        "device_on": mppt_data.get("communication_ok", True)
+                                                        "device_on": mppt_data.get("state", 0) != 0
                                                     },
                                                     "trend": {
                                                         "samples": [
@@ -1014,7 +1119,7 @@ class EnergyServiceCollector(BaseServiceCollector):
                                                         "current": dc_dc_data.get("output_current", 0.0),
                                                         "power": dc_dc_data.get("output_power", 0.0),
                                                         "communication_ok": dc_dc_data.get("communication_ok", True),
-                                                        "device_on": dc_dc_data.get("communication_ok", True)
+                                                        "device_on": dc_dc_data.get("state", 0) != 0
                                                     }
                                                 }
                                                 sources.append(source_obj)
@@ -1023,6 +1128,11 @@ class EnergyServiceCollector(BaseServiceCollector):
                                             _logger.warning(f"Error getting DC-DC data from {proc.name}: {e}")
                                     if dc_dc_processed:
                                         break
+            
+            # Use scale parameters from EnergyControllerParameters
+            total_energy_capacity = float(info.total_energy_capacity) if hasattr(info, 'total_energy_capacity') and info.total_energy_capacity else 0.0
+            total_power_high = float(info.total_power_high) if hasattr(info, 'total_power_high') and info.total_power_high else 1000.0
+            total_power_low = float(info.total_power_low) if hasattr(info, 'total_power_low') and info.total_power_low else 200.0
             
             result = {
                 "ok": True,
@@ -1036,6 +1146,9 @@ class EnergyServiceCollector(BaseServiceCollector):
                 "maximum_main_voltage": float(info.maximum_main_voltage),
                 "minimum_main_voltage": float(info.minimum_main_voltage),
                 "nominal_main_voltage": float(info.nominal_main_voltage),
+                "total_energy_capacity": total_energy_capacity,
+                "total_power_high": total_power_high,
+                "total_power_low": total_power_low,
                 "sources": sources,
                 "batteries": batteries,
             }
@@ -1103,12 +1216,13 @@ class BatteryServiceCollector(BaseServiceCollector):
             nominal_capacity = 100.0  # Default value (Ah)
             nominal_voltage = 12.0    # Default value (V)
             device_model = "Unknown"
+            high_power_scale_amp = 50.0    # Default value (A)
+            low_power_scale_amp = 10.0     # Default value (A)
             
             if hasattr(info, 'battery') and info.battery:
-                # Get state_of_charge if available
+                # Get state_of_charge if available (in 0-1 from backend, convert to 0-100%)
                 if hasattr(info.battery, 'state_of_charge'):
-                    # BatteryService may apply incorrect scaling; compensate by multiplying by 10
-                    state_of_charge = float(info.battery.state_of_charge) * 10.0
+                    state_of_charge = float(info.battery.state_of_charge) * 100.0
                     _logger.debug(f"Battery SOC from info: {state_of_charge}%")
                 
                 # Get device model if available
@@ -1123,6 +1237,12 @@ class BatteryServiceCollector(BaseServiceCollector):
                 if hasattr(info.battery, 'nominal_voltage') and info.battery.nominal_voltage:
                     nominal_voltage = float(info.battery.nominal_voltage)
                     _logger.debug(f"Battery nominal_voltage: {nominal_voltage}V")
+                if hasattr(info.battery, 'high_power_scale_amp') and info.battery.high_power_scale_amp:
+                    high_power_scale_amp = float(info.battery.high_power_scale_amp)
+                    _logger.debug(f"Battery high_power_scale_amp: {high_power_scale_amp}A")
+                if hasattr(info.battery, 'low_power_scale_amp') and info.battery.low_power_scale_amp:
+                    low_power_scale_amp = float(info.battery.low_power_scale_amp)
+                    _logger.debug(f"Battery low_power_scale_amp: {low_power_scale_amp}A")
             
             _logger.debug(f"Battery state_of_charge={state_of_charge}%, nominal_capacity={nominal_capacity}Ah, nominal_voltage={nominal_voltage}V")
             
@@ -1134,18 +1254,20 @@ class BatteryServiceCollector(BaseServiceCollector):
                 "device_model": device_model,
                 "nominal_capacity": nominal_capacity,
                 "nominal_voltage": nominal_voltage,
+                "high_power_scale_amp": high_power_scale_amp,
+                "low_power_scale_amp": low_power_scale_amp,
                 "voltage": float(values.voltage) if values.voltage else 0.0,
                 "current": float(values.current) if values.current else 0.0,
                 "power": float(values.voltage * values.current) if values.voltage and values.current else 0.0,
                 "state_of_charge": state_of_charge,
-                "energy": ((state_of_charge / 100.0) * nominal_capacity * nominal_voltage) if state_of_charge else 0.0,
+                "energy": (state_of_charge * nominal_capacity * nominal_voltage / 100.0) if state_of_charge else 0.0,
                 "trend": {
                     "samples": [
                         {
                             "timestamp": sample.timestamp,
                             "voltage": float(sample.voltage),
                             "power": float(sample.power),
-                            "state_of_charge": float(sample.state_of_charge) * 10.0,
+                            "state_of_charge": float(sample.state_of_charge) * 100.0,
                             "energy_variation": float(sample.energy_variation)
                         }
                         for sample in trend.samples
@@ -1183,7 +1305,7 @@ class BatteryServiceCollector(BaseServiceCollector):
                             "timestamp": sample.timestamp,
                             "voltage": float(sample.voltage),
                             "power": float(sample.power),
-                            "state_of_charge": float(sample.state_of_charge) * 10.0,
+                            "state_of_charge": float(sample.state_of_charge) * 100.0,
                             "energy_variation": float(sample.energy_variation)
                         }
                         for sample in trend.samples
@@ -1211,19 +1333,31 @@ class DC_DC_ServiceCollector(BaseServiceCollector):
         """Get DC-DC charger status data."""
         self._ensure_client()
         try:
-            info = self._client.GetInformation()
+            info = self._client.GetInformation('parameters')
             values = self._client.GetValues()
+            _logger.debug(f"{info.device_label} com:{values.communication_ok} state:{info.state}")
+            
+            # Get off_reason value - can be from values or info (both have it in DC-DC)
+            off_reason_raw = 0
+            if hasattr(values, 'off_reason'):
+                off_reason_raw = int(values.off_reason)
+            elif hasattr(info, 'off_reason'):
+                off_reason_raw = int(info.off_reason)
+            
+            # Decode the bitmask into list of reasons
+            off_reason_list = decode_off_reason(off_reason_raw)
             
             return {
                 "ok": True,
                 "process": self.process_name,
                 "instance": info.instance if hasattr(info, 'instance') else 0,
                 "device_label": info.device_label if hasattr(info, 'device_label') else "DC-DC",
-                "model": info.model if hasattr(info, 'model') else "Unknown",
+                "model": info.device_model if hasattr(info, 'device_model') else "Unknown",
                 "state": int(info.state) if hasattr(info, 'state') else 0,
                 "error": int(info.error) if hasattr(info, 'error') else 0,
-                "off_reason": int(values.off_reason) if hasattr(values, 'off_reason') else 0,
-                "communication_ok": True,
+                "off_reason": off_reason_list,
+                "off_reason_raw": off_reason_raw,
+                "communication_ok": bool(values.communication_ok) if hasattr(values, 'communication_ok') else True,
                 "input_voltage": float(values.input_voltage) if hasattr(values, 'input_voltage') else 0.0,
                 "input_current": float(values.input_current) if hasattr(values, 'input_current') else 0.0,
                 "input_power": float(values.input_power) if hasattr(values, 'input_power') else 0.0,

@@ -471,6 +471,20 @@ button.open-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a
     font-size: 1rem;
     color: var(--accent);
 }
+.power-scale-icon {
+    margin-left: 8px;
+    font-size: 0.9rem;
+    color: var(--amber);
+    cursor: help;
+    vertical-align: middle;
+    display: inline-block;
+}
+.power-scale-icon.high {
+    color: var(--amber);
+}
+.power-scale-icon.low {
+    color: var(--green);
+}
 .ems-bars {
     display: flex;
     gap: 12px;
@@ -728,5 +742,18 @@ button.open-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid var(--red);
     border-radius: 4px;
+}
+
+/* MPPT and DC-DC charger on/off buttons */
+.dc-dc-button-on, .mppt-button-on {
+    background-color: var(--green) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.dc-dc-button-off, .mppt-button-off {
+    background-color: var(--red) !important;
+    color: white !important;
+    border: none !important;
 }
 

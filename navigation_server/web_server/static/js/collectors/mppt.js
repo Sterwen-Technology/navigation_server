@@ -1,5 +1,5 @@
 import {
-  apiGet
+  apiGet, apiPost
 } from '../api.js';
 import {
   getVeErrorName, getVeMpptName, getVeStateName
@@ -19,6 +19,28 @@ import {
 import {
   t
 } from '../translations-bridge.js';
+
+// Format a list of off reason names for display
+function formatOffReasons(reasons) {
+  if (!reasons || reasons.length === 0) {
+    return "No Reason";
+  }
+  // Get human-readable names for each reason
+  const mapping = {
+    "no_reason": "No Reason",
+    "No_input_power": "No Input Power",
+    "Switched_off_switch": "Switched Off (Switch)",
+    "Switched_off_register": "Switched Off (Register)",
+    "Remote_input": "Remote Input",
+    "Protection_active": "Protection Active",
+    "Paygo": "PayGo",
+    "BMS": "BMS",
+    "Engine_shutdown_detection": "Engine Shutdown Detection",
+    "Analyzing_input_voltage": "Analyzing Input Voltage"
+  };
+  const names = reasons.map(r => mapping[r] || r);
+  return names.join(", ");
+}
 
 export { closeMppt };
 export { closeMpptDetails };
@@ -117,6 +139,11 @@ function renderMpptDashboard(data, processName, win) {
     }
     const p = data.parameters || {};
     const o = data.output || {};
+    // Extract off_reason data
+    const offReasonRaw = data.off_reason_raw || 0;
+    const offReason = data.off_reason || [];
+    const offReasonList = Array.isArray(offReason) ? offReason : [offReason];
+    
     // Bargraph maxima come from the device parameters; fall back to
     // sensible defaults when a parameter is absent.
     const maxPV = p.panel_max_voltage || 100;
@@ -128,6 +155,26 @@ function renderMpptDashboard(data, processName, win) {
     const devTitle = data.device_label || data.device_model || data.product_id || processName;
     win.headerTitle.textContent = `${t.t("mppt.title") || "MPPT"} \u2014 ${escapeHtml(devTitle)}`;
     const comLost = data.communication_ok === false;
+    
+    // Button logic: Show 'Turn On' only if off_reason includes "Switched_off_register"
+    const showTurnOn = offReasonList.includes("Switched_off_register") || offReasonRaw === 4;
+    const showTurnOff = data.state !== 0 && !showTurnOn;
+    const showButton = showTurnOn || showTurnOff;
+    
+    let controls = '';
+    if (showButton) {
+        const isOnCommand = showTurnOn;
+        controls = `
+        <div class="mppt-controls">
+            <button class="mppt-button mppt-button-${isOnCommand ? 'on' : 'off'}" 
+                    data-command="${isOnCommand ? 'charger_on' : 'charger_off'}" 
+                    data-i18n="mppt.${isOnCommand ? 'turn_on' : 'turn_off'}">
+                ${t.t(isOnCommand ? 'mppt.turn_on' : 'mppt.turn_off') || (isOnCommand ? 'Turn On' : 'Turn Off')}
+            </button>
+        </div>
+    `;
+    }
+    
     const info = `
         <div class="mppt-info">
             ${comLost ? `<div class="mppt-com-lost" data-i18n="mppt.com_lost">Communication lost</div>` : ""}
@@ -136,6 +183,7 @@ function renderMpptDashboard(data, processName, win) {
             <div class="row"><span class="k" data-i18n="mppt.error">Error</span><span class="v">${escapeHtml(getVeErrorName(data.error))}</span></div>
             <div class="row"><span class="k" data-i18n="mppt.state">State</span><span class="v">${escapeHtml(getVeStateName(data.state))}</span></div>
             <div class="row"><span class="k" data-i18n="mppt.mppt_state">MPPT</span><span class="v">${escapeHtml(getVeMpptName(data.mppt_state))}</span></div>
+            <div class="row"><span class="k" data-i18n="mppt.off_reason">Off Reason</span><span class="v">${escapeHtml(formatOffReasons(offReasonList))}</span></div>
             <div class="row"><span class="k" data-i18n="mppt.day_max_power">Day max power</span><span class="v">${fmt(data.day_max_power)} W</span></div>
             <div class="row"><span class="k" data-i18n="mppt.day_power">Day energy</span><span class="v">${fmt(data.day_power)} Wh</span></div>
             <div class="row"><button class="open-btn compact" id="mppt-details-${escapeHtml(processName)}" data-i18n="mppt.details">Details</button></div>
@@ -156,9 +204,14 @@ function renderMpptDashboard(data, processName, win) {
     body.innerHTML = `
         <div class="mppt-dashboard">
             <div class="mppt-top">${info}${bars}</div>
+            <div class="mppt-controls-container">
+                ${controls}
+            </div>
             <div class="mppt-trend">
                 <div class="mppt-trend-title" data-i18n="mppt.trend">Power trend</div>
-                <div class="mppt-trend-canvas"><div class="empty">${t.t("general.loading")}</div></div>
+                <div class="mppt-trend-canvas">
+                    <div class="empty">${t.t("general.loading")}</div>
+                </div>
             </div>
             <div id="mppt-details-modal-${escapeHtml(processName)}" class="modal">
                 <div class="modal-content" style="max-width:420px">
@@ -173,11 +226,20 @@ function renderMpptDashboard(data, processName, win) {
                     </div>
                 </div>
             </div>
-        </div>
     `;
-    const detailsBtn = body.querySelector('#mppt-details-' + CSS.escape(processName));
+    
+    // Add event listener for the on/off button
+    const button = body.querySelector('.mppt-button');
+    if (button) {
+        button.addEventListener('click', async () => {
+            const command = button.dataset.command;
+            await sendMpptCommand(processName, command, win);
+        });
+    }
+    const safeProcessName = processName.replace(/[!'"#]/g, '\\$&');
+    const detailsBtn = body.querySelector('#mppt-details-' + safeProcessName);
     if (detailsBtn) detailsBtn.addEventListener('click', () => {
-        const m = body.querySelector('#mppt-details-modal-' + CSS.escape(processName));
+        const m = body.querySelector('#mppt-details-modal-' + safeProcessName);
         if (m) m.classList.add('show');
     });
     t.translateAllElements();
@@ -225,6 +287,20 @@ function closeMpptDetails(processName) {
     const win = activeWindows.get(windowKey('mppt', processName));
     const m = win && win.body.querySelector('#mppt-details-modal-' + CSS.escape(processName));
     if (m) m.classList.remove('show');
+}
+
+async function sendMpptCommand(processName, command, win) {
+    try {
+        const response = await apiPost(`/api/mppt/${encodeURIComponent(processName)}/${command}`, {});
+        if (response.ok) {
+            // Refresh the data after a short delay to show the new state
+            setTimeout(() => refreshMppt(win), 1000);
+        } else {
+            alert(`Error: ${response.error || 'Unknown error'}`);
+        }
+    } catch (e) {
+        alert(`Failed to send command: ${e.message}`);
+    }
 }
 
 // --- Battery Service Functions ---

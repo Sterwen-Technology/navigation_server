@@ -11,12 +11,15 @@
 
 import logging
 import time
+from collections import namedtuple
 
 from navigation_server.couplers import VEDirectMsg, VED_TEXT, VED_CMD_HEX, VED_RESP_HEX
 from navigation_server.router_common import copy_protobuf_data
 from navigation_server.generated.nmea2000_classes_gen import Pgn127751Class
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
+
+hex_parameter = namedtuple("hex_parameter", ["pid", "attribute", "scale"])
 
 
 # VE.Direct Protocol PID to Product Name mapping
@@ -241,6 +244,7 @@ class VictronVEDirectDecoderABC:
         self._device_model = None
         self.serial_number = None
         self._transaction_context = None
+        self._parameters_to_handle = {}
 
     @property
     def initialized(self) -> bool:
@@ -289,22 +293,37 @@ class VictronVEDirectDecoderABC:
 
     def response_handling(self, response):
         command = response.get('response_code')
-        if command is None:
-            _logger.warning(f"Received response without response_id: {response}")
-            return
         register_id = response.get('register_id')
-        if register_id is None:
-            _logger.warning(f"Received response without register_id: {response}")
-            return
-        if command != self._transaction_context[0]:
+        if command != self._transaction_context[0]  or register_id != self._transaction_context[1]:
             _logger.warning(f"Received response with unexpected command: {response}")
-            return
-        if register_id != self._transaction_context[1]:
-            _logger.warning(f"Received response with unexpected register_id: {response}")
             return
         self._transaction_context = None
 
+    def process_parameters(self, result):
+        parameter = result.get('register_id')
+        if parameter is None:
+            _logger.error(f"VE Direct HEX message error:{result}")
+            return
+        if parameter in self._parameters_to_handle:
+            parameter_def = self._parameters_to_handle[parameter]
+            value = result.get('value')
+            if value is None:
+                _logger.error(f"VE Direct HEX message error: value not found for parameter {parameter}")
+                return
+            if parameter_def.scale is not None:
+                value = value * parameter_def.scale
+            self.__setattr__(parameter_def.attribute, value)
 
+    def process_hex_message(self, msg: VEDirectMsg):
+        # Let's just trace the HEX responseE
+        _logger.debug(f"HEX message: {msg.msg}")
+        result = VEDirectHEXFrame.decode_hex_response(msg.msg)
+        _logger.debug("HEX response decoded: %s", VEDirectHEXFrame.print_decoded_response(result))
+        if msg.msg_type == VED_RESP_HEX:
+            self.response_handling(result)
+        else:
+            # let's see if we have parameters to handle
+            self.process_parameters(result)
 
 
 class VictronSmartShuntData (VictronVEDirectDecoderABC):
@@ -363,7 +382,7 @@ class VictronSmartShuntData (VictronVEDirectDecoderABC):
             self.voltage = float(value_dict['V']) * 0.001
             self.current = float(value_dict['I']) * 0.001
             self.power = float(value_dict['P'])
-            self.state_of_charge = float(value_dict['SOC']) * 0.01
+            self.state_of_charge = float(value_dict['SOC']) * 0.001
             self.consumed_ah = float(value_dict['CE']) *0.001
             self.time_to_go = float(value_dict['TTG'])
             self.auxiliary_voltage = float(value_dict['VS']) * 0.001
@@ -398,7 +417,7 @@ class VictronSmartShuntData (VictronVEDirectDecoderABC):
         if msg.msg_type == VED_TEXT:
             value_dict = msg.msg
         else:
-            # right now we don't support HEX mode
+            self.process_hex_message(msg)
             return False
 
         if not self._initialized:
@@ -491,6 +510,10 @@ class VictronDC_DC_Data(VictronVEDirectDecoderABC):
         self.temperature = 0.0  # Temperature in °C
         self.mode = 0  # Operating mode
 
+        self._parameters_to_handle = {
+            0xEDDB: hex_parameter(0xEDDB, 'temperature', 0.01)
+        }
+
     @property
     def firmware_key(self) -> str:
         return 'FWE'
@@ -508,14 +531,11 @@ class VictronDC_DC_Data(VictronVEDirectDecoderABC):
         if msg.msg_type == VED_TEXT:
             value_dict = msg.msg
         else:
-            # Let's just trace the HEX responseE
-            _logger.info(f"HEX message: {msg.msg}")
-            result = VEDirectHEXFrame.decode_hex_response(msg.msg)
-            if msg.msg_type == VED_RESP_HEX:
-                self.response_handling(result)
-            formatted_result = VEDirectHEXFrame.print_decoded_response(result)
-            _logger.info(f"HEX response decoded: {formatted_result}")
+            self.process_hex_message(msg)
             return False
+
+        if not self.initialized:
+            self._process_static(value_dict)
 
         try:
             self.state = int(value_dict['CS'])
@@ -578,7 +598,8 @@ class VictronDC_DC_Data(VictronVEDirectDecoderABC):
             parameters_pb: DC_DC_Charger_Parameters protobuf message to fill
         """
         parameters_pb.device_label = f"Orion XS {self.serial_number}" if self.serial_number else "Orion XS"
-        parameters_pb.device_model = self.product_id if self.product_id else "Unknown"
+        parameters_pb.device_model = self.device_model
+        _logger.info(f"DC DC device model={self.device_model}")
         parameters_pb.state = self.state
         parameters_pb.error = self.error
         parameters_pb.off_reason = self.off_reason
@@ -601,13 +622,19 @@ class VictronMPPTData(VictronVEDirectDecoderABC):
         self.mppt_state = 0
         self.day_max_power = 0
         self.day_power = 0
+        self.off_reason = 0
 
     def process_msg(self, msg: VEDirectMsg) -> bool:
-        if msg.msg_type != VED_TEXT:
+
+        if msg.msg_type == VED_TEXT:
+            value_dict = msg.msg
+        else:
+            self.process_hex_message(msg)
             return False
-        value_dict = msg.msg
+
         if not self.initialized:
             super()._process_static(value_dict)
+
         try:
             self.current = float(value_dict['I']) * 0.001
             self.voltage = float(value_dict['V']) * 0.001
@@ -615,6 +642,7 @@ class VictronMPPTData(VictronVEDirectDecoderABC):
             self.panel_power = float(value_dict['PPV'])
             self.error = int(value_dict['ERR'])
             self.state = int(value_dict['CS'])
+            self.off_reason = int(value_dict.get('OR', 0))
             self.mppt_state = int(value_dict['MPPT'])
             self.day_max_power = float(value_dict['H21'])
             self.day_power = float(value_dict['H20']) * 10.0
@@ -629,7 +657,7 @@ class VictronMPPTData(VictronVEDirectDecoderABC):
     def output_info_pb(self, output_pb):
         try:
             copy_protobuf_data(self, output_pb, ('product_id', 'firmware', 'serial_number', 'error', 'state', 'mppt_state',
-                                                 'day_max_power', 'day_power'))
+                                                 'day_max_power', 'day_power', 'off_reason'))
         except AttributeError as e:
             _logger.error(f"Attribute error filling MPPT output info: {e}")
             return False

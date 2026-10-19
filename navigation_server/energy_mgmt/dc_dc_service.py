@@ -112,18 +112,15 @@ class VictronDC_DC(EnergyDevice):
         
         # Store the current data dictionary
 
-        
-        # Update current data via process_msg
-        self._current_data.process_msg(msg)
-        
         clock = time.monotonic()
-
-        # Check if charger is off
-        if self._current_data.state == VE_state.Off:
-            _logger.debug("DC-DC charger is off")
-            if self._energy_controller is not None:
-                self._energy_controller.set_off_state(self._instance, self.device_type, False, True)
+        self._last_msg_ts = clock
+        # Update current data via process_msg
+        if not self._current_data.process_msg(msg):
             return
+
+
+
+
         
         # DC-DC specific processing
         if not self._communication_ok:
@@ -173,8 +170,14 @@ class VictronDC_DC(EnergyDevice):
         if self._publish_function is not None:
             self._publish_function()
 
+        # Check if charger is off
+        # change in 3.0.5 of the communication is OK; we continue to build the buckets
+        if self._current_data.state == VE_state.Off:
+            _logger.debug("DC-DC charger is off")
+            if self._energy_controller is not None:
+                self._energy_controller.set_off_state(self._instance, self.device_type, True, False)
         # Report DC-DC data to the energy controller
-        if self._energy_controller is not None and self._current_data is not None:
+        elif self._energy_controller is not None and self._current_data is not None:
             _logger.debug("DC-DC Service report to energy controller")
             self._energy_controller.source_update(
                 self._instance,
@@ -182,7 +185,8 @@ class VictronDC_DC(EnergyDevice):
                 clock,
                 self._current_data.output_current,
                 self._current_data.output_power,
-                self._current_data.output_voltage
+                self._current_data.output_voltage,
+                self._current_data.state
             )
 
     def get_device_info(self, device_info):
@@ -269,12 +273,13 @@ class DC_DCServicer(DC_DC_ServiceServicer):
         Returns:
             DC_DC_Charger_Parameters protobuf message
         """
-        _logger.debug("gRPC request DC_DC_Service.GetInformation")
+        _logger.debug("gRPC request DC_DC_Service.GetInformation command %s", request.command)
         ret_data = DC_DC_Charger_Parameters()
         self._dc_dc_device.get_device_info(ret_data)
         if request.command:
             if request.command == 'parameters':
                 self._dc_dc_device.get_device_parameters(ret_data)
+        _logger.debug("gRPC response DC_DC_Service.GetInformation: %s", ret_data)
         return ret_data
 
     def GetValues(self, request, context):

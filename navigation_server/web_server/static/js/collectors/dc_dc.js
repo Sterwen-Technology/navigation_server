@@ -17,6 +17,33 @@ import {
   t
 } from '../translations-bridge.js';
 
+// Format a list of off reason names for display
+function formatOffReasons(reasons) {
+  if (!reasons || reasons.length === 0) {
+    return getVeOffReasonName(0);
+  }
+  // Get human-readable names for each reason
+  const names = reasons.map(r => {
+    // Try to get the display name from the mapping
+    // The backend returns enum names like "Switched_off_register"
+    // We need to map them to display names
+    const mapping = {
+      "no_reason": "No Reason",
+      "No_input_power": "No Input Power",
+      "Switched_off_switch": "Switched Off (Switch)",
+      "Switched_off_register": "Switched Off (Register)",
+      "Remote_input": "Remote Input",
+      "Protection_active": "Protection Active",
+      "Paygo": "PayGo",
+      "BMS": "BMS",
+      "Engine_shutdown_detection": "Engine Shutdown Detection",
+      "Analyzing_input_voltage": "Analyzing Input Voltage"
+    };
+    return mapping[r] || r;
+  });
+  return names.join(", ");
+}
+
 export { closeDcDc };
 export { dcDcBar };
 export { openDcDc };
@@ -150,7 +177,9 @@ function renderDcDcDashboard(data, processName, win) {
     const outputPower = data.output_power || 0;
     const veState = data.state || 0;
     const error = data.error || 0;
-    const offReason = data.off_reason || 0;
+    const offReasonRaw = data.off_reason_raw || 0;
+    const offReason = data.off_reason || [];
+    const offReasonList = Array.isArray(offReason) ? offReason : [offReason];
     
     win.headerTitle.textContent = `${t.t("dc_dc.title") || "DC-DC"} \u2014 ${escapeHtml(label)}`;
     win.offReason = offReason;
@@ -162,9 +191,9 @@ function renderDcDcDashboard(data, processName, win) {
     const maxCurrent = 50;        // Reasonable default for current
     const maxPower = Math.max(inputPower, outputPower, 1000);
     
-    // Button logic: Show 'Turn On' only if off_reason is 4 (Switched Off (Register))
+    // Button logic: Show 'Turn On' only if off_reason includes 4 (Switched Off (Register))
     // Otherwise, show 'Turn Off' if charger is on, or no button if off for other reasons
-    const showTurnOn = offReason === 4;
+    const showTurnOn = offReasonList.includes("Switched_off_register") || offReasonRaw === 4;
     const showTurnOff = veState !== 0 && !showTurnOn;
     const showButton = showTurnOn || showTurnOff;
     
@@ -188,7 +217,7 @@ function renderDcDcDashboard(data, processName, win) {
             ${data.model ? `<div class="row"><span class="k" data-i18n="dc_dc.model">Model</span><span class="v">${escapeHtml(data.model)}</span></div>` : ""}
             <div class="row"><span class="k" data-i18n="dc_dc.state">State</span><span class="v">${escapeHtml(getVeStateName(veState))}</span></div>
             <div class="row"><span class="k" data-i18n="dc_dc.error">Error</span><span class="v">${escapeHtml(getVeErrorName(error))}</span></div>
-            <div class="row"><span class="k" data-i18n="dc_dc.off_reason">Off Reason</span><span class="v">${escapeHtml(getVeOffReasonName(offReason))}</span></div>
+            <div class="row"><span class="k" data-i18n="dc_dc.off_reason">Off Reason</span><span class="v">${escapeHtml(formatOffReasons(offReasonList))}</span></div>
         </div>
     `;
     
@@ -211,7 +240,9 @@ function renderDcDcDashboard(data, processName, win) {
             </div>
             <div class="dc-dc-trend">
                 <div class="dc-dc-trend-title" data-i18n="dc_dc.trend">Power trend</div>
-                <div class="dc-dc-trend-canvas"><div class="empty">${t.t("general.loading")}</div></div>
+                <div class="dc-dc-trend-canvas">
+                    <div class="empty">${t.t("general.loading")}</div>
+                </div>
             </div>
         </div>
     `;

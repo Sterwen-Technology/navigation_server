@@ -114,6 +114,13 @@ class EnergyDevice:
         raise NotImplementedError("Subclasses must implement this method")
 
     @property
+    def energy_capacity(self) -> float:
+        """
+        Get the energy capacity of the device in Wh
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @property
     def device_label(self):
         """Get the device label"""
         return self._device_label
@@ -202,10 +209,12 @@ class EnergyDevice:
             self._communication_ok = False
             if self._energy_controller is not None:
                 self._energy_controller.set_off_state(self._instance, self.device_type, False, False)
+            # if the communication is lost, we clear the trend bucket
+            self._trend_buckets.clear()
         device_info.device_label = self._device_label
         device_info.device_model = self.device_model
         device_info.instance = self._instance
-        _logger.debug(f"{self._name} EnergyBase get_device_info OK model={self._device_model}")
+        _logger.debug(f"{self._name} EnergyBase get_device_info OK model={self.device_model}")
 
     def get_device_parameters(self, device_parameters):
         """
