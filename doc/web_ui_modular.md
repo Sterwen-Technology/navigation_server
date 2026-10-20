@@ -92,7 +92,32 @@ pages:
         datasource:
           endpoint: /api/energy
           selector: batteries.0   # chemin dans la réponse JSON
+      - id: energy-sources
+        type: energy_source
+        entity: energy_source
+        area: sources
+        repeat: true           # un bloc indépendant par item de la collection
+        datasource:
+          endpoint: /api/energy
+          selector: sources
 ```
+
+### Blocs répétés (`repeat: true`)
+
+Quand un bloc déclare `repeat: true`, le framework instancie **un bloc
+indépendant par item** de la collection pointée par le sélecteur — leur
+nombre suit les données (ex. nombre de sources d'énergie actives). Chaque
+instance reçoit l'item correspondant et un identifiant unique
+(`<id du bloc>-<index>`).
+
+### Zones de mise en page (`area`)
+
+Chaque zone est une grille CSS indépendante, nommée librement dans la
+configuration (classe `area-<nom>`) :
+- demi-largeur par défaut (2 colonnes), repli 1 colonne sous 768px ;
+- `area: full` pour un bloc en pleine largeur ;
+- une zone personnalisée peut être stylée via `.page-area.area-<nom>` dans
+  `main.css`.
 
 ## 3. Ajouter une nouvelle page ou un nouveau bloc
 

@@ -63,6 +63,42 @@ async function fetchEndpointOnce(endpoint, cache) {
     return promise;
 }
 
+// Rend un bloc (simple ou repete). Un bloc repete (repeat: true) est
+// instancie une fois par item de sa collection: chaque item obtient son
+// propre element de bloc independant, en nombre variable selon les donnees.
+function renderBlockInto(page, block, data) {
+    const def = getBlockType(block.type);
+    if (!def) {
+        const el = page.element.querySelector(`[data-block-id="${block.id}"]`);
+        if (el) el.innerHTML = `<div class="empty">Unknown block type: ${block.type}</div>`;
+        return;
+    }
+    const container = page.element.querySelector(`[data-block-container="${block.id}"]`);
+    if (!container) return;
+
+    if (block.repeat) {
+        const items = selectData(data, block.datasource.selector);
+        if (!Array.isArray(items)) {
+            container.innerHTML = `<div class="empty" data-i18n="ems.loading">Loading...</div>`;
+            return;
+        }
+        // Reconstruit les instances du bloc: leur nombre suit la collection.
+        container.innerHTML = "";
+        items.forEach((item, idx) => {
+            const instanceEl = createBlockElement(block, `${block.id}-${idx}`);
+            const bodyEl = instanceEl.querySelector(".ems-block-body");
+            if (bodyEl) bodyEl.innerHTML = def.render(item, `${block.id}-${idx}`);
+            container.appendChild(instanceEl);
+        });
+    } else {
+        const blockEl = page.element.querySelector(`[data-block-id="${block.id}"]`);
+        if (!blockEl) return;
+        const scoped = selectData(data, block.datasource.selector);
+        const bodyEl = blockEl.querySelector(".ems-block-body");
+        if (bodyEl) bodyEl.innerHTML = def.render(scoped, block.id);
+    }
+}
+
 async function refreshConfiguredPage(pageId) {
     const page = pageRegistry.get(pageId);
     if (!page || page.refreshing) return;
@@ -73,17 +109,7 @@ async function refreshConfiguredPage(pageId) {
         for (const [endpoint, blocks] of groups) {
             const data = await fetchEndpointOnce(endpoint, cache);
             for (const block of blocks) {
-                const blockEl = page.element.querySelector(`[data-block-id="${block.id}"]`);
-                if (!blockEl) continue;
-                const def = getBlockType(block.type);
-                if (!def) {
-                    blockEl.innerHTML = `<div class="empty">Unknown block type: ${block.type}</div>`;
-                    continue;
-                }
-                const scoped = selectData(data, block.datasource.selector);
-                const body = def.render(scoped, block.id);
-                const bodyEl = blockEl.querySelector(".ems-block-body");
-                if (bodyEl) bodyEl.innerHTML = body;
+                renderBlockInto(page, block, data);
             }
         }
         translateAllElements();
@@ -114,23 +140,32 @@ function ensurePageElement(pageCfg) {
     pageEl.className = "page configured-page";
     pageEl.style.display = "none";
 
-    let topBlocks = (pageCfg.blocks || []).filter(b => b.area !== "sources");
-    let sourceBlocks = (pageCfg.blocks || []).filter(b => b.area === "sources");
-
-    const topEl = document.createElement("div");
-    topEl.className = "ems-top";
-    for (const block of topBlocks) {
-        topEl.appendChild(createBlockElement(block));
+    // Les blocs sont agences par zone de mise en page (area). Chaque zone
+    // est une grille independante: "top" (grille 2 colonnes par defaut) et
+    // toute autre zone nommee librement dans la configuration.
+    const areas = new Map();
+    for (const block of pageCfg.blocks || []) {
+        const areaName = block.area || "top";
+        if (!areas.has(areaName)) areas.set(areaName, []);
+        areas.get(areaName).push(block);
     }
-    pageEl.appendChild(topEl);
 
-    if (sourceBlocks.length > 0) {
-        const sourcesEl = document.createElement("div");
-        sourcesEl.className = "ems-sources";
-        for (const block of sourceBlocks) {
-            sourcesEl.appendChild(createBlockElement(block));
+    for (const [areaName, blocks] of areas) {
+        const areaEl = document.createElement("div");
+        areaEl.className = `page-area area-${areaName}`;
+        for (const block of blocks) {
+            if (block.repeat) {
+                // Bloc repete: un conteneur recevra une instance de bloc par
+                // item de la collection (nombre variable).
+                const containerEl = document.createElement("div");
+                containerEl.className = "ems-block-repeat-container";
+                containerEl.dataset.blockContainer = block.id;
+                areaEl.appendChild(containerEl);
+            } else {
+                areaEl.appendChild(createBlockElement(block, block.id));
+            }
         }
-        pageEl.appendChild(sourcesEl);
+        pageEl.appendChild(areaEl);
     }
 
     const main = document.querySelector("main");
@@ -147,10 +182,10 @@ function ensurePageElement(pageCfg) {
     return page;
 }
 
-function createBlockElement(block) {
+function createBlockElement(block, instanceId) {
     const wrapper = document.createElement("div");
-    wrapper.className = block.area === "sources" ? "ems-box ems-source-block" : "ems-box";
-    wrapper.dataset.blockId = block.id;
+    wrapper.className = "ems-box";
+    wrapper.dataset.blockId = instanceId || block.id;
     wrapper.innerHTML = `
         <div class="ems-block-body">
             <div class="empty" data-i18n="ems.loading">Loading...</div>

@@ -9,6 +9,7 @@
 import { escapeHtml } from '../common.js';
 import { t } from '../translations-bridge.js';
 import { barView, centeredBarView, trendView } from './views.js';
+import { getEnergySourceTypeName } from './enums.js';
 
 export { registerBlockType, getBlockType, BLOCK_TYPES };
 
@@ -117,62 +118,53 @@ registerBlockType("battery", {
     }
 });
 
-// --- Bloc: Energy Sources ----------------------------------------------
+// --- Bloc: Energy Source (une entite par bloc) ------------------------
+// Utilise avec repeat: true dans la configuration: le framework instancie
+// un bloc independant par source, en nombre variable selon les donnees.
 
-const energySourceTypeNames = {
-    0: "Battery", 1: "Solar", 2: "Alternator", 3: "AC Charger",
-    4: "DC-DC Charger", 5: "Windmill", 6: "Hydro Generator", 7: "AC Generator", 8: "AC-DC Converter"
-};
+registerBlockType("energy_source", {
+    title: (source) => (source && source.label) || "",
+    render(source, blockId) {
+        if (!source) return `<div class="empty" data-i18n="ems.no_sources">${escapeHtml(t.t("ems.no_sources"))}</div>`;
 
-registerBlockType("energy_sources", {
-    title: () => t.t("ems.sources_title"),
-    render(sources, blockId) {
-        if (!Array.isArray(sources) || sources.length === 0) {
-            return `<div class="empty" data-i18n="ems.no_sources">${escapeHtml(t.t("ems.no_sources"))}</div>`;
+        const sourceData = source.source_data || {};
+        const instance = source.instance_id || source.instance || 0;
+        const label = source.label || ("Source " + instance);
+        const typeName = getEnergySourceTypeName(source.type || 0);
+
+        const current = getValue(sourceData.current);
+        const power = getValue(sourceData.power);
+        const communicationOk = sourceData.communication_ok !== undefined ? sourceData.communication_ok : true;
+        const deviceOn = sourceData.device_on !== undefined ? sourceData.device_on : true;
+
+        let html = '<div class="ems-source-header">';
+        html += '<span class="ems-source-title">' + escapeHtml(label) + '</span>';
+        html += '<span class="ems-source-type">' + escapeHtml(typeName) + '</span>';
+        html += '<span class="ems-source-state">';
+        if (!communicationOk) {
+            html += '<span class="ems-source-state-indicator grey"></span>';
+            html += '<span>' + escapeHtml(t.t("ems.no_communication")) + '</span>';
+        } else {
+            html += '<span class="ems-source-state-indicator ' + (deviceOn ? '' : 'off') + '"></span>';
+            html += '<span>' + escapeHtml(deviceOn ? t.t("ems.on") : t.t("ems.off")) + '</span>';
         }
-
-        let html = '';
-        for (const source of sources) {
-            const sourceData = source.source_data || {};
-            const instance = source.instance_id || source.instance || 0;
-            const label = source.label || ("Source " + instance);
-            const typeName = energySourceTypeNames[source.type || 0] || ("Type " + (source.type || 0));
-
-            const current = getValue(sourceData.current);
-            const power = getValue(sourceData.power);
-            const communicationOk = sourceData.communication_ok !== undefined ? sourceData.communication_ok : true;
-            const deviceOn = sourceData.device_on !== undefined ? sourceData.device_on : true;
-
-            html += '<div class="ems-source-row">';
-            html += '<div class="ems-source-header">';
-            html += '<span class="ems-source-title">' + escapeHtml(label) + '</span>';
-            html += '<span class="ems-source-type">' + escapeHtml(typeName) + '</span>';
-            html += '<span class="ems-source-state">';
-            if (!communicationOk) {
-                html += '<span class="ems-source-state-indicator grey"></span>';
-                html += '<span>' + escapeHtml(t.t("ems.no_communication")) + '</span>';
-            } else {
-                html += '<span class="ems-source-state-indicator ' + (deviceOn ? '' : 'off') + '"></span>';
-                html += '<span>' + escapeHtml(deviceOn ? t.t("ems.on") : t.t("ems.off")) + '</span>';
-            }
-            html += '</span>';
-            html += '</div>';
-            html += '<div class="ems-source-body">';
-            html += '<div class="ems-source-bars">';
-            const sourceCurrentMax = Math.abs(current) > 10.0 ? 50.0 : 10.0;
-            html += barView(t.t("ems.current"), Math.abs(current), "A", "#ff00ff", 0, sourceCurrentMax);
-            const sourcePowerMax = Math.abs(power) > 100.0 ? 500.0 : 100.0;
-            html += barView(t.t("ems.power"), Math.abs(power), "W", "#ff9900", 0, sourcePowerMax);
-            html += '</div>';
-            html += '<div class="ems-source-trend-container">';
-            const trend = trendView(source.trend, `ems-source-trend-${blockId}-${instance}`, "power", "W");
-            if (trend) {
-                html += `<div class="ems-trend-title" data-i18n="ems.source_trend">${escapeHtml(t.t("ems.source_trend"))}</div>`;
-                html += trend;
-            }
-            html += '</div>';
-            html += '</div></div>';
+        html += '</span>';
+        html += '</div>';
+        html += '<div class="ems-source-body">';
+        html += '<div class="ems-source-bars">';
+        const sourceCurrentMax = Math.abs(current) > 10.0 ? 50.0 : 10.0;
+        html += barView(t.t("ems.current"), Math.abs(current), "A", "#ff00ff", 0, sourceCurrentMax);
+        const sourcePowerMax = Math.abs(power) > 100.0 ? 500.0 : 100.0;
+        html += barView(t.t("ems.power"), Math.abs(power), "W", "#ff9900", 0, sourcePowerMax);
+        html += '</div>';
+        html += '<div class="ems-source-trend-container">';
+        const trend = trendView(source.trend, `ems-source-trend-${blockId}`, "power", "W");
+        if (trend) {
+            html += `<div class="ems-trend-title" data-i18n="ems.source_trend">${escapeHtml(t.t("ems.source_trend"))}</div>`;
+            html += trend;
         }
+        html += '</div>';
+        html += '</div>';
         return html;
     }
 });

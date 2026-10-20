@@ -51,9 +51,10 @@ export const DEFAULT_UI_CONFIG = {
                 },
                 {
                     id: "energy-sources",
-                    type: "energy_sources",
+                    type: "energy_source",
                     entity: "energy_source",
                     area: "sources",
+                    repeat: true,
                     datasource: { endpoint: "/api/energy", selector: "sources" },
                 },
             ],
