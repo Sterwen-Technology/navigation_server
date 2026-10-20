@@ -9,8 +9,11 @@ import {
 import {
   showConfiguredPage
 } from '../ui/framework.js';
+import {
+  barView as createEmsBar, centeredBarView as createEmsCenteredBar, fmtValue as emsFmt
+} from '../ui/views.js';
 
-export { createEmsBar } from '../ui/views.js';
+export { createEmsBar, createEmsCenteredBar, emsFmt };
 export { getEnergySourceTypeName, getVeErrorName, getVeMpptName, getVeOffReasonName, getVeStateName };
 
 // Affiche une page (page 0 "services" ou page configuree).
