@@ -73,10 +73,9 @@ function renderBlockInto(page, block, data) {
         if (el) el.innerHTML = `<div class="empty">Unknown block type: ${block.type}</div>`;
         return;
     }
-    const container = page.element.querySelector(`[data-block-container="${block.id}"]`);
-    if (!container) return;
-
     if (block.repeat) {
+        const container = page.element.querySelector(`[data-block-container="${block.id}"]`);
+        if (!container) return;
         const items = selectData(data, block.datasource.selector);
         if (!Array.isArray(items)) {
             container.innerHTML = `<div class="empty" data-i18n="ems.loading">Loading...</div>`;
