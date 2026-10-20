@@ -82,8 +82,6 @@ async function refreshConfiguredPage(pageId) {
                 }
                 const scoped = selectData(data, block.datasource.selector);
                 const body = def.render(scoped, block.id);
-                const titleEl = blockEl.querySelector(".ems-box-title");
-                if (titleEl) titleEl.textContent = def.title();
                 const bodyEl = blockEl.querySelector(".ems-block-body");
                 if (bodyEl) bodyEl.innerHTML = body;
             }
@@ -150,11 +148,10 @@ function ensurePageElement(pageCfg) {
 }
 
 function createBlockElement(block) {
-    const wrapper = document.createElement(block.area === "sources" ? "div" : "div");
+    const wrapper = document.createElement("div");
     wrapper.className = block.area === "sources" ? "ems-box ems-source-block" : "ems-box";
     wrapper.dataset.blockId = block.id;
     wrapper.innerHTML = `
-        <h2 class="ems-box-title"></h2>
         <div class="ems-block-body">
             <div class="empty" data-i18n="ems.loading">Loading...</div>
         </div>
