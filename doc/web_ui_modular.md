@@ -52,12 +52,29 @@ dc_dc, engine, nmea2000, gnss, network, console...).
 `static/js/collectors/energy_mgmt.js` est désormais un pont de compatibilité :
 `showPage()` délègue au framework.
 
-### Back-end (`navigation_server/web_server/web_server.py`)
+### Back-end (`navigation_server/web_server/`)
 
-- Option `--ui-config <fichier YAML>` : configuration des pages/blocs servie
-  au démarrage. Exemple de référence : `conf/web_ui_default.yml`.
-- Endpoint `/api/ui_config` : renvoie la configuration (404 si non fournie,
-  le front utilise alors sa configuration embarquée par défaut).
+Deux façons de fournir la configuration au démarrage :
+
+1. **Fichier YAML du process web** (mode déploiement, `WebTopServer`) : clé
+   `ui_config` dans le bloc `Main` de `web_server.yml`. C'est le mode normal
+   de déploiement (`run_server conf/web_server.yml`).
+2. **Ligne de commande** (mode test autonome) : option `--ui-config <fichier>`
+   de `web_main()`.
+
+Dans les deux cas, le décodage est fait par `yaml.safe_load()` :
+
+- `WebTopServer.__init__` (`web_top_server.py`) lit la clé `ui_config`,
+  décode le fichier et transmet le dict à `NavigationWebServer(ui_config=...)`.
+- `web_main()` (`web_server.py`) fait de même pour l'option `--ui-config`.
+
+La configuration est validée (dict avec clé `pages`), puis servie telle
+  quelle au front-end via l'endpoint `/api/ui_config` (404 si absente → le
+  front utilise sa configuration embarquée par défaut). Le décodage final en
+  objets pages/blocs est fait côté navigateur par `js/ui/config.js`
+  (`loadUiConfig()`) et `js/ui/framework.js`.
+
+Exemple de référence : `conf/web_ui_default.yml`.
 
 ### Schéma de configuration
 

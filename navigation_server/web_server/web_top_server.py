@@ -20,6 +20,8 @@
 import logging
 import datetime
 
+import yaml
+
 from navigation_server.router_common import MessageServerGlobals, GenericTopServer, NavThread
 
 from .web_server import NavigationWebServer
@@ -89,6 +91,25 @@ class WebTopServer(GenericTopServer, NavThread):
         else:
             _logger.info("Web API authentication disabled")
 
+        # Optional UI page/bloc configuration file (YAML): the pages and
+        # blocks of the web UI are then driven by this file instead of the
+        # frontend embedded default. See conf/web_ui_default.yml for the
+        # reference schema and doc/web_ui_modular.md for the concepts.
+        ui_config = None
+        ui_config_file = opts.get('ui_config', str, None)
+        if ui_config_file:
+            try:
+                with open(ui_config_file, "r", encoding="utf-8") as f:
+                    ui_config = yaml.safe_load(f)
+                if not isinstance(ui_config, dict) or "pages" not in ui_config:
+                    _logger.error("Invalid UI configuration file (missing 'pages'): %s" % ui_config_file)
+                    ui_config = None
+                else:
+                    _logger.info("UI configuration loaded from %s" % ui_config_file)
+            except Exception as e:
+                _logger.error("Cannot load UI configuration file %s: %s" % (ui_config_file, e))
+                ui_config = None
+
         self._web_server = NavigationWebServer(
             host=web_host,
             port=web_port,
@@ -99,6 +120,7 @@ class WebTopServer(GenericTopServer, NavThread):
             auth=authenticator,
             certfile=https_certfile,
             keyfile=https_keyfile,
+            ui_config=ui_config,
         )
 
     def start(self) -> bool:
