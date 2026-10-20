@@ -3,7 +3,7 @@ import {
 } from '../api.js';
 import {
   getVeErrorName, getVeStateName
-} from './energy_mgmt.js';
+} from '../ui/enums.js';
 import {
   escapeHtml, fmt
 } from '../common.js';

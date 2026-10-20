@@ -2,7 +2,7 @@ import {
   $, state
 } from './config.js';
 import {
-  getRefresh, getShowPage
+  getRefresh
 } from './runtime.js';
 import {
   isBackendDisconnected
@@ -219,24 +219,16 @@ async function checkEnergyServiceAvailable() {
     }
 }
 
-// Update EMS button visibility based on service availability
+// Update EMS button visibility based on service availability.
+// La page EMS est une page configuree: sa disponibilite est pilotee par le
+// framework page/bloc, on se contente de relayer l'etat du service.
 async function updateEmsVisibility() {
     const emsAvailable = await checkEnergyServiceAvailable();
-    const emsBtn = $("nav-ems");
-    const emsPage = $("ems-page");
-    
-    if (emsBtn) {
-        emsBtn.style.display = emsAvailable ? "" : "none";
-    }
-    if (emsPage) {
-        emsPage.style.display = emsAvailable ? "" : "none";
-    }
-    
-    // If EMS is not available and user is trying to view EMS page, switch to services
-    if (!emsAvailable && window.location.hash === "#ems") {
-        getShowPage()("services");
-    }
-    
+    state.emsAvailable = emsAvailable;
+
+    const { pageAvailabilityChanged } = await import('./ui/framework.js');
+    pageAvailabilityChanged("ems", emsAvailable);
+
     return emsAvailable;
 }
 

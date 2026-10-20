@@ -154,6 +154,7 @@ const TRANSLATIONS = {
         'ems.loading': 'Loading Energy Management System data...',
         'ems.error': 'Error loading EMS data',
         'ems.no_sources': 'No energy sources.',
+        'ems.sources_title': 'Energy Sources',
         'ems.controller_title': 'Energy Controller',
         'ems.battery_title': 'Battery',
         'ems.main_voltage': 'Main Voltage',
@@ -276,6 +277,7 @@ const TRANSLATIONS = {
         // EMS
         'ems.loading': 'Chargement des données du système de gestion d\'énergie...',
         'ems.error': 'Erreur lors du chargement des données EMS',
+        'ems.sources_title': 'Sources d\'énergie',
         'ems.no_sources': 'Aucune source d\'énergie.',
         'ems.controller_title': 'Contrôleur Énergétique',
         'ems.battery_title': 'Batterie',

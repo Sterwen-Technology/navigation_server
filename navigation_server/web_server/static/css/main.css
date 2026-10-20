@@ -451,6 +451,29 @@ button.open-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a
     max-width: 1400px;
     margin: 0 auto;
 }
+/* Pages configurees (framework page/bloc): le contenu est centre comme le
+   dashboard EMS historique. */
+.page.configured-page > .ems-top,
+.page.configured-page > .ems-sources {
+    max-width: 1400px;
+    margin: 0 auto 16px auto;
+}
+.ems-source-block {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+.ems-source-block h2.ems-box-title {
+    display: none;
+}
+.ems-block-body:empty::after {
+    content: "";
+}
+.ems-box-title {
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+    color: var(--accent);
+}
 .ems-top {
     display: grid;
     grid-template-columns: 1fr 1fr;

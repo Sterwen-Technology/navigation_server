@@ -28,6 +28,8 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
+import yaml
+
 from navigation_server.router_common import GrpcClient, MessageServerGlobals
 from navigation_server.generated.energy_pb2 import EnergyControllerData, EnergyControllerParameters, BatteryBank, battery_in_out, BatteryUnit, EnergySourceDevice, EnergySourceData
 from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
@@ -110,6 +112,8 @@ class _RequestHandler(BaseHTTPRequestHandler):
             })
         elif path == "/api/config":
             self._serve_config()
+        elif path == "/api/ui_config":
+            self._serve_ui_config()
         elif path == "/api/keepalive":
             self._serve_keepalive()
         elif path == "/api/connection_state":
@@ -394,6 +398,19 @@ class _RequestHandler(BaseHTTPRequestHandler):
             _logger.error("Error serving config: %s", e)
             self._serve_json({"language": "en", "version": "3.0.0"})
 
+    def _serve_ui_config(self):
+        """Serve the UI page/bloc configuration (option --ui-config).
+
+        Returns 404 when no configuration was provided at startup: the
+        frontend then falls back to its embedded default configuration.
+        """
+        ui_config = self.web_server.get_ui_config() if self.web_server else None
+        if not ui_config:
+            self._serve_json({"ok": False, "error": "no UI configuration"},
+                             status=HTTPStatus.NOT_FOUND)
+            return
+        self._serve_json(ui_config)
+
     def _serve_keepalive(self):
         """Serve keep-alive status for connection monitoring.
         
@@ -464,7 +481,9 @@ class NavigationWebServer:
     def __init__(self, host: str, port: int, grpc_address: str, grpc_port: int,
                  secure: bool = False, language: str = "en",
                  auth: Authenticator | None = None,
-                 certfile: str | None = None, keyfile: str | None = None):
+                 certfile: str | None = None, keyfile: str | None = None,
+                 ui_config: dict | None = None):
+        self._ui_config = ui_config
         self._host = host
         self._port = port
         self._language = language
@@ -498,6 +517,10 @@ class NavigationWebServer:
         except OSError as e:
             _logger.error(f"Cannot create HTTP server on {host}:{port}: {e}")
             raise RuntimeError(f"Socket error: cannot bind to {host}:{port}") from e
+
+    def get_ui_config(self) -> dict | None:
+        """Return the UI configuration given at startup, if any."""
+        return self._ui_config
 
     def serve_forever(self):
         protocol = "https" if self._use_https else "http"
@@ -558,6 +581,9 @@ def _parser() -> argparse.ArgumentParser:
                    help="Credentials file enabling web API authentication")
     p.add_argument("--session-timeout", type=int, default=DEFAULT_SESSION_TIMEOUT,
                    help=f"Session lifetime in seconds, default {DEFAULT_SESSION_TIMEOUT}")
+    p.add_argument("--ui-config", default=None,
+                   help="YAML file describing the web UI pages and blocks (modular page/bloc configuration). "
+                        "When omitted, the frontend uses its embedded default configuration.")
     return p
 
 
@@ -616,6 +642,19 @@ def web_main(argv=None):
     if options.https_key:
         keyfile = options.https_key
 
+    ui_config = None
+    if options.ui_config:
+        try:
+            with open(options.ui_config, "r", encoding="utf-8") as f:
+                ui_config = yaml.safe_load(f)
+            if not isinstance(ui_config, dict) or "pages" not in ui_config:
+                _logger.error("Invalid UI configuration file (missing 'pages'): %s" % options.ui_config)
+                ui_config = None
+            else:
+                _logger.info("UI configuration loaded from %s" % options.ui_config)
+        except Exception as e:
+            _logger.error("Cannot load UI configuration file %s: %s" % (options.ui_config, e))
+
     server = NavigationWebServer(
         host=options.address,
         port=options.port,
@@ -625,6 +664,7 @@ def web_main(argv=None):
         auth=authenticator,
         certfile=certfile,
         keyfile=keyfile,
+        ui_config=ui_config,
     )
     server.serve_forever()
     return 0
