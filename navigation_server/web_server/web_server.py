@@ -30,7 +30,7 @@ from urllib.parse import urlparse
 
 import yaml
 
-from navigation_server.router_common import GrpcClient, MessageServerGlobals
+from navigation_server.router_common import GrpcClient, MessageServerGlobals, get_global_var
 from navigation_server.generated.energy_pb2 import EnergyControllerData, EnergyControllerParameters, BatteryBank, battery_in_out, BatteryUnit, EnergySourceDevice, EnergySourceData
 from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
 
@@ -624,11 +624,10 @@ def web_main(argv=None):
     # Handle HTTPS configuration
     certfile = None
     keyfile = None
-    
+    config = MessageServerGlobals.configuration
     # Check if HTTPS is explicitly enabled via --https flag
     if options.https:
         # Try to use server certificates from global configuration
-        config = MessageServerGlobals.configuration
         if (config and config.server_secure_communications):
             certfile = config.get_global('server_cert_file')
             keyfile = config.get_global('server_key_file')
@@ -644,8 +643,9 @@ def web_main(argv=None):
 
     ui_config = None
     if options.ui_config:
+        ui_config_file = os.path.join(get_global_var('settings_path'), options.ui_config)
         try:
-            with open(options.ui_config, "r", encoding="utf-8") as f:
+            with open(ui_config_file, "r", encoding="utf-8") as f:
                 ui_config = yaml.safe_load(f)
             if not isinstance(ui_config, dict) or "pages" not in ui_config:
                 _logger.error("Invalid UI configuration file (missing 'pages'): %s" % options.ui_config)
