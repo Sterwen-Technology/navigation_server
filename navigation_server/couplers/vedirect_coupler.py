@@ -66,6 +66,7 @@ class Vedirect(NavThread):
         super().__init__(name=f"Vedirect-{coupler}", daemon=True)
         self._serialport = serialport
         self._alt_serialport = alt_serialport
+        self._actual_port = serialport
         self._timeout = timeout
         self._serial_fd = None
         self._queue = input_queue
@@ -120,6 +121,7 @@ class Vedirect(NavThread):
         elif self._alt_serialport is not None:
             # let's try the alternate
             if open_port(self._alt_serialport):
+                self._actual_port = self._alt_serialport
                 return True
             else:
                 return False
@@ -127,6 +129,8 @@ class Vedirect(NavThread):
             _logger.error(f"Cannot open VEdirect serial interface with no alternate port specified")
             return False
 
+    def actual_port(self) -> str:
+        return self._actual_port
 
     def close(self):
         _logger.debug("Vedirect serial port %s closed" % self._serialport)
@@ -345,6 +349,9 @@ class VEDirectLogReader(threading.Thread):
     def close(self):
         pass
 
+    def actual_port(self) -> str:
+        return 'VEDirectLogReader'
+
     @staticmethod
     def output_vedirect(msg) -> VEDirectMsg:
         buffer = bytearray.fromhex(msg.message)
@@ -432,6 +439,9 @@ class VEDirectCoupler(Coupler):
 
     def close(self):
         self._reader.close()
+
+    def device(self) -> str:
+        return self._reader.actual_port()
 
     def stop(self):
         if self._reader is not None:

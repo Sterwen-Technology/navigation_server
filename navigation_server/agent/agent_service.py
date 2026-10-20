@@ -738,6 +738,9 @@ class AgentServicerImpl(AgentServicer):
                 address = None
             if address:
                 resp.system.ip_address = address
+        else:
+            _logger.error("Unable to retrieve main connection")
+            resp.system.ip_address = "Unknown"
 
         resp.system.settings = get_global_var('settings_path')
         resp.system_changed = self._system_changed

@@ -151,6 +151,10 @@ class Coupler(NavThread):
     def publishers(self):
         return self._publishers
 
+    def device(self) -> str:
+        # to be implemented in subclasses for actual value
+        return "N/A"
+
     def start_timer(self):
         self._timer = threading.Timer(self._report_timer, self.timer_lapse)
         self._timer.name = self._name + "-timer"
