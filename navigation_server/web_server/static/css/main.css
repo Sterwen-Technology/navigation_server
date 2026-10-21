@@ -451,6 +451,44 @@ button.open-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a
     max-width: 1400px;
     margin: 0 auto;
 }
+/* Pages configurees (framework page/bloc): chaque zone de mise en page
+   (area) est une grille independante. Les blocs - y compris les instances
+   des blocs repetes - s'y repartissent; demi-largeur par defaut (2
+   colonnes). Le nombre de colonnes d'une zone peut etre ajuste via la
+   configuration (classe area-<nom>). */
+.page.configured-page .page-area {
+    max-width: 1400px;
+    margin: 0 auto 16px auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+}
+.page.configured-page .page-area > .ems-box,
+.page.configured-page .ems-block-repeat-container {
+    grid-column: auto;
+}
+.page.configured-page .ems-block-repeat-container {
+    display: grid;
+    grid-template-columns: inherit;
+    gap: inherit;
+    grid-column: 1 / -1;
+    grid-auto-flow: row;
+}
+.page.configured-page .ems-block-repeat-container > .ems-box {
+    grid-column: auto;
+}
+@media (max-width: 768px) {
+    .page.configured-page .page-area,
+    .page.configured-page .ems-block-repeat-container { grid-template-columns: 1fr; }
+}
+/* Zone pleine largeur si la configuration le demande (area: full par ex.) */
+.page.configured-page .page-area.area-full {
+    grid-template-columns: 1fr;
+}
+.page.configured-page .page-area.area-full > .ems-box {
+    grid-column: 1 / -1;
+}
 .ems-top {
     display: grid;
     grid-template-columns: 1fr 1fr;

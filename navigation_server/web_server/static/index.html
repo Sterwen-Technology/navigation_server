@@ -19,7 +19,7 @@
         </h1>
         <div class="page-nav">
             <button id="nav-services" class="nav-btn active" onclick="showPage('services')" data-i18n="nav.services">Services</button>
-            <button id="nav-ems" class="nav-btn" onclick="showPage('ems')" data-i18n="nav.ems">Energy Management System</button>
+            <!-- Les autres pages (ex: EMS) sont ajoutees dynamiquement par js/ui/framework.js depuis la configuration UI -->
         </div>
         <div class="actions">
             <span id="conn-status" class="status-pill disconnected">disconnected</span>
@@ -37,11 +37,7 @@
             </div>
             <div id="processes-grid" class="grid"></div>
         </div>
-        <div id="ems-page" class="page">
-            <div id="ems-dashboard" class="ems-dashboard">
-                <div class="empty" data-i18n="ems.loading">Loading Energy Management System data...</div>
-            </div>
-        </div>
+        <!-- Les pages configurees (ex: EMS) sont inserees ici par js/ui/framework.js -->
     </main>
     <div id="toast" class="toast"></div>
     <div id="window-container" class="window-container"></div>

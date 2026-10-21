@@ -51,6 +51,7 @@ class ConsoleServicer(NavigationConsoleServicer):
         resp.input_rate_raw = i.input_rate_raw()
         resp.output_rate = i.output_rate()
         resp.trace_on = i.trace_status()
+        resp.device = i.device()
         return resp
 
     def GetCoupler(self, request, context):

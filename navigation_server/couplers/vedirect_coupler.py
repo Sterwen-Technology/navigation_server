@@ -22,7 +22,6 @@ import os
 
 from navigation_server.router_common import MessageServerGlobals, NavGenericMsg, TRANSPARENT_MSG, NULL_MSG, NavThread
 from navigation_server.router_core import (Coupler, XDR, NMEA0183Sentences, NMEA0183Msg)
-from navigation_server.log_replay import RawLogFile, LogReadError
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -66,6 +65,7 @@ class Vedirect(NavThread):
         super().__init__(name=f"Vedirect-{coupler}", daemon=True)
         self._serialport = serialport
         self._alt_serialport = alt_serialport
+        self._actual_port = serialport
         self._timeout = timeout
         self._serial_fd = None
         self._queue = input_queue
@@ -120,6 +120,7 @@ class Vedirect(NavThread):
         elif self._alt_serialport is not None:
             # let's try the alternate
             if open_port(self._alt_serialport):
+                self._actual_port = self._alt_serialport
                 return True
             else:
                 return False
@@ -127,6 +128,8 @@ class Vedirect(NavThread):
             _logger.error(f"Cannot open VEdirect serial interface with no alternate port specified")
             return False
 
+    def actual_port(self) -> str:
+        return self._actual_port
 
     def close(self):
         _logger.debug("Vedirect serial port %s closed" % self._serialport)
@@ -328,6 +331,7 @@ class VEDirectLogReader(threading.Thread):
         self._output_format = {'vedirect':self.output_vedirect, 'raw': self.output_raw}[output_format]
 
     def open(self):
+        from navigation_server.log_replay import RawLogFile, LogReadError
         try:
             self._log_reader = RawLogFile(self._log_file)
         except IOError:
@@ -344,6 +348,9 @@ class VEDirectLogReader(threading.Thread):
 
     def close(self):
         pass
+
+    def actual_port(self) -> str:
+        return 'VEDirectLogReader'
 
     @staticmethod
     def output_vedirect(msg) -> VEDirectMsg:
@@ -364,6 +371,7 @@ class VEDirectLogReader(threading.Thread):
         return msg.message
 
     def run(self):
+        from navigation_server.log_replay import RawLogFile, LogReadError
         while True:
             if self._stop_flag:
                 break
@@ -432,6 +440,9 @@ class VEDirectCoupler(Coupler):
 
     def close(self):
         self._reader.close()
+
+    def device(self) -> str:
+        return self._reader.actual_port()
 
     def stop(self):
         if self._reader is not None:

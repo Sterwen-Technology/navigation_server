@@ -1,0 +1,56 @@
+# Web UI modular configuration example (option: --ui-config)
+#
+# Concepts:
+#   - A PAGE is a set of blocks.
+#   - A BLOCK is bound to an ENTITY and defines a VIEW on that entity
+#     (which information is displayed and how: text, bar, curve...).
+#   - Each entity is served by a data collector backed by a gRPC service.
+#
+# The "services" page is the page 0: always present, built-in, not optional.
+# Any page declared here in addition is assembled by the frontend framework.
+#
+# Block fields:
+#   id: unique block id within the page
+#   type: block type registered in the frontend (see static/js/ui/blocks.js)
+#   entity: entity the block is a view on
+#   area: layout area ("top" grid, or "sources" rows)
+#   datasource:
+#     endpoint: web API endpoint serving the entity data
+#     selector: optional path in the JSON response ("batteries.0" style)
+
+version: 1
+
+pages:
+  - id: services            # page 0 - built-in, not optional
+    builtin: services
+    title_i18n: nav.services
+    optional: false
+
+  - id: ems
+    title_i18n: nav.ems
+    refresh_interval: 10000  # ms
+    availability_endpoint: /api/energy_available
+    blocks:
+      - id: energy-controller
+        type: energy_controller
+        entity: energy_controller
+        area: top
+        datasource:
+          endpoint: /api/energy
+
+      - id: battery
+        type: battery
+        entity: battery
+        area: top
+        datasource:
+          endpoint: /api/energy
+          selector: batteries.0
+
+      - id: energy-sources
+        type: energy_source
+        entity: energy_source
+        area: sources
+        repeat: true             # one independent block per source, variable count
+        datasource:
+          endpoint: /api/energy
+          selector: sources

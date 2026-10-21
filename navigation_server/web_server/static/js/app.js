@@ -38,8 +38,11 @@ import {
   openDcDc, closeDcDc
 } from './collectors/dc_dc.js';
 import {
-  showPage, startEmsRefresh
+  showPage
 } from './collectors/energy_mgmt.js';
+import {
+  initUiFramework
+} from './ui/framework.js';
 import {
   initPageTranslations
 } from './i18n.js';
@@ -54,6 +57,9 @@ import {
 // Branchement des indirections (cycles api/system et api/energy_mgmt)
 setRefresh(refresh);
 setShowPage(showPage);
+
+// Assemblage des pages configurees (page/bloc) avant tout affichage.
+initUiFramework(showPage).catch(e => console.error("UI framework init error:", e));
 
 // Exports window.* supplémentaires pour les onclick inline générés dynamiquement
 window.saveSettings = saveSettings;

@@ -33,6 +33,7 @@ message CouplerMsg {
   }
   Device_state dev_state=4;
   string protocol=5;
+  string device=15;   // Name of the device used for the physical interface (if relevant)
   uint32 msg_in=6;
   uint32 msg_raw=13;
   uint32 msg_out=7;

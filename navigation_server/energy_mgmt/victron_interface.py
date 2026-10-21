@@ -1,7 +1,7 @@
 #-------------------------------------------------------------------------------
 # Name:        victron_interface
 # Purpose:     Decoding and encoding of VEdirect messages (Text and HEX)
-#
+#               Consistent with VE Direct Protocol 3.34
 # Author:      Laurent Carré
 #
 # Created:     4/10/2026
@@ -280,7 +280,7 @@ class VictronVEDirectDecoderABC:
             raise VEDirectException("VE Direct transaction already in progress")
         hex_cmd = encode_charge_control_command(DEVICE_MODE_ON)
         msg = VEDirectMsg(hex_cmd, VED_CMD_HEX)
-        self._transaction_context = (HEX_COMMAND_SET, 0x0200)
+        self._transaction_context = (HEX_COMMAND_SET, 0x0200, time.monotonic())
         coupler.send(msg)
 
     def set_charger_off(self, coupler):
@@ -288,7 +288,7 @@ class VictronVEDirectDecoderABC:
             raise VEDirectException("VE Direct transaction already in progress")
         hex_cmd = encode_charge_control_command(DEVICE_MODE_OFF)
         msg = VEDirectMsg(hex_cmd, VED_CMD_HEX)
-        self._transaction_context = (HEX_COMMAND_SET, 0x0200)
+        self._transaction_context = (HEX_COMMAND_SET, 0x0200, time.monotonic())
         coupler.send(msg)
 
     def response_handling(self, response):
@@ -324,6 +324,11 @@ class VictronVEDirectDecoderABC:
         else:
             # let's see if we have parameters to handle
             self.process_parameters(result)
+        # now check that we have no pending command
+        if self._transaction_context is not None:
+            if time.monotonic() - self._transaction_context[2] > 10:
+                _logger.warning("No response from Victron device for %s seconds", time.monotonic() - self._transaction_context.timestamp)
+                self._transaction_context = None
 
 
 class VictronSmartShuntData (VictronVEDirectDecoderABC):

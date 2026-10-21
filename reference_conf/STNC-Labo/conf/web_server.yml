@@ -39,6 +39,11 @@ servers:
       host: 0.0.0.0
       port: 8080
       use_agent_connection: true
+      # Optional page/bloc UI configuration file (YAML). When set, the web UI
+      # pages and blocks are driven by this file; otherwise the frontend uses
+      # its embedded default configuration.
+      # Reference schema: conf/web_ui_default.yml - Concepts: doc/web_ui_modular.md
+      # ui_config: /home/laurent/config/web_ui.yml
       # agent_address: stnc800a003
       # grpc_port: 4545
       auth:
