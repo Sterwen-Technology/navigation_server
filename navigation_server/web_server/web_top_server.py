@@ -19,10 +19,11 @@
 
 import logging
 import datetime
+import os
 
 import yaml
 
-from navigation_server.router_common import MessageServerGlobals, GenericTopServer, NavThread
+from navigation_server.router_common import MessageServerGlobals, GenericTopServer, NavThread, get_global_var
 
 from .web_server import NavigationWebServer
 from .user_management import Authenticator
@@ -95,9 +96,9 @@ class WebTopServer(GenericTopServer, NavThread):
         # blocks of the web UI are then driven by this file instead of the
         # frontend embedded default. See conf/web_ui_default.yml for the
         # reference schema and doc/web_ui_modular.md for the concepts.
-        ui_config = None
-        ui_config_file = opts.get('ui_config', str, None)
-        if ui_config_file:
+        ui_config = opts.get('ui_config', str, None)
+        if ui_config:
+            ui_config_file = os.path.join(get_global_var('settings_path'), ui_config)
             try:
                 with open(ui_config_file, "r", encoding="utf-8") as f:
                     ui_config = yaml.safe_load(f)

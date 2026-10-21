@@ -51,7 +51,7 @@ servers:
       # pages and blocks are driven by this file; otherwise the frontend uses
       # its embedded default configuration.
       # Reference schema: conf/web_ui_default.yml - Concepts: doc/web_ui_modular.md
-      ui_config: web_ui.yml
+      ui_config: web_ui_default.yml
       auth:
             enabled: true
             credentials_file: /home/laurent/certificates/web_users
