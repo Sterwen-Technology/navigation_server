@@ -113,8 +113,8 @@ For any problem encountered, please open an issue in this GitHub repository: [Na
 
 ## Roadmap
 
-The current stable version is V3.0.4 Documentation is aligned on this version. The version 2.8.2 has introduced some key corrections on the CAN interface management.
-Existing application are to be upgraded to 2.8.3 and up.
+The current stable version is V3.0.6 Documentation is aligned on this version. The version 2.8.2 has introduced some key corrections on the CAN interface management.
+Existing applications are to be upgraded to 2.8.3 and up.
 
 From the version 2.5.0 the new STNC800 hardware is supported
 
