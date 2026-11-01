@@ -152,3 +152,36 @@ distincte, à traiter avec le périmètre back-end correspondant. En attendant,
 la configuration par défaut de la page EMS utilise l'endpoint `/api/energy`
 (qui agrège) — le basculement vers les endpoints dédiés ne requerra qu'un
 changement de configuration, pas de code front-end.
+
+## 5. Visualisation des données dans les blocs
+
+Les données sont réparties dans les catégories suivantes :
+
+| Type de donnée             | représentation interne | description                                                            | donnée(s) additionelle                |
+|----------------------------|------------------------|------------------------------------------------------------------------|---------------------------------------|
+| scalaire positif           | float                  | Nombre flottant positif                                                | valeur maximum d'affichage            |
+| scalaire                   | float                  | nombre flottant                                                        | valeur absolue du maximum d'affichage |
+| texte                      | string (utf_8)         | Chaine de caractères                                                   | nombre caractères maximum d'affichage |
+| date                       | string                 | Date au format iso 8601 UTC                                            | N/A                                   |
+| série temporelle tendance  | list[float]            | série de valeurs à intervalle fixe référencé par rapport temps courant | intervalle, valeur maximum            |     
+| série temporelle régulière | list[float]            | série de valeur à intervalle fixe référencée par une date              | date, intervalle, valeur maximum      |
+
+Les séries peuvent être avec des valeurs strictement positives ou bien négatives/positives
+
+
+Les unités utilisées dans l'application sont les suivantes (liste non définitive)
+
+| Grandeur physique | Unité              | Symbole | Type             |
+|-------------------|--------------------|---------|------------------|
+| Temps/Durée       | seconde            | s       | scalaire positif |
+| Date              | N/A                | N/A     | date             |
+| Tension (DDP)     | Volt               | V       | scalaire positif |
+| Courant           | Ampère             | A       | Scalaire         |
+| Puissance         | Watt               | W       | Scalaire         | 
+| Energie           | Watt-heure         | Wh      | scalaire         |
+| Pression          | hectoPascal        | hPa     | scalaire positif |
+| Vitesse rotation  | revolution/minute  | RPM     | scalaire positif |
+| Temperature       | Celsius            | °C      | scalaire         |
+
+
+Maintenant 
