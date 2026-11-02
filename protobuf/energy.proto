@@ -99,7 +99,7 @@ message energy_command_response{
 
 // MPPT - Solar panel specific section
 
-message MPPT_device {
+message MPPT_device { // That is the parameters dataset
   // Semi static information
   uint32 instance=1;          // device ID - identify the device when more than one are used
   bool communication_ok=2;  // True if the communication is working with the MPPT device
@@ -115,17 +115,13 @@ message MPPT_device {
   float day_max_power = 11;  //Watt
   float day_power = 12;      //kilo Watt-heure
   string msg_timestamp = 13; // ISO UTC
-  MPPT_parameters parameters = 14;  // Optional
+  float panel_max_power=14;    // Watt
+  float panel_max_voltage=19;  // Volt
+  float max_voltage=16;        // Volt - on MPPT output
+  float trend_duration=17;     // Duration in minutes of the trand series
+  float trend_interval=18;     // interval in seconds between trend values
 }
 
-message MPPT_parameters {
-  uint32 instance=6;          // Instance ID of the MPPT device
-  float panel_max_power=1;    // Watt
-  float panel_max_voltage=2;  // Volt
-  float max_voltage=3;        // Volt - on MPPT output
-  float trend_duration=4;     // Duration in minutes of the trand series
-  float trend_interval=5;     // interval in seconds between trend values
-}
 
 // that is the minimum set of parameters that are configurable from the service
 // Only the parameter that are set in the message are applied
@@ -138,24 +134,30 @@ message MPPT_Configuration_parameters {
   float equalize_voltage=6;
 }
 
-message solar_output {
+message MPPT_Data {
   float current = 1;  // Amp
   float voltage =2;   // Volt
   float panel_voltage=4;  // Volt
   float panel_power =3;  //Watt
+  float power=5;    // Watt - that is the output power from the MPPT, the one that really matter
+  // The following fields are repeated in the current data to avoid fetching the parameters permanently
+  bool communication_ok=6;  // True if the communication is working with the MPPT device
+  VE_state state= 8;
+  VE_MPPT mppt_state =7;
+  uint32 off_reason=9; // Bitwise OR of the reasons as per VE_Off_Reason
 }
 
 message solar_trend_response {
   int32 id=1;
   int32 nb_values=2;
   float interval=3;
-  repeated solar_output values=4;
+  repeated MPPT_Data values=4;
 }
 
 service MPPTService {
   // returns semi-static information + parameters with the 'parameters' command
   rpc GetDeviceInfo(energy_request) returns (MPPT_device) {}
-  rpc GetOutput(energy_request) returns (solar_output) {}
+  rpc GetOutput(energy_request) returns (MPPT_Data) {}
   rpc GetTrend(energy_request) returns (solar_trend_response) {}
   rpc SetConfiguration(MPPT_Configuration_parameters) returns (energy_command_response) {}
   rpc DeviceCommand(energy_request) returns (energy_command_response) {}
@@ -321,22 +323,7 @@ message EnergyControllerParameters {
   float total_energy_capacity=9;  // sum of all batteries capacity in Wh (for display scale)
   float total_power_high=10;    // Total power (ceiling) in high power mode (for display scale)
   float total_power_low=11;     // Total power in low power mode (for display scale)
-}
-
-message EnergySourceData {
-  EnergySourceDevice device=1;
-  float current = 2;  // Instantaneous current (A) injected/draw
-  float power = 3;    // Instantaneous Power input/draw (W) in the system
-  bool communication_ok =4; // True of communication with the device is OK
-  bool device_on = 5;       // True if the device is ON
-}
-
-message BatteryUnitData {
-  uint32 instance=1;
-  float current=4;  // Positive send current - negative draw current (charging)
-  float power=5;    // Positive power injected from the battery - negative power draw
-  float state_of_charge=6;  // Current SoC (ratio between 0-1)
-  float energy=7;   // Energy level in Wh
+  float max_voltage_scale=12;   // To build all graphical representation on voltage (except generators specific voltage)
 }
 
 message EnergyControllerData {
@@ -346,9 +333,8 @@ message EnergyControllerData {
   float production_power=3;
   float consumption_power=4; // Excluding injected in battery banks
   float energy_stock=5;     // total energy available in all battery banks (Wh)
-  float battery_balance=6;  // positive power injected / negative draw (W)
-  repeated EnergySourceData sources_data=7;
-  repeated BatteryUnitData batteries_data=8;
+  float battery_balance=6;  // W positive power injected / negative draw (W)
+  float state_of_charge=7;  // Between 0 and 1
 }
 
 message EnergyControllerTrend {

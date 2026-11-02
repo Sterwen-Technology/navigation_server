@@ -26,6 +26,8 @@ Correspondance endpoint ↔ service gRPC : `ENDPOINT_SERVICE_MAP` dans
 `navigation_server/web_server/data_collectors.py` (battery, mppt, energy,
 dc_dc, engine, nmea2000, gnss, network, console...).
 
+**NOTE generale: pour simplifier le travail du backend et du front end on peut envisager de restructurer les interfaces protobuf pour améliorer leur cohérence pour l'ensemble des entités. Egalement, les données ne doivent plus être dupliquées comme elles le sont aujourd'hui dans le "Energy Controller" (sauf pour les batteries car le contrôleur présente une vue consolidée)**
+
 ### Règles
 
 1. **La page Services est la page 0** : toujours présente, non optionnelle,
@@ -40,6 +42,8 @@ dc_dc, engine, nmea2000, gnss, network, console...).
 ## 2. Implémentation
 
 ### Front-end (`navigation_server/web_server/static/js/ui/`)
+
+**Modification: plus de "block" préconfiguré. La configuration des blocks est aussi paramétrable. Voir plus bas**
 
 | Module | Rôle |
 |---|---|
@@ -76,33 +80,112 @@ La configuration est validée (dict avec clé `pages`), puis servie telle
 
 Exemple de référence : `conf/web_ui_default.yml`.
 
+### Positionnement des blocs
+
+Les blocs doivent pouvoir être positionnés dans la page soit de manière automatique, soit de manière explicite (row, column)
+
 ### Schéma de configuration
+
+**L'exemple est une ébauche de la définition des blocks et des entités conceptuelles associées (view, widgets)**
+
+*Le fichier de définition est un exemple significatif, à ce stade il est incomplet*
 
 ```yaml
 pages:
   - id: ems
     title_i18n: nav.ems
+    layout:
+      type: grid
+      columns: 2
+      rows: 4
     refresh_interval: 10000     # ms
     availability_endpoint: /api/energy_available
+    parameters_endpoint: /api/energy/parameters     # parameters like scale
     blocks:
-      - id: battery
-        type: battery          # type enregistré dans js/ui/blocks.js
-        entity: battery
-        area: top              # zone de mise en page
-        datasource:
-          endpoint: /api/energy
-          selector: batteries.0   # chemin dans la réponse JSON
+      - id: energy_summary
+        title: Energy Controller  #  can be a translation reference
+        position: (0, 0)
+        width: 2    # means 2 columns (default 1)
+        endpoint: /api/energy/data
+        definition:
+          - view: main_voltage
+            title: Main Voltage
+            data: main_voltage      # reference au Json - on peut mettre un chemin structuré
+            widget: voltage_viewgraph  # definition générique
+          - view: auxiliary_voltage
+            title: Auxiliary Voltage
+            data: auxiliary_voltage
+            widget: voltage_viewgraph
+          - view: production_power
+            title: Production
+            data: production_power
+            widget: production_viewgraph
+          - view: battery_power_balance
+            title: Battery power
+            data: battery_balance
+            widget: power_balance
+          - view: power_balance_trend
+            title: Battery balance trend
+            data: trend/battery_balance # there is a trick here as there is a sample field, but it is not significant here
+        
       - id: energy-sources
-        type: energy_source
-        entity: energy_source
-        area: sources
-        repeat: true           # un bloc indépendant par item de la collection
-        datasource:
-          endpoint: /api/energy
-          selector: sources
+        type: energy_source     # vue générique pour le block
+        position: (auto, 0)
+        width: 1    # one column (default)
+        repeat:           # un bloc indépendant par item de la collection
+          source_endpoint: /api/energy/parameters/sources # source de la répétition
+          block_endpoint: /api/type/instance    # the endpoint est construit dynamiquement à partir de la source
+               
+    block_types:
+      - id: energy_source
+        title: parameters.label   # le préfixe du endpoint est implicite 
+        top_widget: communication_indicator
+        definition:
+          - view: production_current
+            title: Current
+            data: data/current      # chemin des données relatif au endpoint
+            widget: production_current_viewgraph
+          - view: production_power
+            title: Power
+            data: data/power
+            widget: production_viewgraph
+          - view: power_trend
+            title: Power trend
+            data: trend/power
+            widget: power_trend
+            
+    widgets:
+      - id: voltage_viewgraph
+        base_widget: positive_viewgraph # that is the hard coded part
+        units: V
+        precision: 2  # figures with 2 digits
+        scale: fixed
+        color: 'voltage_color_parameter'
+        max_value: voltage_max_scale  # using the default parameters_endpoint
+      - id: production_viewgraph
+        base_widget: positive_viewgraph
+        units: W
+        precision: 0
+        scale: dual
+        max_value: [total_power_low, total_power_high]
+      - id: power_balance
+        base_widget: symmetric_viewgraph
+        unit: W
+        precision: 0
+        color: 'power_color_parameter'    # to be defined somewhere - that is already the case
+        scale: dual
+        max_value: [total_power_low, total_power_high]
+      - id: power_trend
+        base_widget: single_positive_curve
+        scale: dynamic
+      - id: power_balance_trend
+        base_widget: single_symmetric_curve
+        scale: dynamic
+        
+
 ```
 
-### Blocs répétés (`repeat: true`)
+### Blocs répétés (`repeat: true`) 
 
 Quand un bloc déclare `repeat: true`, le framework instancie **un bloc
 indépendant par item** de la collection pointée par le sélecteur — leur
@@ -183,5 +266,65 @@ Les unités utilisées dans l'application sont les suivantes (liste non définit
 | Vitesse rotation  | revolution/minute  | RPM     | scalaire positif |
 | Temperature       | Celsius            | °C      | scalaire         |
 
+### Identification des données et chemin d'accès
 
-Maintenant 
+Le chemin d'accès aux données peut être défini de la manière suivante:
+/api/<service>/<instance>/<dataset>/<name>
+
+- **service**: correspond au service au sens gRPC tel que défini par la directive *service* dans me protobuf
+- **instance**: numero d'instance (0 par défaut) quand le service gère plusieurs instances. Il faut définir quels sont les services à instances multiples
+- **dataset**: un message spécifique, correspondant à une structure Json entre serveur et client. Par défaut (et pour la partie énergie) on va avoir 4 *dataset* définis:
+1. parameters: ce sont les données statiques ou semi-statiques qui ne sont rafraichies qu'au démarrage ou sur des changements de contexte qui le nécessitent
+2. data: données instantanées
+3. trend: données historiques immédiates - la dernière valuer est celle de l'instant présent. Cas spécifique les données historiques sont stockées dans le tableau 'samples', ce élément du chemin non significatif est omis dans le chemin de donnée.
+4. history: données historiques - pas encore implémentées
+
+- **name**: nom du champs protobuf/Json
+
+
+Pour d'autres pages et hors contexte "energy", il pourra y avoir d'autres *dataset* définis.
+
+
+## 6. Définition des vues/widgets
+
+### viewgraph
+
+Le viewgraph est un ensemble graphique constitué des éléments suivants:
+- Un titre sur 2 lignes centrées (si le titre est un mot on provisionne toujours 2 lignes)
+- Un rectangle colorié verticalement proportionnellement à la donnée repésentée avec deux variantes: 0 en bas (positive_viewgraph) ou 0 au milieu avec valeur positive au-dessus et valeurs négatives en dessous (symmetric_viewgraph). Dans ce dernier cas le zero est marqué par un trait horizontal.
+- La valeur numérique (signée si symmetrique) avec la précision donnée en paramètre et suivi du symbole de l'unité
+
+### courbes en fonction du temps
+
+Deux variantes: positive_curve ou symmetric_curve. Même principe que pour les bargraph
+Par défaut, il n'y a pas d'axes ni d'échelle tracés.
+
+Il peut y avoir des widget avec une seule courbe ou avec deux courbes
+
+### histogrammes
+
+Même principes que les courbes mais avec un graphique en histogramme
+
+### Dimensions des widgets
+
+Les viewgraphs ont une taille fixe pour l'ensemble de l'application. Ces dimensions sont un paramètre global du front end. Il peut être eventuellement dynamique en fonction de la résolution de l'écran.
+La hauteur est lié à la dimension du block, le nombre de widget que l'on peut instancier dans un bloc est donc limité. Il faut un message d'erreur visible si la vue générée n'est pas constructible.
+Pour les courbes et histogrammes, ils prennent tout l'espace restant à droite dans le block.
+
+### Réutilisation de l'existant
+
+Les vues existantes doivent être réutilisées et adaptées, mais les principes et le look and feel de la version actuelle doivent être conservés. C'est la construction modulaire et la paramétrisation qui changent pas le résultat.
+
+### Paramètres des widgets
+
+| parameter | values or type | signification |
+|-----------|----------------|---------------|
+|  title    | string         |                |
+|   unit        | string                 | Symbol of the units               |
+|     color           |   symbol or value                     | reference to the color symbol or hard coded value |
+|     precision         |      int [0, 3]                                 |      Number of  decimal digits (default 0)  |
+|             data          | data path to values            |   reference relative to base enbpoint               |
+
+Parameters can be configured as arrays when multiple values have to be displayed in the widget
+
+
