@@ -78,32 +78,35 @@ widgets:
     base_widget: positive_viewgraph
     unit: V
     precision: 2            # nombre de décimales (défaut 0)
-    scale: fixed
     color: voltage          # référence à la palette de couleurs
-    max_value: parameters/max_voltage_scale
+    scale: {type: fixed, max: parameters/max_voltage_scale}
 
   - id: production_viewgraph
     base_widget: positive_viewgraph
     unit: W
     precision: 0
-    scale: dual
-    max_value: [parameters/total_power_low, parameters/total_power_high]
+    scale:
+      type: dual
+      low: parameters/total_power_low
+      high: parameters/total_power_high
 
   - id: power_balance
     base_widget: symmetric_viewgraph
     unit: W
     precision: 0
     color: power
-    scale: dual
-    max_value: [parameters/total_power_low, parameters/total_power_high]
+    scale:
+      type: dual
+      low: parameters/total_power_low
+      high: parameters/total_power_high
 
   - id: power_trend
     base_widget: single_positive_curve
-    scale: dynamic
+    scale: {type: dynamic}
 
   - id: power_balance_trend
     base_widget: single_symmetric_curve
-    scale: dynamic
+    scale: {type: dynamic}
 
 # --- Types de blocs (globaux) --------------------------------------
 block_types:
@@ -113,7 +116,7 @@ block_types:
     definition:
       - view: current
         title: Current
-        data: data/current         # dataset implicite du bloc si omis
+        data: data/current         # dataset toujours explicite
         widget: production_current_viewgraph
       - view: power
         title: Power
@@ -142,19 +145,19 @@ pages:
         definition:
           - view: main_voltage
             title: Main Voltage
-            data: main_voltage      # relatif au dataset de l'endpoint
+            data: data/main_voltage
             widget: voltage_viewgraph
           - view: auxiliary_voltage
             title: Auxiliary Voltage
-            data: auxiliary_voltage
+            data: data/auxiliary_voltage
             widget: voltage_viewgraph
           - view: production_power
             title: Production
-            data: production_power
+            data: data/production_power
             widget: production_viewgraph
           - view: battery_power_balance
             title: Battery power
-            data: battery_balance
+            data: data/battery_balance
             widget: power_balance
           - view: power_balance_trend
             title: Battery balance trend
@@ -195,7 +198,8 @@ Un bloc déclare :
 | `title` | texte brut ou chemin de données (`parameters/label`) ou clé i18n |
 | `type` | référence à un `block_type` (mutuellement exclusif avec `definition`) |
 | `definition` | définition inline des vues (surcharge ponctuelle) |
-| `endpoint` | chemin de données du dataset `data` du bloc |
+| `endpoint` | chemin de données du dataset primaire du bloc (`/api/<service>/<instance>/<dataset>`) |
+| `process` | **optionnel** : qualification du process hôte, requise uniquement si le service est hébergé par plusieurs process (§3.1) |
 | `position`, `width`, `priority` | mise en page (§2.3) |
 | `repeat` | bloc répété (§2.5) |
 
@@ -216,7 +220,8 @@ repeat:
 ```
 
 - `source_endpoint` : endpoint retournant la collection décrivant les items
-  (au moins `service` et `instance` par item).
+  (au moins `service` et `instance` par item ; l'item peut aussi porter
+  `process` si le service est hébergé par plusieurs process, §3.1).
 - `block_endpoint` : gabarit de l'endpoint de chaque instance, construit par
   substitution des placeholders `{service}` et `{instance}` depuis l'item.
 - Le `title` du bloc et les chemins `data` des vues sont relatifs à
@@ -232,7 +237,7 @@ interrogé que si un élément affiché l'utilise :
 |---|---|
 | `data` | à chaque cycle de rafraîchissement de la page (`refresh_interval`), un seul fetch par endpoint même si plusieurs vues/blocs le partagent |
 | `trend` | au même cycle, **uniquement si au moins une vue du bloc référence un chemin `trend/...`** (correspond à une requête protobuf `GetTrend` distincte) |
-| `parameters` | une fois à l'activation de la page, puis re-fetch sur changement de contexte (keepalive `system_changed`) ; **uniquement si** un titre, un widget (`max_value`) ou un `repeat` le référence |
+| `parameters` | une fois à l'activation de la page, puis re-fetch sur changement de contexte (keepalive `system_changed`) ; **uniquement si** un titre, un widget (`scale`) ou un `repeat` le référence |
 
 Optimisations futures possibles (non traitées dans un premier temps) :
 fréquence distincte pour `trend`, regroupement de requêtes, cache côté
@@ -242,7 +247,37 @@ cycle.
 
 ## 3. Chemins de données
 
-### 3.1 Endpoints
+### 3.1 Process, services et instances
+
+**Les services gRPC sont hébergés dans des process.** Le lien
+process ↔ service est établi par le backend (configuration des process,
+status de l'agent) et **n'apparaît pas dans les chemins de données de
+l'UI**. La configuration UI référence des entités (service + instance),
+jamais des process directement.
+
+Deux dimensions distinctes doivent être distinguées :
+
+| Notion | Définition | Exemples |
+|---|---|---|
+| **service multi-instance** | un service qui gère plusieurs entités de même type **dans le même process** ; l'instance identifie l'entité dans le process | `battery`, `mppt`, `dc_dc`, `engine` |
+| **service multi-process** | un même type de service hébergé par **plusieurs process** ; singleton dans chaque process, mais plusieurs exemplaires dans le système | `console` (présent dans chaque process) |
+
+L'adresse complète d'une entité côté backend est donc le triplet
+**(service, process, instance)** — instance valant 0 pour les services
+singleton dans leur process.
+
+**Règle de résolution du process** (backend, à partir du status de l'agent) :
+
+1. Le service est hébergé par **un seul process** → résolution implicite
+   (cas de tous les services de la page EMS, hébergés dans le process
+   `energy` ; c'est un cas particulier, pas une généralité).
+2. Le service est hébergé par **plusieurs process** (ex. `console`) → la
+   configuration doit qualifier le process explicitement, via la clé
+   `process:` du bloc (§2.4) ou de l'item de `repeat` (§2.5).
+3. Service introuvable ou process non qualifié alors que le service est
+   multi-process → erreur visible dans le bloc.
+
+### 3.2 Chemins d'accès aux données
 
 Le chemin d'accès aux données suit le schéma :
 
@@ -251,10 +286,9 @@ Le chemin d'accès aux données suit le schéma :
 ```
 
 - **service** : le service au sens gRPC (directive `service` du protobuf)
-- **instance** : numéro d'instance (0 par défaut) quand le service gère
-  plusieurs instances. Services multi-instances (liste provisoire à
-  confirmer) : `battery`, `mppt`, `dc_dc`, `engine`. Singletons :
-  `energy`, `gnss`, `nmea2000`, `network`, `console`.
+- **instance** : numéro d'instance (0 par défaut) pour les services
+  multi-instances (§3.1) ; le process est résolu par le backend (§3.1),
+  éventuellement qualifié par la clé `process:` du bloc
 - **dataset** : un message protobuf spécifique (structure JSON entre serveur
   et client). Quatre datasets :
   1. `parameters` : données statiques ou semi-statiques, rafraîchies au
@@ -269,19 +303,20 @@ Le chemin d'accès aux données suit le schéma :
 D'autres datasets pourront être définis pour d'autres pages, hors contexte
 « energy ».
 
-### 3.2 Chemins relatifs des vues
+### 3.3 Chemins relatifs des vues
 
-Dans la définition d'un bloc :
+Le **dataset est toujours explicite** dans les chemins de données des vues :
 
-- `data` d'une vue = `[dataset/]<name>`. Si le `dataset/` est omis, c'est le
-  dataset de l'`endpoint` du bloc (`data` par défaut).
-  Exemples : `main_voltage` (dataset `data` implicite), `trend/power`,
-  `parameters/label`.
-- Les chemins de widget (`max_value`, `color` paramétré, `title`) se
-  résolvent : d'abord dans les `parameters` **du service du bloc**
-  (`/api/<service>/<instance>/parameters`), sinon dans le dataset
+- `data` d'une vue = `<dataset>/<name>`, ex. `data/main_voltage`,
+  `trend/power`, `parameters/label`. Le dataset de l'`endpoint` du bloc est
+  le dataset **primaire** (celui qui motive le fetch du bloc) ; une vue peut
+  référencer un autre dataset (fetch supplémentaire, §2.6).
+- Les chemins de widget (`scale.max`/`low`/`high`, `color` paramétré,
+  `title`) se résolvent : d'abord dans les `parameters` **du service du
+  bloc** (`/api/<service>/<instance>/parameters`), sinon dans le dataset
   `parameters` de la page (endpoint `parameters_endpoint` de la page, s'il
-  est déclaré).
+  est déclaré — les paramètres de page sont valides pour l'ensemble de
+  celle-ci).
 
 ## 4. Visualisation des données dans les blocs
 
@@ -374,20 +409,34 @@ histogrammes, ils prennent tout l'espace restant à droite dans le bloc.
 | unit      | string         | symbole de l'unité |
 | color     | string         | référence à la palette de couleurs (nom) ou valeur codée |
 | precision | int [0, 3]     | nombre de décimales (défaut 0) |
-| scale     | `fixed` \| `dual` \| `dynamic` | mode d'échelle (§5.7) |
-| max_value | chemin ou liste | valeur(s) maximum d'affichage |
-| data      | chemin de données | référence relative à l'endpoint du bloc |
+| scale     | object (§5.7)  | définition d'échelle : `{type: fixed\|dual\|dynamic, ...}` |
+| data      | chemin de données | référence relative à l'endpoint du bloc, dataset explicite |
 
 Les paramètres peuvent être configurés en tableaux quand plusieurs valeurs
 doivent être affichées dans le widget (ex. `dual_curve` avec deux chemins
 `data` et deux `color`).
 
-### 5.7 Modes d'échelle (`scale`)
+### 5.7 Définition d'échelle (`scale`)
 
-| Mode | Signification |
+L'échelle d'affichage est définie par un objet structuré (les valeurs de
+référence sont des chemins de données, résolus selon §3.3, ou des valeurs
+numériques littérales) :
+
+```yaml
+scale: {type: fixed, max: parameters/max_voltage_scale}
+
+scale:
+  type: dual
+  low: parameters/total_power_low      # échelle basse ET seuil de bascule
+  high: parameters/total_power_high    # échelle haute
+
+scale: {type: dynamic}
+```
+
+| Type | Signification |
 |---|---|
-| `fixed` | échelle constante, `max_value` = un chemin unique |
-| `dual` | bascule automatique entre échelle basse et haute : `max_value` = `[seuil/échelle basse, échelle haute]` (le seuil de bascule est l'échelle basse) |
+| `fixed` | échelle constante ; `max` = valeur (ou chemin) du maximum affichable |
+| `dual` | double échelle à bascule automatique : le widget affiche sur l'échelle basse tant que \|valeur\| ≤ `low`, sinon sur l'échelle haute ; `low` sert à la fois de seuil et d'échelle basse, `high` est l'échelle haute |
 | `dynamic` | recalculée sur la série affichée (min/max observés) |
 
 ### 5.8 Palette de couleurs
@@ -451,14 +500,15 @@ charge). Chaque entité est servie par son service dédié.
 | Battery | battery | `/api/battery/<instance>/...` |
 | Sources (MPPT, DC-DC...) | mppt, dc_dc | `/api/mppt/<instance>/...`, `/api/dc_dc/<instance>/...` |
 
-**Compatibilité** : la renumérotation de champs dans `energy.proto` (ex.
-`MPPT_device` absorbant `MPPT_parameters`) n'est pas compatible wire avec les
-versions antérieures — le déploiement doit être simultané des deux côtés
-(application et web server). Après modification d'un `.proto`, toujours
-régénérer (`gen_proto`) ; les impacts backend (`energy_mgmt/`,
-`data_collectors.py`, simulator) et la configuration UI par défaut
-(sélecteurs `batteries.0`/`sources` supprimés) sont à traiter dans la même
-itération.
+**Compatibilité** : le serveur Web est considéré comme faisant partie de
+l'application : pas de contrainte de compatibilité wire entre versions —
+l'application (process serveurs) et le serveur Web sont mis à jour
+simultanément. La renumérotation de champs dans `energy.proto` (ex.
+`MPPT_device` absorbant `MPPT_parameters`) est donc sans réserve. Après
+modification d'un `.proto`, toujours régénérer (`gen_proto`) ; les impacts
+backend (`energy_mgmt/`, `data_collectors.py`, simulator) et la configuration
+UI par défaut (sélecteurs `batteries.0`/`sources` supprimés) sont à traiter
+dans la même itération.
 
 ## 8. Ajouter une nouvelle page ou un nouveau bloc
 
