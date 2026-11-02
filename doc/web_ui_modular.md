@@ -204,7 +204,7 @@ Un bloc déclare :
 | `repeat` | bloc répété (§2.5) |
 
 Chaque vue (`definition`) déclare : `view` (identifiant), `title`,
-`data` (chemin relatif — voir §3.2) et `widget` (référence à un widget
+`data` (chemin relatif — voir §3.3) et `widget` (référence à un widget
 paramétré).
 
 ### 2.5 Blocs répétés (`repeat`)
