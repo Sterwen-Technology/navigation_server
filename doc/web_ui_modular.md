@@ -1,5 +1,8 @@
 # Web UI — Architecture modulaire page / bloc
 
+> Version de travail (français). Version de base anglaise :
+> `doc/web_ui_modular_en.md`.
+
 ## 1. Concepts formalisés
 
 L'interface Web est organisée selon une modularité à deux niveaux :
@@ -168,7 +171,7 @@ pages:
         priority: 2
         repeat:
           source_endpoint: /api/energy/0/parameters/sources
-          block_endpoint: /api/{service}/{instance}/data
+          block_endpoint: /api/{service}/{instance}
 ```
 
 ### 2.3 Pages et mise en page
@@ -216,14 +219,17 @@ de sources d'énergie actives).
 ```yaml
 repeat:
   source_endpoint: /api/energy/0/parameters/sources
-  block_endpoint: /api/{service}/{instance}/data
+  block_endpoint: /api/{service}/{instance}
 ```
 
 - `source_endpoint` : endpoint retournant la collection décrivant les items
   (au moins `service` et `instance` par item ; l'item peut aussi porter
   `process` si le service est hébergé par plusieurs process, §3.1).
-- `block_endpoint` : gabarit de l'endpoint de chaque instance, construit par
-  substitution des placeholders `{service}` et `{instance}` depuis l'item.
+- `block_endpoint` : gabarit de l'adresse de **base** de chaque instance
+  (`/api/<service>/<instance>`), construit par substitution des
+  placeholders `{service}` et `{instance}` depuis l'item. Le dataset primaire
+  est déterminé par les vues du type de bloc (§2.4) et les chemins `data`
+  explicites de chaque vue.
 - Le `title` du bloc et les chemins `data` des vues sont relatifs à
   l'endpoint de l'instance.
 - Chaque instance reçoit un identifiant unique `<id du bloc>-<index>`.
