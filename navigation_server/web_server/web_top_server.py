@@ -21,12 +21,12 @@ import logging
 import datetime
 import os
 
-import yaml
 
 from navigation_server.router_common import MessageServerGlobals, GenericTopServer, NavThread, get_global_var
 
 from .web_server import NavigationWebServer
 from .user_management import Authenticator
+from .ui_config import UIConfiguration, UIConfigError
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -92,24 +92,26 @@ class WebTopServer(GenericTopServer, NavThread):
         else:
             _logger.info("Web API authentication disabled")
 
-        # Optional UI page/bloc configuration file (YAML): the pages and
-        # blocks of the web UI are then driven by this file instead of the
-        # frontend embedded default. See conf/web_ui_default.yml for the
-        # reference schema and doc/web_ui_modular.md for the concepts.
-        ui_config = opts.get('ui_config', str, None)
-        if ui_config:
-            ui_config_file = os.path.join(get_global_var('settings_path'), ui_config)
-            try:
-                with open(ui_config_file, "r", encoding="utf-8") as f:
-                    ui_config = yaml.safe_load(f)
-                if not isinstance(ui_config, dict) or "pages" not in ui_config:
-                    _logger.error("Invalid UI configuration file (missing 'pages'): %s" % ui_config_file)
-                    ui_config = None
-                else:
-                    _logger.info("UI configuration loaded from %s" % ui_config_file)
-            except Exception as e:
-                _logger.error("Cannot load UI configuration file %s: %s" % (ui_config_file, e))
-                ui_config = None
+        # UI page/bloc configuration (YAML): the pages and blocks of the web
+        # UI are driven by this file. When the key is absent, the reference
+        # configuration shipped with the application is served (see
+        # ui_config.py). See doc/web_ui_modular.md for the concepts.
+        # The configuration is managed by the dedicated ui_config module
+        # (single point of responsibility: loading, validation, serving).
+        ui_configuration = None
+        ui_config_file = opts.get('ui_config', str, None)
+        if ui_config_file:
+            ui_config_file = os.path.join(get_global_var('settings_path'), ui_config_file)
+        try:
+            if ui_config_file:
+                ui_configuration = UIConfiguration.from_file(ui_config_file)
+            else:
+                ui_configuration = UIConfiguration.default()
+            ui_configuration.validate_or_raise()
+            _logger.info("UI configuration loaded from %s" % ui_configuration.source)
+        except UIConfigError as e:
+            _logger.error("UI configuration error: %s - the frontend embedded default will be used", e)
+            ui_configuration = None
 
         self._web_server = NavigationWebServer(
             host=web_host,
@@ -121,7 +123,7 @@ class WebTopServer(GenericTopServer, NavThread):
             auth=authenticator,
             certfile=https_certfile,
             keyfile=https_keyfile,
-            ui_config=ui_config,
+            ui_config=ui_configuration.as_dict() if ui_configuration is not None else None,
         )
 
     def start(self) -> bool:
