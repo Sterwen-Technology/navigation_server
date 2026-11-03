@@ -129,7 +129,7 @@ function curveHtml(ctx) {
     const area = `0,${zeroY} ${pts} ${W},${zeroY}`;
 
     const zeroLine = ctx.symmetric
-        ? `<line x1="0" y1="${zeroY}" x2="${W}" y2="${zeroY}" stroke="currentColor" stroke-width="0.5" opacity="0.6"/>`
+        ? `<line x1="0" y1="${zeroY}" x2="${W}" y2="${zeroY}" stroke="currentColor" stroke-width="1" opacity="0.7"/>`
         : "";
 
     return `
@@ -183,8 +183,8 @@ function deviceStateIndicatorHtml(ctx) {
 const BASE_WIDGETS = {
     positive_viewgraph: (ctx) => viewgraphHtml({ ...ctx, symmetric: false }),
     symmetric_viewgraph: (ctx) => viewgraphHtml({ ...ctx, symmetric: true }),
-    single_positive_curve: curveHtml,
-    single_symmetric_curve: curveHtml,
+    single_positive_curve: (ctx) => curveHtml({ ...ctx, symmetric: false }),
+    single_symmetric_curve: (ctx) => curveHtml({ ...ctx, symmetric: true }),
     communication_indicator: communicationIndicatorHtml,
     device_state_indicator: deviceStateIndicatorHtml,
 };
