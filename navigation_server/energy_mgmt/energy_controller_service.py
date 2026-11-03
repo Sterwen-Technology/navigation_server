@@ -103,7 +103,10 @@ class EnergyController:
             'trend_interval': self._trend_period,
             'total_energy_capacity': 0.0,
             'total_power_high': 0.0,
-            'total_power_low': 0.0
+            'total_power_low': 0.0,
+            # Display scale for all voltage widgets (specs section 5.7):
+            # defaults to the maximum (alarm) voltage
+            'max_voltage_scale': opts.get('max_voltage_scale', float, self._maximum_main_voltage)
         }
 
     def stop_service(self):

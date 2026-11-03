@@ -213,16 +213,18 @@ class EnergyDevice:
         # communication_ok uses the single device-level semantics (timeout on
         # the last message), served uniformly in BOTH datasets of every
         # energy service - see doc/web_ui_modular.md section 1.
+        # NOTE: this is a READ path (GetParameters) - it must not mutate the
+        # device state. The trend history is cleared on communication
+        # RECOVERY in publish(), not here: clearing it on a parameters fetch
+        # would erase the trend every cycle as soon as the device is quiet
+        # for longer than the coupler timeout (bench-observed bug).
         communication_ok = self.communication_ok
         if communication_ok:
             if self._current_data is not None:
                 self._current_data.output_info_pb(device_info)
         else:
-            self._communication_ok = False
             if self._energy_controller is not None:
                 self._energy_controller.set_off_state(self._instance, self.device_type, False, False)
-            # if the communication is lost, we clear the trend bucket
-            self._trend_buckets.clear()
         device_info.communication_ok = communication_ok
         device_info.device_label = self._device_label
         device_info.device_model = self.device_model

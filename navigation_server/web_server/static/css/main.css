@@ -496,9 +496,15 @@ button.open-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a
     flex-direction: column;
     gap: 6px;
     flex: 1;
+    justify-content: center;
 }
+/* Hauteur des courbes identique a celle des viewgraphs (container de
+   barre = 120px), titre et axe compris - le trend s'aligne sur la rangee
+   de bargraphs (section 5.5). */
 .ui-trend-item .ems-trend-canvas {
-    flex: 1;
+    height: 120px;
+    flex: none;
+    box-sizing: border-box;
 }
 /* Conteneur des blocs repetes: les instances sont des blocs independants
    repartis sur les colonnes de la page (largeur 1 = demi-ecran en 2
