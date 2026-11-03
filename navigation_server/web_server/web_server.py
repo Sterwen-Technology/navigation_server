@@ -644,14 +644,16 @@ def web_main(argv=None):
     # validation, serving). With --ui-config the given file is used, otherwise
     # the reference configuration shipped with the application is served.
     ui_config = None
-    if options.ui_config:
-        try:
+    try:
+        if options.ui_config:
             ui_configuration = UIConfiguration.from_file(options.ui_config)
-            ui_configuration.validate_or_raise()
-            ui_config = ui_configuration.as_dict()
-            _logger.info("UI configuration loaded from %s" % options.ui_config)
-        except UIConfigError as e:
-            _logger.error("UI configuration error: %s - the frontend embedded default will be used", e)
+        else:
+            ui_configuration = UIConfiguration.default()
+        ui_configuration.validate_or_raise()
+        ui_config = ui_configuration.as_dict()
+        _logger.info("UI configuration loaded from %s" % ui_configuration.source)
+    except UIConfigError as e:
+        _logger.error("UI configuration error: %s - the frontend embedded default will be used", e)
 
     server = NavigationWebServer(
         host=options.address,

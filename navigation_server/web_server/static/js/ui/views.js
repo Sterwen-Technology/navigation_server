@@ -1,114 +1,134 @@
-// Registre des VUES: representations reutilisables d'une information.
-// Une vue prend une valeur (et ses parametres d'echelle/couleur) et rend du
-// HTML. Les blocs (js/ui/blocks.js) composent ces vues pour definir ce qui
-// est affiche et comment.
+// Base widgets (rendus elementaires codes en dur) - doc/web_ui_modular.md
+// section 5.4. Les widgets de la configuration (section widgets du YAML)
+// parametrent ces rendus: unite, precision, couleur, echelle, ratio.
+//
+// Un base widget recoit un contexte normalise:
+//   { label, value, series, unit, precision, colorCss, max, scaleLow,
+//     scaleHigh, symmetric, ratioPercent }
+// et rend le HTML de la vue.
 
-import { escapeHtml, fmt } from '../common.js';
+import { escapeHtml } from '../common.js';
 
-export { barView };
-export { centeredBarView };
-export { trendView };
-export { textView };
+export { BASE_WIDGETS };
 export { fmtValue };
+export { resolveColor };
+export { renderWidget };
 
-function fmtValue(value, unit = "") {
-    if (value === 0 || value === null || value === undefined) return "--";
-    if (typeof value === "number") {
-        if (unit === "W" || unit === "Wh") return value.toFixed(0) + " " + unit;
-        if (unit === "A" || unit === "V") return value.toFixed(1) + " " + unit;
-        if (unit === "%") return value.toFixed(1) + " " + unit;
-        return value.toFixed(2);
-    }
-    return escapeHtml(value);
+const BASE_WIDGET_IDS = [
+    "positive_viewgraph", "symmetric_viewgraph",
+    "single_positive_curve", "single_symmetric_curve",
+    "communication_indicator",
+];
+
+// --- Helpers ---------------------------------------------------------------
+
+function fmtValue(value, unit = "", precision = 0) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+    const n = Number(value);
+    const fixed = n.toFixed(precision ?? 0);
+    return `${fixed}${unit ? " " + unit : ""}`;
 }
 
-// Barre unipolaire: remplissage de minVal a maxVal.
-function barView(label, value, unit, color, minVal, maxVal) {
-    const range = maxVal - minVal;
-    const percent = range > 0 ? Math.min(Math.max((value - minVal) / range * 100, 0), 100) : 0;
-    return `
-    <div class="ems-bar">
-        <div class="ems-bar-label">${escapeHtml(label)}</div>
-        <div class="ems-bar-container">
-            <div class="ems-bar-fill" style="height: ${percent}%; background: ${color}; bottom: 0; width: 100%;"></div>
-        </div>
-        <div class="ems-bar-value">${fmtValue(value, unit)}</div>
-    </div>
-`;
+// Couleur: reference a la palette (nom) ou valeur CSS directe.
+function resolveColor(colorRef, palette) {
+    if (!colorRef) return "#334155";
+    if (palette && palette[colorRef]) return palette[colorRef];
+    return colorRef;
 }
 
-// Barre centree sur zero: remplissage vers le haut (positif) ou le bas
-// (negatif), maxAbsValue correspondant a 50% de la hauteur.
-function centeredBarView(label, value, unit, color, maxAbsValue) {
-    const absValue = Math.abs(value);
-    const percent = Math.min((absValue / maxAbsValue) * 50, 50);
-    const isPositive = value >= 0;
-    const fillClass = isPositive ? "positive" : "negative";
-    const positionStyle = isPositive ? 'bottom: 50%' : 'top: 50%';
-
-    return `
-    <div class="ems-bar">
-        <div class="ems-bar-label">${escapeHtml(label)}</div>
-        <div class="ems-bar-container">
-            <div class="ems-bar-fill ${fillClass}" style="height: ${percent}%; background: ${color};"></div>
-            <div class="ems-bar-zero-line"></div>
-        </div>
-        <div class="ems-bar-value">${fmtValue(value, unit)}</div>
-    </div>
-`;
+// Ratio 0-1 (convention protobuf) affiche en pourcentage - la conversion
+// est de la responsabilite du widget, jamais du transport (doc section 4).
+function displayValue(value, ratioPercent) {
+    if (value === null || value === undefined) return value;
+    const n = Number(value);
+    return ratioPercent ? n * 100.0 : n;
 }
 
-// Courbe de tendance (SVG inline).
-function trendView(trend, canvasId, fieldName, unit) {
-    if (!trend || !trend.samples || trend.samples.length === 0) return null;
+// --- Viewgraphs (barres) ----------------------------------------------------
+// Barre 0 en bas (positive) ou barre centree sur 0 (symmetric).
+// Rendu identique a la version historique (classes CSS .ems-bar*).
 
-    const values = trend.samples;
-    const W = 100, H = 100;
-    let dataValues = [];
-
-    if (fieldName === "state_of_charge") {
-        dataValues = values.map(v => v.state_of_charge || 0);
+function viewgraphHtml(ctx) {
+    const value = displayValue(ctx.value, ctx.ratioPercent);
+    const absValue = Math.abs(value || 0);
+    let percent;
+    if (ctx.symmetric) {
+        percent = Math.min((absValue / (ctx.max || 1)) * 50, 50);
     } else {
-        dataValues = values.map(v => {
-            if (v.power !== undefined) return v.power;
-            if (v.panel_power !== undefined) return v.panel_power;
-            if (v.current !== undefined && v.voltage !== undefined) return v.current * v.voltage;
-            return 0;
-        });
+        const range = ctx.max || 1;
+        percent = Math.min(Math.max((absValue / range) * 100, 0), 100);
     }
+    const isPositive = value >= 0;
+    const fillClass = ctx.symmetric ? (isPositive ? "positive" : "negative") : "";
+    const positionStyle = ctx.symmetric && !isPositive ? 'top: 50%' : 'bottom: 0';
 
-    const minVal = Math.min(...dataValues, 0);
-    const maxVal = Math.max(...dataValues, 1);
+    return `
+    <div class="ems-bar">
+        <div class="ems-bar-label">${escapeHtml(ctx.label)}</div>
+        <div class="ems-bar-container">
+            <div class="ems-bar-fill ${fillClass}" style="height: ${percent}%; background: ${ctx.colorCss}; ${positionStyle}; width: 100%;"></div>
+            ${ctx.symmetric ? '<div class="ems-bar-zero-line"></div>' : ''}
+        </div>
+        <div class="ems-bar-value">${fmtValue(value, ctx.unit, ctx.precision)}</div>
+    </div>
+`;
+}
+
+// --- Courbes ----------------------------------------------------------------
+// Serie temporelle en SVG inline, sans axes (doc section 5.2).
+// Echelle dynamic: recalculee sur la serie (min/max observes).
+
+function curveHtml(ctx) {
+    const series = (ctx.series || []).map(v => displayValue(v, ctx.ratioPercent));
+    const W = 100, H = 100;
+    if (!series.length) {
+        return `<div class="ems-trend-canvas empty-curve">--</div>`;
+    }
+    const minVal = ctx.symmetric ? Math.min(...series, 0) : Math.min(...series, 0);
+    const maxVal = Math.max(...series, 1);
     const range = maxVal - minVal || 1;
-
-    const n = dataValues.length;
-    const pts = dataValues.map((val, i) => {
+    const n = series.length;
+    const pts = series.map((val, i) => {
         const x = n === 1 ? W / 2 : (i / (n - 1)) * W;
         const y = H - ((val - minVal) / range) * H;
         return `${x.toFixed(2)},${y.toFixed(2)}`;
     }).join(" ");
-
     const area = `0,${H} ${pts} ${W},${H}`;
 
     return `
-    <div class="ems-trend">
-        <div class="ems-trend-canvas" id="${canvasId}">
-            <svg class="ems-trend-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-                <polygon class="ems-trend-area" points="${area}"/>
-                <polyline class="ems-trend-line" points="${pts}" fill="none"/>
-            </svg>
-            <div class="ems-trend-axis">${fmtValue(maxVal, unit)} max</div>
-        </div>
+    <div class="ems-trend-canvas" style="border-color:${ctx.colorCss}; border-width:1px; border-style:solid;">
+        <svg class="ems-trend-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+            <polygon class="ems-trend-area" points="${area}"/>
+            <polyline class="ems-trend-line" points="${pts}" fill="none"/>
+        </svg>
+        <div class="ems-trend-axis">${fmtValue(maxVal, ctx.unit, 0)} max</div>
     </div>
 `;
 }
 
-// Texte simple.
-function textView(label, value, unit = "") {
-    return `
-    <div class="ems-bar">
-        <div class="ems-bar-label">${escapeHtml(label)}</div>
-        <div class="ems-bar-value">${fmt(value, unit)}</div>
-    </div>
-`;
+// --- Indicateur de communication (top_widget) -------------------------------
+
+function communicationIndicatorHtml(ctx) {
+    const ok = ctx.value !== false;
+    return `<span class="ems-source-state-indicator ${ok ? '' : 'off'}"></span>`;
+}
+
+// --- Registre des base widgets ----------------------------------------------
+
+const BASE_WIDGETS = {
+    positive_viewgraph: (ctx) => viewgraphHtml({ ...ctx, symmetric: false }),
+    symmetric_viewgraph: (ctx) => viewgraphHtml({ ...ctx, symmetric: true }),
+    single_positive_curve: curveHtml,
+    single_symmetric_curve: curveHtml,
+    communication_indicator: communicationIndicatorHtml,
+};
+
+// Rend un widget parametre (definition de la section widgets) dans un contexte
+// deja normalise par le framework (valeur ou serie + echelle resolue).
+function renderWidget(widgetDef, ctx) {
+    const renderer = BASE_WIDGETS[widgetDef.base_widget];
+    if (!renderer) {
+        return `<div class="empty">Unknown base widget: ${escapeHtml(widgetDef.base_widget || "")}</div>`;
+    }
+    return renderer(ctx);
 }

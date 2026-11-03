@@ -451,43 +451,65 @@ button.open-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a
     max-width: 1400px;
     margin: 0 auto;
 }
-/* Pages configurees (framework page/bloc): chaque zone de mise en page
-   (area) est une grille independante. Les blocs - y compris les instances
-   des blocs repetes - s'y repartissent; demi-largeur par defaut (2
-   colonnes). Le nombre de colonnes d'une zone peut etre ajuste via la
-   configuration (classe area-<nom>). */
-.page.configured-page .page-area {
+/* Pages configurees (framework page/bloc, doc/web_ui_modular.md sections
+   2.3 et 5.5): grille au nombre de colonnes du layout, blocs places par
+   position explicite ou par priorite; les viewgraphs s'alignent a gauche
+   du bloc, les courbes prennent l'espace restant a droite. */
+.ui-page-grid {
     max-width: 1400px;
     margin: 0 auto 16px auto;
     display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 16px;
     align-items: start;
-}
-.page.configured-page .page-area > .ems-box,
-.page.configured-page .ems-block-repeat-container {
-    grid-column: auto;
-}
-.page.configured-page .ems-block-repeat-container {
-    display: grid;
-    grid-template-columns: inherit;
-    gap: inherit;
-    grid-column: 1 / -1;
     grid-auto-flow: row;
 }
-.page.configured-page .ems-block-repeat-container > .ems-box {
-    grid-column: auto;
-}
 @media (max-width: 768px) {
-    .page.configured-page .page-area,
-    .page.configured-page .ems-block-repeat-container { grid-template-columns: 1fr; }
+    .ui-page-grid { grid-template-columns: 1fr !important; }
+    .ui-page-grid > .ui-block { grid-column: 1 / -1 !important; }
 }
-/* Zone pleine largeur si la configuration le demande (area: full par ex.) */
-.page.configured-page .page-area.area-full {
+.ui-block-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+}
+.ui-viewgraphs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    flex: 0 1 auto;
+    min-width: 300px;
+}
+.ui-trend-zone {
+    flex: 1 1 260px;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.ui-trend-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ui-repeat-container {
+    display: grid;
     grid-template-columns: 1fr;
+    gap: 16px;
+    width: 100%;
 }
-.page.configured-page .page-area.area-full > .ems-box {
-    grid-column: 1 / -1;
+.ui-repeat-block .ui-block-body {
+    display: block;
+}
+.ui-block-status {
+    margin-left: 8px;
+}
+.empty-curve {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+    color: var(--muted);
 }
 .ems-top {
     display: grid;

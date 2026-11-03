@@ -59,7 +59,7 @@ setRefresh(refresh);
 setShowPage(showPage);
 
 // Assemblage des pages configurees (page/bloc) avant tout affichage.
-initUiFramework(showPage).catch(e => console.error("UI framework init error:", e));
+initUiFramework().catch(e => console.error("UI framework init error:", e));
 
 // Exports window.* supplémentaires pour les onclick inline générés dynamiquement
 window.saveSettings = saveSettings;

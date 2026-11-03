@@ -1,20 +1,13 @@
 // Pont de compatibilite: l'ancienne page EMS monolithique est desormais
 // assemblee par le framework page/bloc (js/ui/) a partir de la configuration
-// UI. Ce module conserve les exports historiques utilises par app.js et les
-// collectors (battery, mppt, dc_dc) pour les tables d'enum.
+// UI (schema doc/web_ui_modular.md section 2). Ce module conserve l'export
+// showPage utilise par app.js et le HTML statique.
 
-import {
-  getEnergySourceTypeName, getVeErrorName, getVeMpptName, getVeOffReasonName, getVeStateName
-} from '../ui/enums.js';
 import {
   showConfiguredPage
 } from '../ui/framework.js';
-import {
-  barView as createEmsBar, centeredBarView as createEmsCenteredBar, fmtValue as emsFmt
-} from '../ui/views.js';
 
-export { createEmsBar, createEmsCenteredBar, emsFmt };
-export { getEnergySourceTypeName, getVeErrorName, getVeMpptName, getVeOffReasonName, getVeStateName };
+export { getEnergySourceTypeName, getVeErrorName, getVeMpptName, getVeOffReasonName, getVeStateName } from '../ui/enums.js';
 
 // Affiche une page (page 0 "services" ou page configuree).
 export function showPage(page) {
@@ -27,6 +20,3 @@ export function showPage(page) {
         showConfiguredPage("services");
     }
 }
-
-// Le rafraichissement EMS est gere par le framework (timer par page).
-export function startEmsRefresh() {}

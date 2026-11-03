@@ -131,6 +131,13 @@ class UIConfiguration:
         widget_ids = self._collect_section_ids("widgets")
         block_type_ids = self._collect_section_ids("block_types")
 
+        # Block type definitions also reference widgets - validate them so a
+        # bad reference is caught at startup, not on the first page display.
+        for i, block_type in enumerate(self._config.get("block_types", []) or []):
+            if isinstance(block_type, dict):
+                self._validate_definition(block_type.get("definition"),
+                                          f"block_type '{block_type.get('id', i)}'", widget_ids)
+
         if "pages" in self._config:
             page_ids = set()
             for i, page in enumerate(self._config["pages"]):
@@ -176,6 +183,12 @@ class UIConfiguration:
         columns = layout.get("columns") if isinstance(layout, dict) else None
         if columns is not None and (not isinstance(columns, int) or columns < 1):
             self._errors.append(f"page '{page_id}': 'layout.columns' must be a positive integer (section 2.3)")
+
+        # Page-level parameters endpoint (doc section 3.3): scale/title paths
+        # unresolved in the block service parameters are looked up here.
+        parameters_endpoint = page.get("parameters_endpoint")
+        if parameters_endpoint is not None:
+            self._validate_endpoint(parameters_endpoint, f"page '{page_id}': 'parameters_endpoint'")
 
         blocks = page.get("blocks") or []
         if not isinstance(blocks, list):

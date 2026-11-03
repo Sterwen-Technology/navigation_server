@@ -111,6 +111,21 @@ widgets:
     base_widget: single_symmetric_curve
     scale: {type: dynamic}
 
+  - id: state_of_charge_viewgraph
+    base_widget: positive_viewgraph
+    unit: "%"
+    precision: 1
+    color: state_of_charge
+    ratio_percent: true          # ratio 0-1 dans le dataset, affiche 0-100
+    scale: {type: fixed, max: 100}
+
+  - id: energy_stock_viewgraph
+    base_widget: positive_viewgraph
+    unit: Wh
+    precision: 0
+    color: energy
+    scale: {type: fixed, max: parameters/total_energy_capacity}
+
 # --- Types de blocs (globaux) --------------------------------------
 block_types:
   - id: energy_source
@@ -162,6 +177,14 @@ pages:
             title: Battery power
             data: data/battery_balance
             widget: power_balance
+          - view: state_of_charge
+            title: State of charge
+            data: data/state_of_charge
+            widget: state_of_charge_viewgraph
+          - view: energy_stock
+            title: Energy stock
+            data: data/energy_stock
+            widget: energy_stock_viewgraph
           - view: power_balance_trend
             title: Battery balance trend
             data: trend/battery_balance
