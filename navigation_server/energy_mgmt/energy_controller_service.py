@@ -18,7 +18,7 @@ from collections import deque, namedtuple
 
 from navigation_server.generated.energy_pb2 import (
     EnergyControllerParameters, EnergyControllerData, EnergyControllerTrend,
-    EnergySourceDevice, BatteryUnit, EnergySourceData, BatteryUnitData,
+    EnergySourceDevice, BatteryUnit,
     energy_request, energy_command_response, EnergySource, VE_state
 )
 from navigation_server.generated.energy_pb2_grpc import (
@@ -72,13 +72,14 @@ class EnergyController:
         self._source_data = {}  # instance_id -> {'current': float, 'power': float, 'timestamp': float}
         self._battery_data = {}  # instance_id -> {'current': float, 'power': float, 'soc': float, 'energy': float, 'timestamp': float}
         
-        # Aggregated values
+        # Aggregated values (consolidated view of the controller)
         self._main_voltage = 0.0
         self._auxiliary_voltage = 0.0
         self._production_power = 0.0
         self._consumption_power = 0.0
         self._energy_stock = 0.0
         self._battery_balance = 0.0
+        self._state_of_charge = 0.0
 
         # Aggregated values computing cycle control
 
@@ -327,6 +328,10 @@ class EnergyController:
         # Energy stock (total available energy in all batteries)
         self._energy_stock = total_energy_stock
         
+        # Consolidated state of charge (ratio 0-1) over all battery banks
+        capacity = self._parameters.get('total_energy_capacity', 0.0)
+        self._state_of_charge = (total_energy_stock / capacity) if capacity > 0.0 else 0.0
+        
         # For now, main and auxiliary voltages are set to nominal values
         # These would be updated from actual measurements if available
         self._main_voltage = main_voltage
@@ -355,30 +360,10 @@ class EnergyController:
         bucket_data.consumption_power = self._consumption_power
         bucket_data.energy_stock = self._energy_stock
         bucket_data.battery_balance = self._battery_balance
-        
-        # Add source data
-        for instance, data in self._source_data.items():
-            source_data = EnergySourceData()
-            # Use EnergySourceDevice to include both instance_id and type
-            source_data.device.instance_id = instance[0]
-            source_data.device.type = instance[1]
-            if instance in self._sources:
-                source_data.device.label = self._sources[instance].record.label
-            source_data.current = data['current']
-            source_data.power = data['power']
-            source_data.communication_ok = data.get('communication_ok', True)
-            source_data.device_on = data.get('device_on', True)
-            bucket_data.sources_data.append(source_data)
-        
-        # Add battery data
-        for instance, data in self._battery_data.items():
-            battery_data = BatteryUnitData()
-            battery_data.instance = instance
-            battery_data.current = data['current']
-            battery_data.power = data['power']
-            battery_data.state_of_charge = data['state_of_charge']
-            battery_data.energy = data['energy']
-            bucket_data.batteries_data.append(battery_data)
+        bucket_data.state_of_charge = self._state_of_charge
+        # Note: per the rationalized service structure, the EnergyControllerData
+        # message no longer duplicates the data of the individual entities
+        # (sources, batteries): each entity is served by its own dedicated service.
         
         self._trend_buckets.append(bucket_data)
 
@@ -402,7 +387,7 @@ class EnergyController:
 
     def get_values(self, response):
         """
-        Get current energy controller values
+        Get current energy controller values (data dataset: consolidated view)
         
         Args:
             response: The EnergyControllerData to fill
@@ -413,31 +398,10 @@ class EnergyController:
         response.consumption_power = self._consumption_power
         response.energy_stock = self._energy_stock
         response.battery_balance = self._battery_balance
-        response.auxiliary_voltage = self._auxiliary_voltage
-        
-        # Add source data
-        for instance, data in self._source_data.items():
-            source_data = EnergySourceData()
-            # Use EnergySourceDevice to include both instance_id and type
-            source_data.device.instance_id = instance[0]
-            source_data.device.type = instance[1]
-            if instance in self._sources:
-                source_data.device.label = self._sources[instance].record.label
-            source_data.current = data['current']
-            source_data.power = data['power']
-            source_data.communication_ok = data['communication_ok']
-            source_data.device_on = data['device_on']
-            response.sources_data.append(source_data)
-        
-        # Add battery data
-        for instance, data in self._battery_data.items():
-            battery_data = BatteryUnitData()
-            battery_data.instance = instance
-            battery_data.current = data['current']
-            battery_data.power = data['power']
-            battery_data.state_of_charge = data['state_of_charge']
-            battery_data.energy = data['energy']
-            response.batteries_data.append(battery_data)
+        response.state_of_charge = self._state_of_charge
+        # Note: per the rationalized service structure, the controller serves
+        # only its consolidated view - the data of the individual entities
+        # (sources, batteries) comes from their own dedicated services.
 
     def get_trend(self, request, response):
         """
@@ -469,20 +433,20 @@ class EnergyServicer(EnergyServiceServicer):
     def __init__(self, energy_controller):
         self._energy_controller = energy_controller
 
-    def GetInformation(self, request, context):
-        """Get energy controller information"""
-        _logger.debug("gRPC request EnergyServicer.GetInformation")
+    def GetParameters(self, request, context):
+        """Get energy controller parameters"""
+        _logger.debug("gRPC request EnergyServicer.GetParameters")
         ret_data = EnergyControllerParameters()
         self._energy_controller.get_information(ret_data)
-        _logger.debug(f"GetInformation ret_data={ret_data}")
+        _logger.debug(f"GetParameters ret_data={ret_data}")
         return ret_data
 
-    def GetValues(self, request, context):
-        """Get current energy controller values"""
-        _logger.debug("gRPC request EnergyServicer.GetValues")
+    def GetData(self, request, context):
+        """Get current energy controller values (consolidated view)"""
+        _logger.debug("gRPC request EnergyServicer.GetData")
         ret_data = EnergyControllerData()
         self._energy_controller.get_values(ret_data)
-        _logger.debug(f"GetValues ret_data={ret_data}")
+        _logger.debug(f"GetData ret_data={ret_data}")
         return ret_data
 
     def GetTrend(self, request, context):

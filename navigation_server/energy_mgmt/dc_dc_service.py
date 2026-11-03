@@ -16,8 +16,8 @@ import traceback
 
 from collections import namedtuple, deque
 
-from navigation_server.generated.energy_pb2 import (DC_DC_Charger_running_values, energy_request,
-                                                    DC_DC_Charger_Parameters, DC_DC_Charger_trend,
+from navigation_server.generated.energy_pb2 import (DC_DC_Data, energy_request,
+                                                    DC_DC_Parameters, DC_DC_Trend,
                                                     EnergySource, VE_state, VE_Error, VE_Off_Reason,
                                                     energy_command_response)
 from navigation_server.generated.energy_pb2_grpc import DC_DC_ServiceServicer, add_DC_DC_ServiceServicer_to_server
@@ -191,10 +191,10 @@ class VictronDC_DC(EnergyDevice):
 
     def get_device_info(self, device_info):
         """
-        Fill device information protobuf
+        Fill device information protobuf (parameters dataset)
         
         Args:
-            device_info: DC_DC_Charger_Parameters protobuf message to fill
+            device_info: DC_DC_Parameters protobuf message to fill
         """
         # Call parent implementation to set common fields
         # super().get_device_info(device_info)
@@ -205,10 +205,10 @@ class VictronDC_DC(EnergyDevice):
 
     def get_running_values(self, running_values_pb):
         """
-        Fill protobuf with current running values
+        Fill protobuf with current running values (data dataset)
         
         Args:
-            running_values_pb: DC_DC_Charger_running_values protobuf message to fill
+            running_values_pb: DC_DC_Data protobuf message to fill
         """
         if self._current_data is not None:
             self._current_data.running_values_pb(running_values_pb)
@@ -261,41 +261,39 @@ class DC_DCServicer(DC_DC_ServiceServicer):
         """
         self._dc_dc_device = dc_dc_device
 
-    def GetInformation(self, request, context):
+    def GetParameters(self, request, context):
         """
-        Handle GetInformation gRPC request
-        Returns device parameters and optionally configuration parameters
+        Handle GetParameters gRPC request
+        Returns device parameters (parameters dataset)
         
         Args:
             request: energy_request protobuf message
             context: gRPC context
             
         Returns:
-            DC_DC_Charger_Parameters protobuf message
+            DC_DC_Parameters protobuf message
         """
-        _logger.debug("gRPC request DC_DC_Service.GetInformation command %s", request.command)
-        ret_data = DC_DC_Charger_Parameters()
+        _logger.debug("gRPC request DC_DC_Service.GetParameters command %s", request.command)
+        ret_data = DC_DC_Parameters()
         self._dc_dc_device.get_device_info(ret_data)
-        if request.command:
-            if request.command == 'parameters':
-                self._dc_dc_device.get_device_parameters(ret_data)
-        _logger.debug("gRPC response DC_DC_Service.GetInformation: %s", ret_data)
+        self._dc_dc_device.get_device_parameters(ret_data)
+        _logger.debug("gRPC response DC_DC_Service.GetParameters: %s", ret_data)
         return ret_data
 
-    def GetValues(self, request, context):
+    def GetData(self, request, context):
         """
-        Handle GetValues gRPC request
-        Returns current running values of the DC-DC charger
+        Handle GetData gRPC request
+        Returns current running values of the DC-DC charger (data dataset)
         
         Args:
             request: energy_request protobuf message
             context: gRPC context
             
         Returns:
-            DC_DC_Charger_running_values protobuf message
+            DC_DC_Data protobuf message
         """
-        _logger.debug("gRPC request DC_DC_Service.GetValues")
-        ret_val = DC_DC_Charger_running_values()
+        _logger.debug("gRPC request DC_DC_Service.GetData")
+        ret_val = DC_DC_Data()
         self._dc_dc_device.get_running_values(ret_val)
         return ret_val
 
@@ -309,16 +307,16 @@ class DC_DCServicer(DC_DC_ServiceServicer):
             context: gRPC context
             
         Returns:
-            DC_DC_Charger_trend protobuf message
+            DC_DC_Trend protobuf message
         """
         _logger.debug("gRPC request DC_DC_Service.GetTrend")
-        ret_values = DC_DC_Charger_trend()
+        ret_values = DC_DC_Trend()
         ret_values.instance = self._dc_dc_device.instance
         ret_values.nb_values = 0
         ret_values.interval = self._dc_dc_device.trend_interval
         for bucket in self._dc_dc_device.get_trend_buckets():
             ret_values.nb_values += 1
-            val = DC_DC_Charger_running_values()
+            val = DC_DC_Data()
             val.input_voltage = bucket.input_voltage
             val.input_current = bucket.input_current
             val.input_power = bucket.input_power

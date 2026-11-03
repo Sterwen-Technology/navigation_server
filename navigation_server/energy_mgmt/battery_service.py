@@ -16,8 +16,8 @@ import traceback
 
 from collections import namedtuple, deque
 
-from navigation_server.generated.energy_pb2 import (battery_in_out, energy_request, BatteryBank, battery_response,
-                                                  battery_trend_response, battery_trend_bucket,
+from navigation_server.generated.energy_pb2 import (Battery_Data, energy_request, Battery_Parameters,
+                                                  Battery_Trend, Battery_Trend_Bucket,
                                                   EnergySource)
 from navigation_server.generated.energy_pb2_grpc import BatteryServiceServicer, add_BatteryServiceServicer_to_server
 from navigation_server.router_common import (GrpcService, MessageServerGlobals, resolve_ref, copy_protobuf_data,
@@ -183,9 +183,11 @@ class BatteryOnVictronSmartShunt(EnergyDevice):
             )
 
     def get_battery_values(self, output_pb):
-        """Get current battery values"""
+        """Get current battery values (data dataset)"""
         if self._current_data is not None:
             self._current_data.output_pb(output_pb)
+        output_pb.instance = self._instance
+        output_pb.communication_ok = self._communication_ok
 
 
     def get_device_parameters(self, device_parameters):
@@ -225,30 +227,27 @@ class BatteryServicer(BatteryServiceServicer):
     def __init__(self, battery_device):
         self._battery_device = battery_device
 
-    def GetInformation(self, request, context):
-        """Get battery bank information"""
-        _logger.debug("GRPC request BatteryService.GetInformation")
-        ret_data = battery_response()
-        self._battery_device.get_device_info(ret_data.battery)
-        if request.command:
-            if request.command == 'parameters':
-                self._battery_device.get_device_parameters(ret_data.battery)
-        ret_data.response = 'OK'
-        _logger.debug("BatteryService.GetInformation OK")
+    def GetParameters(self, request, context):
+        """Parameters dataset: battery bank static / semi-static information"""
+        _logger.debug("GRPC request BatteryService.GetParameters")
+        ret_data = Battery_Parameters()
+        self._battery_device.get_device_info(ret_data)
+        self._battery_device.get_device_parameters(ret_data)
+        _logger.debug("BatteryService.GetParameters OK")
         return ret_data
 
-    def GetValues(self, request, context):
-        """Get current battery values"""
-        _logger.debug("GRPC request BatteryService.GetValues")
-        ret_val = battery_in_out()
+    def GetData(self, request, context):
+        """Data dataset: instantaneous battery values"""
+        _logger.debug("GRPC request BatteryService.GetData")
+        ret_val = Battery_Data()
         self._battery_device.get_battery_values(ret_val)
-        _logger.debug("BatteryService.GetValues OK")
+        _logger.debug("BatteryService.GetData OK")
         return ret_val
 
     def GetTrend(self, request, context):
-        """Get battery trend data"""
+        """Trend dataset: trailing battery samples"""
         _logger.debug("GRPC request BatteryService.GetTrend")
-        ret_values = battery_trend_response()
+        ret_values = Battery_Trend()
         ret_values.instance = self._battery_device.instance
         ret_values.nb_values = 0
         ret_values.interval = self._battery_device.trend_interval
@@ -256,7 +255,7 @@ class BatteryServicer(BatteryServiceServicer):
         energy_var = []
         for bucket in self._battery_device.get_trend_buckets():
             ret_values.nb_values += 1
-            val = battery_trend_bucket()
+            val = Battery_Trend_Bucket()
             val.timestamp = bucket.timestamp
             val.voltage = bucket.voltage
             val.energy_variation = bucket.energy_variation
