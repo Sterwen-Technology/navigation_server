@@ -45,10 +45,12 @@ dc_dc, engine, nmea2000, gnss, network, console...).
    assumées :
    - la vue **consolidée** présentée par l'Energy Controller (ex.
      `battery_balance`, `state_of_charge`), qui est sa raison d'être ;
-   - la reprise de quelques champs **live** dans le dataset `data` d'un
-     service (ex. `communication_ok`, `state`) pour éviter d'aller chercher
-     en permanence le dataset `parameters`. Les données semi-statiques
-     restent dans `parameters`.
+   - la reprise des champs **live** de statut (`communication_ok`, `state`,
+     `off_reason`...) dans le dataset `data` de chaque service, pour éviter
+     d'aller chercher en permanence le dataset `parameters`. Ces champs
+     sont présents **uniformément dans les deux datasets** (`parameters`
+     et `data`) de tous les services d'énergie ; les données semi-statiques
+     restent uniquement dans `parameters`.
 
 ## 2. Configuration de l'interface
 

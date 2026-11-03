@@ -617,7 +617,8 @@ class VictronDC_DC_Data(VictronVEDirectDecoderABC):
         parameters_pb.state = self.state
         parameters_pb.error = self.error
         parameters_pb.off_reason = self.off_reason
-        parameters_pb.communication_ok = True
+        # communication_ok is set by the device (timeout on the last message),
+        # not defaulted here - single device-level semantics.
 
 
 class VictronMPPTData(VictronVEDirectDecoderABC):

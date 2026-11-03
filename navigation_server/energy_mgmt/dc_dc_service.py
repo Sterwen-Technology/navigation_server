@@ -196,12 +196,17 @@ class VictronDC_DC(EnergyDevice):
         Args:
             device_info: DC_DC_Parameters protobuf message to fill
         """
-        # Call parent implementation to set common fields
-        # super().get_device_info(device_info)
         fill_protobuf_from_dict(device_info, self._parameters)
         # Add DC-DC specific information
         if self._current_data is not None:
             self._current_data.parameters_pb(device_info)
+        # Common fields: single device-level semantics for the live status
+        # (timeout on the last message), uniform across the parameters and
+        # data datasets - the data class default is overridden here.
+        device_info.communication_ok = self.communication_ok
+        device_info.device_label = device_info.device_label or self._device_label
+        device_info.device_model = device_info.device_model or self.device_model
+        device_info.instance = self._instance
 
     def get_running_values(self, running_values_pb):
         """
@@ -212,7 +217,12 @@ class VictronDC_DC(EnergyDevice):
         """
         if self._current_data is not None:
             self._current_data.running_values_pb(running_values_pb)
-            running_values_pb.instance = self._instance
+        running_values_pb.instance = self._instance
+        # Live status: single device-level semantics (timeout on the last
+        # message), uniform across the parameters and data datasets. The
+        # data class default (True) is overridden by the authoritative
+        # device-level value.
+        running_values_pb.communication_ok = self.communication_ok
 
     def send_command(self, command):
         """Send a command to the DC-DC device

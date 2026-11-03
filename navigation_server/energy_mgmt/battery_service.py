@@ -187,7 +187,9 @@ class BatteryOnVictronSmartShunt(EnergyDevice):
         if self._current_data is not None:
             self._current_data.output_pb(output_pb)
         output_pb.instance = self._instance
-        output_pb.communication_ok = self._communication_ok
+        # Live status: single device-level semantics (timeout on the last
+        # message), uniform across the parameters and data datasets
+        output_pb.communication_ok = self.communication_ok
 
 
     def get_device_parameters(self, device_parameters):

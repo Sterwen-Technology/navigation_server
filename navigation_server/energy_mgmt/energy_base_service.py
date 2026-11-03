@@ -106,6 +106,16 @@ class EnergyDevice:
         return self._instance
 
     @property
+    def communication_ok(self) -> bool:
+        """True if the last device message is more recent than the coupler timeout.
+
+        Single semantics for the live status field, served uniformly in the
+        parameters and data datasets of every energy service (see the uniform
+        rule in doc/web_ui_modular.md section 1 and energy.proto).
+        """
+        return time.monotonic() - self._last_msg_ts < self._coupler_timeout
+
+    @property
     def device_type(self):
         """
         Get the energy source type for this device
@@ -199,12 +209,11 @@ class EnergyDevice:
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_device_info(self, device_info):
-        # fill the protobuf with device information (parameters dataset)
-        # communication_ok is a live status: it is repeated in the parameters
-        # dataset only for the services that expose it there (see the spec
-        # exception rule, doc/web_ui_modular.md section 1); for the others
-        # (e.g. Battery) it is served by the data dataset.
-        communication_ok = time.monotonic() - self._last_msg_ts < self._coupler_timeout
+        # Fill the protobuf with device information (parameters dataset).
+        # communication_ok uses the single device-level semantics (timeout on
+        # the last message), served uniformly in BOTH datasets of every
+        # energy service - see doc/web_ui_modular.md section 1.
+        communication_ok = self.communication_ok
         if communication_ok:
             if self._current_data is not None:
                 self._current_data.output_info_pb(device_info)
@@ -214,8 +223,7 @@ class EnergyDevice:
                 self._energy_controller.set_off_state(self._instance, self.device_type, False, False)
             # if the communication is lost, we clear the trend bucket
             self._trend_buckets.clear()
-        if "communication_ok" in [f.name for f in type(device_info).DESCRIPTOR.fields]:
-            device_info.communication_ok = communication_ok
+        device_info.communication_ok = communication_ok
         device_info.device_label = self._device_label
         device_info.device_model = self.device_model
         device_info.instance = self._instance

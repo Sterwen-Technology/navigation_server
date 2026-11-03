@@ -189,6 +189,7 @@ message ShuntDevice {
 // Battery parameters dataset: static / semi static battery bank information
 message Battery_Parameters {
   uint32 instance=1;          // Instance ID=0 by default
+  bool communication_ok=2;   // Live status repeated in both datasets (see global remark)
   string device_label=3;
   string device_model=4;
   string chemistry=16;

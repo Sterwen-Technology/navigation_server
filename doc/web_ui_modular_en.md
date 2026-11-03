@@ -46,9 +46,11 @@ dc_dc, engine, nmea2000, gnss, network, console...).
    exceptions:
    - the **consolidated** view presented by the Energy Controller (e.g.
      `battery_balance`, `state_of_charge`), which is its very purpose;
-   - a few **live** fields repeated in the `data` dataset of a service
-     (e.g. `communication_ok`, `state`) to avoid permanently fetching the
-     `parameters` dataset. Semi-static data stays in `parameters`.
+   - the live status fields (`communication_ok`, `state`, `off_reason`...)
+     repeated in the `data` dataset of every service, to avoid permanently
+     fetching the `parameters` dataset. These fields are present
+     **uniformly in both datasets** (`parameters` and `data`) of all energy
+     services; semi-static data stays in `parameters` only.
 
 ## 2. Interface configuration
 

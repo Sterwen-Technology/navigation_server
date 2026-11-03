@@ -166,8 +166,9 @@ class VictronMPPT(EnergyDevice):
         if self._current_data is not None:
             self._current_data.output_pb(output_values_pb)
             output_values_pb.power = self._output_power
-        # Live status repeated in the data dataset (see energy.proto global remark)
-        output_values_pb.communication_ok = self._communication_ok
+        # Live status: single device-level semantics (timeout on the last
+        # message), uniform across the parameters and data datasets
+        output_values_pb.communication_ok = self.communication_ok
 
     def send_command(self, command):
         """Send a command to the DC-DC device
