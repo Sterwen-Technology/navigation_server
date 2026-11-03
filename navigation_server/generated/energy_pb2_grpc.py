@@ -5,7 +5,6 @@ import warnings
 
 import navigation_server.generated.energy_pb2 as energy__pb2
 
-
 GRPC_GENERATED_VERSION = '1.66.2'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
@@ -35,20 +34,20 @@ class MPPTServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GetDeviceInfo = channel.unary_unary(
-                '/MPPTService/GetDeviceInfo',
+        self.GetParameters = channel.unary_unary(
+                '/MPPTService/GetParameters',
                 request_serializer=energy__pb2.energy_request.SerializeToString,
-                response_deserializer=energy__pb2.MPPT_device.FromString,
+                response_deserializer=energy__pb2.MPPT_Parameters.FromString,
                 _registered_method=True)
-        self.GetOutput = channel.unary_unary(
-                '/MPPTService/GetOutput',
+        self.GetData = channel.unary_unary(
+                '/MPPTService/GetData',
                 request_serializer=energy__pb2.energy_request.SerializeToString,
-                response_deserializer=energy__pb2.solar_output.FromString,
+                response_deserializer=energy__pb2.MPPT_Data.FromString,
                 _registered_method=True)
         self.GetTrend = channel.unary_unary(
                 '/MPPTService/GetTrend',
                 request_serializer=energy__pb2.energy_request.SerializeToString,
-                response_deserializer=energy__pb2.solar_trend_response.FromString,
+                response_deserializer=energy__pb2.MPPT_Trend.FromString,
                 _registered_method=True)
         self.SetConfiguration = channel.unary_unary(
                 '/MPPTService/SetConfiguration',
@@ -65,14 +64,13 @@ class MPPTServiceStub(object):
 class MPPTServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def GetDeviceInfo(self, request, context):
-        """returns semi-static information + parameters with the 'parameters' command
-        """
+    def GetParameters(self, request, context):
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetOutput(self, request, context):
+    def GetData(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -99,20 +97,20 @@ class MPPTServiceServicer(object):
 
 def add_MPPTServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetDeviceInfo': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetDeviceInfo,
+            'GetParameters': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetParameters,
                     request_deserializer=energy__pb2.energy_request.FromString,
-                    response_serializer=energy__pb2.MPPT_device.SerializeToString,
+                    response_serializer=energy__pb2.MPPT_Parameters.SerializeToString,
             ),
-            'GetOutput': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetOutput,
+            'GetData': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetData,
                     request_deserializer=energy__pb2.energy_request.FromString,
-                    response_serializer=energy__pb2.solar_output.SerializeToString,
+                    response_serializer=energy__pb2.MPPT_Data.SerializeToString,
             ),
             'GetTrend': grpc.unary_unary_rpc_method_handler(
                     servicer.GetTrend,
                     request_deserializer=energy__pb2.energy_request.FromString,
-                    response_serializer=energy__pb2.solar_trend_response.SerializeToString,
+                    response_serializer=energy__pb2.MPPT_Trend.SerializeToString,
             ),
             'SetConfiguration': grpc.unary_unary_rpc_method_handler(
                     servicer.SetConfiguration,
@@ -136,7 +134,7 @@ class MPPTService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetDeviceInfo(request,
+    def GetParameters(request,
             target,
             options=(),
             channel_credentials=None,
@@ -149,9 +147,9 @@ class MPPTService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/MPPTService/GetDeviceInfo',
+            '/MPPTService/GetParameters',
             energy__pb2.energy_request.SerializeToString,
-            energy__pb2.MPPT_device.FromString,
+            energy__pb2.MPPT_Parameters.FromString,
             options,
             channel_credentials,
             insecure,
@@ -163,7 +161,7 @@ class MPPTService(object):
             _registered_method=True)
 
     @staticmethod
-    def GetOutput(request,
+    def GetData(request,
             target,
             options=(),
             channel_credentials=None,
@@ -176,9 +174,9 @@ class MPPTService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/MPPTService/GetOutput',
+            '/MPPTService/GetData',
             energy__pb2.energy_request.SerializeToString,
-            energy__pb2.solar_output.FromString,
+            energy__pb2.MPPT_Data.FromString,
             options,
             channel_credentials,
             insecure,
@@ -205,7 +203,7 @@ class MPPTService(object):
             target,
             '/MPPTService/GetTrend',
             energy__pb2.energy_request.SerializeToString,
-            energy__pb2.solar_trend_response.FromString,
+            energy__pb2.MPPT_Trend.FromString,
             options,
             channel_credentials,
             insecure,
@@ -280,33 +278,33 @@ class BatteryServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GetInformation = channel.unary_unary(
-                '/BatteryService/GetInformation',
+        self.GetParameters = channel.unary_unary(
+                '/BatteryService/GetParameters',
                 request_serializer=energy__pb2.energy_request.SerializeToString,
-                response_deserializer=energy__pb2.battery_response.FromString,
+                response_deserializer=energy__pb2.Battery_Parameters.FromString,
                 _registered_method=True)
-        self.GetValues = channel.unary_unary(
-                '/BatteryService/GetValues',
+        self.GetData = channel.unary_unary(
+                '/BatteryService/GetData',
                 request_serializer=energy__pb2.energy_request.SerializeToString,
-                response_deserializer=energy__pb2.battery_in_out.FromString,
+                response_deserializer=energy__pb2.Battery_Data.FromString,
                 _registered_method=True)
         self.GetTrend = channel.unary_unary(
                 '/BatteryService/GetTrend',
                 request_serializer=energy__pb2.energy_request.SerializeToString,
-                response_deserializer=energy__pb2.battery_trend_response.FromString,
+                response_deserializer=energy__pb2.Battery_Trend.FromString,
                 _registered_method=True)
 
 
 class BatteryServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def GetInformation(self, request, context):
+    def GetParameters(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetValues(self, request, context):
+    def GetData(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -321,20 +319,20 @@ class BatteryServiceServicer(object):
 
 def add_BatteryServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetInformation': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetInformation,
+            'GetParameters': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetParameters,
                     request_deserializer=energy__pb2.energy_request.FromString,
-                    response_serializer=energy__pb2.battery_response.SerializeToString,
+                    response_serializer=energy__pb2.Battery_Parameters.SerializeToString,
             ),
-            'GetValues': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetValues,
+            'GetData': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetData,
                     request_deserializer=energy__pb2.energy_request.FromString,
-                    response_serializer=energy__pb2.battery_in_out.SerializeToString,
+                    response_serializer=energy__pb2.Battery_Data.SerializeToString,
             ),
             'GetTrend': grpc.unary_unary_rpc_method_handler(
                     servicer.GetTrend,
                     request_deserializer=energy__pb2.energy_request.FromString,
-                    response_serializer=energy__pb2.battery_trend_response.SerializeToString,
+                    response_serializer=energy__pb2.Battery_Trend.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -348,7 +346,7 @@ class BatteryService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetInformation(request,
+    def GetParameters(request,
             target,
             options=(),
             channel_credentials=None,
@@ -361,9 +359,9 @@ class BatteryService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/BatteryService/GetInformation',
+            '/BatteryService/GetParameters',
             energy__pb2.energy_request.SerializeToString,
-            energy__pb2.battery_response.FromString,
+            energy__pb2.Battery_Parameters.FromString,
             options,
             channel_credentials,
             insecure,
@@ -375,7 +373,7 @@ class BatteryService(object):
             _registered_method=True)
 
     @staticmethod
-    def GetValues(request,
+    def GetData(request,
             target,
             options=(),
             channel_credentials=None,
@@ -388,9 +386,9 @@ class BatteryService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/BatteryService/GetValues',
+            '/BatteryService/GetData',
             energy__pb2.energy_request.SerializeToString,
-            energy__pb2.battery_in_out.FromString,
+            energy__pb2.Battery_Data.FromString,
             options,
             channel_credentials,
             insecure,
@@ -417,7 +415,7 @@ class BatteryService(object):
             target,
             '/BatteryService/GetTrend',
             energy__pb2.energy_request.SerializeToString,
-            energy__pb2.battery_trend_response.FromString,
+            energy__pb2.Battery_Trend.FromString,
             options,
             channel_credentials,
             insecure,
@@ -438,20 +436,20 @@ class DC_DC_ServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GetInformation = channel.unary_unary(
-                '/DC_DC_Service/GetInformation',
+        self.GetParameters = channel.unary_unary(
+                '/DC_DC_Service/GetParameters',
                 request_serializer=energy__pb2.energy_request.SerializeToString,
-                response_deserializer=energy__pb2.DC_DC_Charger_Parameters.FromString,
+                response_deserializer=energy__pb2.DC_DC_Parameters.FromString,
                 _registered_method=True)
-        self.GetValues = channel.unary_unary(
-                '/DC_DC_Service/GetValues',
+        self.GetData = channel.unary_unary(
+                '/DC_DC_Service/GetData',
                 request_serializer=energy__pb2.energy_request.SerializeToString,
-                response_deserializer=energy__pb2.DC_DC_Charger_running_values.FromString,
+                response_deserializer=energy__pb2.DC_DC_Data.FromString,
                 _registered_method=True)
         self.GetTrend = channel.unary_unary(
                 '/DC_DC_Service/GetTrend',
                 request_serializer=energy__pb2.energy_request.SerializeToString,
-                response_deserializer=energy__pb2.DC_DC_Charger_trend.FromString,
+                response_deserializer=energy__pb2.DC_DC_Trend.FromString,
                 _registered_method=True)
         self.SetConfiguration = channel.unary_unary(
                 '/DC_DC_Service/SetConfiguration',
@@ -468,13 +466,13 @@ class DC_DC_ServiceStub(object):
 class DC_DC_ServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def GetInformation(self, request, context):
+    def GetParameters(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetValues(self, request, context):
+    def GetData(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -502,20 +500,20 @@ class DC_DC_ServiceServicer(object):
 
 def add_DC_DC_ServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetInformation': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetInformation,
+            'GetParameters': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetParameters,
                     request_deserializer=energy__pb2.energy_request.FromString,
-                    response_serializer=energy__pb2.DC_DC_Charger_Parameters.SerializeToString,
+                    response_serializer=energy__pb2.DC_DC_Parameters.SerializeToString,
             ),
-            'GetValues': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetValues,
+            'GetData': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetData,
                     request_deserializer=energy__pb2.energy_request.FromString,
-                    response_serializer=energy__pb2.DC_DC_Charger_running_values.SerializeToString,
+                    response_serializer=energy__pb2.DC_DC_Data.SerializeToString,
             ),
             'GetTrend': grpc.unary_unary_rpc_method_handler(
                     servicer.GetTrend,
                     request_deserializer=energy__pb2.energy_request.FromString,
-                    response_serializer=energy__pb2.DC_DC_Charger_trend.SerializeToString,
+                    response_serializer=energy__pb2.DC_DC_Trend.SerializeToString,
             ),
             'SetConfiguration': grpc.unary_unary_rpc_method_handler(
                     servicer.SetConfiguration,
@@ -539,7 +537,7 @@ class DC_DC_Service(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetInformation(request,
+    def GetParameters(request,
             target,
             options=(),
             channel_credentials=None,
@@ -552,9 +550,9 @@ class DC_DC_Service(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/DC_DC_Service/GetInformation',
+            '/DC_DC_Service/GetParameters',
             energy__pb2.energy_request.SerializeToString,
-            energy__pb2.DC_DC_Charger_Parameters.FromString,
+            energy__pb2.DC_DC_Parameters.FromString,
             options,
             channel_credentials,
             insecure,
@@ -566,7 +564,7 @@ class DC_DC_Service(object):
             _registered_method=True)
 
     @staticmethod
-    def GetValues(request,
+    def GetData(request,
             target,
             options=(),
             channel_credentials=None,
@@ -579,9 +577,9 @@ class DC_DC_Service(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/DC_DC_Service/GetValues',
+            '/DC_DC_Service/GetData',
             energy__pb2.energy_request.SerializeToString,
-            energy__pb2.DC_DC_Charger_running_values.FromString,
+            energy__pb2.DC_DC_Data.FromString,
             options,
             channel_credentials,
             insecure,
@@ -608,7 +606,7 @@ class DC_DC_Service(object):
             target,
             '/DC_DC_Service/GetTrend',
             energy__pb2.energy_request.SerializeToString,
-            energy__pb2.DC_DC_Charger_trend.FromString,
+            energy__pb2.DC_DC_Trend.FromString,
             options,
             channel_credentials,
             insecure,
@@ -683,13 +681,13 @@ class EnergyServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GetInformation = channel.unary_unary(
-                '/EnergyService/GetInformation',
+        self.GetParameters = channel.unary_unary(
+                '/EnergyService/GetParameters',
                 request_serializer=energy__pb2.energy_request.SerializeToString,
                 response_deserializer=energy__pb2.EnergyControllerParameters.FromString,
                 _registered_method=True)
-        self.GetValues = channel.unary_unary(
-                '/EnergyService/GetValues',
+        self.GetData = channel.unary_unary(
+                '/EnergyService/GetData',
                 request_serializer=energy__pb2.energy_request.SerializeToString,
                 response_deserializer=energy__pb2.EnergyControllerData.FromString,
                 _registered_method=True)
@@ -703,13 +701,13 @@ class EnergyServiceStub(object):
 class EnergyServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def GetInformation(self, request, context):
+    def GetParameters(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetValues(self, request, context):
+    def GetData(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -724,13 +722,13 @@ class EnergyServiceServicer(object):
 
 def add_EnergyServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetInformation': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetInformation,
+            'GetParameters': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetParameters,
                     request_deserializer=energy__pb2.energy_request.FromString,
                     response_serializer=energy__pb2.EnergyControllerParameters.SerializeToString,
             ),
-            'GetValues': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetValues,
+            'GetData': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetData,
                     request_deserializer=energy__pb2.energy_request.FromString,
                     response_serializer=energy__pb2.EnergyControllerData.SerializeToString,
             ),
@@ -751,7 +749,7 @@ class EnergyService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetInformation(request,
+    def GetParameters(request,
             target,
             options=(),
             channel_credentials=None,
@@ -764,7 +762,7 @@ class EnergyService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/EnergyService/GetInformation',
+            '/EnergyService/GetParameters',
             energy__pb2.energy_request.SerializeToString,
             energy__pb2.EnergyControllerParameters.FromString,
             options,
@@ -778,7 +776,7 @@ class EnergyService(object):
             _registered_method=True)
 
     @staticmethod
-    def GetValues(request,
+    def GetData(request,
             target,
             options=(),
             channel_credentials=None,
@@ -791,7 +789,7 @@ class EnergyService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/EnergyService/GetValues',
+            '/EnergyService/GetData',
             energy__pb2.energy_request.SerializeToString,
             energy__pb2.EnergyControllerData.FromString,
             options,

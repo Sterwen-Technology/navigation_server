@@ -16,6 +16,16 @@ syntax = "proto3";
 //  Power in Watt, Energy in Watt-hour
 //  Time in seconds
 //  Date and timestamp are UTC
+//  Ratios (e.g. state of charge) are always between 0 and 1 - the conversion
+//  to percent (0-100) is the responsibility of the display (web UI), never of
+//  the transport.
+//
+// Each service exposes the three standard datasets (see doc/web_ui_modular_en.md section 7):
+//   parameters : static / semi-static data (message <Service>_Parameters)
+//   data       : instantaneous values (message <Service>_Data)
+//   trend      : immediate history (message <Service>_Trend, values in 'samples')
+// Live status fields (state, communication_ok, off_reason...) may be repeated
+// in the data dataset to avoid a permanent fetch of the parameters dataset.
 
 // Victron VE direct protocol specific enum
 
@@ -99,7 +109,8 @@ message energy_command_response{
 
 // MPPT - Solar panel specific section
 
-message MPPT_device { // That is the parameters dataset
+// MPPT parameters dataset: semi static information + device parameters
+message MPPT_Parameters {
   // Semi static information
   uint32 instance=1;          // device ID - identify the device when more than one are used
   bool communication_ok=2;  // True if the communication is working with the MPPT device
@@ -122,7 +133,6 @@ message MPPT_device { // That is the parameters dataset
   float trend_interval=18;     // interval in seconds between trend values
 }
 
-
 // that is the minimum set of parameters that are configurable from the service
 // Only the parameter that are set in the message are applied
 message MPPT_Configuration_parameters {
@@ -134,6 +144,7 @@ message MPPT_Configuration_parameters {
   float equalize_voltage=6;
 }
 
+// MPPT data dataset: instantaneous values
 message MPPT_Data {
   float current = 1;  // Amp
   float voltage =2;   // Volt
@@ -147,18 +158,18 @@ message MPPT_Data {
   uint32 off_reason=9; // Bitwise OR of the reasons as per VE_Off_Reason
 }
 
-message solar_trend_response {
-  int32 id=1;
-  int32 nb_values=2;
-  float interval=3;
-  repeated MPPT_Data values=4;
+// MPPT trend dataset
+message MPPT_Trend {
+  uint32 instance=1;
+  uint32 nb_values=2;
+  float interval=3;          // seconds between samples
+  repeated MPPT_Data samples=4;
 }
 
 service MPPTService {
-  // returns semi-static information + parameters with the 'parameters' command
-  rpc GetDeviceInfo(energy_request) returns (MPPT_device) {}
-  rpc GetOutput(energy_request) returns (MPPT_Data) {}
-  rpc GetTrend(energy_request) returns (solar_trend_response) {}
+  rpc GetParameters(energy_request) returns (MPPT_Parameters) {}
+  rpc GetData(energy_request) returns (MPPT_Data) {}
+  rpc GetTrend(energy_request) returns (MPPT_Trend) {}
   rpc SetConfiguration(MPPT_Configuration_parameters) returns (energy_command_response) {}
   rpc DeviceCommand(energy_request) returns (energy_command_response) {}
 }
@@ -175,18 +186,16 @@ message ShuntDevice {
   VE_state state=5;
 }
 
-message BatteryBank {
+// Battery parameters dataset: static / semi static battery bank information
+message Battery_Parameters {
   uint32 instance=1;          // Instance ID=0 by default
-  bool communication_ok=2;
-  uint32 controller=17;       // Instance ID of the Shunt
   string device_label=3;
   string device_model=4;
   string chemistry=16;
+  uint32 controller=17;       // Instance ID of the Shunt
+  optional ShuntDevice controller_details=22;  // Details of the controlling shunt, when available
   float nominal_voltage=5;    // Volt
   float nominal_capacity=6;   // Wh
-  float voltage=7;            // Actual voltage
-  float auxiliary_voltage=8;  // actual auxiliary voltage (engine circuit)
-  float state_of_charge=9;    // (ratio between 0-1)
   float max_voltage=10;        // Maximum charge voltage => alarm
   float min_voltage=11;        // Minimum operating voltage => alarm
   float charge_voltage=12;     // Bulk charge
@@ -199,48 +208,44 @@ message BatteryBank {
   float low_power_scale_amp=21;     // Scale for low power. If current exceed that value => high power
 }
 
-message battery_in_out {
+// Battery data dataset: instantaneous values
+message Battery_Data {
   uint32 instance=1;  // Shunt instance ID
   float voltage = 2;  // Instant voltage
   float current = 3;  // Instant current positive = charge, negative discharge
   float energy_variation = 4; // Wh positive = charge
   float auxiliary_voltage = 5;  // Instant auxiliary voltage - engine battery in most of the cases
+  float state_of_charge=6;      // Ratio between 0-1
+  // Live status repeated from the controller (see global remark)
+  bool communication_ok=7;
 }
 
-message battery_trend_bucket {
+// Battery trend dataset
+message Battery_Trend_Bucket {
   string timestamp=1;  // ISO UTC of the reporting period end
   float voltage=2;     // Voltage at the end of the period
   float energy_variation=3;      // in Wh positive charge - Variation during the interval
-  float state_of_charge=4;    // Percent at the end of the period (ratio between 0-1)
+  float state_of_charge=4;    // Ratio between 0-1 at the end of the period
   float power=5;          // average power over the period in W
 }
 
-message battery_trend_response {
+message Battery_Trend {
   uint32 instance=1;
   uint32 nb_values=2;   // Number of values in the response
   float interval=3;     // Interval between samples in seconds
-  repeated battery_trend_bucket samples=4;
-}
-
-message battery_response {
-  // The message sent back is defined by the command field
-  //
-    BatteryBank battery=1;
-    optional ShuntDevice controller=2;
-    string response=3;
+  repeated Battery_Trend_Bucket samples=4;
 }
 
 service BatteryService {
-    rpc GetInformation(energy_request) returns (battery_response) {}
-    rpc GetValues(energy_request) returns (battery_in_out) {}
-    rpc GetTrend(energy_request) returns (battery_trend_response) {}
+    rpc GetParameters(energy_request) returns (Battery_Parameters) {}
+    rpc GetData(energy_request) returns (Battery_Data) {}
+    rpc GetTrend(energy_request) returns (Battery_Trend) {}
     }
 
 // DC-DC Charger
 
-
-// DC-DC charger definition
-message DC_DC_Charger_Parameters {
+// DC-DC parameters dataset
+message DC_DC_Parameters {
   uint32 instance=1;    // instance number default=0, if single instance
   string device_label=2;       // User label
   string device_model=3;       // Device model and make
@@ -249,6 +254,7 @@ message DC_DC_Charger_Parameters {
   float input_voltage_range=6;
   float output_voltage_range=7;
   float max_power=8; // W
+  // Live status fields repeated in the data dataset (see global remark)
   VE_state state=9;
   VE_Error error=10;
   uint32 off_reason=11;     // Bitwise OR of the reasons as per VE_Off_Reason
@@ -257,8 +263,8 @@ message DC_DC_Charger_Parameters {
   float trend_interval=14;     // interval in seconds between trend values
 }
 
-// DC-DC Charger dynamic values
-message DC_DC_Charger_running_values {
+// DC-DC data dataset: instantaneous values
+message DC_DC_Data {
   uint32 instance=1;
   VE_state state=2;
   VE_Error error=3;
@@ -280,17 +286,18 @@ message DC_DC_Charger_configuration {
   float max_output_current=4; // in A
 }
 
-message DC_DC_Charger_trend {
+// DC-DC trend dataset
+message DC_DC_Trend {
   uint32 instance=1;
   uint32 nb_values=2;
   float interval=3;
-  repeated DC_DC_Charger_running_values samples=4;
+  repeated DC_DC_Data samples=4;
 }
 
 service DC_DC_Service {
-  rpc GetInformation(energy_request) returns (DC_DC_Charger_Parameters) {}
-  rpc GetValues(energy_request) returns (DC_DC_Charger_running_values) {}
-  rpc GetTrend(energy_request) returns (DC_DC_Charger_trend){}
+  rpc GetParameters(energy_request) returns (DC_DC_Parameters) {}
+  rpc GetData(energy_request) returns (DC_DC_Data) {}
+  rpc GetTrend(energy_request) returns (DC_DC_Trend){}
   rpc SetConfiguration(DC_DC_Charger_configuration) returns (energy_command_response) {}
   // Allow to start and stop the charger
   rpc DeviceCommand(energy_request) returns (energy_command_response) {}
@@ -299,6 +306,9 @@ service DC_DC_Service {
 // Energy Controller
 // That service manages the global view and summary view of the electrical energy in the boat
 // In that version, only instantaneous values (with trend) are managed. No historical data
+// The Energy Controller presents a consolidated view of the energy system: it does NOT
+// duplicate the data of the individual entities (batteries, MPPT, DC-DC chargers), which
+// are served by their own dedicated service.
 
 message EnergySourceDevice {
   uint32 instance_id = 1;
@@ -311,6 +321,7 @@ message BatteryUnit {
   string label=2;       //
 }
 
+// Energy controller parameters dataset
 message EnergyControllerParameters {
   float nominal_main_voltage=1;       // 12-24-48V
   float nominal_auxiliary_voltage=2;
@@ -326,17 +337,18 @@ message EnergyControllerParameters {
   float max_voltage_scale=12;   // To build all graphical representation on voltage (except generators specific voltage)
 }
 
+// Energy controller data dataset: consolidated instantaneous data
 message EnergyControllerData {
-  // consolidated instantaneous data
   float main_voltage=1;
   float auxiliary_voltage=2;
   float production_power=3;
   float consumption_power=4; // Excluding injected in battery banks
   float energy_stock=5;     // total energy available in all battery banks (Wh)
   float battery_balance=6;  // W positive power injected / negative draw (W)
-  float state_of_charge=7;  // Between 0 and 1
+  float state_of_charge=7;  // Ratio between 0 and 1 - consolidated over all battery banks
 }
 
+// Energy controller trend dataset
 message EnergyControllerTrend {
   uint32 nb_values=1;   // number of samples
   float interval=2;     // in seconds
@@ -344,8 +356,7 @@ message EnergyControllerTrend {
 }
 
 service EnergyService {
-  rpc GetInformation(energy_request) returns (EnergyControllerParameters) {}
-  rpc GetValues(energy_request) returns (EnergyControllerData) {}
+  rpc GetParameters(energy_request) returns (EnergyControllerParameters) {}
+  rpc GetData(energy_request) returns (EnergyControllerData) {}
   rpc GetTrend(energy_request) returns (EnergyControllerTrend) {}
 }
-
