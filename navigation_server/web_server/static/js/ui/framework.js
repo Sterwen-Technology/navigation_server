@@ -95,8 +95,9 @@ function requiredDatasets(block) {
 
 // --- Resolution des chemins (section 3.3) --------------------------------
 
-// Valeur scalaire: <dataset>/<name>, resolue dans le dataset du bloc,
-// sinon dans les parametres de la page (pour parameters/...).
+// Valeur scalaire: <dataset>/<name>, resolue dans le dataset du bloc;
+// pour le dataset parameters: parametres du service du bloc d'abord, puis
+// parametres de la page (section 3.3).
 function resolveScalar(datasets, path, pageParams) {
     if (path === null || path === undefined) return undefined;
     if (typeof path === "number") return path;
@@ -107,9 +108,20 @@ function resolveScalar(datasets, path, pageParams) {
         return Number.isNaN(n) ? undefined : n;
     }
     const [ds, ...rest] = s.split("/");
-    const container = datasets[ds] || (ds === "parameters" ? pageParams : null);
+    const name = rest.join("/");
+    if (ds === "parameters") {
+        // Section 3.3: parametres du service du bloc, sinon parametres de la page
+        if (datasets.parameters && name in datasets.parameters) {
+            return datasets.parameters[name];
+        }
+        if (pageParams && name in pageParams) {
+            return pageParams[name];
+        }
+        return undefined;
+    }
+    const container = datasets[ds];
     if (!container) return undefined;
-    return container[rest.join("/")];
+    return container[name];
 }
 
 // Serie temporelle: <dataset>/<name> - le champ name dans chaque sample
@@ -295,7 +307,10 @@ async function refreshRepeatBlock(page, block) {
         return;
     }
 
-    // Le nombre d'instances suit la collection (section 2.5)
+    // Le nombre d'instances suit la collection (section 2.5); le type de
+    // bloc peut etre specialise par service (repeat.types, section 2.5):
+    // les datasets des entites heterogenes n'exposent pas les memes champs
+    // (ex. MPPT_Data.current/power vs DC_DC_Data.output_current/output_power).
     container.innerHTML = "";
     for (let idx = 0; idx < items.length; idx++) {
         const item = items[idx];
@@ -303,9 +318,26 @@ async function refreshRepeatBlock(page, block) {
         const base = block.repeat.block_endpoint
             .replace("{service}", item.service)
             .replace("{instance}", item.instance);
+        const typeOverride = (block.repeat.types && block.repeat.types[item.service]) || null;
+        const typeDef = typeOverride ? blockTypeDefs.get(typeOverride) : block.typeDef;
+        if (typeOverride && !typeDef) {
+            container.innerHTML += `<div class="empty">Unknown block type '${typeOverride}' for service ${item.service}</div>`;
+            continue;
+        }
+        const instanceBlock = {
+            id: instanceId,
+            typeDef,
+            views: (typeDef && typeDef.definition) || block.views,
+            title: (typeDef && typeDef.title) || block.title,
+            topWidget: (typeDef && typeDef.top_widget) || block.topWidget,
+            endpoint: base,
+            repeat: null,
+            width: 1,
+            position: null,
+            priority: block.priority,
+        };
         const blockEl = createBlockElement(instanceId, 1, null, columnsOf(page));
         container.appendChild(blockEl);
-        const instanceBlock = { ...block, id: instanceId, endpoint: base, repeat: null };
         const { results, errors } = await fetchDatasets(base, requiredDatasets(instanceBlock));
         if (!results.data && errors.length) {
             // Erreur visible dans l'instance (ex. service injoignable) - pas
@@ -368,17 +400,20 @@ function ensurePageElement(pageCfg) {
         gridEl.appendChild(createBlockElement(block.id, block.width, block.position, columns));
     }
     for (const block of auto) {
-        const el = createBlockElement(block.id, block.width, null, columns);
         if (block.repeat) {
-            el.classList.add("ui-repeat-block");
+            // Bloc repete: le conteneur est place directement dans la grille
+            // de la page (pas de bloc wrapper - il n'y a pas d'entite
+            // associee au conteneur lui-meme). Les instances sont des blocs
+            // independants de largeur 1, repartis sur les colonnes de la page.
             const containerEl = document.createElement("div");
             containerEl.className = "ui-repeat-container";
             containerEl.dataset.blockContainer = block.id;
-            el.querySelector(".ui-block-body").appendChild(containerEl);
-            // Le repeat occupe toute la largeur restante de la page
-            el.style.gridColumn = `1 / -1`;
+            containerEl.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+            containerEl.style.gridColumn = "1 / -1";
+            gridEl.appendChild(containerEl);
+            continue;
         }
-        gridEl.appendChild(el);
+        gridEl.appendChild(createBlockElement(block.id, block.width, null, columns));
     }
     pageEl.appendChild(gridEl);
     document.querySelector("main").appendChild(pageEl);

@@ -197,6 +197,9 @@ pages:
         repeat:
           source_endpoint: /api/energy/0/parameters/sources
           block_endpoint: /api/{service}/{instance}
+          types:
+            mppt: energy_source
+            dc_dc: dc_dc_source
 ```
 
 ### 2.3 Pages et mise en page
@@ -255,6 +258,11 @@ repeat:
   placeholders `{service}` et `{instance}` depuis l'item. Le dataset primaire
   est déterminé par les vues du type de bloc (§2.4) et les chemins `data`
   explicites de chaque vue.
+- `types` (optionnel) : type de bloc **par service** (`types: {mppt:
+  energy_source, dc_dc: dc_dc_source}`). Les entités hétérogènes n'exposent
+  pas les mêmes champs dans leurs datasets (ex. `MPPT_Data.current/power`
+  vs `DC_DC_Data.output_current/output_power`) : sans qualification, le type
+  du bloc déclarant le repeat est utilisé.
 - Le `title` du bloc et les chemins `data` des vues sont relatifs à
   l'endpoint de l'instance.
 - Chaque instance reçoit un identifiant unique `<id du bloc>-<index>`.
@@ -424,7 +432,7 @@ d'autres pages, sans remettre en cause les principes.*
 | `single_symmetric_curve` | une courbe, valeurs signées |
 | `dual_curve` | deux courbes superposées |
 | `positive_histogram` / `symmetric_histogram` | histogrammes |
-| `communication_indicator` | indicateur d'état de communication (top_widget) |
+| `communication_indicator` | indicateur d'état de communication, rendu dans le titre du bloc (`top_widget`) : pastille **verte** = `communication_ok` vrai, **rouge** = communication perdue, **gris** = pas de donnée (dataset `data` absent) |
 | `text_value` | texte simple |
 
 ### 5.5 Dimensions des widgets

@@ -466,23 +466,27 @@ button.open-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a
 @media (max-width: 768px) {
     .ui-page-grid { grid-template-columns: 1fr !important; }
     .ui-page-grid > .ui-block { grid-column: 1 / -1 !important; }
+    .ui-repeat-container { grid-template-columns: 1fr !important; }
+    .ui-block-body { flex-wrap: wrap; }
 }
+/* Corps d'un bloc: les viewgraphs s'alignent sur une seule ligne a
+   gauche, les courbes prennent l'espace restant a droite (section 5.5). */
 .ui-block-body {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 12px;
-    align-items: flex-start;
+    align-items: stretch;
 }
 .ui-viewgraphs {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 12px;
-    flex: 0 1 auto;
-    min-width: 300px;
+    flex: 0 0 auto;
+    min-width: 0;
 }
 .ui-trend-zone {
-    flex: 1 1 260px;
-    min-width: 240px;
+    flex: 1 1 240px;
+    min-width: 200px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -491,18 +495,29 @@ button.open-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a
     display: flex;
     flex-direction: column;
     gap: 6px;
+    flex: 1;
 }
+.ui-trend-item .ems-trend-canvas {
+    flex: 1;
+}
+/* Conteneur des blocs repetes: les instances sont des blocs independants
+   repartis sur les colonnes de la page (largeur 1 = demi-ecran en 2
+   colonnes). Le nombre de colonnes est fixe par le framework. */
 .ui-repeat-container {
     display: grid;
-    grid-template-columns: 1fr;
     gap: 16px;
     width: 100%;
 }
-.ui-repeat-block .ui-block-body {
-    display: block;
-}
+/* Indicateur de communication (top_widget): pastille d'etat dans le
+   titre du bloc - vert = communication OK, rouge = perdue, gris = sans
+   donnee. Le span doit etre en inline-flex pour appliquer ses dimensions. */
 .ui-block-status {
+    display: inline-flex;
+    align-items: center;
     margin-left: 8px;
+}
+.ui-block-status .ems-source-state-indicator {
+    display: inline-block;
 }
 .empty-curve {
     display: flex;

@@ -38,6 +38,16 @@ export const DEFAULT_UI_CONFIG = {
                 { view: "power_trend", title: "Power trend", data: "trend/power", widget: "power_trend" },
             ],
         },
+        {
+            id: "dc_dc_source",
+            title: "parameters/label",
+            top_widget: "communication_indicator",
+            definition: [
+                { view: "current", title: "Current", data: "data/output_current", widget: "production_current_viewgraph" },
+                { view: "power", title: "Power", data: "data/output_power", widget: "production_viewgraph" },
+                { view: "power_trend", title: "Power trend", data: "trend/output_power", widget: "power_trend" },
+            ],
+        },
     ],
     pages: [
         { id: "services", title_i18n: "nav.services", builtin: "services", optional: false },
@@ -64,7 +74,11 @@ export const DEFAULT_UI_CONFIG = {
                 },
                 {
                     id: "energy-sources", type: "energy_source", priority: 2,
-                    repeat: { source_endpoint: "/api/energy/0/parameters/sources", block_endpoint: "/api/{service}/{instance}" },
+                    repeat: {
+                        source_endpoint: "/api/energy/0/parameters/sources",
+                        block_endpoint: "/api/{service}/{instance}",
+                        types: { mppt: "energy_source", dc_dc: "dc_dc_source" },
+                    },
                 },
             ],
         },

@@ -60,7 +60,10 @@ function viewgraphHtml(ctx) {
     }
     const isPositive = value >= 0;
     const fillClass = ctx.symmetric ? (isPositive ? "positive" : "negative") : "";
-    const positionStyle = ctx.symmetric && !isPositive ? 'top: 50%' : 'bottom: 0';
+    // Symmetric viewgraph: 0 line in the middle - positive values grow
+    // from the middle up (bottom: 50%), negative from the middle down
+    // (top: 50%). Positive viewgraph: 0 at the bottom.
+    const positionStyle = !ctx.symmetric ? 'bottom: 0' : (isPositive ? 'bottom: 50%' : 'top: 50%');
 
     return `
     <div class="ems-bar">

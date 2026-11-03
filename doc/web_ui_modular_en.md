@@ -232,6 +232,11 @@ repeat:
   `{instance}` placeholders from the item. The primary dataset is
   determined by the views of the block type (§2.4) and the explicit `data`
   paths of each view.
+- `types` (optional): block type **per service** (`types: {mppt:
+  energy_source, dc_dc: dc_dc_source}`). Heterogeneous entities do not
+  expose the same fields in their datasets (e.g. `MPPT_Data.current/power`
+  vs `DC_DC_Data.output_current/output_power`): without qualification the
+  type of the block declaring the repeat is used.
 - The block `title` and the views' `data` paths are relative to the
   instance's base address.
 - Each instance receives a unique identifier `<block id>-<index>`.
@@ -395,7 +400,7 @@ without questioning the principles.*
 | `single_symmetric_curve` | one curve, signed values |
 | `dual_curve` | two superimposed curves |
 | `positive_histogram` / `symmetric_histogram` | histograms |
-| `communication_indicator` | communication status indicator (top_widget) |
+| `communication_indicator` | communication status indicator rendered in the block title (`top_widget`): **green** dot = `communication_ok` true, **red** = communication lost, **grey** = no data (missing `data` dataset) |
 | `text_value` | plain text |
 
 ### 5.5 Widget dimensions

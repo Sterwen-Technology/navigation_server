@@ -30,7 +30,7 @@ from .victron_interface import VictronMPPTData
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-MPPTBucket = namedtuple('MPPTBucket', ['voltage', 'panel_voltage', 'current', 'power'])
+MPPTBucket = namedtuple('MPPTBucket', ['voltage', 'panel_voltage', 'current', 'power', 'output_power'])
 
 
 class VictronMPPT(EnergyDevice):
@@ -68,6 +68,7 @@ class VictronMPPT(EnergyDevice):
         self._mean_a = 0.0
         self._mean_p = 0.0
         self._mean_pv = 0.0
+        self._mean_op = 0.0
         self._nb_sample = 0
 
     @property
@@ -109,6 +110,7 @@ class VictronMPPT(EnergyDevice):
             self._mean_a = 0.0
             self._mean_p = 0.0
             self._mean_pv = 0.0
+            self._mean_op = 0.0
             self._nb_sample = 0
             self._trend_buckets.clear()
             self._start_period = clock
@@ -119,6 +121,7 @@ class VictronMPPT(EnergyDevice):
         self._mean_a += self._current_data.current
         self._mean_pv += self._current_data.panel_voltage
         self._mean_p += self._current_data.panel_power
+        self._mean_op += self._current_data.voltage * self._current_data.current
         self._output_power = self._current_data.voltage * self._current_data.current
         self._nb_sample += 1
 
@@ -126,16 +129,20 @@ class VictronMPPT(EnergyDevice):
         
         # Create trend buckets periodically
         if clock - self._start_period >= self._trend_period and self._nb_sample > 0:
+            # Field order of MPPTBucket: voltage, panel_voltage, current,
+            # power (panel), output_power
             self._trend_buckets.append(MPPTBucket(
-                self._mean_v/self._nb_sample, 
-                self._mean_a/self._nb_sample,
+                self._mean_v/self._nb_sample,
                 self._mean_pv/self._nb_sample,
-                self._mean_p/self._nb_sample))
+                self._mean_a/self._nb_sample,
+                self._mean_p/self._nb_sample,
+                self._mean_op/self._nb_sample))
             self._start_period = clock
             self._mean_v = 0.0
             self._mean_a = 0.0
             self._mean_p = 0.0
             self._mean_pv = 0.0
+            self._mean_op = 0.0
             self._nb_sample = 0
         
         # forward information through publisher
@@ -242,8 +249,10 @@ class MPPTServicer(MPPTServiceServicer):
             ret_values.nb_values += 1
             val = MPPT_Data()
             val.voltage = bucket.voltage
+            val.panel_voltage = bucket.panel_voltage
             val.current = bucket.current
             val.panel_power = bucket.power
+            val.power = bucket.output_power
             ret_values.samples.append(val)
         _logger.debug(f"MPPTService.GetTrend OK")
         return ret_values
