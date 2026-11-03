@@ -349,6 +349,11 @@ The units used in the application are as follows (non-exhaustive list):
 | Rotation speed    | revolution/minute   | RPM    | positive scalar |
 | Temperature       | Celsius             | °C     | scalar           |
 
+**Ratio convention**: ratios (e.g. `state_of_charge`) are always represented
+**between 0 and 1** in protobuf messages. The interface displays them as
+**0-100 percent**; the conversion is the widget's responsibility (display
+parameter), never the transport's.
+
 ## 5. Widgets
 
 ### 5.1 Viewgraph
@@ -375,10 +380,10 @@ There may be widgets with a single curve or with two curves.
 
 Same principle as the curves but with a histogram chart.
 
-### 5.4 Base widgets (provisional list)
+### 5.4 Base widgets (consolidated list)
 
-*To be consolidated at the end of the design phase — the §2.2 example must
-be kept consistent with this list as we go.*
+*Sufficient for the energy part; it may be extended for other pages,
+without questioning the principles.*
 
 | base_widget | Description |
 |---|---|

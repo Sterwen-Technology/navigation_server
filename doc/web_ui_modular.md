@@ -355,6 +355,11 @@ définitive) :
 | Vitesse rotation  | revolution/minute  | RPM     | scalaire positif |
 | Temperature       | Celsius            | °C      | scalaire         |
 
+**Convention des ratios** : les ratios (ex. `state_of_charge`) sont toujours
+représentés **entre 0 et 1** dans les messages protobuf. L'interface les
+affiche en **pourcentage 0-100** ; la conversion est de la responsabilité
+du widget (paramètre d'affichage), jamais du transport.
+
 ## 5. Widgets
 
 ### 5.1 Viewgraph
@@ -381,10 +386,10 @@ Il peut y avoir des widgets avec une seule courbe ou avec deux courbes.
 
 Même principe que les courbes mais avec un graphique en histogramme.
 
-### 5.4 Base widgets (liste provisoire)
+### 5.4 Base widgets (liste consolidée)
 
-*Consolidée en fin de conception — l'exemple §2.2 est à rendre cohérent avec
-cette liste au fil de l'eau.*
+*Liste suffisante pour la partie énergie ; elle pourra être étendue pour
+d'autres pages, sans remettre en cause les principes.*
 
 | base_widget | Description |
 |---|---|
