@@ -190,8 +190,10 @@ function renderBlockBody(blockEl, block, datasets, pageParams, titleFallback) {
             trends += `<div class="ui-trend-item"><div class="ems-trend-title">${ctx.label || ""}</div>` +
                 renderWidget(widget, ctx) + `</div>`;
         } else {
-            ctx.value = resolveScalar(datasets, view.data, pageParams);
-            if (ctx.value === undefined) continue;
+            // Valeur indéfinie (dataset absent ou champ manquant): la vue est
+            // quand même rendue avec '--' - une vue ne doit pas disparaître
+            // silencieusement, c'est un indice de diagnostic.
+            ctx.value = resolveScalar(datasets, view.data, pageParams) ?? null;
             const scale = resolveScale(widget.scale, ctx.value, datasets, pageParams);
             ctx.max = scale.max;
             ctx.scaleLow = scale.low;
@@ -304,7 +306,14 @@ async function refreshRepeatBlock(page, block) {
         const blockEl = createBlockElement(instanceId, 1, null, columnsOf(page));
         container.appendChild(blockEl);
         const instanceBlock = { ...block, id: instanceId, endpoint: base, repeat: null };
-        const { results } = await fetchDatasets(base, requiredDatasets(instanceBlock));
+        const { results, errors } = await fetchDatasets(base, requiredDatasets(instanceBlock));
+        if (!results.data && errors.length) {
+            // Erreur visible dans l'instance (ex. service injoignable) - pas
+            // de bloc muet.
+            blockEl.querySelector(".ui-block-body").innerHTML =
+                `<div class="empty">${errors[0]}</div>`;
+            continue;
+        }
         renderBlockBody(blockEl, instanceBlock, results, page.params, item.label);
     }
 }

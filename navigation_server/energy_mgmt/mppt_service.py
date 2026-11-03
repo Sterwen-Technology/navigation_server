@@ -47,9 +47,13 @@ class VictronMPPT(EnergyDevice):
         super().__init__(opts, service)
         
         # MPPT-specific parameters
+        # Note: only fields existing in MPPT_Parameters can be stored here -
+        # the parameters dataset is filled by fill_protobuf_from_dict.
+        # 'battery' (the battery bank this MPPT charges) is a service-level
+        # reference kept outside the protobuf parameters.
+        self._battery_ref = opts.get('battery', int, 1)
         self._parameters = {
             'instance': opts.get('instance', int, 1),
-            'battery': opts.get('battery', int, 1),
             'panel_max_power': opts.get('panel_max_power', float, 0.0),
             'panel_max_voltage': opts.get('panel_max_voltage', float, 0.0),
             'max_voltage': opts.get('max_voltage', float, 0.0),
@@ -163,7 +167,6 @@ class VictronMPPT(EnergyDevice):
             self._current_data.output_pb(output_values_pb)
             output_values_pb.power = self._output_power
         # Live status repeated in the data dataset (see energy.proto global remark)
-        output_values_pb.instance = self._instance
         output_values_pb.communication_ok = self._communication_ok
 
     def send_command(self, command):

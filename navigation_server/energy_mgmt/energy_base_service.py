@@ -199,18 +199,23 @@ class EnergyDevice:
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_device_info(self, device_info):
-        # fill the protobuf with device information
-        if time.monotonic() - self._last_msg_ts < self._coupler_timeout :
-            device_info.communication_ok = True
+        # fill the protobuf with device information (parameters dataset)
+        # communication_ok is a live status: it is repeated in the parameters
+        # dataset only for the services that expose it there (see the spec
+        # exception rule, doc/web_ui_modular.md section 1); for the others
+        # (e.g. Battery) it is served by the data dataset.
+        communication_ok = time.monotonic() - self._last_msg_ts < self._coupler_timeout
+        if communication_ok:
             if self._current_data is not None:
                 self._current_data.output_info_pb(device_info)
         else:
-            device_info.communication_ok = False
             self._communication_ok = False
             if self._energy_controller is not None:
                 self._energy_controller.set_off_state(self._instance, self.device_type, False, False)
             # if the communication is lost, we clear the trend bucket
             self._trend_buckets.clear()
+        if "communication_ok" in [f.name for f in type(device_info).DESCRIPTOR.fields]:
+            device_info.communication_ok = communication_ok
         device_info.device_label = self._device_label
         device_info.device_model = self.device_model
         device_info.instance = self._instance

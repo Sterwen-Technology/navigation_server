@@ -610,7 +610,9 @@ class VictronDC_DC_Data(VictronVEDirectDecoderABC):
             parameters_pb: DC_DC_Parameters protobuf message to fill
         """
         parameters_pb.device_label = f"Orion XS {self.serial_number}" if self.serial_number else "Orion XS"
-        parameters_pb.device_model = self.device_model
+        # device_model is None until the device has reported its identity
+        # (VEDirect static data): never assign None to a protobuf string field.
+        parameters_pb.device_model = self.device_model if self.device_model else "Unknown"
         _logger.info(f"DC DC device model={self.device_model}")
         parameters_pb.state = self.state
         parameters_pb.error = self.error
@@ -674,8 +676,20 @@ class VictronMPPTData(VictronVEDirectDecoderABC):
         copy_protobuf_data(self, output_pb_v, ('state', 'mppt_state', 'off_reason'))
 
     def output_info_pb(self, output_pb):
+        """Fill MPPT_Parameters protobuf (parameters dataset) with semi-static info.
+
+        The string fields (product_id, firmware, serial_number) are None
+        until the device has reported its identity (VEDirect static data):
+        only assign them when available, never None to a protobuf string field.
+        """
         try:
-            copy_protobuf_data(self, output_pb, ('product_id', 'firmware', 'serial_number', 'error', 'state', 'mppt_state',
+            if getattr(self, 'product_id', None) is not None:
+                output_pb.product_id = self.product_id
+            if getattr(self, 'firmware', None) is not None:
+                output_pb.firmware = self.firmware
+            if getattr(self, 'serial_number', None) is not None:
+                output_pb.serial_number = self.serial_number
+            copy_protobuf_data(self, output_pb, ('error', 'state', 'mppt_state',
                                                  'day_max_power', 'day_power', 'off_reason'))
         except AttributeError as e:
             _logger.error(f"Attribute error filling MPPT output info: {e}")

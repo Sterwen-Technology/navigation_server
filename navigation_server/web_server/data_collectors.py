@@ -803,7 +803,10 @@ class EnergyDatasetCollector(BaseServiceCollector):
 
         Returns:
             Dictionary with 'ok' plus the dataset fields (protobuf field
-            names). The trend samples are returned under 'samples' (the
+            names). Zero-valued scalar fields are explicitly included: a
+            displayed 0 W must resolve as a value, not as a missing field
+            (proto3 MessageToDict omits fields at their default value).
+            The trend samples are returned under 'samples' (the
             non-significant 'samples' path element is omitted in the UI
             data paths, see doc/web_ui_modular.md section 3.2).
         """
@@ -814,7 +817,15 @@ class EnergyDatasetCollector(BaseServiceCollector):
         try:
             method = getattr(self._client, rpc_name)
             msg = method(instance)
-            result = MessageToDict(msg, preserving_proto_field_name=True, use_integers_for_enums=True)
+            try:
+                result = MessageToDict(msg, preserving_proto_field_name=True,
+                                       use_integers_for_enums=True,
+                                       always_print_fields_with_no_presence=True)
+            except TypeError:
+                # protobuf < 5.x kwarg name
+                result = MessageToDict(msg, preserving_proto_field_name=True,
+                                       use_integers_for_enums=True,
+                                       including_default_value_fields=True)
             result["ok"] = True
             result["process"] = self.process_name
             return result
