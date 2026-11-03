@@ -401,6 +401,7 @@ without questioning the principles.*
 | `dual_curve` | two superimposed curves |
 | `positive_histogram` / `symmetric_histogram` | histograms |
 | `communication_indicator` | communication status indicator rendered in the block title (`top_widget`): **green** dot = `communication_ok` true, **red** = communication lost, **grey** = no data (missing `data` dataset) |
+| `device_state_indicator` | **3-state** operating indicator, dot + text on the right of the block title. **Decided by the frontend** from the two live fields served by the backend in the `data` dataset: `communication_ok` → **NO COM** (grey); otherwise `state` = Off → **OFF** (red); otherwise → **ON** (green) |
 | `text_value` | plain text |
 
 ### 5.5 Widget dimensions
@@ -447,7 +448,7 @@ scale: {type: dynamic}
 | Type | Meaning |
 |---|---|
 | `fixed` | constant scale; `max` = the displayable maximum value (or path) |
-| `dual` | dual scale with automatic switching: the widget displays on the low scale while \|value\| ≤ `low`, otherwise on the high scale; `low` serves both as threshold and low scale, `high` is the high scale |
+| `dual` | dual scale with automatic switching: the widget displays on the low scale while \|value\| ≤ `low`, otherwise on the high scale; `low` serves both as threshold and low scale, `high` is the high scale. The **High-Power ⚡ / Low-Power ◎** mode indicator shown by the widget is **derived by the frontend** from this same rule - the backend serves no additional data |
 | `dynamic` | recomputed from the displayed series (observed min/max) |
 
 ### 5.8 Color palette

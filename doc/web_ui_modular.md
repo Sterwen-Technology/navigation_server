@@ -433,6 +433,7 @@ d'autres pages, sans remettre en cause les principes.*
 | `dual_curve` | deux courbes superposées |
 | `positive_histogram` / `symmetric_histogram` | histogrammes |
 | `communication_indicator` | indicateur d'état de communication, rendu dans le titre du bloc (`top_widget`) : pastille **verte** = `communication_ok` vrai, **rouge** = communication perdue, **gris** = pas de donnée (dataset `data` absent) |
+| `device_state_indicator` | indicateur de fonctionnement **3 états**, pastille + texte à droite du titre du bloc. **Décidé par le front-end** à partir des deux champs live servis par le back-end dans le dataset `data` : `communication_ok` → **NO COM** (gris) ; sinon `state` = Off → **OFF** (rouge) ; sinon → **ON** (vert) |
 | `text_value` | texte simple |
 
 ### 5.5 Dimensions des widgets
@@ -480,7 +481,7 @@ scale: {type: dynamic}
 | Type | Signification |
 |---|---|
 | `fixed` | échelle constante ; `max` = valeur (ou chemin) du maximum affichable |
-| `dual` | double échelle à bascule automatique : le widget affiche sur l'échelle basse tant que \|valeur\| ≤ `low`, sinon sur l'échelle haute ; `low` sert à la fois de seuil et d'échelle basse, `high` est l'échelle haute |
+| `dual` | double échelle à bascule automatique : le widget affiche sur l'échelle basse tant que \|valeur\| ≤ `low`, sinon sur l'échelle haute ; `low` sert à la fois de seuil et d'échelle basse, `high` est l'échelle haute. L'indicateur de mode **High-Power ⚡ / Low-Power ◎** affiché par le widget est **dérivé par le front-end** selon cette même règle — le back-end ne sert aucune donnée supplémentaire |
 | `dynamic` | recalculée sur la série affichée (min/max observés) |
 
 ### 5.8 Palette de couleurs

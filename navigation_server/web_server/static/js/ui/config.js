@@ -31,7 +31,7 @@ export const DEFAULT_UI_CONFIG = {
         {
             id: "energy_source",
             title: "parameters/label",
-            top_widget: "communication_indicator",
+            top_widget: "device_state_indicator",
             definition: [
                 { view: "current", title: "Current", data: "data/current", widget: "production_current_viewgraph" },
                 { view: "power", title: "Power", data: "data/power", widget: "production_viewgraph" },
@@ -41,7 +41,7 @@ export const DEFAULT_UI_CONFIG = {
         {
             id: "dc_dc_source",
             title: "parameters/label",
-            top_widget: "communication_indicator",
+            top_widget: "device_state_indicator",
             definition: [
                 { view: "current", title: "Current", data: "data/output_current", widget: "production_current_viewgraph" },
                 { view: "power", title: "Power", data: "data/output_power", widget: "production_viewgraph" },

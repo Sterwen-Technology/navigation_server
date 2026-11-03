@@ -102,7 +102,7 @@ block_types:
   # Generic source view - field names of MPPT_Data (current, power)
   - id: energy_source
     title: parameters/label
-    top_widget: communication_indicator
+    top_widget: device_state_indicator
     definition:
       - view: current
         title: Current
@@ -121,7 +121,7 @@ block_types:
   # side is the output: output_current, output_power)
   - id: dc_dc_source
     title: parameters/label
-    top_widget: communication_indicator
+    top_widget: device_state_indicator
     definition:
       - view: current
         title: Current

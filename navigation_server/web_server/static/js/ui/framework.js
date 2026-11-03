@@ -174,7 +174,15 @@ function renderBlockBody(blockEl, block, datasets, pageParams, titleFallback) {
     const statusEl = blockEl.querySelector(".ui-block-status");
     if (statusEl && block.topWidget) {
         const widget = widgetDefs.get(block.topWidget) || { base_widget: block.topWidget };
-        const ctx = { value: datasets.data ? datasets.data.communication_ok : undefined };
+        // Live fields from the data dataset: the 3-state indicator
+        // (ON/OFF/NO COM) is decided by the frontend from communication_ok
+        // and state (specs section 5.4).
+        const live = datasets.data || {};
+        const ctx = {
+            value: live.communication_ok,
+            communication_ok: live.communication_ok,
+            state: live.state,
+        };
         statusEl.innerHTML = renderWidget(widget, ctx);
     }
 
