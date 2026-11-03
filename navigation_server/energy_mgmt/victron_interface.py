@@ -266,12 +266,18 @@ class VictronVEDirectDecoderABC:
             _logger.error(f"VE direct {self.__class__.__name__} missing required keys in static data: {value_dict.keys()}")
             return
         self.serial_number = value_dict.get('SER#', 'NO_SERIAL#')
+        # The product id is a hexadecimal string on real devices; simulators
+        # may inject a free-form label (e.g. 'Simulated') - tolerate it.
         try:
             product_id = int(self.product_id, 16)
             self._device_model = VEDIRECT_PID_TABLE[product_id]
         except KeyError:
             _logger.warning(f'VE Direct Unknown device model: {self.product_id}')
             _logger.debug(f"VE Direct {self.__class__.__name__} Unknown device model {value_dict}")
+            self._device_model = 'Unknown'
+        except ValueError:
+            _logger.info(f"VE Direct non-hexadecimal product id '{self.product_id}' "
+                         f"({self.__class__.__name__}), device model set to 'Unknown'")
             self._device_model = 'Unknown'
         self._initialized = True
 
