@@ -94,41 +94,41 @@ class MPPT_Client(ServiceClient):
     def __init__(self):
         super().__init__(MPPTServiceStub)
 
-    def getParameters(self) -> MPPT_Parameters_proxy:
-        _logger.debug("Client GetParameters")
-        return self._server_call(self._stub.GetParameters, energy_request(), MPPT_Parameters_proxy)
+    def GetParameters(self, instance: int = 0) -> MPPT_Parameters_proxy:
+        _logger.debug("Client GetParameters instance=%d", instance)
+        return self._server_call(self._stub.GetParameters, energy_request(instance=instance), MPPT_Parameters_proxy)
 
-    def getData(self) -> MPPT_Data_proxy:
-        _logger.debug("Client GetData")
-        return self._server_call(self._stub.GetData, energy_request(), MPPT_Data_proxy)
+    def GetData(self, instance: int = 0) -> MPPT_Data_proxy:
+        _logger.debug("Client GetData instance=%d", instance)
+        return self._server_call(self._stub.GetData, energy_request(instance=instance), MPPT_Data_proxy)
 
-    def getTrend(self):
-        _logger.debug("Client GetTrend")
-        trend = self._server_call(self._stub.GetTrend, energy_request(), None)
+    def GetTrend(self, instance: int = 0):
+        _logger.debug("Client GetTrend instance=%d", instance)
+        trend = self._server_call(self._stub.GetTrend, energy_request(instance=instance), None)
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 
     def server_status(self):
         if self.server_state() == GrpcClient.NOT_CONNECTED:
             self._server.connect()
-        return self.getParameters()
+        return self.GetParameters()
 
 
 class EnergyServiceClient(ServiceClient):
     def __init__(self):
         super().__init__(EnergyServiceStub)
 
-    def GetParameters(self):
+    def GetParameters(self, instance: int = 0):
         _logger.debug("Client GetParameters")
-        return self._server_call(self._stub.GetParameters, energy_request(), None)
+        return self._server_call(self._stub.GetParameters, energy_request(instance=instance), None)
 
-    def GetData(self):
+    def GetData(self, instance: int = 0):
         _logger.debug("Client GetData")
-        return self._server_call(self._stub.GetData, energy_request(), None)
+        return self._server_call(self._stub.GetData, energy_request(instance=instance), None)
 
-    def GetTrend(self):
+    def GetTrend(self, instance: int = 0):
         _logger.debug("Client GetTrend")
-        trend = self._server_call(self._stub.GetTrend, energy_request(), None)
+        trend = self._server_call(self._stub.GetTrend, energy_request(instance=instance), None)
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 
@@ -137,17 +137,17 @@ class BatteryServiceClient(ServiceClient):
     def __init__(self):
         super().__init__(BatteryServiceStub)
 
-    def GetParameters(self):
-        _logger.debug("Client GetParameters")
-        return self._server_call(self._stub.GetParameters, energy_request(), None)
+    def GetParameters(self, instance: int = 0):
+        _logger.debug("Client GetParameters instance=%d", instance)
+        return self._server_call(self._stub.GetParameters, energy_request(instance=instance), None)
 
-    def GetData(self):
-        _logger.debug("Client GetData")
-        return self._server_call(self._stub.GetData, energy_request(), None)
+    def GetData(self, instance: int = 0):
+        _logger.debug("Client GetData instance=%d", instance)
+        return self._server_call(self._stub.GetData, energy_request(instance=instance), None)
 
-    def GetTrend(self):
-        _logger.debug("Client GetTrend")
-        trend = self._server_call(self._stub.GetTrend, energy_request(), None)
+    def GetTrend(self, instance: int = 0):
+        _logger.debug("Client GetTrend instance=%d", instance)
+        trend = self._server_call(self._stub.GetTrend, energy_request(instance=instance), None)
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 
@@ -158,17 +158,17 @@ class DC_DC_ServiceClient(ServiceClient):
     def __init__(self):
         super().__init__(DC_DC_ServiceStub)
 
-    def GetParameters(self):
-        _logger.debug("Client GetParameters")
-        return self._server_call(self._stub.GetParameters, energy_request(), None)
+    def GetParameters(self, instance: int = 0):
+        _logger.debug("Client GetParameters instance=%d", instance)
+        return self._server_call(self._stub.GetParameters, energy_request(instance=instance), None)
 
-    def GetData(self):
-        _logger.debug("Client GetData")
-        return self._server_call(self._stub.GetData, energy_request(), None)
+    def GetData(self, instance: int = 0):
+        _logger.debug("Client GetData instance=%d", instance)
+        return self._server_call(self._stub.GetData, energy_request(instance=instance), None)
 
-    def GetTrend(self):
-        _logger.debug("Client GetTrend")
-        trend = self._server_call(self._stub.GetTrend, energy_request(), None)
+    def GetTrend(self, instance: int = 0):
+        _logger.debug("Client GetTrend instance=%d", instance)
+        trend = self._server_call(self._stub.GetTrend, energy_request(instance=instance), None)
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 

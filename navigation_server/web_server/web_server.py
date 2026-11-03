@@ -31,7 +31,6 @@ from urllib.parse import urlparse
 import yaml
 
 from navigation_server.router_common import GrpcClient, MessageServerGlobals, get_global_var
-from navigation_server.generated.energy_pb2 import EnergyControllerData, EnergyControllerParameters, BatteryBank, battery_in_out, BatteryUnit, EnergySourceDevice, EnergySourceData
 from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
 
 from .user_management import Authenticator, UserStore, _NullUserStore, DEFAULT_SESSION_TIMEOUT, _SESSION_COOKIE

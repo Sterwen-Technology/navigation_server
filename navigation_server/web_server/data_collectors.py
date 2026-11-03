@@ -37,8 +37,9 @@ from navigation_server.navigation_clients.n2k_can_client import NMEA2000CanClien
 from navigation_server.navigation_clients.navigation_data_client import EngineClient
 from navigation_server.navigation_clients.energy_client import MPPT_Client, EnergyServiceClient, BatteryServiceClient, DC_DC_ServiceClient
 from navigation_server.navigation_clients.gnss_client import GNSSClient
-from navigation_server.generated.energy_pb2 import EnergyControllerData, EnergyControllerParameters, BatteryBank, battery_in_out, BatteryUnit, EnergySourceDevice, EnergySourceData
+from navigation_server.generated.energy_pb2 import EnergySource
 from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
+from google.protobuf.json_format import MessageToDict
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -772,136 +773,171 @@ class EngineServiceCollector(BaseServiceCollector):
                 return {"ok": False, "error": f"Unknown engine command: {command}"}
 
 
-class MPPTServiceCollector(BaseServiceCollector):
-    """Service collector for the MPPT (solar charge controller) service.
+class EnergyDatasetCollector(BaseServiceCollector):
+    """Base collector for the services exposing the standard 3 datasets
+    (parameters / data / trend) - see doc/web_ui_modular.md section 7.
 
-    The collector exposes three facets of an MPPT device:
-      * device info (semi-static: product id, firmware, serial, state, error,
-        mppt_state, day_max_power, day_power) and its MPPT_parameters,
-      * live output (panel_voltage, voltage, current, panel_power),
-      * trailing power trend (repeated solar_output samples).
-
-    All graphics ranges (bargraph maxima, trend window) are driven by the
-    MPPT_parameters returned by the device, so the frontend scales itself to
-    the configured panel_max_power / panel_max_voltage / max_voltage.
+    Subclasses set _client_class to the ServiceClient subclass. The generic
+    get_dataset() serves exactly one dataset as JSON (protobuf field names,
+    enums as integers, ratios such as state_of_charge between 0 and 1).
+    The legacy get_data()/get_trend() aggregate the datasets and keep the
+    historical JSON shape used by the service windows (MPPT, Battery, DC-DC)
+    and the current EMS page until the new UI configuration is generated.
     """
 
+    _client_class = None
+
+    #: rpc method name per dataset
+    _DATASET_RPCS = {"parameters": "GetParameters", "data": "GetData", "trend": "GetTrend"}
+
     def _initialize_client(self):
-        self._client = MPPT_Client()
+        self._client = self._client_class()
         self._grpc_server.add_service(self._client)
 
-    @staticmethod
-    def _parameters_dict(params) -> dict:
-        if params is None:
-            return {}
-        return {
-            "instance": params.instance,
-            "panel_max_power": round(params.panel_max_power, 1),
-            "panel_max_voltage": round(params.panel_max_voltage, 1),
-            "max_voltage": round(params.max_voltage, 1),
-            "trend_duration": round(params.trend_duration, 1),
-            "trend_interval": round(params.trend_interval, 1),
-        }
-    
-    def get_data(self) -> dict:
-        """Return device info + parameters + live output for this MPPT process.
+    def get_dataset(self, dataset: str, instance: int = 0) -> dict:
+        """Serve one of the standard datasets as a JSON-ready dictionary.
 
-        A single 'parameters' command is sent to GetDeviceInfo so the server
-        returns the MPPT_parameters block alongside the semi-static device
-        fields. GetOutput is queried independently for the live readings.
+        Args:
+            dataset: 'parameters' | 'data' | 'trend'
+            instance: entity instance within the service (0 = default)
+
+        Returns:
+            Dictionary with 'ok' plus the dataset fields (protobuf field
+            names). The trend samples are returned under 'samples' (the
+            non-significant 'samples' path element is omitted in the UI
+            data paths, see doc/web_ui_modular.md section 3.2).
         """
+        rpc_name = self._DATASET_RPCS.get(dataset)
+        if rpc_name is None:
+            return {"ok": False, "error": f"Unknown dataset: {dataset}"}
         self._ensure_client()
         try:
-            device = self._client.getDeviceInfo()
-            output = self._client.getOutput()
-            communication_ok = device.communication_ok
-            if communication_ok:
-                out = {
-                    "panel_voltage": round(output.panel_voltage, 2),
-                    "voltage": round(output.voltage, 2),
-                    "current": round(output.current, 2),
-                    "panel_power": round(output.panel_power, 1),
-                }
-            else:
-                out = {
-                    "panel_voltage": None,
-                    "voltage": None,
-                    "current": None,
-                    "panel_power": None,
-                }
-            _logger.debug(f"{device.device_label} com:{communication_ok} state:{device.state}")
-            
-            # Get off_reason value and decode it
-            off_reason_raw = int(device.off_reason) if hasattr(device, 'off_reason') else 0
-            off_reason_list = decode_off_reason(off_reason_raw)
-            
-            return {
-                "ok": True,
-                "process": self.process_name,
-                "instance": device.instance,
-                "communication_ok": communication_ok,
-                "device_label": device.device_label,
-                "device_model": device.device_model,
-                "product_id": device.product_id,
-                "firmware": device.firmware,
-                "serial": device.serial_number,
-                "error": device.error,
-                "state": device.state,
-                "mppt_state": device.mppt_state,
-                "off_reason": off_reason_list,
-                "off_reason_raw": off_reason_raw,
-                "day_max_power": round(device.day_max_power, 1),
-                "day_power": round(device.day_yield, 3),
-                "msg_timestamp": device.msg_timestamp,
-                "parameters": self._parameters_dict(device.parameters),
-                "output": out,
-            }
+            method = getattr(self._client, rpc_name)
+            msg = method(instance)
+            result = MessageToDict(msg, preserving_proto_field_name=True, use_integers_for_enums=True)
+            result["ok"] = True
+            result["process"] = self.process_name
+            return result
         except GrpcAccessException:
-            return {"ok": False, "error": "MPPT service call failed"}
+            return {"ok": False, "error": f"{type(self).__name__} {dataset} call failed"}
+
+    @staticmethod
+    def _num(value, default=0.0) -> float:
+        """Numeric conversion tolerant to missing/None dataset fields."""
+        try:
+            return float(value) if value is not None else default
+        except (TypeError, ValueError):
+            return default
+
+
+class MPPTServiceCollector(EnergyDatasetCollector):
+    """Service collector for the MPPT (solar charge controller) service.
+
+    The three datasets of the MPPTService:
+      * parameters: semi-static device info + panel/charge parameters,
+      * data: live output (panel_voltage, voltage, current, panel_power,
+        output power) + live status fields (state, mppt_state, off_reason,
+        communication_ok),
+      * trend: trailing output samples.
+    """
+
+    _client_class = MPPT_Client
+
+    def get_data(self) -> dict:
+        """Legacy aggregate (device info + parameters + live output) for the
+        service window. Field names are kept for front-end compatibility."""
+        params = self.get_dataset("parameters")
+        if not params.get("ok"):
+            return params
+        data = self.get_dataset("data")
+        if not data.get("ok"):
+            return data
+
+        communication_ok = bool(params.get("communication_ok", False))
+        if communication_ok:
+            out = {
+                "panel_voltage": round(self._num(data.get("panel_voltage")), 2),
+                "voltage": round(self._num(data.get("voltage")), 2),
+                "current": round(self._num(data.get("current")), 2),
+                "panel_power": round(self._num(data.get("panel_power")), 1),
+            }
+        else:
+            out = {
+                "panel_voltage": None,
+                "voltage": None,
+                "current": None,
+                "panel_power": None,
+            }
+
+        off_reason_raw = int(params.get("off_reason", 0) or 0)
+        _logger.debug(f"{params.get('device_label')} com:{communication_ok} state:{params.get('state')}")
+
+        return {
+            "ok": True,
+            "process": self.process_name,
+            "instance": int(params.get("instance", 0) or 0),
+            "communication_ok": communication_ok,
+            "device_label": params.get("device_label", ""),
+            "device_model": params.get("device_model", ""),
+            "product_id": params.get("product_id", ""),
+            "firmware": params.get("firmware", ""),
+            "serial": params.get("serial_number", ""),
+            "error": int(params.get("error", 0) or 0),
+            "state": int(params.get("state", 0) or 0),
+            "mppt_state": int(params.get("mppt_state", 0) or 0),
+            "off_reason": decode_off_reason(off_reason_raw),
+            "off_reason_raw": off_reason_raw,
+            "day_max_power": round(self._num(params.get("day_max_power")), 1),
+            "day_power": round(self._num(params.get("day_power")), 3),
+            "msg_timestamp": params.get("msg_timestamp", ""),
+            "parameters": {
+                "instance": int(params.get("instance", 0) or 0),
+                "panel_max_power": round(self._num(params.get("panel_max_power")), 1),
+                "panel_max_voltage": round(self._num(params.get("panel_max_voltage")), 1),
+                "max_voltage": round(self._num(params.get("max_voltage")), 1),
+                "trend_duration": round(self._num(params.get("trend_duration")), 1),
+                "trend_interval": round(self._num(params.get("trend_interval")), 1),
+            },
+            "output": out,
+        }
 
     def get_trend(self) -> dict:
-        """Return the trailing solar output trend (panel power over time).
-
-        The trend window (duration and sampling interval) is governed by the
-        MPPT_parameters returned with the device info; the server decides how
-        many samples to return.
-        """
-        self._ensure_client()
-        try:
-            trend = self._client.getTrend()
-            values = []
-            for v in (trend.values if trend else []):
-                values.append({
-                    "panel_voltage": round(v.panel_voltage, 2),
-                    "voltage": round(v.voltage, 2),
-                    "current": round(v.current, 2),
-                    "panel_power": round(v.panel_power, 1),
-                })
-            return {
-                "ok": True,
-                "process": self.process_name,
-                "id": trend.id if trend else 0,
-                "nb_values": trend.nb_values if trend else 0,
-                "interval": round(trend.interval, 1) if trend else 0,
-                "values": values,
+        """Legacy aggregate for the service window (trailing output trend)."""
+        result = self.get_dataset("trend")
+        if not result.get("ok"):
+            return result
+        samples = result.get("samples", [])
+        values = [
+            {
+                "panel_voltage": round(self._num(s.get("panel_voltage")), 2),
+                "voltage": round(self._num(s.get("voltage")), 2),
+                "current": round(self._num(s.get("current")), 2),
+                "panel_power": round(self._num(s.get("panel_power")), 1),
             }
-        except GrpcAccessException:
-            return {"ok": False, "error": "MPPT trend call failed"}
-    
+            for s in samples
+        ]
+        return {
+            "ok": True,
+            "process": self.process_name,
+            "nb_values": int(result.get("nb_values", len(values)) or len(values)),
+            "interval": round(self._num(result.get("interval")), 1),
+            "values": values,
+        }
+
     def execute(self, parameters: list, **kwargs) -> dict:
-        """Execute MPPT service commands.
-        
+        """Execute MPPT service commands (legacy window commands).
+
         Commands:
-        - No command or "status": get MPPT status
-        - trend: get MPPT trend data
+        - No command or "status": get MPPT status (legacy aggregate)
+        - trend: get MPPT trend data (legacy shape)
         - charger_on: turn MPPT charger on
         - charger_off: turn MPPT charger off
         """
         if not parameters:
             return self.get_data()
-        
+
         command = parameters[0]
-        
+
         if command == "trend":
             return self.get_trend()
         elif command == "status":
@@ -910,15 +946,15 @@ class MPPTServiceCollector(BaseServiceCollector):
             return self._send_device_command("charger_on")
         elif command == "charger_off":
             return self._send_device_command("charger_off")
-        
+
         return {"ok": False, "error": f"Unknown MPPT command: {command}"}
-    
+
     def _send_device_command(self, command: str) -> dict:
         """Send a device command to the MPPT charger.
-        
+
         Args:
             command: Command to send ("charger_on" or "charger_off")
-            
+
         Returns:
             Dictionary with "ok" and "response" keys
         """
@@ -935,480 +971,255 @@ class MPPTServiceCollector(BaseServiceCollector):
             return {"ok": False, "error": str(e)}
 
 
-class EnergyServiceCollector(BaseServiceCollector):
-    """Service collector for EnergyService.
-    
-    Collects energy controller data including production, consumption,
-    and battery balance information.
+class EnergyServiceCollector(EnergyDatasetCollector):
+    """Service collector for the EnergyService (energy controller).
+
+    The controller serves only its consolidated view (voltages, production,
+    consumption, energy stock, battery balance, consolidated state of
+    charge as a ratio 0-1). The data of the individual entities (batteries,
+    MPPT, DC-DC chargers) is served by their own dedicated services - the
+    historical duplication (sources_data/batteries_data back-compat
+    aggregation) is removed per the rationalized service structure.
     """
-    
-    def _initialize_client(self):
-        self._client = EnergyServiceClient()
-        self._grpc_server.add_service(self._client)
-    
+
+    _client_class = EnergyServiceClient
+
     def get_data(self) -> dict:
-        """Get energy system status data."""
-        self._ensure_client()
-        try:
-            info = self._client.GetInformation()
-            values = self._client.GetValues()
-            trend = self._client.GetTrend()
-            
-            # Build sources data
-            # Now sources_data uses EnergySourceDevice instead of encoded instance
-            sources = []
-            for source in info.sources:
-                _logger.debug(f"Energy get_data source:{source.label}====================")
-                source_obj = {
-                    "instance": int(source.instance_id),
-                    "label": source.label,
-                    "type": int(source.type),
-                    "source_data": {
-                        "current": 0.0,
-                        "power": 0.0,
-                        "communication_ok": True,
-                        "device_on": True
+        """Legacy aggregate (controller values + scale parameters + trend) for
+        the current EMS page until the new UI configuration is generated."""
+        values = self.get_dataset("data")
+        if not values.get("ok"):
+            return values
+        params = self.get_dataset("parameters")
+        if not params.get("ok"):
+            return params
+        trend = self.get_dataset("trend")
+
+        result = {
+            "ok": True,
+            "process": self.process_name,
+            "main_voltage": self._num(values.get("main_voltage")),
+            "auxiliary_voltage": self._num(values.get("auxiliary_voltage")),
+            "production_power": self._num(values.get("production_power")),
+            "consumption_power": self._num(values.get("consumption_power")),
+            "energy_stock": self._num(values.get("energy_stock")),
+            "battery_balance": self._num(values.get("battery_balance")),
+            "state_of_charge": self._num(values.get("state_of_charge")),
+            "maximum_main_voltage": self._num(params.get("maximum_main_voltage")),
+            "minimum_main_voltage": self._num(params.get("minimum_main_voltage")),
+            "nominal_main_voltage": self._num(params.get("nominal_main_voltage")),
+            "max_voltage_scale": self._num(params.get("max_voltage_scale")),
+            "total_energy_capacity": self._num(params.get("total_energy_capacity")),
+            "total_power_high": self._num(params.get("total_power_high"), 1000.0),
+            "total_power_low": self._num(params.get("total_power_low"), 200.0),
+        }
+
+        if trend.get("ok"):
+            result["trend"] = {
+                "samples": [
+                    {
+                        "main_voltage": self._num(sample.get("main_voltage")),
+                        "auxiliary_voltage": self._num(sample.get("auxiliary_voltage")),
+                        "production_power": self._num(sample.get("production_power")),
+                        "consumption_power": self._num(sample.get("consumption_power")),
+                        "energy_stock": self._num(sample.get("energy_stock")),
+                        "battery_balance": self._num(sample.get("battery_balance")),
+                        "state_of_charge": self._num(sample.get("state_of_charge")),
                     }
-                }
-                # Look for source_data with matching instance_id and type
-                for sd in values.sources_data:
-                    _logger.debug(f"\tEnergy get_data source_data:{sd}")
-                    if sd.device.instance_id == source.instance_id and sd.device.type == source.type:
-                        source_obj["source_data"]["current"] = float(sd.current)
-                        source_obj["source_data"]["power"] = float(sd.power)
-                        source_obj["source_data"]["communication_ok"] = bool(sd.communication_ok)
-                        source_obj["source_data"]["device_on"] = bool(sd.device_on)
-                        break
-                _logger.debug(f"\tEnergy get_data:{source_obj}")
-                sources.append(source_obj)
-            
-            # Build batteries data
-            batteries = []
-            for battery_unit_data in values.batteries_data:
-                # Find matching battery in info.batteries to get parameters for scaling
-                high_power_scale_amp = 50.0  # Default value (A)
-                low_power_scale_amp = 10.0   # Default value (A) - switch threshold
-                nominal_voltage = 12.0       # Default value (V)
-                
-                if hasattr(battery_unit_data, 'instance'):
-                    for battery_bank in info.batteries:
-                        # BatteryUnit has instance_id, BatteryUnitData has instance
-                        if hasattr(battery_bank, 'instance_id') and hasattr(battery_unit_data, 'instance'):
-                            if int(battery_bank.instance_id) == int(battery_unit_data.instance):
-                                if hasattr(battery_bank, 'high_power_scale_amp') and battery_bank.high_power_scale_amp:
-                                    high_power_scale_amp = float(battery_bank.high_power_scale_amp)
-                                if hasattr(battery_bank, 'low_power_scale_amp') and battery_bank.low_power_scale_amp:
-                                    low_power_scale_amp = float(battery_bank.low_power_scale_amp)
-                                if hasattr(battery_bank, 'nominal_voltage') and battery_bank.nominal_voltage:
-                                    nominal_voltage = float(battery_bank.nominal_voltage)
-                                break
-                
-                battery_obj = {
-                    "instance": int(battery_unit_data.instance) if hasattr(battery_unit_data, 'instance') else 0,
-                    "high_power_scale_amp": high_power_scale_amp,
-                    "low_power_scale_amp": low_power_scale_amp,
-                    "nominal_voltage": nominal_voltage,
-                    "battery_data": {
-                        "voltage": float(values.main_voltage),
-                        "current": float(battery_unit_data.current),
-                        "power": float(battery_unit_data.power),
-                        "state_of_charge": float(battery_unit_data.state_of_charge) * 100.0,  # Convert from 0-1 to 0-100%
-                        "energy": float(battery_unit_data.energy)  # Already in Wh
-                    }
-                }
-                batteries.append(battery_obj)
-            
-            # If EnergyService doesn't have battery data (batteries not registered with EnergyController),
-            # try to get it directly from BatteryService for backward compatibility and to get trend data
-            if not batteries:
-                # Try to find BatteryService processes and get their data
-                system_collector = self._process_collector._system_collector
-                system = system_collector._get_agent_status()
-                if system:
-                    for proc in system.get_processes():
-                        if proc.state == "RUNNING":
-                            for svc in proc.services:
-                                if svc.rpc_service == "BatteryService":
-                                    endpoint_key = f"api/battery/{proc.name}"
-                                    battery_collector = system_collector._service_collector_cache.get(endpoint_key)
-                                    if battery_collector:
-                                        try:
-                                            battery_service_data = battery_collector.get_data()
-                                            if battery_service_data.get("ok"):
-                                                battery_obj = {
-                                                    "instance": battery_service_data.get("instance", 0),
-                                                    "battery_data": {
-                                                        "voltage": battery_service_data.get("voltage", 0.0),
-                                                        "current": battery_service_data.get("current", 0.0),
-                                                        "power": battery_service_data.get("power", 0.0),
-                                                        "state_of_charge": battery_service_data.get("state_of_charge", 0.0),
-                                                        "energy": battery_service_data.get("energy", 0.0),
-                                                    },
-                                                    "trend": battery_service_data.get("trend", {"samples": []})
-                                                }
-                                                batteries.append(battery_obj)
-                                        except Exception as e:
-                                            _logger.warning(f"Error getting battery data from {proc.name}: {e}")
-                                    break
-            
-            # If EnergyService doesn't have source data or we want to add trend data,
-            # try to get it directly from MPPTService for backward compatibility
-            if not sources:
-                # Try to find MPPTService processes and get their data
-                system_collector = self._process_collector._system_collector
-                system = system_collector._get_agent_status()
-                if system:
-                    for proc in system.get_processes():
-                        if proc.state == "RUNNING":
-                            for svc in proc.services:
-                                if svc.rpc_service == "MPPTService":
-                                    endpoint_key = f"api/mppt/{proc.name}"
-                                    mppt_collector = system_collector._service_collector_cache.get(endpoint_key)
-                                    if mppt_collector:
-                                        try:
-                                            mppt_data = mppt_collector.get_data()
-                                            if mppt_data.get("ok"):
-                                                # Create source object from MPPT data
-                                                source_obj = {
-                                                    "instance": mppt_data.get("instance", 0),
-                                                    "label": mppt_data.get("device_label", "MPPT"),
-                                                    "type": 1,  # EnergySource.Solar_MPPT
-                                                    "source_data": {
-                                                        "current": mppt_data.get("output", {}).get("current", 0.0) if mppt_data.get("output") else 0.0,
-                                                        "power": mppt_data.get("output", {}).get("panel_power", 0.0) if mppt_data.get("output") else 0.0,
-                                                        "communication_ok": mppt_data.get("communication_ok", True),
-                                                        "device_on": mppt_data.get("state", 0) != 0
-                                                    },
-                                                    "trend": {
-                                                        "samples": [
-                                                            {"power": float(v.get("panel_power", 0))}
-                                                            for v in mppt_data.get("output", {}).get("values", []) if isinstance(mppt_data.get("output"), dict)
-                                                        ] if mppt_data.get("output") and isinstance(mppt_data.get("output"), dict) else []
-                                                    }
-                                                }
-                                                sources.append(source_obj)
-                                        except Exception as e:
-                                            _logger.warning(f"Error getting MPPT data from {proc.name}: {e}")
-                                    break
-            
-            # If EnergyService doesn't have source data for DC-DC, try to get it directly
-            # from DC_DC_Service for backward compatibility
-            # Check if we have any sources and if any of them are DC_DC type
-            has_dc_dc_source = any(s.get('type') == 4 for s in sources)  # EnergySource.DC_DC_Charger = 4
-            dc_dc_processed = False
-            if not has_dc_dc_source:
-                system_collector = self._process_collector._system_collector
-                system = system_collector._get_agent_status()
-                if system:
-                    for proc in system.get_processes():
-                        if proc.state == "RUNNING":
-                            for svc in proc.services:
-                                if svc.rpc_service == "DC_DC_Service":
-                                    endpoint_key = f"api/dc_dc/{proc.name}"
-                                    dc_dc_collector = system_collector._service_collector_cache.get(endpoint_key)
-                                    if dc_dc_collector:
-                                        try:
-                                            dc_dc_data = dc_dc_collector.get_data()
-                                            if dc_dc_data.get("ok"):
-                                                # Create source object from DC-DC data
-                                                source_obj = {
-                                                    "instance": dc_dc_data.get("instance", 0),
-                                                    "label": dc_dc_data.get("device_label", "DC-DC"),
-                                                    "type": 4,  # EnergySource.DC_DC_Charger
-                                                    "source_data": {
-                                                        "current": dc_dc_data.get("output_current", 0.0),
-                                                        "power": dc_dc_data.get("output_power", 0.0),
-                                                        "communication_ok": dc_dc_data.get("communication_ok", True),
-                                                        "device_on": dc_dc_data.get("state", 0) != 0
-                                                    }
-                                                }
-                                                sources.append(source_obj)
-                                                dc_dc_processed = True
-                                        except Exception as e:
-                                            _logger.warning(f"Error getting DC-DC data from {proc.name}: {e}")
-                                    if dc_dc_processed:
-                                        break
-            
-            # Use scale parameters from EnergyControllerParameters
-            total_energy_capacity = float(info.total_energy_capacity) if hasattr(info, 'total_energy_capacity') and info.total_energy_capacity else 0.0
-            total_power_high = float(info.total_power_high) if hasattr(info, 'total_power_high') and info.total_power_high else 1000.0
-            total_power_low = float(info.total_power_low) if hasattr(info, 'total_power_low') and info.total_power_low else 200.0
-            
-            result = {
-                "ok": True,
-                "process": self.process_name,
-                "main_voltage": float(values.main_voltage),
-                "auxiliary_voltage": float(values.auxiliary_voltage),
-                "production_power": float(values.production_power),
-                "consumption_power": float(values.consumption_power),
-                "energy_stock": float(values.energy_stock),
-                "battery_balance": float(values.battery_balance),
-                "maximum_main_voltage": float(info.maximum_main_voltage),
-                "minimum_main_voltage": float(info.minimum_main_voltage),
-                "nominal_main_voltage": float(info.nominal_main_voltage),
-                "total_energy_capacity": total_energy_capacity,
-                "total_power_high": total_power_high,
-                "total_power_low": total_power_low,
-                "sources": sources,
-                "batteries": batteries,
+                    for sample in trend.get("samples", [])
+                ]
             }
-            
-            # Add trend data
-            if trend.samples:
-                result["trend"] = {
-                    "samples": [
-                        {
-                            "main_voltage": float(sample.main_voltage),
-                            "auxiliary_voltage": float(sample.auxiliary_voltage),
-                            "production_power": float(sample.production_power),
-                            "consumption_power": float(sample.consumption_power),
-                            "energy_stock": float(sample.energy_stock),
-                            "battery_balance": float(sample.battery_balance)
-                        }
-                        for sample in trend.samples
-                    ]
-                }
-            # _logger.info(f"Energy data collected successfully {result}")
-            return result
-        except GrpcAccessException:
-            return {"ok": False, "error": "Energy service call failed"}
-    
+        # _logger.info(f"Energy data collected successfully {result}")
+        return result
+
     def execute(self, parameters: list, **kwargs) -> dict:
-        """Execute Energy service commands.
-        
-        Commands:
-        - No parameters or "status": get energy status
-        """
-        # Energy service doesn't take parameters for status
+        """Execute Energy service commands (legacy: status only)."""
         return self.get_data()
 
 
-class BatteryServiceCollector(BaseServiceCollector):
+class BatteryServiceCollector(EnergyDatasetCollector):
     """Service collector for BatteryService.
-    
-    Collects battery data including voltage, current, power, state of charge,
-    and energy variations.
+
+    Collects battery data including voltage, current, power, state of charge
+    (ratio 0-1 in the datasets, percent in the legacy window shape) and
+    energy variations.
     """
-    
-    def _initialize_client(self):
-        self._client = BatteryServiceClient()
-        self._grpc_server.add_service(self._client)
-    
+
+    _client_class = BatteryServiceClient
+
     def get_data(self) -> dict:
-        """Get battery status data."""
-        self._ensure_client()
-        try:
-            info = self._client.GetInformation('parameters')
-            values = self._client.GetValues()
-            trend = self._client.GetTrend()
-            
-            battery_label = "Battery_0"
-            try:
-                if info.battery.device_label:
-                    battery_label = info.battery.device_label
-                elif info.controller.device_label:
-                    battery_label = info.controller.device_label
-            except (AttributeError, ValueError):
-                pass
-            
-            # Extract battery info
-            state_of_charge = 0.0
-            nominal_capacity = 100.0  # Default value (Ah)
-            nominal_voltage = 12.0    # Default value (V)
-            device_model = "Unknown"
-            high_power_scale_amp = 50.0    # Default value (A)
-            low_power_scale_amp = 10.0     # Default value (A)
-            
-            if hasattr(info, 'battery') and info.battery:
-                # Get state_of_charge if available (in 0-1 from backend, convert to 0-100%)
-                if hasattr(info.battery, 'state_of_charge'):
-                    state_of_charge = float(info.battery.state_of_charge) * 100.0
-                    _logger.debug(f"Battery SOC from info: {state_of_charge}%")
-                
-                # Get device model if available
-                if hasattr(info.battery, 'device_model') and info.battery.device_model:
-                    device_model = info.battery.device_model
-                    _logger.debug(f"Battery device_model: {device_model}")
-                
-                # Get nominal parameters if available and non-zero, otherwise use defaults
-                if hasattr(info.battery, 'nominal_capacity') and info.battery.nominal_capacity:
-                    nominal_capacity = float(info.battery.nominal_capacity)
-                    _logger.debug(f"Battery nominal_capacity: {nominal_capacity}Ah")
-                if hasattr(info.battery, 'nominal_voltage') and info.battery.nominal_voltage:
-                    nominal_voltage = float(info.battery.nominal_voltage)
-                    _logger.debug(f"Battery nominal_voltage: {nominal_voltage}V")
-                if hasattr(info.battery, 'high_power_scale_amp') and info.battery.high_power_scale_amp:
-                    high_power_scale_amp = float(info.battery.high_power_scale_amp)
-                    _logger.debug(f"Battery high_power_scale_amp: {high_power_scale_amp}A")
-                if hasattr(info.battery, 'low_power_scale_amp') and info.battery.low_power_scale_amp:
-                    low_power_scale_amp = float(info.battery.low_power_scale_amp)
-                    _logger.debug(f"Battery low_power_scale_amp: {low_power_scale_amp}A")
-            
-            _logger.debug(f"Battery state_of_charge={state_of_charge}%, nominal_capacity={nominal_capacity}Ah, nominal_voltage={nominal_voltage}V")
-            
-            battery_obj = {
-                "ok": True,
-                "process": self.process_name,
-                "instance": 0,
-                "label": battery_label,
-                "device_model": device_model,
-                "nominal_capacity": nominal_capacity,
-                "nominal_voltage": nominal_voltage,
-                "high_power_scale_amp": high_power_scale_amp,
-                "low_power_scale_amp": low_power_scale_amp,
-                "voltage": float(values.voltage) if values.voltage else 0.0,
-                "current": float(values.current) if values.current else 0.0,
-                "power": float(values.voltage * values.current) if values.voltage and values.current else 0.0,
-                "state_of_charge": state_of_charge,
-                "energy": (state_of_charge * nominal_capacity * nominal_voltage / 100.0) if state_of_charge else 0.0,
-                "trend": {
-                    "samples": [
-                        {
-                            "timestamp": sample.timestamp,
-                            "voltage": float(sample.voltage),
-                            "power": float(sample.power),
-                            "state_of_charge": float(sample.state_of_charge) * 100.0,
-                            "energy_variation": float(sample.energy_variation)
-                        }
-                        for sample in trend.samples
-                    ] if trend.samples else []
-                }
+        """Legacy aggregate (parameters + data + trend) for the service
+        window. state_of_charge is converted to percent for the window."""
+        params = self.get_dataset("parameters")
+        if not params.get("ok"):
+            return params
+        data = self.get_dataset("data")
+        if not data.get("ok"):
+            return data
+        trend = self.get_dataset("trend")
+
+        battery_label = params.get("device_label") or "Battery_0"
+        nominal_capacity = self._num(params.get("nominal_capacity"), 100.0)
+        nominal_voltage = self._num(params.get("nominal_voltage"), 12.0)
+        soc_ratio = self._num(data.get("state_of_charge"))
+        voltage = self._num(data.get("voltage"))
+        current = self._num(data.get("current"))
+        state_of_charge_pct = soc_ratio * 100.0
+
+        _logger.debug(f"Battery state_of_charge={state_of_charge_pct:.1f}%, nominal_capacity={nominal_capacity}Ah, nominal_voltage={nominal_voltage}V")
+
+        battery_obj = {
+            "ok": True,
+            "process": self.process_name,
+            "instance": int(data.get("instance", params.get("instance", 0)) or 0),
+            "label": battery_label,
+            "device_model": params.get("device_model", "Unknown"),
+            "nominal_capacity": nominal_capacity,
+            "nominal_voltage": nominal_voltage,
+            "high_power_scale_amp": self._num(params.get("high_power_scale_amp"), 50.0),
+            "low_power_scale_amp": self._num(params.get("low_power_scale_amp"), 10.0),
+            "communication_ok": bool(data.get("communication_ok", True)),
+            "voltage": voltage,
+            "current": current,
+            "power": voltage * current,
+            "state_of_charge": state_of_charge_pct,
+            "energy": soc_ratio * nominal_capacity * nominal_voltage,
+            "trend": {
+                "samples": [
+                    {
+                        "timestamp": sample.get("timestamp", ""),
+                        "voltage": self._num(sample.get("voltage")),
+                        "power": self._num(sample.get("power")),
+                        "state_of_charge": self._num(sample.get("state_of_charge")) * 100.0,
+                        "energy_variation": self._num(sample.get("energy_variation")),
+                    }
+                    for sample in trend.get("samples", [])
+                ] if trend.get("ok") else []
             }
-            return battery_obj
-        except GrpcAccessException:
-            return {"ok": False, "error": "Battery service call failed"}
-    
+        }
+        return battery_obj
+
     def execute(self, parameters: list, **kwargs) -> dict:
-        """Execute Battery service commands.
-        
+        """Execute Battery service commands (legacy window commands).
+
         Commands:
-        - No parameters or "status": get battery status
+        - No parameters or "status": get battery status (legacy aggregate)
         - trend: get battery trend data
         """
         if not parameters:
             return self.get_data()
-        
+
         command = parameters[0]
-        
+
         if command == "status":
             return self.get_data()
         elif command == "trend":
             # Get trend data only
-            self._ensure_client()
-            try:
-                trend = self._client.GetTrend()
-                trend_data = {
-                    "ok": True,
-                    "process": self.process_name,
-                    "samples": [
-                        {
-                            "timestamp": sample.timestamp,
-                            "voltage": float(sample.voltage),
-                            "power": float(sample.power),
-                            "state_of_charge": float(sample.state_of_charge) * 100.0,
-                            "energy_variation": float(sample.energy_variation)
-                        }
-                        for sample in trend.samples
-                    ] if trend.samples else []
-                }
-                return trend_data
-            except GrpcAccessException:
-                return {"ok": False, "error": "Battery trend call failed"}
-        
+            result = self.get_dataset("trend")
+            if not result.get("ok"):
+                return result
+            return {
+                "ok": True,
+                "process": self.process_name,
+                "samples": [
+                    {
+                        "timestamp": sample.get("timestamp", ""),
+                        "voltage": self._num(sample.get("voltage")),
+                        "power": self._num(sample.get("power")),
+                        "state_of_charge": self._num(sample.get("state_of_charge")) * 100.0,
+                        "energy_variation": self._num(sample.get("energy_variation")),
+                    }
+                    for sample in result.get("samples", [])
+                ]
+            }
+
         return {"ok": False, "error": f"Unknown battery command: {command}"}
 
 
-class DC_DC_ServiceCollector(BaseServiceCollector):
+class DC_DC_ServiceCollector(EnergyDatasetCollector):
     """Service collector for DC-DC Charger service.
-    
-    Collects DC-DC charger data including input/output voltage, current, power,
-    and trend data.
+
+    Collects DC-DC charger data including input/output voltage, current,
+    power, live status fields and trend data.
     """
-    
-    def _initialize_client(self):
-        self._client = DC_DC_ServiceClient()
-        self._grpc_server.add_service(self._client)
-    
+
+    _client_class = DC_DC_ServiceClient
+
     def get_data(self) -> dict:
-        """Get DC-DC charger status data."""
-        self._ensure_client()
-        try:
-            info = self._client.GetInformation('parameters')
-            values = self._client.GetValues()
-            _logger.debug(f"{info.device_label} com:{values.communication_ok} state:{info.state}")
-            
-            # Get off_reason value - can be from values or info (both have it in DC-DC)
-            off_reason_raw = 0
-            if hasattr(values, 'off_reason'):
-                off_reason_raw = int(values.off_reason)
-            elif hasattr(info, 'off_reason'):
-                off_reason_raw = int(info.off_reason)
-            
-            # Decode the bitmask into list of reasons
-            off_reason_list = decode_off_reason(off_reason_raw)
-            
-            return {
-                "ok": True,
-                "process": self.process_name,
-                "instance": info.instance if hasattr(info, 'instance') else 0,
-                "device_label": info.device_label if hasattr(info, 'device_label') else "DC-DC",
-                "model": info.device_model if hasattr(info, 'device_model') else "Unknown",
-                "state": int(info.state) if hasattr(info, 'state') else 0,
-                "error": int(info.error) if hasattr(info, 'error') else 0,
-                "off_reason": off_reason_list,
-                "off_reason_raw": off_reason_raw,
-                "communication_ok": bool(values.communication_ok) if hasattr(values, 'communication_ok') else True,
-                "input_voltage": float(values.input_voltage) if hasattr(values, 'input_voltage') else 0.0,
-                "input_current": float(values.input_current) if hasattr(values, 'input_current') else 0.0,
-                "input_power": float(values.input_power) if hasattr(values, 'input_power') else 0.0,
-                "output_voltage": float(values.output_voltage) if hasattr(values, 'output_voltage') else 0.0,
-                "output_current": float(values.output_current) if hasattr(values, 'output_current') else 0.0,
-                "output_power": float(values.output_power) if hasattr(values, 'output_power') else 0.0,
-            }
-        except GrpcAccessException:
-            return {"ok": False, "error": "DC-DC service call failed"}
-    
+        """Legacy aggregate (parameters + data) for the service window."""
+        params = self.get_dataset("parameters")
+        if not params.get("ok"):
+            return params
+        data = self.get_dataset("data")
+        if not data.get("ok"):
+            return data
+
+        # off_reason can be in data (live) or parameters
+        off_reason_raw = 0
+        if data.get("off_reason") is not None:
+            off_reason_raw = int(data.get("off_reason", 0) or 0)
+        elif params.get("off_reason") is not None:
+            off_reason_raw = int(params.get("off_reason", 0) or 0)
+
+        _logger.debug(f"{params.get('device_label')} com:{data.get('communication_ok')} state:{data.get('state')}")
+
+        return {
+            "ok": True,
+            "process": self.process_name,
+            "instance": int(data.get("instance", params.get("instance", 0)) or 0),
+            "device_label": params.get("device_label", "DC-DC"),
+            "model": params.get("device_model", "Unknown"),
+            "state": int(data.get("state", 0) or 0),
+            "error": int(data.get("error", 0) or 0),
+            "off_reason": decode_off_reason(off_reason_raw),
+            "off_reason_raw": off_reason_raw,
+            "communication_ok": bool(data.get("communication_ok", True)),
+            "input_voltage": self._num(data.get("input_voltage")),
+            "input_current": self._num(data.get("input_current")),
+            "input_power": self._num(data.get("input_power")),
+            "output_voltage": self._num(data.get("output_voltage")),
+            "output_current": self._num(data.get("output_current")),
+            "output_power": self._num(data.get("output_power")),
+        }
+
     def get_trend(self) -> dict:
-        """Get DC-DC charger trend data."""
-        self._ensure_client()
-        try:
-            trend = self._client.GetTrend()
-            samples = []
-            if trend and hasattr(trend, 'samples'):
-                for sample in trend.samples:
-                    sample_dict = {
-                        "input_voltage": float(sample.input_voltage) if hasattr(sample, 'input_voltage') else 0.0,
-                        "input_current": float(sample.input_current) if hasattr(sample, 'input_current') else 0.0,
-                        "input_power": float(sample.input_power) if hasattr(sample, 'input_power') else 0.0,
-                        "output_voltage": float(sample.output_voltage) if hasattr(sample, 'output_voltage') else 0.0,
-                        "output_current": float(sample.output_current) if hasattr(sample, 'output_current') else 0.0,
-                        "output_power": float(sample.output_power) if hasattr(sample, 'output_power') else 0.0,
-                    }
-                    samples.append(sample_dict)
-            return {
-                "ok": True,
-                "process": self.process_name,
-                "nb_values": trend.nb_values if trend else 0,
-                "interval": float(trend.interval) if trend else 0.0,
-                "samples": samples
+        """Legacy aggregate for the service window (trailing samples)."""
+        result = self.get_dataset("trend")
+        if not result.get("ok"):
+            return result
+        samples = [
+            {
+                "input_voltage": self._num(sample.get("input_voltage")),
+                "input_current": self._num(sample.get("input_current")),
+                "input_power": self._num(sample.get("input_power")),
+                "output_voltage": self._num(sample.get("output_voltage")),
+                "output_current": self._num(sample.get("output_current")),
+                "output_power": self._num(sample.get("output_power")),
             }
-        except GrpcAccessException:
-            return {"ok": False, "error": "DC-DC trend call failed"}
-    
+            for sample in result.get("samples", [])
+        ]
+        return {
+            "ok": True,
+            "process": self.process_name,
+            "nb_values": int(result.get("nb_values", len(samples)) or len(samples)),
+            "interval": self._num(result.get("interval")),
+            "samples": samples
+        }
+
     def execute(self, parameters: list, **kwargs) -> dict:
-        """Execute DC-DC service commands.
-        
+        """Execute DC-DC service commands (legacy window commands).
+
         Commands:
-        - No parameters or "status": get DC-DC status
+        - No parameters or "status": get DC-DC status (legacy aggregate)
         - trend: get DC-DC trend data
         - charger_on: turn charger on
         - charger_off: turn charger off
         """
         if not parameters:
             return self.get_data()
-        
+
         command = parameters[0]
-        
+
         if command == "status":
             return self.get_data()
         elif command == "trend":
@@ -1417,15 +1228,15 @@ class DC_DC_ServiceCollector(BaseServiceCollector):
             return self._send_device_command("charger_on")
         elif command == "charger_off":
             return self._send_device_command("charger_off")
-        
+
         return {"ok": False, "error": f"Unknown DC-DC command: {command}"}
-    
+
     def _send_device_command(self, command: str) -> dict:
         """Send a device command to the DC-DC charger.
-        
+
         Args:
             command: Command to send ("charger_on" or "charger_off")
-            
+
         Returns:
             Dictionary with "ok" and "response" keys
         """
@@ -2310,7 +2121,14 @@ class NavigationSystemCollector:
         if is_system_level:
             return {"ok": False, "error": f"Unexpected system-level service: {service_handle}"}
         
-        # For per-process services
+        # Dataset-oriented routing for the services exposing the standard 3
+        # datasets: /api/<service>/<instance>/<dataset>[/<name>] (see
+        # doc/web_ui_modular.md sections 2.6 and 3). The legacy process-name
+        # routing below is preserved for the services page and windows.
+        if parameters and (parameters[0].isdigit() or parameters[0] in ("parameters", "data", "trend")):
+            return self._route_dataset_request(service_handle, parameters, **kwargs)
+
+        # For per-process services (legacy routing by process name)
         if not parameters:
             # No process name provided - return list of processes with this service
             return self._get_service_processes(service_handle)
@@ -2656,6 +2474,120 @@ class NavigationSystemCollector:
         except Exception as e:
             _logger.warning(f"Error checking EnergyService availability: {e}")
             return False
+
+    # EnergySource type -> service handle, for the repeated block source items
+    # (see doc/web_ui_modular.md section 2.5: an item carries at least 'service'
+    # and 'instance' so the frontend can build the block endpoint).
+    _SOURCE_SERVICE_HANDLES = {
+        int(EnergySource.Solar_MPPT): "mppt",
+        int(EnergySource.DC_DC_Charger): "dc_dc",
+    }
+
+    def _find_process_for_service(self, service_handle: str, process: Optional[str] = None) -> Optional[str]:
+        """Resolve the process hosting a service (doc/web_ui_modular.md section 3.1).
+
+        The process <-> service link is a backend concern and does not appear
+        in the UI data paths. Resolution is implicit when exactly one process
+        hosts the service; an explicit qualification (query parameter
+        'process') is required when several processes do (e.g. console).
+
+        Args:
+            service_handle: service handle from the URL path
+            process: optional explicit process qualification
+
+        Returns:
+            The process name, or None when not found / ambiguous.
+        """
+        endpoint_info = ENDPOINT_SERVICE_MAP.get(service_handle)
+        if endpoint_info is None or endpoint_info[1] is None:
+            return None
+        service_name = endpoint_info[1]
+        system = self._get_agent_status()
+        if system is None:
+            return None
+        candidates = []
+        for proc in system.get_processes():
+            if proc.state == "RUNNING":
+                for svc in proc.services:
+                    if svc.rpc_service == service_name:
+                        candidates.append(proc.name)
+                        break
+        if process is not None:
+            return process if process in candidates else None
+        if len(candidates) == 1:
+            return candidates[0]
+        return None
+
+    def _route_dataset_request(self, service_handle: str, parameters: list, **kwargs) -> dict:
+        """Route a dataset request /api/<service>/<instance>/<dataset>[/<name>].
+
+        Path parsing (doc/web_ui_modular.md section 3.2):
+        - first parameter numeric -> entity instance, then dataset (default
+          'data'), then optional field name,
+        - first parameter a dataset name -> instance 0 (singleton services).
+        """
+        if parameters[0].isdigit():
+            try:
+                instance = int(parameters[0])
+            except ValueError:
+                return {"ok": False, "error": f"Invalid instance: {parameters[0]}"}
+            dataset = parameters[1] if len(parameters) > 1 else "data"
+            name = parameters[2] if len(parameters) > 2 else None
+        else:
+            instance = 0
+            dataset = parameters[0]
+            name = parameters[1] if len(parameters) > 1 else None
+
+        if dataset not in ("parameters", "data", "trend"):
+            return {"ok": False, "error": f"Unknown dataset: {dataset}"}
+
+        process = kwargs.get("process")
+        process_name = self._find_process_for_service(service_handle, process)
+        if process_name is None:
+            if process:
+                return {"ok": False, "error": f"Service {service_handle} not found in process {process}"}
+            return {"ok": False,
+                    "error": f"Service {service_handle} not available or hosted by several processes (qualify with ?process=)"}
+
+        endpoint_key = f"api/{service_handle}/{process_name}"
+        collector = self._service_collector_cache.get(endpoint_key)
+        if collector is None or not isinstance(collector, EnergyDatasetCollector):
+            return {"ok": False, "error": f"Service {service_handle} does not expose the standard datasets"}
+
+        result = collector.get_dataset(dataset, instance)
+        if not result.get("ok"):
+            return result
+        if name is not None:
+            return self._extract_dataset_value(service_handle, dataset, result, name)
+        return result
+
+    def _extract_dataset_value(self, service_handle: str, dataset: str, result: dict, name: str) -> dict:
+        """Extract a named value from a dataset result (data path /api/<service>/<instance>/<dataset>/<name>).
+
+        Special case for the repeated block sources: the 'sources' items are
+        enriched with the service handle of each source (EnergySource type
+        mapping) so the frontend can substitute {service}/{instance} in the
+        block endpoint template.
+        """
+        if name == "sources" and dataset == "parameters" and service_handle == "energy":
+            items = []
+            for source in result.get("sources", []):
+                try:
+                    source_type = int(source.get("type", 0))
+                except (TypeError, ValueError):
+                    source_type = 0
+                items.append({
+                    "service": self._SOURCE_SERVICE_HANDLES.get(source_type),
+                    "instance": int(source.get("instance_id", 0) or 0),
+                    "label": source.get("label", ""),
+                    "type": source_type,
+                })
+            return {"ok": True, "value": items}
+
+        fields = {k: v for k, v in result.items() if k not in ("ok", "process")}
+        if name in fields:
+            return {"ok": True, "value": fields[name]}
+        return {"ok": False, "error": f"Unknown field {name} in {service_handle} {dataset} dataset"}
 
     def network_interface_cmd(self, interface_name: str, connection_name: str, cmd: str) -> dict:
         """Send a command to a network interface (up, down, delete, add connection)."""
