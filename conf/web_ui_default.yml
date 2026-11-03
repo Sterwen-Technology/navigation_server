@@ -171,6 +171,9 @@ pages:
             title: Production
             data: data/production_power
             widget: production_viewgraph
+          - view: consumption_power
+            data: data/consumption_power
+            widget: production_viewgraph
           - view: battery_power_balance
             title: Battery power
             data: data/battery_balance
