@@ -144,10 +144,12 @@ function resolveScale(scale, value, datasets, pageParams) {
         return { max: resolveScalar(datasets, scale.max, pageParams) ?? 1.0 };
     }
     if (scale.type === "dual") {
-        // low = seuil ET echelle basse; high = echelle haute (section 5.7)
+        // low = seuil ET echelle basse; high = echelle haute (section 5.7).
+        // low/high sont retournes au widget pour l'indicateur High/Low power
+        // (derive par le front-end selon la meme regle que la bascule).
         const low = resolveScalar(datasets, scale.low, pageParams) ?? 1.0;
         const high = resolveScalar(datasets, scale.high, pageParams) ?? low * 5;
-        return { max: Math.abs(value) <= low ? low : high };
+        return { max: Math.abs(value) <= low ? low : high, low, high };
     }
     return { max: 1.0 };
 }
