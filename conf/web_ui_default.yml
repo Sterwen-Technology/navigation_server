@@ -202,3 +202,12 @@ pages:
           types:
             mppt: energy_source
             dc_dc: dc_dc_source
+
+      - id: consumption
+        priority: 1
+        endpoint: /api/energy/0/trend
+        definition:
+          - view: consumption
+            title: Consumption Power
+            data: trend/consumption_power
+            widget: power_trend
