@@ -143,6 +143,11 @@ This server connect to the agent of the *Navigation Server* system to allow cont
 | agent_port           | int     | 4545    | Port to contact the agent                         |
 | language             | choice  | en      | Language to be used on the interface [en/fr]      |
 | auth                 | dict    | None    | Parameter set for user authentication (see below) |
+| ui_config            |  string |  web_ui_default.yml  |  Name of the file containing the UI configuration  |
+
+The web server as fix part controlling several aspects of the Navigation Server system like: network configuration, processes and services.
+But it has the possibility to add pages to display data from various services. These additional pages can be configured using a dedicated Yaml file.
+The structure and parameters of this file are described in [UI configuration](web_ui_configuration.md)
 
 Authentication parameters (sub set below auth)
 

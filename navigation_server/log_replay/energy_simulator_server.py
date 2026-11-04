@@ -28,7 +28,7 @@ from navigation_server.generated.energy_simulator_pb2 import ( battery_simulated
     mppt_simulated_data, dc_dc_charger_simulated_data, simulator_parameter
 )
 from navigation_server.generated.energy_simulator_pb2_grpc import EnergySimulatorStub
-from navigation_server.generated.energy_pb2 import EnergySource, BatteryBank, MPPT_device, DC_DC_Charger_Parameters, EnergyControllerParameters
+from navigation_server.generated.energy_pb2 import EnergySource, Battery_Parameters, MPPT_Parameters, DC_DC_Parameters, EnergyControllerParameters
 
 # Import simulation models from energy_mgmt package
 from navigation_server.energy_mgmt.energy_simulator_models import (
@@ -208,21 +208,22 @@ class EnergySimulatorEngine:
             if self._battery_service_client and self._energy_client and self._energy_client.connected:
                 # Check if the service client has its server attached and stub created
                 if hasattr(self._battery_service_client, '_server') and self._battery_service_client._server:
-                    # Try to get battery information
-                    battery_info = self._battery_service_client.GetInformation("parameters")
-                    if battery_info and hasattr(battery_info, 'battery') and battery_info.battery:
-                        battery_bank = battery_info.battery
-                        _logger.info(f"Retrieved battery info from service: nominal_voltage={battery_bank.nominal_voltage}V, nominal_capacity={battery_bank.nominal_capacity}Ah")
+                    # Try to get battery information (parameters dataset) and
+                    # the current state of charge (data dataset)
+                    battery_info = self._battery_service_client.GetParameters()
+                    battery_data = self._battery_service_client.GetData()
+                    if battery_info:
+                        _logger.info(f"Retrieved battery info from service: nominal_voltage={battery_info.nominal_voltage}V, nominal_capacity={battery_info.nominal_capacity}Ah")
                         
                         # Update battery config with nominal values from service
                         with self._lock:
                             if self.battery_config:
-                                self.battery_config.nominal_voltage = battery_bank.nominal_voltage
-                                self.battery_config.nominal_capacity = battery_bank.nominal_capacity
+                                self.battery_config.nominal_voltage = battery_info.nominal_voltage
+                                self.battery_config.nominal_capacity = battery_info.nominal_capacity
                                 # Also update initial_soc from service if available
-                                # Note: state_of_charge from BatteryBank is already a ratio (0-1), not percentage
-                                if battery_bank.state_of_charge > 0:
-                                    self.battery_config.initial_soc = battery_bank.state_of_charge
+                                # Note: state_of_charge from Battery_Data is a ratio (0-1)
+                                if battery_data is not None and battery_data.state_of_charge > 0:
+                                    self.battery_config.initial_soc = battery_data.state_of_charge
                                 
                                 # Reconfigure simulator with updated battery config
                                 self.simulator.configure_battery(self.battery_config)
@@ -242,7 +243,7 @@ class EnergySimulatorEngine:
         This is kept for backward compatibility but not used by default.
         
         Major parameters like names, capacity, and device characteristics
-        must be retrieved from the running services using GetInformation method.
+        must be retrieved from the running services using GetParameters method.
         """
         # This method is no longer used by default - we use YAML configuration
         _logger.info("Service retrieval method called but not used (YAML configuration mode active)")
@@ -275,8 +276,8 @@ class EnergySimulatorEngine:
         # Device-specific configuration is handled in separate _update_config_from_* methods
         pass
         
-    def _update_config_from_battery_info(self, battery_info: BatteryBank):
-        """Update battery nominal values from BatteryBank information.
+    def _update_config_from_battery_info(self, battery_info: Battery_Parameters):
+        """Update battery nominal values from Battery_Parameters information.
         
         Note: nominal_voltage and nominal_capacity come from the service.
         Simulation-specific parameters (voltage_100pct, voltage_0pct, charging_efficiency, initial_soc) 
@@ -294,14 +295,15 @@ class EnergySimulatorEngine:
                 nominal_capacity=battery_info.nominal_capacity,
                 voltage_100pct=old_config.voltage_100pct,
                 voltage_0pct=old_config.voltage_0pct,
-                # Note: state_of_charge from BatteryBank is already a ratio (0-1), not percentage
-                initial_soc=battery_info.state_of_charge if battery_info.state_of_charge > 0 else old_config.initial_soc,
+                # Note: state_of_charge comes from the data dataset (ratio 0-1);
+                # initial_soc is kept from the YAML configuration here.
+                initial_soc=old_config.initial_soc,
                 charging_efficiency=old_config.charging_efficiency,
                 max_charge_current=battery_info.max_charge_current
             )
             
             _logger.info(f"Updated battery nominal values from Battery service: voltage={battery_info.nominal_voltage}V, "
-                        f"capacity={battery_info.nominal_capacity}Ah, SoC={battery_info.state_of_charge * 100:.1f}%")
+                        f"capacity={battery_info.nominal_capacity}Ah")
             
             self.simulator.configure_battery(self.battery_config)
         
@@ -309,8 +311,8 @@ class EnergySimulatorEngine:
         """Update MPPT configuration from MPPT device information"""
         with self._lock:
             # FOR_AGENT: Device characteristics come from service, simulation params from YAML
-            # Map device parameters to simulation config
-            params = mppt_info.parameters
+            # Map device parameters to simulation config (MPPT_Parameters is flat)
+            params = mppt_info
             
             # MPPT_parameters provides:
             # - panel_max_power: Maximum panel power (W)
@@ -338,7 +340,7 @@ class EnergySimulatorEngine:
             _logger.info(f"Updated MPPT {instance} config from device info: {mppt_info.device_model}, "
                         f"max_power={params.panel_max_power}W, max_voltage={params.panel_max_voltage}V")
         
-    def _update_config_from_dc_dc_info(self, instance: int, charger_info: DC_DC_Charger_Parameters):
+    def _update_config_from_dc_dc_info(self, instance: int, charger_info: DC_DC_Parameters):
         """Update DC-DC charger configuration from device information"""
         with self._lock:
             # FOR_AGENT: Device characteristics from service, simulation params from YAML

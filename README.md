@@ -92,6 +92,8 @@ The documentation is located in the *doc* directory.
 
 [energy_management documentation](doc/energy_management.md)
 
+[Web UI configuration](doc/web_ui_configuration.md)
+
 [System API](doc/Navigation%20system%20API.md)
 
 [NMEA2000 support](doc/NMEA2000.md)
@@ -113,7 +115,7 @@ For any problem encountered, please open an issue in this GitHub repository: [Na
 
 ## Roadmap
 
-The current stable version is V3.0.6 Documentation is aligned on this version. The version 2.8.2 has introduced some key corrections on the CAN interface management.
+The current stable version is V3.0.7 Documentation is aligned on this version. The version 2.8.2 has introduced some key corrections on the CAN interface management.
 Existing applications are to be upgraded to 2.8.3 and up.
 
 From the version 2.5.0 the new STNC800 hardware is supported

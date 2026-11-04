@@ -4,9 +4,7 @@ import grpc
 import warnings
 
 import navigation_server.generated.energy_pb2 as energy__pb2
-
 import navigation_server.generated.energy_simulator_pb2 as energy__simulator__pb2
-
 
 GRPC_GENERATED_VERSION = '1.66.2'
 GRPC_VERSION = grpc.__version__

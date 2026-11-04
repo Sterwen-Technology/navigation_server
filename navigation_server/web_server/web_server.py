@@ -28,14 +28,13 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
-import yaml
 
-from navigation_server.router_common import GrpcClient, MessageServerGlobals, get_global_var
-from navigation_server.generated.energy_pb2 import EnergyControllerData, EnergyControllerParameters, BatteryBank, battery_in_out, BatteryUnit, EnergySourceDevice, EnergySourceData
+from navigation_server.router_common import GrpcClient, MessageServerGlobals
 from navigation_server.generated.network_pb2 import NetInterface as NetInterfacePb
 
 from .user_management import Authenticator, UserStore, _NullUserStore, DEFAULT_SESSION_TIMEOUT, _SESSION_COOKIE
 from .data_collectors import NavigationSystemCollector
+from .ui_config import UIConfiguration, UIConfigError
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
@@ -641,19 +640,20 @@ def web_main(argv=None):
     if options.https_key:
         keyfile = options.https_key
 
+    # UI configuration: managed by the dedicated ui_config module (loading,
+    # validation, serving). With --ui-config the given file is used, otherwise
+    # the reference configuration shipped with the application is served.
     ui_config = None
-    if options.ui_config:
-        ui_config_file = os.path.join(get_global_var('settings_path'), options.ui_config)
-        try:
-            with open(ui_config_file, "r", encoding="utf-8") as f:
-                ui_config = yaml.safe_load(f)
-            if not isinstance(ui_config, dict) or "pages" not in ui_config:
-                _logger.error("Invalid UI configuration file (missing 'pages'): %s" % options.ui_config)
-                ui_config = None
-            else:
-                _logger.info("UI configuration loaded from %s" % options.ui_config)
-        except Exception as e:
-            _logger.error("Cannot load UI configuration file %s: %s" % (options.ui_config, e))
+    try:
+        if options.ui_config:
+            ui_configuration = UIConfiguration.from_file(options.ui_config)
+        else:
+            ui_configuration = UIConfiguration.default()
+        ui_configuration.validate_or_raise()
+        ui_config = ui_configuration.as_dict()
+        _logger.info("UI configuration loaded from %s" % ui_configuration.source)
+    except UIConfigError as e:
+        _logger.error("UI configuration error: %s - the frontend embedded default will be used", e)
 
     server = NavigationWebServer(
         host=options.address,

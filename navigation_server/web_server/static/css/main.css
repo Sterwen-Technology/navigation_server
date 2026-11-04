@@ -451,43 +451,93 @@ button.open-btn:hover:not(:disabled) { background: var(--accent); color: #0f172a
     max-width: 1400px;
     margin: 0 auto;
 }
-/* Pages configurees (framework page/bloc): chaque zone de mise en page
-   (area) est une grille independante. Les blocs - y compris les instances
-   des blocs repetes - s'y repartissent; demi-largeur par defaut (2
-   colonnes). Le nombre de colonnes d'une zone peut etre ajuste via la
-   configuration (classe area-<nom>). */
-.page.configured-page .page-area {
+/* Pages configurees (framework page/bloc, doc/web_ui_modular.md sections
+   2.3 et 5.5): grille au nombre de colonnes du layout, blocs places par
+   position explicite ou par priorite; les viewgraphs s'alignent a gauche
+   du bloc, les courbes prennent l'espace restant a droite. */
+.ui-page-grid {
     max-width: 1400px;
     margin: 0 auto 16px auto;
     display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 16px;
     align-items: start;
-}
-.page.configured-page .page-area > .ems-box,
-.page.configured-page .ems-block-repeat-container {
-    grid-column: auto;
-}
-.page.configured-page .ems-block-repeat-container {
-    display: grid;
-    grid-template-columns: inherit;
-    gap: inherit;
-    grid-column: 1 / -1;
     grid-auto-flow: row;
 }
-.page.configured-page .ems-block-repeat-container > .ems-box {
-    grid-column: auto;
-}
 @media (max-width: 768px) {
-    .page.configured-page .page-area,
-    .page.configured-page .ems-block-repeat-container { grid-template-columns: 1fr; }
+    .ui-page-grid { grid-template-columns: 1fr !important; }
+    .ui-page-grid > .ui-block { grid-column: 1 / -1 !important; }
+    .ui-repeat-container { grid-template-columns: 1fr !important; }
+    .ui-block-body { flex-wrap: wrap; }
 }
-/* Zone pleine largeur si la configuration le demande (area: full par ex.) */
-.page.configured-page .page-area.area-full {
-    grid-template-columns: 1fr;
+/* Corps d'un bloc: les viewgraphs s'alignent sur une seule ligne a
+   gauche, les courbes prennent l'espace restant a droite (section 5.5). */
+.ui-block-body {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    align-items: stretch;
 }
-.page.configured-page .page-area.area-full > .ems-box {
-    grid-column: 1 / -1;
+.ui-viewgraphs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    flex: 0 0 auto;
+    min-width: 0;
+}
+.ui-trend-zone {
+    flex: 1 1 240px;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.ui-trend-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    justify-content: center;
+}
+/* Hauteur des courbes identique a celle des viewgraphs (container de
+   barre = 120px), titre et axe compris - le trend s'aligne sur la rangee
+   de bargraphs (section 5.5). */
+.ui-trend-item .ems-trend-canvas {
+    height: 120px;
+    flex: none;
+    box-sizing: border-box;
+}
+/* Conteneur des blocs repetes: les instances sont des blocs independants
+   repartis sur les colonnes de la page (largeur 1 = demi-ecran en 2
+   colonnes). Le nombre de colonnes est fixe par le framework. */
+.ui-repeat-container {
+    display: grid;
+    gap: 16px;
+    width: 100%;
+}
+/* Indicateur de communication (top_widget): pastille d'etat dans le
+   titre du bloc - vert = communication OK, rouge = perdue, gris = sans
+   donnee. Le span doit etre en inline-flex pour appliquer ses dimensions. */
+.ui-block-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+.ui-block-status .ems-source-state-indicator {
+    display: inline-block;
+    flex: 0 0 auto;
+}
+.ui-block-state-text {
+    font-weight: 500;
+}
+.empty-curve {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+    color: var(--muted);
 }
 .ems-top {
     display: grid;
