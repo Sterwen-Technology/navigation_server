@@ -1,6 +1,8 @@
-# Web UI — Architecture modulaire page / bloc
+# Web UI — Architecture modulaire page / bloc (notes de conception)
 
-> Version de travail (français). Version de base anglaise :
+> **Documentation produit : `doc/web_ui_configuration.md`** (configuration
+> UI de référence). Ce document conserve les notes de conception et la
+> justification des choix ; la version anglaise de base est
 > `doc/web_ui_modular_en.md`.
 
 ## 1. Concepts formalisés

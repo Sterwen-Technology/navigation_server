@@ -91,6 +91,7 @@ The documentation is located in the *doc* directory.
 [message_server documentation](doc/Navigation%20message%20server.md)
 
 [energy_management documentation](doc/energy_management.md)
+[Web UI configuration](doc/web_ui_configuration.md)
 
 [System API](doc/Navigation%20system%20API.md)
 

@@ -1,8 +1,8 @@
-# Web UI — Page / Block Modular Architecture
+# Web UI — Page / Block Modular Architecture (design notes)
 
-> English base version of this specification. The working draft is
-> `doc/web_ui_modular.md` (French); in case of divergence during the design
-> phase, the French version prevails.
+> **Product documentation: `doc/web_ui_configuration.md`** (UI configuration
+> reference). This document keeps the design notes and the rationale of the
+> choices made during the design phase.
 
 ## 1. Formalized concepts
 
