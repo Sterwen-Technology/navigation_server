@@ -1,18 +1,21 @@
 #-------------------------------------------------------------------------------
-# Name:        mppt_instrument
-# Purpose:     classes to manage Victron MPPT as an coupler
+# Name:        energy_client
+# Purpose:     gRPC client classes for the energy management services
+#              (MPPT, Battery, DC-DC, Energy Controller, Energy Simulator)
+#              Aligned with the standard 3-dataset service structure:
+#              GetParameters / GetData / GetTrend (see protobuf/energy.proto)
 #
 # Author:      Laurent Carré
 #
 # Created:     31/03/2022
-# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2025
+# Copyright:   (c) Laurent Carré Sterwen Technology 2021-2026
 # Licence:     Eclipse Public License 2.0
 #-------------------------------------------------------------------------------
 
 import logging
 
 from navigation_server.generated.energy_pb2_grpc import MPPTServiceStub, EnergyServiceStub, BatteryServiceStub, DC_DC_ServiceStub
-from navigation_server.generated.energy_pb2 import MPPT_device, energy_request, EnergyControllerParameters, battery_response, battery_in_out, battery_trend_response, energy_command_response
+from navigation_server.generated.energy_pb2 import MPPT_Parameters, MPPT_Data, energy_request, energy_command_response
 from navigation_server.generated.energy_simulator_pb2 import battery_simulated_data, mppt_simulated_data, dc_dc_charger_simulated_data
 from navigation_server.generated.energy_simulator_pb2_grpc import EnergySimulatorStub
 from navigation_server.router_common import GrpcClient, ServiceClient, pb_enum_string, ProtobufProxy
@@ -20,8 +23,8 @@ from navigation_server.router_common import GrpcClient, ServiceClient, pb_enum_s
 
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
-class MPPT_device_proxy (ProtobufProxy):
-    def __init__(self, device: MPPT_device):
+class MPPT_Parameters_proxy (ProtobufProxy):
+    def __init__(self, device: MPPT_Parameters):
         super().__init__(device)
         self._device = device
 
@@ -35,7 +38,7 @@ class MPPT_device_proxy (ProtobufProxy):
 
     @property
     def serial(self):
-        return self._device.serial
+        return self._device.serial_number
 
     @property
     def error(self):
@@ -58,9 +61,9 @@ class MPPT_device_proxy (ProtobufProxy):
         return self._device.day_power
 
 
-class MPPT_output_proxy(ProtobufProxy):
+class MPPT_Data_proxy(ProtobufProxy):
 
-    def __init__(self, output):
+    def __init__(self, output: MPPT_Data):
         super().__init__(output)
         self._output = output
 
@@ -73,6 +76,10 @@ class MPPT_output_proxy(ProtobufProxy):
         return self._output.voltage
 
     @property
+    def power(self) -> float:
+        return self._output.power
+
+    @property
     def panel_power(self) -> float:
         return self._output.panel_power
 
@@ -81,51 +88,47 @@ class MPPT_output_proxy(ProtobufProxy):
         return self._output.panel_voltage
 
 
-
 class MPPT_Client(ServiceClient):
 
 
     def __init__(self):
         super().__init__(MPPTServiceStub)
 
-    def getDeviceInfo(self, parameters=False) -> MPPT_device_proxy:
-        _logger.debug("Client GetDeviceInfo")
-        request = energy_request()
-        if parameters:
-            request.command = "parameters"
-        return self._server_call(self._stub.GetDeviceInfo, request, MPPT_device_proxy)
+    def GetParameters(self, instance: int = 0) -> MPPT_Parameters_proxy:
+        _logger.debug("Client GetParameters instance=%d", instance)
+        return self._server_call(self._stub.GetParameters, energy_request(instance=instance), MPPT_Parameters_proxy)
 
-    def getOutput(self) -> MPPT_output_proxy:
-        _logger.debug("Client GetOutput")
-        return self._server_call(self._stub.GetOutput, energy_request(), MPPT_output_proxy)
+    def GetData(self, instance: int = 0) -> MPPT_Data_proxy:
+        _logger.debug("Client GetData instance=%d", instance)
+        return self._server_call(self._stub.GetData, energy_request(instance=instance), MPPT_Data_proxy)
 
-    def getTrend(self):
-        _logger.debug("Client GetTrend")
-        trend = self._server_call(self._stub.GetTrend, energy_request(), None)
+    def GetTrend(self, instance: int = 0):
+        _logger.debug("Client GetTrend instance=%d", instance)
+        trend = self._server_call(self._stub.GetTrend, energy_request(instance=instance), None)
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 
     def server_status(self):
         if self.server_state() == GrpcClient.NOT_CONNECTED:
             self._server.connect()
-        return self.getDeviceInfo()
+        return self.GetParameters()
 
 
 class EnergyServiceClient(ServiceClient):
     def __init__(self):
         super().__init__(EnergyServiceStub)
 
-    def GetInformation(self):
-        _logger.debug("Client GetInformation")
-        return self._server_call(self._stub.GetInformation, energy_request(), None)
+    def GetParameters(self, instance: int = 0):
+        _logger.debug("Client GetParameters")
+        return self._server_call(self._stub.GetParameters, energy_request(instance=instance), None)
 
-    def GetValues(self):
-        _logger.debug("Client GetValues")
-        return self._server_call(self._stub.GetValues, energy_request(), None)
+    def GetData(self, instance: int = 0):
+        _logger.debug("Client GetData")
+        return self._server_call(self._stub.GetData, energy_request(instance=instance), None)
 
-    def GetTrend(self):
+    def GetTrend(self, instance: int = 0):
         _logger.debug("Client GetTrend")
-        trend = self._server_call(self._stub.GetTrend, energy_request(), None)
+        trend = self._server_call(self._stub.GetTrend, energy_request(instance=instance), None)
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 
@@ -134,43 +137,38 @@ class BatteryServiceClient(ServiceClient):
     def __init__(self):
         super().__init__(BatteryServiceStub)
 
-    def GetInformation(self, cmd=None):
-        _logger.debug("Client GetInformation")
-        req = energy_request()
-        if cmd is not None:
-            req.command = cmd
-        return self._server_call(self._stub.GetInformation, req, None)
+    def GetParameters(self, instance: int = 0):
+        _logger.debug("Client GetParameters instance=%d", instance)
+        return self._server_call(self._stub.GetParameters, energy_request(instance=instance), None)
 
-    def GetValues(self):
-        _logger.debug("Client GetValues")
-        return self._server_call(self._stub.GetValues, energy_request(), None)
+    def GetData(self, instance: int = 0):
+        _logger.debug("Client GetData instance=%d", instance)
+        return self._server_call(self._stub.GetData, energy_request(instance=instance), None)
 
-    def GetTrend(self):
-        _logger.debug("Client GetTrend")
-        trend = self._server_call(self._stub.GetTrend, energy_request(), None)
+    def GetTrend(self, instance: int = 0):
+        _logger.debug("Client GetTrend instance=%d", instance)
+        trend = self._server_call(self._stub.GetTrend, energy_request(instance=instance), None)
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 
 
 class DC_DC_ServiceClient(ServiceClient):
     """Client for DC-DC Charger service"""
-    
+
     def __init__(self):
         super().__init__(DC_DC_ServiceStub)
-    
-    def GetInformation(self, command:str):
-        _logger.debug("Client GetInformation %s", command)
-        request = energy_request()
-        request.command = command
-        return self._server_call(self._stub.GetInformation, request, None)
-    
-    def GetValues(self):
-        _logger.debug("Client GetValues")
-        return self._server_call(self._stub.GetValues, energy_request(), None)
-    
-    def GetTrend(self):
-        _logger.debug("Client GetTrend")
-        trend = self._server_call(self._stub.GetTrend, energy_request(), None)
+
+    def GetParameters(self, instance: int = 0):
+        _logger.debug("Client GetParameters instance=%d", instance)
+        return self._server_call(self._stub.GetParameters, energy_request(instance=instance), None)
+
+    def GetData(self, instance: int = 0):
+        _logger.debug("Client GetData instance=%d", instance)
+        return self._server_call(self._stub.GetData, energy_request(instance=instance), None)
+
+    def GetTrend(self, instance: int = 0):
+        _logger.debug("Client GetTrend instance=%d", instance)
+        trend = self._server_call(self._stub.GetTrend, energy_request(instance=instance), None)
         _logger.debug("Trend response with %d values" % trend.nb_values)
         return trend
 
@@ -200,5 +198,3 @@ class EnergySimulatorClient(ServiceClient):
     def SimulateDcDc(self, charger_data: dc_dc_charger_simulated_data) -> energy_command_response:
         _logger.debug("Client SimulateDcDc")
         return self._server_call(self._stub.SimulateDcDc, charger_data, None)
-
-

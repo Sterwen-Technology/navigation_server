@@ -7,7 +7,13 @@ The energy management system is designed to optimize the energy consumption of t
 
 ## Supported hardware
 
-Currently, only Victron hardware with a VEDirect interface is supported. That is covering most of the systems present on small and medium size yachts.
+Currently, only Victron hardware with a VEDirect interface is supported. That is covering most of the systems present on small and medium size yachts. More precisely, this is covering:
+- BlueSolar MPPT
+- SmartSolar MPPT except the series with CECan interface
+- Orion XS DC-DC
+- Smart Shunt
+
+The support of new protocol is needed to support Charger and Inverter-Charger (VE.Bus) or high-power MPPT (VE.Can). That shall be a minimum effort, but requires the access to test devices and installations.
 
 
 ## Software

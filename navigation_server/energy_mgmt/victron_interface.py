@@ -266,12 +266,18 @@ class VictronVEDirectDecoderABC:
             _logger.error(f"VE direct {self.__class__.__name__} missing required keys in static data: {value_dict.keys()}")
             return
         self.serial_number = value_dict.get('SER#', 'NO_SERIAL#')
+        # The product id is a hexadecimal string on real devices; simulators
+        # may inject a free-form label (e.g. 'Simulated') - tolerate it.
         try:
             product_id = int(self.product_id, 16)
             self._device_model = VEDIRECT_PID_TABLE[product_id]
         except KeyError:
             _logger.warning(f'VE Direct Unknown device model: {self.product_id}')
             _logger.debug(f"VE Direct {self.__class__.__name__} Unknown device model {value_dict}")
+            self._device_model = 'Unknown'
+        except ValueError:
+            _logger.info(f"VE Direct non-hexadecimal product id '{self.product_id}' "
+                         f"({self.__class__.__name__}), device model set to 'Unknown'")
             self._device_model = 'Unknown'
         self._initialized = True
 
@@ -360,7 +366,7 @@ class VictronSmartShuntData (VictronVEDirectDecoderABC):
         # Auxiliary voltage
         self.auxiliary_voltage = 0.0
         
-        # Additional battery information (for BatteryBank protobuf)
+        # Additional battery information (for Battery_Parameters protobuf)
         self.min_voltage = 0.0
         self.max_voltage = 0.0
         self.charge_voltage = 0.0
@@ -463,14 +469,21 @@ class VictronSmartShuntData (VictronVEDirectDecoderABC):
             return False
 
     def output_pb(self, output_pb):
-        """Fill battery_in_out protobuf with current values using copy_protobuf_data"""
-        # battery_in_out has: voltage, current, energy_variation, auxiliary_voltage
-        copy_protobuf_data(self, output_pb, ('voltage', 'current', 'energy_variation', 'auxiliary_voltage'))
+        """Fill Battery_Data protobuf with current values using copy_protobuf_data
+
+        Battery_Data (data dataset) has: voltage, current, energy_variation,
+        auxiliary_voltage, state_of_charge (ratio 0-1), communication_ok.
+        """
+        copy_protobuf_data(self, output_pb, ('voltage', 'current', 'energy_variation', 'auxiliary_voltage', 'state_of_charge'))
 
     def output_info_pb(self, output_pb):
-        """Fill BatteryBank protobuf with device information using copy_protobuf_data"""
-        # BatteryBank fields that we have: voltage, state_of_charge, min_voltage, max_voltage, charge_voltage
-        copy_protobuf_data(self, output_pb, ('voltage', 'state_of_charge', 'min_voltage', 'max_voltage', 'charge_voltage'))
+        """Fill Battery_Parameters protobuf with device information using copy_protobuf_data
+
+        Battery_Parameters (parameters dataset): only the device-reported static
+        voltages; live values (voltage, state_of_charge) are served by the data
+        dataset (Battery_Data).
+        """
+        copy_protobuf_data(self, output_pb, ('min_voltage', 'max_voltage', 'charge_voltage'))
 
     def set_charger_off(self, coupler):
         _logger.error("set_charger_off not not allowed")
@@ -579,10 +592,10 @@ class VictronDC_DC_Data(VictronVEDirectDecoderABC):
 
     def running_values_pb(self, running_values_pb):
         """
-        Fill protobuf DC_DC_Charger_running_values message with current data
+        Fill protobuf DC_DC_Data message with current data
         
         Args:
-            running_values_pb: DC_DC_Charger_running_values protobuf message to fill
+            running_values_pb: DC_DC_Data protobuf message to fill
         """
         running_values_pb.state = self.state
         running_values_pb.error = self.error
@@ -597,18 +610,21 @@ class VictronDC_DC_Data(VictronVEDirectDecoderABC):
 
     def parameters_pb(self, parameters_pb):
         """
-        Fill protobuf DC_DC_Charger_Parameters message with device information
+        Fill protobuf DC_DC_Parameters message with device information
         
         Args:
-            parameters_pb: DC_DC_Charger_Parameters protobuf message to fill
+            parameters_pb: DC_DC_Parameters protobuf message to fill
         """
         parameters_pb.device_label = f"Orion XS {self.serial_number}" if self.serial_number else "Orion XS"
-        parameters_pb.device_model = self.device_model
+        # device_model is None until the device has reported its identity
+        # (VEDirect static data): never assign None to a protobuf string field.
+        parameters_pb.device_model = self.device_model if self.device_model else "Unknown"
         _logger.info(f"DC DC device model={self.device_model}")
         parameters_pb.state = self.state
         parameters_pb.error = self.error
         parameters_pb.off_reason = self.off_reason
-        parameters_pb.communication_ok = True
+        # communication_ok is set by the device (timeout on the last message),
+        # not defaulted here - single device-level semantics.
 
 
 class VictronMPPTData(VictronVEDirectDecoderABC):
@@ -657,11 +673,30 @@ class VictronMPPTData(VictronVEDirectDecoderABC):
         return True
 
     def output_pb(self, output_pb_v):
+        """Fill MPPT_Data protobuf (data dataset) with current output values
+
+        The live status fields (state, mppt_state, off_reason) are provided by
+        this decoder; communication_ok is set by the device (see
+        VictronMPPT.get_solar_output).
+        """
         copy_protobuf_data(self, output_pb_v, ('current', 'voltage', 'panel_voltage','panel_power'))
+        copy_protobuf_data(self, output_pb_v, ('state', 'mppt_state', 'off_reason'))
 
     def output_info_pb(self, output_pb):
+        """Fill MPPT_Parameters protobuf (parameters dataset) with semi-static info.
+
+        The string fields (product_id, firmware, serial_number) are None
+        until the device has reported its identity (VEDirect static data):
+        only assign them when available, never None to a protobuf string field.
+        """
         try:
-            copy_protobuf_data(self, output_pb, ('product_id', 'firmware', 'serial_number', 'error', 'state', 'mppt_state',
+            if getattr(self, 'product_id', None) is not None:
+                output_pb.product_id = self.product_id
+            if getattr(self, 'firmware', None) is not None:
+                output_pb.firmware = self.firmware
+            if getattr(self, 'serial_number', None) is not None:
+                output_pb.serial_number = self.serial_number
+            copy_protobuf_data(self, output_pb, ('error', 'state', 'mppt_state',
                                                  'day_max_power', 'day_power', 'off_reason'))
         except AttributeError as e:
             _logger.error(f"Attribute error filling MPPT output info: {e}")

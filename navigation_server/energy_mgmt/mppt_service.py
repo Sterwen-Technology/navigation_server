@@ -16,7 +16,7 @@ import traceback
 
 from collections import namedtuple
 
-from navigation_server.generated.energy_pb2 import (solar_output, energy_request, MPPT_device, solar_trend_response,
+from navigation_server.generated.energy_pb2 import (MPPT_Data, energy_request, MPPT_Parameters, MPPT_Trend,
                                                     EnergySource, VE_MPPT, VE_Error, energy_command_response)
 from navigation_server.generated.energy_pb2_grpc import MPPTServiceServicer, add_MPPTServiceServicer_to_server
 from navigation_server.router_common import (GrpcService, MessageServerGlobals, resolve_ref, copy_protobuf_data,
@@ -30,7 +30,7 @@ from .victron_interface import VictronMPPTData
 _logger = logging.getLogger("ShipDataServer." + __name__)
 
 
-MPPTBucket = namedtuple('MPPTBucket', ['voltage', 'panel_voltage', 'current', 'power'])
+MPPTBucket = namedtuple('MPPTBucket', ['voltage', 'panel_voltage', 'current', 'power', 'output_power'])
 
 
 class VictronMPPT(EnergyDevice):
@@ -47,9 +47,13 @@ class VictronMPPT(EnergyDevice):
         super().__init__(opts, service)
         
         # MPPT-specific parameters
+        # Note: only fields existing in MPPT_Parameters can be stored here -
+        # the parameters dataset is filled by fill_protobuf_from_dict.
+        # 'battery' (the battery bank this MPPT charges) is a service-level
+        # reference kept outside the protobuf parameters.
+        self._battery_ref = opts.get('battery', int, 1)
         self._parameters = {
             'instance': opts.get('instance', int, 1),
-            'battery': opts.get('battery', int, 1),
             'panel_max_power': opts.get('panel_max_power', float, 0.0),
             'panel_max_voltage': opts.get('panel_max_voltage', float, 0.0),
             'max_voltage': opts.get('max_voltage', float, 0.0),
@@ -64,6 +68,7 @@ class VictronMPPT(EnergyDevice):
         self._mean_a = 0.0
         self._mean_p = 0.0
         self._mean_pv = 0.0
+        self._mean_op = 0.0
         self._nb_sample = 0
 
     @property
@@ -105,6 +110,7 @@ class VictronMPPT(EnergyDevice):
             self._mean_a = 0.0
             self._mean_p = 0.0
             self._mean_pv = 0.0
+            self._mean_op = 0.0
             self._nb_sample = 0
             self._trend_buckets.clear()
             self._start_period = clock
@@ -115,6 +121,7 @@ class VictronMPPT(EnergyDevice):
         self._mean_a += self._current_data.current
         self._mean_pv += self._current_data.panel_voltage
         self._mean_p += self._current_data.panel_power
+        self._mean_op += self._current_data.voltage * self._current_data.current
         self._output_power = self._current_data.voltage * self._current_data.current
         self._nb_sample += 1
 
@@ -122,16 +129,20 @@ class VictronMPPT(EnergyDevice):
         
         # Create trend buckets periodically
         if clock - self._start_period >= self._trend_period and self._nb_sample > 0:
+            # Field order of MPPTBucket: voltage, panel_voltage, current,
+            # power (panel), output_power
             self._trend_buckets.append(MPPTBucket(
-                self._mean_v/self._nb_sample, 
-                self._mean_a/self._nb_sample,
+                self._mean_v/self._nb_sample,
                 self._mean_pv/self._nb_sample,
-                self._mean_p/self._nb_sample))
+                self._mean_a/self._nb_sample,
+                self._mean_p/self._nb_sample,
+                self._mean_op/self._nb_sample))
             self._start_period = clock
             self._mean_v = 0.0
             self._mean_a = 0.0
             self._mean_p = 0.0
             self._mean_pv = 0.0
+            self._mean_op = 0.0
             self._nb_sample = 0
         
         # forward information through publisher
@@ -158,8 +169,13 @@ class VictronMPPT(EnergyDevice):
             )
 
     def get_solar_output(self, output_values_pb):
+        """Fill the MPPT_Data protobuf with current output values (data dataset)"""
         if self._current_data is not None:
             self._current_data.output_pb(output_values_pb)
+            output_values_pb.power = self._output_power
+        # Live status: single device-level semantics (timeout on the last
+        # message), uniform across the parameters and data datasets
+        output_values_pb.communication_ok = self.communication_ok
 
     def send_command(self, command):
         """Send a command to the DC-DC device
@@ -205,37 +221,39 @@ class MPPTServicer(MPPTServiceServicer):
     def __init__(self, mppt_device):
         self._mppt_device = mppt_device
 
-    def GetDeviceInfo(self, request, context):
-        _logger.debug(f"GRPC request MPPTService.GetDeviceInfo command={request.command}")
-        ret_data = MPPT_device()
+    def GetParameters(self, request, context):
+        """Parameters dataset: semi-static information + device parameters (flat fields)"""
+        _logger.debug(f"GRPC request MPPTService.GetParameters command={request.command}")
+        ret_data = MPPT_Parameters()
         self._mppt_device.get_device_info(ret_data)
-        if request.command:
-            if request.command == 'parameters':
-                self._mppt_device.get_device_parameters(ret_data.parameters)
-        _logger.debug(f"MPPTService.GetDeviceInfo OK")
+        self._mppt_device.get_device_parameters(ret_data)
+        _logger.debug(f"MPPTService.GetParameters OK")
         return ret_data
 
-    def GetOutput(self, request, context):
-        _logger.debug("GRPC request MPPTService.GetOutput")
-        ret_val = solar_output()
-        # object.__setattr__(ret_val, 'voltage', 12.6)
+    def GetData(self, request, context):
+        """Data dataset: instantaneous output values"""
+        _logger.debug("GRPC request MPPTService.GetData")
+        ret_val = MPPT_Data()
         self._mppt_device.get_solar_output(ret_val)
-        _logger.debug(f"MPPTService.GetOutput OK")
+        _logger.debug(f"MPPTService.GetData OK")
         return ret_val
 
     def GetTrend(self, request, context):
+        """Trend dataset: trailing output samples"""
         _logger.debug("GRPC request MPPTService.GetTrend")
-        ret_values = solar_trend_response()
-        ret_values.id = request.id
+        ret_values = MPPT_Trend()
+        ret_values.instance = self._mppt_device.instance
         ret_values.nb_values = 0
         ret_values.interval = self._mppt_device.trend_interval
         for bucket in self._mppt_device.get_trend_buckets():
             ret_values.nb_values += 1
-            val = solar_output()
+            val = MPPT_Data()
             val.voltage = bucket.voltage
+            val.panel_voltage = bucket.panel_voltage
             val.current = bucket.current
             val.panel_power = bucket.power
-            ret_values.values.append(val)
+            val.power = bucket.output_power
+            ret_values.samples.append(val)
         _logger.debug(f"MPPTService.GetTrend OK")
         return ret_values
 
