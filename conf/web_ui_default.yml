@@ -66,6 +66,7 @@ widgets:
 
   - id: power_balance_trend
     base_widget: single_symmetric_curve
+    color: power                  # couleur parametrable de la courbe
     scale: {type: dynamic}
 
   - id: state_of_charge_viewgraph
@@ -92,6 +93,7 @@ widgets:
 
   - id: power_trend
     base_widget: single_positive_curve
+    color: power                  # couleur parametrable de la courbe
     scale: {type: dynamic}
 
 # --- Block types (global) -------------------------------------------------
@@ -150,41 +152,41 @@ pages:
     layout: {columns: 2}
     refresh_interval: 10000          # ms
     availability_endpoint: /api/energy_available
-    parameters_endpoint: /api/energy/0/parameters
+    parameters_endpoint: /api/energy/parameters
     blocks:
       - id: energy_summary
         title: Energy Controller
         priority: 1
         position: {row: 0, column: 0}
         width: 2                    # 2 columns (default 1)
-        endpoint: /api/energy/0/data
+        endpoint: /api/energy/data
         definition:
           - view: main_voltage
             title: Main Voltage
-            data: data/main_voltage
+            data: main_voltage
             widget: voltage_viewgraph
           - view: auxiliary_voltage
             title: Auxiliary Voltage
-            data: data/auxiliary_voltage
+            data: auxiliary_voltage
             widget: auxiliary_voltage_viewgraph
           - view: production_power
             title: Production
-            data: data/production_power
+            data: production_power
             widget: production_viewgraph
           - view: consumption_power
-            data: data/consumption_power
+            data: consumption_power
             widget: production_viewgraph
           - view: battery_power_balance
             title: Battery power
-            data: data/battery_balance
+            data: battery_balance
             widget: power_balance
           - view: state_of_charge
             title: State of charge
-            data: data/state_of_charge
+            data: state_of_charge
             widget: state_of_charge_viewgraph
           - view: energy_stock
             title: Energy stock
-            data: data/energy_stock
+            data: energy_stock
             widget: energy_stock_viewgraph
           - view: power_balance_trend
             title: Battery balance trend
@@ -195,7 +197,7 @@ pages:
         type: energy_source
         priority: 2
         repeat:
-          source_endpoint: /api/energy/0/parameters/sources
+          source_endpoint: /api/energy/parameters/sources
           block_endpoint: /api/{service}/{instance}
           # Per-service block type: heterogeneous entities do not expose the
           # same dataset field names (doc section 2.5)

@@ -132,12 +132,18 @@ function curveHtml(ctx) {
         ? `<line x1="0" y1="${zeroY}" x2="${W}" y2="${zeroY}" stroke="currentColor" stroke-width="1" opacity="0.7"/>`
         : "";
 
+    // Couleur parametrable du widget (palette ou valeur directe): le trait
+    // et l'aire de la courbe suivent la couleur, avec une aire translucide.
+    const lineColor = ctx.colorCss || "var(--accent)";
+    const areaStyle = `fill:${lineColor};opacity:0.15;`;
+    const lineStyle = `stroke:${lineColor};`;
+
     return `
     <div class="ems-trend-canvas" style="border-color:${ctx.colorCss || "var(--border)"}; border-width:1px; border-style:solid;">
         <svg class="ems-trend-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-            <polygon class="ems-trend-area" points="${area}"/>
+            <polygon points="${area}" style="${areaStyle}"/>
             ${zeroLine}
-            <polyline class="ems-trend-line" points="${pts}" fill="none"/>
+            <polyline points="${pts}" fill="none" style="${lineStyle}"/>
         </svg>
         <div class="ems-trend-axis">${fmtValue(maxVal, ctx.unit, 0)} max</div>
     </div>

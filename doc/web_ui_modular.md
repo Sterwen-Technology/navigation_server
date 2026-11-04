@@ -161,23 +161,23 @@ pages:
         priority: 1
         position: {row: 0, column: 0}
         width: 2                    # 2 colonnes (défaut 1)
-        endpoint: /api/energy/0/data
+        endpoint: /api/energy/data        # singleton: instance omise
         definition:
           - view: main_voltage
             title: Main Voltage
-            data: data/main_voltage
+            data: main_voltage            # dataset implicite = endpoint
             widget: voltage_viewgraph
           - view: auxiliary_voltage
             title: Auxiliary Voltage
-            data: data/auxiliary_voltage
+            data: auxiliary_voltage
             widget: voltage_viewgraph
           - view: production_power
             title: Production
-            data: data/production_power
+            data: production_power
             widget: production_viewgraph
           - view: battery_power_balance
             title: Battery power
-            data: data/battery_balance
+            data: battery_balance
             widget: power_balance
           - view: state_of_charge
             title: State of charge
@@ -195,7 +195,7 @@ pages:
         type: energy_source
         priority: 2
         repeat:
-          source_endpoint: /api/energy/0/parameters/sources
+          source_endpoint: /api/energy/parameters/sources
           block_endpoint: /api/{service}/{instance}
           types:
             mppt: energy_source
@@ -325,9 +325,11 @@ Le chemin d'accès aux données suit le schéma :
 ```
 
 - **service** : le service au sens gRPC (directive `service` du protobuf)
-- **instance** : numéro d'instance (0 par défaut) pour les services
-  multi-instances (§3.1) ; le process est résolu par le backend (§3.1),
-  éventuellement qualifié par la clé `process:` du bloc
+- **instance** : numéro d'instance pour les services multi-instances (§3.1).
+  **Pour les services singletons, l'instance est omise** (forme courte
+  `/api/<service>/<dataset>[/<name>]`, instance 0 implicite) ; le process
+  est résolu par le backend (§3.1), éventuellement qualifié par la clé
+  `process:` du bloc
 - **dataset** : un message protobuf spécifique (structure JSON entre serveur
   et client). Quatre datasets :
   1. `parameters` : données statiques ou semi-statiques, rafraîchies au
@@ -344,12 +346,15 @@ D'autres datasets pourront être définis pour d'autres pages, hors contexte
 
 ### 3.3 Chemins relatifs des vues
 
-Le **dataset est toujours explicite** dans les chemins de données des vues :
+Le chemin `data` d'une vue est `<dataset>/<name>` ou `<name>` seul :
 
-- `data` d'une vue = `<dataset>/<name>`, ex. `data/main_voltage`,
-  `trend/power`, `parameters/label`. Le dataset de l'`endpoint` du bloc est
-  le dataset **primaire** (celui qui motive le fetch du bloc) ; une vue peut
-  référencer un autre dataset (fetch supplémentaire, §2.6).
+- **dataset explicite** (`trend/power`, `parameters/label`) : la vue
+  référence ce dataset — un autre dataset que le primaire entraîne un fetch
+  supplémentaire (§2.6) ;
+- **dataset implicite** (`main_voltage`) : la vue résout dans le dataset
+  **primaire** du bloc — celui spécifié dans l'`endpoint` (`data` par
+  défaut). Pas de duplication : le dataset est indiqué une seule fois, dans
+  l'endpoint.
 - Les chemins de widget (`scale.max`/`low`/`high`, `color` paramétré,
   `title`) se résolvent : d'abord dans les `parameters` **du service du
   bloc** (`/api/<service>/<instance>/parameters`), sinon dans le dataset

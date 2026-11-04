@@ -21,11 +21,11 @@ export const DEFAULT_UI_CONFIG = {
         { id: "auxiliary_voltage_viewgraph", base_widget: "positive_viewgraph", unit: "V", precision: 2, color: "auxiliary_voltage", scale: { type: "fixed", max: "parameters/max_voltage_scale" } },
         { id: "production_viewgraph", base_widget: "positive_viewgraph", unit: "W", precision: 0, color: "power", scale: { type: "dual", low: "parameters/total_power_low", high: "parameters/total_power_high" } },
         { id: "power_balance", base_widget: "symmetric_viewgraph", unit: "W", precision: 0, color: "power", scale: { type: "dual", low: "parameters/total_power_low", high: "parameters/total_power_high" } },
-        { id: "power_balance_trend", base_widget: "single_symmetric_curve", scale: { type: "dynamic" } },
+        { id: "power_balance_trend", base_widget: "single_symmetric_curve", color: "power", scale: { type: "dynamic" } },
         { id: "state_of_charge_viewgraph", base_widget: "positive_viewgraph", unit: "%", precision: 1, color: "state_of_charge", ratio_percent: true, scale: { type: "fixed", max: 100 } },
         { id: "energy_stock_viewgraph", base_widget: "positive_viewgraph", unit: "Wh", precision: 0, color: "energy", scale: { type: "fixed", max: "parameters/total_energy_capacity" } },
         { id: "production_current_viewgraph", base_widget: "positive_viewgraph", unit: "A", precision: 1, color: "current", scale: { type: "fixed", max: 50 } },
-        { id: "power_trend", base_widget: "single_positive_curve", scale: { type: "dynamic" } },
+        { id: "power_trend", base_widget: "single_positive_curve", color: "power", scale: { type: "dynamic" } },
     ],
     block_types: [
         {
@@ -57,25 +57,25 @@ export const DEFAULT_UI_CONFIG = {
             layout: { columns: 2 },
             refresh_interval: 10000,
             availability_endpoint: "/api/energy_available",
-            parameters_endpoint: "/api/energy/0/parameters",
+            parameters_endpoint: "/api/energy/parameters",
             blocks: [
                 {
                     id: "energy_summary", title: "Energy Controller", priority: 1,
-                    position: { row: 0, column: 0 }, width: 2, endpoint: "/api/energy/0/data",
+                    position: { row: 0, column: 0 }, width: 2, endpoint: "/api/energy/data",
                     definition: [
-                        { view: "main_voltage", title: "Main Voltage", data: "data/main_voltage", widget: "voltage_viewgraph" },
-                        { view: "auxiliary_voltage", title: "Auxiliary Voltage", data: "data/auxiliary_voltage", widget: "auxiliary_voltage_viewgraph" },
-                        { view: "production_power", title: "Production", data: "data/production_power", widget: "production_viewgraph" },
-                        { view: "battery_power_balance", title: "Battery power", data: "data/battery_balance", widget: "power_balance" },
-                        { view: "state_of_charge", title: "State of charge", data: "data/state_of_charge", widget: "state_of_charge_viewgraph" },
-                        { view: "energy_stock", title: "Energy stock", data: "data/energy_stock", widget: "energy_stock_viewgraph" },
+                        { view: "main_voltage", title: "Main Voltage", data: "main_voltage", widget: "voltage_viewgraph" },
+                        { view: "auxiliary_voltage", title: "Auxiliary Voltage", data: "auxiliary_voltage", widget: "auxiliary_voltage_viewgraph" },
+                        { view: "production_power", title: "Production", data: "production_power", widget: "production_viewgraph" },
+                        { view: "battery_power_balance", title: "Battery power", data: "battery_balance", widget: "power_balance" },
+                        { view: "state_of_charge", title: "State of charge", data: "state_of_charge", widget: "state_of_charge_viewgraph" },
+                        { view: "energy_stock", title: "Energy stock", data: "energy_stock", widget: "energy_stock_viewgraph" },
                         { view: "power_balance_trend", title: "Battery balance trend", data: "trend/battery_balance", widget: "power_balance_trend" },
                     ],
                 },
                 {
                     id: "energy-sources", type: "energy_source", priority: 2,
                     repeat: {
-                        source_endpoint: "/api/energy/0/parameters/sources",
+                        source_endpoint: "/api/energy/parameters/sources",
                         block_endpoint: "/api/{service}/{instance}",
                         types: { mppt: "energy_source", dc_dc: "dc_dc_source" },
                     },

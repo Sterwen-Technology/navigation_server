@@ -38,15 +38,34 @@ let currentPage = "services";    // page 0 par defaut
 // Parse un endpoint en (base, service, instance) - section 3.2:
 //   /api/<service>/<instance>/<dataset>[/<name>]  ou forme courte
 //   /api/<service>/<dataset>
+// Parse un endpoint en (base, service, instance, dataset primaire) -
+// section 3.2. Formes acceptees:
+//   /api/<service>/<instance>/<dataset>[/<name>]  (services multi-instances)
+//   /api/<service>/<dataset>[/<name>]              (singletons: instance omise)
+// Le dataset de l'endpoint est le dataset PRIMAIRE du bloc: les chemins de
+// donnees des vues sans prefixe de dataset y resolvent (section 3.3).
 function parseEndpoint(endpoint) {
     const parts = endpoint.replace(/^\//, "").split("/").filter(Boolean);
     if (parts[0] !== "api" || parts.length < 2) return null;
     const service = parts[1];
     let instance = 0;
-    if (parts.length > 2 && !STANDARD_DATASETS.includes(parts[2])) {
-        instance = parts[2];
+    let dataset = "data";
+    let name = null;
+    if (parts.length > 2) {
+        if (STANDARD_DATASETS.includes(parts[2])) {
+            // forme courte: /api/<service>/<dataset>[/<name>]
+            dataset = parts[2];
+            name = parts[3] || null;
+        } else {
+            // forme complete: /api/<service>/<instance>/<dataset>[/<name>]
+            instance = parts[2];
+            if (parts.length > 3 && STANDARD_DATASETS.includes(parts[3])) {
+                dataset = parts[3];
+                name = parts[4] || null;
+            }
+        }
     }
-    return { service, instance, base: `/api/${service}/${instance}` };
+    return { service, instance, dataset, name, base: `/api/${service}/${instance}` };
 }
 
 // Normalise un bloc de la configuration: soit il reference un block_type,
@@ -55,6 +74,9 @@ function normalizeBlock(block) {
     const typeDef = block.type ? blockTypeDefs.get(block.type) : null;
     const source = typeDef || block;
     const views = source.definition || [];
+    // Dataset primaire du bloc: celui de l'endpoint s'il est specifie,
+    // 'data' par defaut (bases des blocs repetes sans dataset).
+    const parsed = block.endpoint ? parseEndpoint(block.endpoint) : null;
     return {
         id: block.id,
         typeDef,
@@ -63,6 +85,7 @@ function normalizeBlock(block) {
         topWidget: source.top_widget || null,
         repeat: block.repeat || null,
         endpoint: block.endpoint || null,
+        primaryDataset: parsed ? parsed.dataset : "data",
         width: Math.max(1, block.width || 1),
         position: block.position || null,
         priority: block.priority !== undefined ? block.priority : 100,
@@ -73,9 +96,13 @@ function normalizeBlock(block) {
 // echelles des widgets (section 2.6 - un dataset n'est fetch que s'il sert).
 function requiredDatasets(block) {
     const needed = new Set();
+    const primary = block.primaryDataset || "data";
     for (const view of block.views) {
-        const ds = String(view.data || "").split("/")[0];
-        if (STANDARD_DATASETS.includes(ds)) needed.add(ds);
+        // Chemin de donnee: <dataset>/<name> ou <name> seul - dans ce cas le
+        // dataset PRIMAIRE du bloc (celui de l'endpoint) est implicite.
+        const first = String(view.data || "").split("/")[0];
+        const ds = STANDARD_DATASETS.includes(first) ? first : primary;
+        needed.add(ds);
         const widget = view.widget ? widgetDefs.get(view.widget) : null;
         if (widget && widget.scale) {
             for (const key of ["max", "low", "high"]) {
@@ -98,12 +125,16 @@ function requiredDatasets(block) {
 // Valeur scalaire: <dataset>/<name>, resolue dans le dataset du bloc;
 // pour le dataset parameters: parametres du service du bloc d'abord, puis
 // parametres de la page (section 3.3).
-function resolveScalar(datasets, path, pageParams) {
+function resolveScalar(datasets, path, pageParams, defaultDataset) {
     if (path === null || path === undefined) return undefined;
     if (typeof path === "number") return path;
     const s = String(path);
     if (!s.includes("/")) {
-        // Chemin relatif au dataset de l'endpoint du bloc (rare) ou litteral
+        // Chemin sans dataset: resolution dans le dataset PRIMAIRE du bloc
+        // (celui de l'endpoint, section 3.3); sinon valeur litterale.
+        if (defaultDataset && datasets[defaultDataset] && s in datasets[defaultDataset]) {
+            return datasets[defaultDataset][s];
+        }
         const n = Number(s);
         return Number.isNaN(n) ? undefined : n;
     }
@@ -126,8 +157,10 @@ function resolveScalar(datasets, path, pageParams) {
 
 // Serie temporelle: <dataset>/<name> - le champ name dans chaque sample
 // (l'element de chemin 'samples' non significatif est omis, section 3.2).
-function resolveSeries(datasets, path) {
-    const [ds, name] = String(path || "").split("/");
+function resolveSeries(datasets, path, defaultDataset) {
+    const parts = String(path || "").split("/");
+    const ds = STANDARD_DATASETS.includes(parts[0]) ? parts[0] : (defaultDataset || "data");
+    const name = STANDARD_DATASETS.includes(parts[0]) ? parts[1] : parts[0];
     const container = datasets[ds];
     if (!container || !Array.isArray(container.samples)) return [];
     return container.samples.map(s => s[name]);
@@ -208,14 +241,14 @@ function renderBlockBody(blockEl, block, datasets, pageParams, titleFallback) {
             ratioPercent: !!widget.ratio_percent,
         };
         if (isCurve) {
-            ctx.series = resolveSeries(datasets, view.data);
+            ctx.series = resolveSeries(datasets, view.data, block.primaryDataset);
             trends += `<div class="ui-trend-item"><div class="ems-trend-title">${ctx.label || ""}</div>` +
                 renderWidget(widget, ctx) + `</div>`;
         } else {
             // Valeur indéfinie (dataset absent ou champ manquant): la vue est
             // quand même rendue avec '--' - une vue ne doit pas disparaître
             // silencieusement, c'est un indice de diagnostic.
-            ctx.value = resolveScalar(datasets, view.data, pageParams) ?? null;
+            ctx.value = resolveScalar(datasets, view.data, pageParams, block.primaryDataset) ?? null;
             const scale = resolveScale(widget.scale, ctx.value, datasets, pageParams);
             ctx.max = scale.max;
             ctx.scaleLow = scale.low;

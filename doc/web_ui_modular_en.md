@@ -146,23 +146,23 @@ pages:
         priority: 1
         position: {row: 0, column: 0}
         width: 2                    # 2 columns (default 1)
-        endpoint: /api/energy/0/data
+        endpoint: /api/energy/data        # singleton: instance omitted
         definition:
           - view: main_voltage
             title: Main Voltage
-            data: data/main_voltage
+            data: main_voltage            # implicit dataset = endpoint
             widget: voltage_viewgraph
           - view: auxiliary_voltage
             title: Auxiliary Voltage
-            data: data/auxiliary_voltage
+            data: auxiliary_voltage
             widget: voltage_viewgraph
           - view: production_power
             title: Production
-            data: data/production_power
+            data: production_power
             widget: production_viewgraph
           - view: battery_power_balance
             title: Battery power
-            data: data/battery_balance
+            data: battery_balance
             widget: power_balance
           - view: power_balance_trend
             title: Battery balance trend
@@ -172,7 +172,7 @@ pages:
         type: energy_source
         priority: 2
         repeat:
-          source_endpoint: /api/energy/0/parameters/sources
+          source_endpoint: /api/energy/parameters/sources
           block_endpoint: /api/{service}/{instance}
 ```
 
@@ -297,9 +297,11 @@ The data access path follows the schema:
 ```
 
 - **service**: the gRPC service (protobuf `service` directive)
-- **instance**: instance number (0 by default) for multi-instance services
-  (§3.1); the process is resolved by the backend (§3.1), possibly
-  qualified by the block's `process:` key
+- **instance**: instance number for multi-instance services (§3.1).
+  **For singleton services the instance is omitted** (short form
+  `/api/<service>/<dataset>[/<name>]`, instance 0 implicit); the process is
+  resolved by the backend (§3.1), possibly qualified by the block's
+  `process:` key
 - **dataset**: a specific protobuf message (JSON structure between server
   and client). Four datasets:
   1. `parameters`: static or semi-static data, refreshed at startup or on
@@ -315,12 +317,14 @@ Other datasets may be defined for other pages, outside the "energy" context.
 
 ### 3.3 Relative paths of views
 
-The **dataset is always explicit** in the views' data paths:
+A view's `data` path is `<dataset>/<name>` or `<name>` alone:
 
-- A view's `data` = `<dataset>/<name>`, e.g. `data/main_voltage`,
-  `trend/power`, `parameters/label`. The dataset of the block's `endpoint`
-  is the **primary** dataset (the one motivating the block's fetch); a view
-  may reference another dataset (additional fetch, §2.6).
+- **explicit dataset** (`trend/power`, `parameters/label`): the view
+  references that dataset - a dataset other than the primary one triggers
+  an additional fetch (§2.6);
+- **implicit dataset** (`main_voltage`): the view resolves in the block's
+  **primary** dataset - the one specified in the `endpoint` (`data` by
+  default). No duplication: the dataset is stated once, in the endpoint.
 - Widget paths (`scale.max`/`low`/`high`, parameterized `color`, `title`)
   resolve: first in the `parameters` **of the block's service**
   (`/api/<service>/<instance>/parameters`), otherwise in the page's
